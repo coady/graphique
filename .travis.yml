@@ -1,0 +1,15 @@
+language: python
+
+python:
+  - 3.6
+  - 3.7
+  - 3.8
+
+install:
+  - pip install pyarrow strawberry-graphql pytest-cov codecov
+
+script:
+  - pytest -v --cov
+
+after_success:
+  - codecov

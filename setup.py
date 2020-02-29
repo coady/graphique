@@ -1,0 +1,32 @@
+from setuptools import setup
+
+setup(
+    name='graphique',
+    version='0.0',
+    description='GraphQL service for arrow tables and parquet files.',
+    long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
+    author='Aric Coady',
+    author_email='aric.coady@gmail.com',
+    url='https://github.com/coady/graphique',
+    project_urls={'Documentation': 'https://graphique.readthedocs.io'},
+    license='Apache Software License',
+    packages=['graphique'],
+    install_requires=['pyarrow', 'strawberry-graphql'],
+    extras_require={'docs': ['m2r']},
+    python_requires='>=3.6',
+    tests_require=['pytest-cov'],
+    keywords='graphql arrow parquet',
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+    ],
+)
