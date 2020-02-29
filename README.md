@@ -1,3 +1,5 @@
+[![image](https://img.shields.io/travis/coady/graphique.svg)](https://travis-ci.com/coady/graphique)
+[![image](https://readthedocs.org/projects/graphique/badge)](https://graphique.readthedocs.io)
 [![image](https://img.shields.io/badge/code%20style-black-000000.svg)](https://pypi.org/project/black/)
 [![image](http://mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 

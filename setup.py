@@ -14,7 +14,7 @@ setup(
     packages=['graphique'],
     install_requires=['pyarrow', 'strawberry-graphql'],
     extras_require={'docs': ['m2r']},
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     tests_require=['pytest-cov'],
     keywords='graphql arrow parquet',
     classifiers=[
@@ -24,7 +24,6 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Topic :: Software Development :: Libraries :: Python Modules',

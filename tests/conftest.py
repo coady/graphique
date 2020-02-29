@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import numpy as np
 import pyarrow as pa
 import strawberry
 import pytest
@@ -9,7 +10,7 @@ fixtures = Path(__file__).parent / 'fixtures'
 
 
 def pytest_report_header(config):
-    return f'pyarrow {pa.__version__}, strawberry {strawberry.__version__}'
+    return f'pyarrow {pa.__version__}, strawberry {strawberry.__version__}, numpy {np.__version__}'
 
 
 class TestClient(testclient.TestClient):

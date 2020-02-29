@@ -1,12 +1,12 @@
 language: python
 
 python:
-  - 3.6
   - 3.7
   - 3.8
 
 install:
-  - pip install pyarrow strawberry-graphql pytest-cov codecov
+  - pip install -U pyarrow strawberry-graphql
+  - pip install pytest-cov codecov
 
 script:
   - pytest -v --cov
