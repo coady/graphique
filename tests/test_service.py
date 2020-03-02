@@ -2,7 +2,7 @@ import pytest
 
 
 def test_slice(client):
-    data = client.execute(query='{ slice(stop: 3) { zipcode city state } }')
+    data = client.execute(query='{ slice(length: 3) { zipcode city state } }')
     assert data == {
         'slice': {
             'zipcode': [501, 544, 601],
@@ -10,6 +10,10 @@ def test_slice(client):
             'state': ['NY', 'NY', 'PR'],
         }
     }
+    data = client.execute(query='{ slice(offset: 1) { zipcode } }')
+    zipcodes = data['slice']['zipcode']
+    assert zipcodes[0] == 544
+    assert len(zipcodes) == 41699
 
 
 def test_unique(client):

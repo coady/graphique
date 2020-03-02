@@ -73,9 +73,9 @@ class Query:
         return Counts(**data)  # type: ignore
 
     @strawberry.field
-    def slice(self, info, start: int = 0, stop: int = None) -> Columns:
+    def slice(self, info, offset: int = 0, length: int = None) -> Columns:
         """Return table slice."""
-        data = select(info)[start:stop]
+        data = select(info).slice(offset, length)
         return Columns(**data.to_pydict())  # type: ignore
 
     @strawberry.field

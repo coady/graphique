@@ -25,6 +25,29 @@ class Compare:
         return super().__gt__(other.as_py())
 
 
+class Array(pa.Array):
+    """Chunked array interface as a namespace of functions."""
+
+    def sum(self):
+        """Return sum of the values."""
+        return sum(chunk.sum().as_py() for chunk in self.chunks)
+
+    def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> pa.Array:
+        """Return start, stop indices within range, by default a half-open interval.
+
+        Assumes the array is sorted.
+        """
+        if lower is upper is None:
+            return 0, None
+        (base,) = {type(lower), type(upper)} - {type(None)}
+        cls = type(base.__name__, (Compare, base), {})
+        method = bisect.bisect_left if include_lower else bisect.bisect_right
+        start = 0 if lower is None else method(self, cls(lower))
+        method = bisect.bisect_right if include_upper else bisect.bisect_left
+        stop = None if upper is None else method(self, cls(upper), start)
+        return start, stop
+
+
 class Table(pa.Table):
     """Table utilities as a namespace of functions."""
 
@@ -50,24 +73,12 @@ class Table(pa.Table):
 
     def sum(self) -> dict:
         """Return mapping of sums."""
-        return {
-            name: sum(chunk.sum().as_py() for chunk in self[name].chunks)
-            for name in self.column_names
-        }
+        return {name: Array.sum(self[name]) for name in self.column_names}
 
-    def search(
-        self, name: str, lower=None, upper=None, include_lower=True, include_upper=False
-    ) -> pa.Table:
-        """Return rows within inclusive bounds.
+    def search(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
+        """Return rows within range, by default a half-open interval.
 
         Assumes the table is sorted by the given field, i.e., indexed.
         """
-        if lower is upper is None:
-            return self
-        (base,) = {type(lower), type(upper)} - {type(None)}
-        cls = type(base.__name__, (Compare, base), {})
-        method = bisect.bisect_left if include_lower else bisect.bisect_right
-        start = 0 if lower is None else method(self[name], cls(lower))
-        method = bisect.bisect_right if include_upper else bisect.bisect_left
-        stop = len(self) if upper is None else method(self[name], cls(upper), start)
+        start, stop = Array.range(self[name], lower, upper, **includes)
         return self[start:stop]

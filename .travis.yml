@@ -5,8 +5,8 @@ python:
   - 3.8
 
 install:
-  - pip install -U pyarrow strawberry-graphql
-  - pip install pytest-cov codecov
+  - pip install -U numpy
+  - pip install pyarrow strawberry-graphql pytest-cov codecov
 
 script:
   - pytest -v --cov
