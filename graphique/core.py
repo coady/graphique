@@ -1,5 +1,6 @@
 import bisect
 import json
+from typing import Iterator
 import pyarrow as pa
 
 type_map = {
@@ -28,28 +29,37 @@ class Compare:
 class Array(pa.Array):
     """Chunked array interface as a namespace of functions."""
 
+    def subtype(self):
+        base = type_map[self.type]
+        return type(base.__name__, (Compare, base), {})
+
     def sum(self):
         """Return sum of the values."""
         return sum(chunk.sum().as_py() for chunk in self.chunks)
 
-    def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> pa.Array:
+    def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> tuple:
         """Return start, stop indices within range, by default a half-open interval.
 
         Assumes the array is sorted.
         """
-        if lower is upper is None:
-            return 0, None
-        (base,) = {type(lower), type(upper)} - {type(None)}
-        cls = type(base.__name__, (Compare, base), {})
+        cls = Array.subtype(self)
         method = bisect.bisect_left if include_lower else bisect.bisect_right
         start = 0 if lower is None else method(self, cls(lower))
         method = bisect.bisect_right if include_upper else bisect.bisect_left
         stop = None if upper is None else method(self, cls(upper), start)
         return start, stop
 
+    def find(self, *values) -> Iterator[tuple]:
+        """Generate slices of matching rows from a sorted array."""
+        stop = 0
+        for value in map(Array.subtype(self), sorted(values)):
+            start = bisect.bisect_left(self, value, stop)
+            stop = bisect.bisect_right(self, value, start)
+            yield start, stop
+
 
 class Table(pa.Table):
-    """Table utilities as a namespace of functions."""
+    """Table interface as a namespace of functions."""
 
     def index(self) -> list:
         """Return index column names from pandas metadata."""
@@ -75,10 +85,22 @@ class Table(pa.Table):
         """Return mapping of sums."""
         return {name: Array.sum(self[name]) for name in self.column_names}
 
-    def search(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
+    def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.
 
-        Assumes the table is sorted by the given field, i.e., indexed.
+        Assumes the table is sorted by the column name, i.e., indexed.
         """
         start, stop = Array.range(self[name], lower, upper, **includes)
         return self[start:stop]
+
+    def isin(self, name: str, *values) -> pa.Table:
+        """Return rows which matches one of the values.
+
+        Assumes the table is sorted by the column name, i.e., indexed.
+        """
+        slices = [(start, stop) for start, stop in Array.find(self[name], *values) if start != stop]
+        arrays = []
+        for column in self.columns:
+            chunks = (pa.concat_arrays(column[start:stop].chunks) for start, stop in slices)
+            arrays.append(pa.chunked_array(chunks, column.type))
+        return self.from_arrays(arrays, self.column_names)

@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
@@ -9,7 +9,6 @@ from .settings import DEBUG, INDEX, MMAP, PARQUET_PATH
 table = pq.read_table(PARQUET_PATH, memory_map=MMAP)
 types = T.types(table)
 index = list(INDEX) or T.index(table)
-indexed = Optional[Union[tuple(types[name] for name in index)]]  # type: ignore
 
 
 def select(info, tbl=table) -> pa.Table:
@@ -40,17 +39,50 @@ class Counts:
     locals().update(dict.fromkeys(types, 0))
 
 
+def __init__(self, **kwargs):  # workaround for default inputs being overridden
+    for name, value in kwargs.items():
+        if value is not None:
+            setattr(self, name, value)
+
+
+@strawberry.type(is_input=True)
+class Equals:
+    __annotations__ = {name: Optional[types[name]] for name in index}
+    locals().update(dict.fromkeys(index))
+    __init__ = __init__
+
+
+@strawberry.type(is_input=True)
+class IsIn:
+    __annotations__ = {name: Optional[List[types[name]]] for name in index}  # type: ignore
+    locals().update(dict.fromkeys(index))
+    __init__ = __init__
+
+
+ranges = {}
+namespace = {
+    'lower': None,
+    'upper': None,
+    'include_lower': True,
+    'include_upper': False,
+    '__init__': __init__,
+}
+for cls in {types[name] for name in index}:
+    name = cls.__name__.capitalize() + 'Range'
+    namespace['__annotations__'] = {  # type: ignore
+        'lower': Optional[cls],
+        'upper': Optional[cls],
+        'include_lower': Optional[bool],
+        'include_upper': Optional[bool],
+    }
+    ranges[cls] = strawberry.type(type(name, (), namespace), is_input=True)
+
+
 @strawberry.type(is_input=True)
 class Range:
-    lower: indexed = None  # type: ignore
-    upper: indexed = None  # type: ignore
-    include_lower: Optional[bool] = True
-    include_upper: Optional[bool] = False
-
-    def __init__(self, **kwargs):  # workaround for default inputs being overridden
-        for name, value in kwargs.items():
-            if value is not None:
-                setattr(self, name, value)
+    __annotations__ = {name: Optional[ranges[types[name]]] for name in index}
+    locals().update(dict.fromkeys(index))
+    __init__ = __init__
 
 
 @strawberry.type
@@ -91,21 +123,28 @@ class Query:
         return Numbers(**data)  # type: ignore
 
     @strawberry.field
-    def search(self, info, ranges: List[Range] = []) -> Columns:
-        f"""Return table within ranges for index: {index}.
+    def search(
+        self, info, equals: Equals = Equals(), isin: IsIn = IsIn(), range: Range = Range(),
+    ) -> Columns:  # type: ignore
+        f"""Return table with matching values for index: {index}.
 
-        A multi-valued range can only appear last.
+        The values are matched in index order.
+        Only one `range` or `isin` query is allowed, and applied last.
         """
-        if len(ranges) > len(index):
-            raise ValueError(f"too many ranges for index: {index}")
+        names = list(isin.__dict__) + list(range.__dict__)
+        if len(names) > 1:
+            raise ValueError(f"only one multi-valued selection allowed: {names}")
+        names = list(equals.__dict__) + names
+        if names != index[: len(names)]:
+            raise ValueError(f"{names} is not a prefix of index: {index}")
         data = table
-        items = zip(index, ranges)
-        for name, rng in items:
-            data = T.search(data, name, **rng.__dict__)
-            if None in (rng.lower, rng.upper) or rng.lower != rng.upper:  # type: ignore
-                break
-        for name, _ in items:
-            raise ValueError(f"range for `{name}` appears after a multi-valued range")
+        for name in equals.__dict__:
+            value = getattr(equals, name)
+            data = T.range(data, name, value, value, include_upper=True)
+        for name in isin.__dict__:
+            data = T.isin(data, name, *getattr(isin, name))
+        for name in range.__dict__:
+            data = T.range(data, name, **getattr(range, name).__dict__)
         return Columns(**select(info, data).to_pydict())  # type: ignore
 
 

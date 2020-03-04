@@ -2,7 +2,7 @@
 ![image](https://img.shields.io/pypi/pyversions/graphique.svg)
 [![image](https://pepy.tech/badge/graphique)](https://pepy.tech/project/graphique)
 ![image](https://img.shields.io/pypi/status/graphique.svg)
-[![image](https://img.shields.io/travis/coady/graphique.svg)](https://travis-ci.com/coady/graphique)
+[![image](https://api.travis-ci.com/coady/graphique.svg)](https://travis-ci.com/coady/graphique)
 [![image](https://img.shields.io/codecov/c/github/coady/graphique.svg)](https://codecov.io/github/coady/graphique)
 [![image](https://readthedocs.org/projects/graphique/badge)](https://graphique.readthedocs.io)
 [![image](https://requires.io/github/coady/graphique/requirements.svg)](https://requires.io/github/coady/graphique/requirements/)

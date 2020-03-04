@@ -10,6 +10,7 @@ Welcome to graphique's documentation!
    :caption: Contents:
 
    readme
+   reference
 
 Indices and tables
 ==================
