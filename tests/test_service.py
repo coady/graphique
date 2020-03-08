@@ -17,17 +17,20 @@ def test_slice(client):
 
 
 def test_unique(client):
-    data = client.execute(query='{ unique { state } }')
-    states = data['unique']['state']
+    data = client.execute(query='{ unique { values { state } } }')
+    states = data['unique']['values']['state']
     assert len(states) == 52
     assert min(states) == 'AK'
+    data = client.execute(query='{ unique { values { state } counts { state } } }')
+    assert data['unique']['values']['state'] == states
+    counts = data['unique']['counts']['state']
+    assert len(counts) == len(states)
+    assert min(counts) == 91
 
 
 def test_counts(client):
     data = client.execute(query='{ count }')
     assert data == {'count': 41700}
-    data = client.execute(query='{ uniqueCount { state } }')
-    assert data == {'uniqueCount': {'state': 52}}
     data = client.execute(query='{ nullCount { state } }')
     assert data == {'nullCount': {'state': 0}}
 

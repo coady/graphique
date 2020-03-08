@@ -1,7 +1,9 @@
 import bisect
+import functools
 import json
 from concurrent import futures
 from typing import Callable, Iterator
+import numpy as np
 import pyarrow as pa
 
 threader = futures.ThreadPoolExecutor()
@@ -40,10 +42,7 @@ class Array(pa.Array):
         return sum(scalar.as_py() for scalar in threader.map(pa.Array.sum, self.chunks))
 
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
-        """Return start, stop indices within range, by default a half-open interval.
-
-        Assumes the array is sorted.
-        """
+        """Return slice within range from a sorted array, by default a half-open interval."""
         cls = Array.subtype(self)
         method = bisect.bisect_left if include_lower else bisect.bisect_right
         start = 0 if lower is None else method(self, cls(lower))
@@ -58,6 +57,18 @@ class Array(pa.Array):
             start = bisect.bisect_left(self, value, stop)
             stop = bisect.bisect_right(self, value, start)
             yield slice(start, stop)
+
+    def unique(self, counts=False):
+        """Return array of unique values, optionally with counts."""
+        if not counts:
+            return self.unique()
+        if not isinstance(self.type, pa.DictionaryType):  # pragma: no branch
+            self = self.dictionary_encode()
+        dictionary = self and self.chunks[0].dictionary
+        size = len(dictionary)
+        bins = threader.map(lambda arr: np.bincount(arr.indices, minlength=size), self.chunks)
+        counts = functools.reduce(np.ndarray.__iadd__, bins, np.full(size, 0))
+        return dictionary, pa.array(counts)
 
 
 class Table(pa.Table):
@@ -82,9 +93,9 @@ class Table(pa.Table):
         """Return count of null values."""
         return Table.map(self, pa.ChunkedArray.null_count.__get__)
 
-    def unique(self) -> dict:
+    def unique(self, counts=False) -> dict:
         """Return mapping to unique arrays."""
-        return Table.map(self, pa.ChunkedArray.unique)
+        return Table.map(self, functools.partial(Array.unique, counts=bool(counts)))
 
     def sum(self) -> dict:
         """Return mapping of sums."""

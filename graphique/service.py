@@ -11,11 +11,15 @@ types = T.types(table)
 index = list(INDEX) or T.index(table)
 
 
+def selections(node):
+    """Return tree of field name selections."""
+    nodes = getattr(node.selection_set, 'selections', [])
+    return {node.name.value: selections(node) for node in nodes}
+
+
 def select(info, tbl=table) -> pa.Table:
     """Return table with selected columns."""
-    (node,) = info.field_nodes
-    names = (selection.name.value for selection in node.selection_set.selections)
-    return T.select(tbl, *names)
+    return T.select(tbl, *selections(*info.field_nodes))
 
 
 @strawberry.type
@@ -86,17 +90,23 @@ class Range:
 
 
 @strawberry.type
+class IntColumns:
+    __annotations__ = {name: List[int] for name in types}  # type: ignore
+    locals().update(dict.fromkeys(types, ()))
+
+
+@strawberry.type
+class Uniques:
+    values: Columns
+    counts: IntColumns
+
+
+@strawberry.type
 class Query:
     @strawberry.field
     def count(self, info) -> int:
         """total row count"""
         return len(table)
-
-    @strawberry.field
-    def unique_count(self, info) -> Counts:
-        """unique value count"""
-        data = T.unique(select(info))
-        return Counts(**{name: len(data[name]) for name in data})  # type: ignore
 
     @strawberry.field
     def null_count(self, info) -> Counts:
@@ -111,10 +121,19 @@ class Query:
         return Columns(**data.to_pydict())  # type: ignore
 
     @strawberry.field
-    def unique(self, info) -> Columns:
-        """unique values"""
-        data = T.unique(select(info))
-        return Columns(**{name: data[name].to_pylist() for name in data})  # type: ignore
+    def unique(self, info) -> Uniques:
+        """unique values and optionally counts"""
+        names = selections(*info.field_nodes)
+        counts = dict.fromkeys(names.get('counts', []))
+        values = dict.fromkeys(set(names.get('values', [])) - set(counts))
+        data = T.unique(T.select(table, *values))
+        for name, value in data.items():
+            values[name] = value.to_pylist()
+        data = T.unique(T.select(table, *counts), counts=True)
+        for name, (value, count) in data.items():
+            values[name] = value.to_pylist()
+            counts[name] = count.to_pylist()
+        return Uniques(Columns(**values), IntColumns(**counts))  # type: ignore
 
     @strawberry.field
     def sum(self, info) -> Numbers:
