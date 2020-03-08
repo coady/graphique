@@ -139,8 +139,7 @@ class Query:
             raise ValueError(f"{names} is not a prefix of index: {index}")
         data = table
         for name in equals.__dict__:
-            value = getattr(equals, name)
-            data = T.range(data, name, value, value, include_upper=True)
+            data = T.isin(data, name, getattr(equals, name))
         for name in isin.__dict__:
             data = T.isin(data, name, *getattr(isin, name))
         for name in range.__dict__:

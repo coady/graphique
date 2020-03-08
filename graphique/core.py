@@ -1,8 +1,10 @@
 import bisect
 import json
-from typing import Iterator
+from concurrent import futures
+from typing import Callable, Iterator
 import pyarrow as pa
 
+threader = futures.ThreadPoolExecutor()
 type_map = {
     pa.bool_(): bool,
     pa.float16(): float,
@@ -29,15 +31,15 @@ class Compare:
 class Array(pa.Array):
     """Chunked array interface as a namespace of functions."""
 
-    def subtype(self):
+    def subtype(self) -> type:
         base = type_map[self.type]
         return type(base.__name__, (Compare, base), {})
 
     def sum(self):
         """Return sum of the values."""
-        return sum(chunk.sum().as_py() for chunk in self.chunks)
+        return sum(scalar.as_py() for scalar in threader.map(pa.Array.sum, self.chunks))
 
-    def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> tuple:
+    def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return start, stop indices within range, by default a half-open interval.
 
         Assumes the array is sorted.
@@ -47,19 +49,22 @@ class Array(pa.Array):
         start = 0 if lower is None else method(self, cls(lower))
         method = bisect.bisect_right if include_upper else bisect.bisect_left
         stop = None if upper is None else method(self, cls(upper), start)
-        return start, stop
+        return slice(start, stop)
 
-    def find(self, *values) -> Iterator[tuple]:
+    def find(self, *values) -> Iterator[slice]:
         """Generate slices of matching rows from a sorted array."""
         stop = 0
         for value in map(Array.subtype(self), sorted(values)):
             start = bisect.bisect_left(self, value, stop)
             stop = bisect.bisect_right(self, value, start)
-            yield start, stop
+            yield slice(start, stop)
 
 
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
+
+    def map(self, func: Callable) -> dict:
+        return dict(zip(self.column_names, threader.map(func, self.columns)))
 
     def index(self) -> list:
         """Return index column names from pandas metadata."""
@@ -75,32 +80,27 @@ class Table(pa.Table):
 
     def null_count(self) -> dict:
         """Return count of null values."""
-        return {name: self[name].null_count for name in self.column_names}
+        return Table.map(self, pa.ChunkedArray.null_count.__get__)
 
     def unique(self) -> dict:
         """Return mapping to unique arrays."""
-        return {name: self[name].unique() for name in self.column_names}
+        return Table.map(self, pa.ChunkedArray.unique)
 
     def sum(self) -> dict:
         """Return mapping of sums."""
-        return {name: Array.sum(self[name]) for name in self.column_names}
+        return Table.map(self, Array.sum)
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.
 
         Assumes the table is sorted by the column name, i.e., indexed.
         """
-        start, stop = Array.range(self[name], lower, upper, **includes)
-        return self[start:stop]
+        return self[Array.range(self[name], lower, upper, **includes)]
 
     def isin(self, name: str, *values) -> pa.Table:
         """Return rows which matches one of the values.
 
         Assumes the table is sorted by the column name, i.e., indexed.
         """
-        slices = [(start, stop) for start, stop in Array.find(self[name], *values) if start != stop]
-        arrays = []
-        for column in self.columns:
-            chunks = (pa.concat_arrays(column[start:stop].chunks) for start, stop in slices)
-            arrays.append(pa.chunked_array(chunks, column.type))
-        return self.from_arrays(arrays, self.column_names)
+        slices = list(Array.find(self[name], *values)) or [slice(0)]
+        return pa.concat_tables(self[slc] for slc in slices)
