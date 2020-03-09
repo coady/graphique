@@ -32,8 +32,8 @@ class Columns:
 
 
 @strawberry.type
-class Numbers:
-    __annotations__ = {name: cls for name, cls in types.items() if cls in (int, float)}
+class Scalars:
+    __annotations__ = dict(types)
     locals().update({name: types[name]() for name in __annotations__})
 
 
@@ -136,10 +136,22 @@ class Query:
         return Uniques(Columns(**values), IntColumns(**counts))  # type: ignore
 
     @strawberry.field
-    def sum(self, info) -> Numbers:
+    def sum(self, info) -> Scalars:
         """sum of columns"""
         data = T.sum(select(info))
-        return Numbers(**data)  # type: ignore
+        return Scalars(**data)  # type: ignore
+
+    @strawberry.field
+    def min(self, info) -> Scalars:
+        """min of columns"""
+        data = T.min(select(info))
+        return Scalars(**data)  # type: ignore
+
+    @strawberry.field
+    def max(self, info) -> Scalars:
+        """max of columns"""
+        data = T.max(select(info))
+        return Scalars(**data)  # type: ignore
 
     @strawberry.field
     def search(

@@ -41,6 +41,14 @@ class Array(pa.Array):
         """Return sum of the values."""
         return sum(scalar.as_py() for scalar in threader.map(pa.Array.sum, self.chunks))
 
+    def min(self):
+        """Return min of the values."""
+        return min(threader.map(np.min, self.chunks))
+
+    def max(self):
+        """Return max of the values."""
+        return max(threader.map(np.max, self.chunks))
+
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""
         cls = Array.subtype(self)
@@ -100,6 +108,14 @@ class Table(pa.Table):
     def sum(self) -> dict:
         """Return mapping of sums."""
         return Table.map(self, Array.sum)
+
+    def min(self) -> dict:
+        """Return mapping of min values."""
+        return Table.map(self, Array.min)
+
+    def max(self) -> dict:
+        """Return mapping of max values."""
+        return Table.map(self, Array.max)
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.

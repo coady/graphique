@@ -35,9 +35,13 @@ def test_counts(client):
     assert data == {'nullCount': {'state': 0}}
 
 
-def test_sum(client):
+def test_reduce(client):
     data = client.execute(query='{ sum { zipcode } }')
     assert data == {'sum': {'zipcode': 2066562337}}
+    data = client.execute(query='{ min { latitude } }')
+    assert data['min']['latitude'] == pytest.approx(17.963333)
+    data = client.execute(query='{ max { longitude } }')
+    assert data['max']['longitude'] == pytest.approx(-65.301389)
 
 
 def test_search(client):
