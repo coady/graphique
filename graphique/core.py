@@ -2,7 +2,7 @@ import bisect
 import functools
 import json
 from concurrent import futures
-from typing import Callable, Iterator
+from typing import Callable, Iterator, Union
 import numpy as np
 import pyarrow as pa
 
@@ -37,17 +37,22 @@ class Array(pa.Array):
         base = type_map[self.type]
         return type(base.__name__, (Compare, base), {})
 
+    def dictionary(self) -> pa.array:
+        return self.chunks[0].dictionary if isinstance(self.type, pa.DictionaryType) else self[:0]
+
     def sum(self):
         """Return sum of the values."""
         return sum(scalar.as_py() for scalar in threader.map(pa.Array.sum, self.chunks))
 
     def min(self):
         """Return min of the values."""
-        return min(threader.map(np.min, self.chunks))
+        dictionary = Array.dictionary(self)
+        return np.min(dictionary) if dictionary else min(threader.map(np.min, self.chunks))
 
     def max(self):
         """Return max of the values."""
-        return max(threader.map(np.max, self.chunks))
+        dictionary = Array.dictionary(self)
+        return np.max(dictionary) if dictionary else max(threader.map(np.max, self.chunks))
 
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""
@@ -66,13 +71,16 @@ class Array(pa.Array):
             stop = bisect.bisect_right(self, value, start)
             yield slice(start, stop)
 
-    def unique(self, counts=False):
+    def unique(self, counts=False) -> Union[pa.array, tuple]:
         """Return array of unique values, optionally with counts."""
-        if not counts:
-            return self.unique()
-        if not isinstance(self.type, pa.DictionaryType):  # pragma: no branch
+        dictionary = Array.dictionary(self)
+        if not dictionary:
+            if not counts:
+                return self.unique()
             self = self.dictionary_encode()
-        dictionary = self and self.chunks[0].dictionary
+        dictionary = Array.dictionary(self)
+        if not counts:
+            return dictionary
         size = len(dictionary)
         bins = threader.map(lambda arr: np.bincount(arr.indices, minlength=size), self.chunks)
         counts = functools.reduce(np.ndarray.__iadd__, bins, np.full(size, 0))

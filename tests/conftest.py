@@ -24,8 +24,15 @@ class TestClient(testclient.TestClient):
 
 
 @pytest.fixture(scope='module')
-def client():
+def table():
     os.environ['PARQUET_PATH'] = str(fixtures / 'zipcodes.parquet')
+    from graphique.service import table
+
+    return table
+
+
+@pytest.fixture(scope='module')
+def client(table):
     from graphique.service import app
 
     return TestClient(app)
