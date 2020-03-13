@@ -14,8 +14,8 @@ def pytest_report_header(config):
 
 
 class TestClient(testclient.TestClient):
-    def execute(self, **kwargs):
-        response = self.post('/graphql', json=kwargs)
+    def execute(self, query, **variables):
+        response = self.post('/graphql', json={'query': query, 'variables': variables})
         response.raise_for_status()
         result = response.json()
         for error in result.get('errors', []):
