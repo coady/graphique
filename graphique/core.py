@@ -37,8 +37,19 @@ class Array(pa.Array):
         base = type_map[self.type]
         return type(base.__name__, (Compare, base), {})
 
-    def dictionary(self) -> pa.array:
-        return self.chunks[0].dictionary if isinstance(self.type, pa.DictionaryType) else self[:0]
+    def dictionary(self) -> pa.Array:
+        if isinstance(self.type, pa.DictionaryType):
+            for chunk in self.chunks:
+                return chunk.dictionary
+        return self[:0]
+
+    def mask(self, predicate: Callable) -> pa.ChunkedArray:
+        """Return boolean mask array by applying predicate."""
+        return pa.chunked_array(threader.map(lambda ch: predicate(np.asarray(ch)), self.chunks))
+
+    def filter(self, mask: pa.ChunkedArray) -> pa.ChunkedArray:
+        """Return array filtered by a boolean mask."""
+        return pa.chunked_array(threader.map(pa.Array.filter, self.chunks, mask.chunks))
 
     def sum(self):
         """Return sum of the values."""
@@ -71,7 +82,7 @@ class Array(pa.Array):
             stop = bisect.bisect_right(self, value, start)
             yield slice(start, stop)
 
-    def unique(self, counts=False) -> Union[pa.array, tuple]:
+    def unique(self, counts=False) -> Union[pa.Array, tuple]:
         """Return array of unique values, optionally with counts."""
         dictionary = Array.dictionary(self)
         if not dictionary:
@@ -139,3 +150,11 @@ class Table(pa.Table):
         """
         slices = list(Array.find(self[name], *values)) or [slice(0)]
         return pa.concat_tables(self[slc] for slc in slices)
+
+    def filter(self, **predicates: Callable) -> pa.Table:
+        """Return table filtered by applying predicates to columns."""
+        for name in predicates:
+            mask = Array.mask(self[name], predicates[name])
+            data = Table.map(self, lambda col: Array.filter(col, mask))
+            self = self.from_arrays(list(data.values()), list(data))
+        return self
