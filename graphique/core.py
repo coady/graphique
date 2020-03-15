@@ -1,12 +1,13 @@
 import bisect
 import functools
 import json
+import os
 from concurrent import futures
 from typing import Callable, Iterator, Union
 import numpy as np
 import pyarrow as pa
 
-threader = futures.ThreadPoolExecutor()
+max_workers = os.cpu_count() or 1  # same default as ProcessPoolExecutor
 type_map = {
     pa.bool_(): bool,
     pa.float16(): float,
@@ -33,6 +34,11 @@ class Compare:
 class Array(pa.Array):
     """Chunked array interface as a namespace of functions."""
 
+    threader = futures.ThreadPoolExecutor(max_workers)
+
+    def map(self, func: Callable, *iterables) -> Iterator:
+        return Array.threader.map(func, self.chunks, *iterables)
+
     def subtype(self) -> type:
         base = type_map[self.type]
         return type(base.__name__, (Compare, base), {})
@@ -45,25 +51,25 @@ class Array(pa.Array):
 
     def mask(self, predicate: Callable) -> pa.ChunkedArray:
         """Return boolean mask array by applying predicate."""
-        return pa.chunked_array(threader.map(lambda ch: predicate(np.asarray(ch)), self.chunks))
+        return pa.chunked_array(Array.map(self, lambda ch: predicate(np.asarray(ch))))
 
     def filter(self, mask: pa.ChunkedArray) -> pa.ChunkedArray:
         """Return array filtered by a boolean mask."""
-        return pa.chunked_array(threader.map(pa.Array.filter, self.chunks, mask.chunks))
+        return pa.chunked_array(Array.map(self, pa.Array.filter, mask.chunks))
 
     def sum(self):
         """Return sum of the values."""
-        return sum(scalar.as_py() for scalar in threader.map(pa.Array.sum, self.chunks))
+        return sum(scalar.as_py() for scalar in Array.map(self, pa.Array.sum))
 
     def min(self):
         """Return min of the values."""
         dictionary = Array.dictionary(self)
-        return np.min(dictionary) if dictionary else min(threader.map(np.min, self.chunks))
+        return np.min(dictionary) if dictionary else min(Array.map(self, np.min))
 
     def max(self):
         """Return max of the values."""
         dictionary = Array.dictionary(self)
-        return np.max(dictionary) if dictionary else max(threader.map(np.max, self.chunks))
+        return np.max(dictionary) if dictionary else max(Array.map(self, np.max))
 
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""
@@ -93,7 +99,7 @@ class Array(pa.Array):
         if not counts:
             return dictionary
         size = len(dictionary)
-        bins = threader.map(lambda arr: np.bincount(arr.indices, minlength=size), self.chunks)
+        bins = Array.map(self, lambda arr: np.bincount(arr.indices, minlength=size))
         counts = functools.reduce(np.ndarray.__iadd__, bins, np.full(size, 0))
         return dictionary, pa.array(counts)
 
@@ -101,8 +107,10 @@ class Array(pa.Array):
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
+    threader = futures.ThreadPoolExecutor(max_workers)
+
     def map(self, func: Callable) -> dict:
-        return dict(zip(self.column_names, threader.map(func, self.columns)))
+        return dict(zip(self.column_names, Table.threader.map(func, self.columns)))
 
     def index(self) -> list:
         """Return index column names from pandas metadata."""
