@@ -51,7 +51,11 @@ class Array(pa.Array):
 
     def mask(self, predicate: Callable) -> pa.ChunkedArray:
         """Return boolean mask array by applying predicate."""
-        return pa.chunked_array(Array.map(self, lambda ch: predicate(np.asarray(ch))))
+        dictionary = Array.dictionary(self)
+        if not dictionary:
+            return pa.chunked_array(Array.map(self, lambda ch: predicate(np.asarray(ch))))
+        (indices,) = np.nonzero(predicate(np.asarray(dictionary)))
+        return pa.chunked_array(Array.map(self, lambda ch: np.isin(ch.indices, indices)))
 
     def filter(self, mask: pa.ChunkedArray) -> pa.ChunkedArray:
         """Return array filtered by a boolean mask."""

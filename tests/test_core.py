@@ -16,6 +16,10 @@ def test_dictionary(table):
 
 
 def test_filter(table):
+    array = table['state'].dictionary_encode()
+    mask = A.mask(array, lambda a: a == 'CA')
+    assert len(A.filter(array, mask)) == 2647
+
     tbl = T.filter(table, city=lambda a: a == 'Mountain View')
     assert len(tbl) == 11
     assert len(tbl['state'].unique()) == 6
