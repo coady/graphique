@@ -1,4 +1,5 @@
 import bisect
+import collections
 import functools
 import json
 import os
@@ -19,6 +20,16 @@ type_map = {
     pa.int64(): int,
     pa.string(): str,
 }
+
+
+# TODO: reimplement or reuse spector.vector.arggroupby, optimized for ints
+def arggroupby(chunk: pa.Array) -> Iterator[tuple]:
+    """Generate unique keys with corresponding index arrays."""
+    values = np.asarray(getattr(chunk, 'indices', chunk))
+    keys, counts = np.unique(values, return_counts=True)
+    dictionary = getattr(chunk, 'dictionary', None)
+    keys = dictionary.take(pa.array(keys)).to_pylist() if dictionary else keys.tolist()
+    return zip(keys, np.split(np.argsort(values), np.cumsum(counts)))
 
 
 class Compare:
@@ -61,6 +72,21 @@ class Array(pa.Array):
         """Return array filtered by a boolean mask."""
         return pa.chunked_array(Array.map(self, pa.Array.filter, mask.chunks))
 
+    def take(self, indices: pa.ChunkedArray) -> pa.ChunkedArray:
+        """Return array with indexed elements."""
+        return pa.chunked_array(Array.map(self, pa.Array.take, indices.chunks))
+
+    def arggroupby(self) -> dict:
+        """Return mapping of unique keys to corresponding index arrays."""
+        empty = np.full(0, 0)
+        result = collections.defaultdict(lambda: [empty] * len(self.chunks))  # type: dict
+        if self.type == pa.string():
+            self = self.dictionary_encode()
+        for index, items in enumerate(Array.map(self, arggroupby)):
+            for key, values in items:
+                result[key][index] = values
+        return {key: pa.chunked_array(result[key]) for key in result}
+
     def sum(self):
         """Return sum of the values."""
         return sum(scalar.as_py() for scalar in Array.map(self, pa.Array.sum))
@@ -94,8 +120,7 @@ class Array(pa.Array):
 
     def unique(self, counts=False) -> Union[pa.Array, tuple]:
         """Return array of unique values, optionally with counts."""
-        dictionary = Array.dictionary(self)
-        if not dictionary:
+        if not Array.dictionary(self):
             if not counts:
                 return self.unique()
             self = self.dictionary_encode()
