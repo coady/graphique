@@ -4,7 +4,7 @@ import functools
 import json
 import os
 from concurrent import futures
-from typing import Callable, Iterator, Union
+from typing import Callable, Iterable, Iterator
 import numpy as np
 import pyarrow as pa
 
@@ -42,12 +42,12 @@ class Compare:
         return super().__gt__(other.as_py())
 
 
-class Array(pa.Array):
+class Array(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 
     threader = futures.ThreadPoolExecutor(max_workers)
 
-    def map(self, func: Callable, *iterables) -> Iterator:
+    def map(self, func: Callable, *iterables: Iterable) -> Iterator:
         return Array.threader.map(func, self.chunks, *iterables)
 
     def subtype(self) -> type:
@@ -101,6 +101,25 @@ class Array(pa.Array):
         dictionary = Array.dictionary(self)
         return np.max(dictionary) if dictionary else max(Array.map(self, np.max))
 
+    def where(self, predicate: Callable):
+        offset = 0
+        for chunk in self.chunks:
+            (indices,) = np.nonzero(predicate(np.asarray(getattr(chunk, 'indices', chunk))))
+            yield from map(int, indices + offset)
+            offset += len(chunk)
+
+    def argmin(self):
+        """Return first index of the minimum value."""
+        dictionary = Array.dictionary(self)
+        value = np.argmin(dictionary) if dictionary else Array.min(self)
+        return next(Array.where(self, lambda a: a == value))
+
+    def argmax(self):
+        """Return first index of the maximum value."""
+        dictionary = Array.dictionary(self)
+        value = np.argmax(dictionary) if dictionary else Array.max(self)
+        return next(Array.where(self, lambda a: a == value))
+
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""
         cls = Array.subtype(self)
@@ -118,15 +137,15 @@ class Array(pa.Array):
             stop = bisect.bisect_right(self, value, start)
             yield slice(start, stop)
 
-    def unique(self, counts=False) -> Union[pa.Array, tuple]:
-        """Return array of unique values, optionally with counts."""
+    def unique(self) -> pa.Array:
+        """Return array of unique values."""
+        return Array.dictionary(self) or self.unique()
+
+    def value_counts(self) -> tuple:
+        """Return arrays of unique values with corresponding ounts."""
         if not Array.dictionary(self):
-            if not counts:
-                return self.unique()
             self = self.dictionary_encode()
         dictionary = Array.dictionary(self)
-        if not counts:
-            return dictionary
         size = len(dictionary)
         bins = Array.map(self, lambda arr: np.bincount(arr.indices, minlength=size))
         counts = functools.reduce(np.ndarray.__iadd__, bins, np.full(size, 0))
@@ -151,7 +170,7 @@ class Table(pa.Table):
 
     def select(self, *names: str) -> pa.Table:
         """Return table with selected columns."""
-        return self.from_arrays(list(map(self.column, names)), names)
+        return self.from_pydict({name: self[name] for name in names})
 
     def null_count(self) -> dict:
         """Return count of null values."""
@@ -159,7 +178,7 @@ class Table(pa.Table):
 
     def unique(self, counts=False) -> dict:
         """Return mapping to unique arrays."""
-        return Table.map(self, functools.partial(Array.unique, counts=bool(counts)))
+        return Table.map(self, Array.value_counts if counts else Array.unique)
 
     def sum(self) -> dict:
         """Return mapping of sums."""
@@ -192,6 +211,6 @@ class Table(pa.Table):
         """Return table filtered by applying predicates to columns."""
         for name in predicates:
             mask = Array.mask(self[name], predicates[name])
-            data = Table.map(self, lambda col: Array.filter(col, mask))
-            self = self.from_arrays(list(data.values()), list(data))
+            data = Table.map(self, functools.partial(Array.filter, mask=mask))
+            self = self.from_pydict(data)
         return self

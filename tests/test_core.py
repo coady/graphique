@@ -1,18 +1,30 @@
 import pytest
+import pyarrow as pa
 from graphique.core import Array as A, Table as T
 
 
 def test_dictionary(table):
     array = table['state'].dictionary_encode()
-    values, counts = A.unique(array, counts=True)
+    values, counts = A.value_counts(array)
     assert len(values) == len(counts) == 52
     assert set(A.unique(array)) == set(values)
-    assert A.min(array) == 'AK'
-    assert A.max(array) == 'WY'
+    assert array[A.argmin(array)] == A.min(array) == 'AK'
+    assert array[A.argmax(array)] == A.max(array) == 'WY'
     with pytest.raises(ValueError):
         A.min(array[:0])
     with pytest.raises(ValueError):
         A.max(array[:0])
+
+
+def test_where():
+    array = pa.chunked_array([[0, 1], [1, 2]])
+    assert A.argmin(array) == 0
+    assert A.argmax(array) == 3
+    assert list(A.where(array[:0], None)) == []
+    with pytest.raises(ValueError):
+        A.argmin(array[:0])
+    with pytest.raises(ValueError):
+        A.argmax(array[:0])
 
 
 def test_filter(table):
