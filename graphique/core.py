@@ -22,16 +22,6 @@ type_map = {
 }
 
 
-# TODO: reimplement or reuse spector.vector.arggroupby, optimized for ints
-def arggroupby(chunk: pa.Array) -> Iterator[tuple]:
-    """Generate unique keys with corresponding index arrays."""
-    values = np.asarray(getattr(chunk, 'indices', chunk))
-    keys, counts = np.unique(values, return_counts=True)
-    dictionary = getattr(chunk, 'dictionary', None)
-    keys = dictionary.take(pa.array(keys)).to_pylist() if dictionary else keys.tolist()
-    return zip(keys, np.split(np.argsort(values), np.cumsum(counts)))
-
-
 class Compare:
     """Comparable mixin for bisection search."""
 
@@ -42,35 +32,42 @@ class Compare:
         return super().__gt__(other.as_py())
 
 
+class Chunk(pa.Array):
+    # TODO: reimplement or reuse spector.vector.arggroupby, optimized for ints
+    def arggroupby(self) -> Iterator[tuple]:
+        """Generate unique keys with corresponding index arrays."""
+        values = np.asarray(getattr(self, 'indices', self))
+        keys, counts = np.unique(values, return_counts=True)
+        dictionary = getattr(self, 'dictionary', None)
+        keys = dictionary.take(pa.array(keys)).to_pylist() if dictionary else keys.tolist()
+        return zip(keys, np.split(np.argsort(values), np.cumsum(counts)))
+
+    def value_counts(self: pa.DictionaryArray) -> tuple:
+        vc = self.indices.value_counts()
+        return self.dictionary.take(vc.field('values')), vc.field('counts')
+
+    def mask(self, predicate: Callable) -> pa.Array:
+        if not isinstance(self, pa.DictionaryArray):
+            return pa.array(predicate(np.asarray(self)))
+        (indices,) = np.nonzero(predicate(np.asarray(self.dictionary)))
+        return pa.array(np.isin(self.indices, indices))
+
+
 class Array(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 
     threader = futures.ThreadPoolExecutor(max_workers)
 
     def map(self, func: Callable, *iterables: Iterable) -> Iterator:
-        return Array.threader.map(func, self.chunks, *iterables)
+        return Array.threader.map(func, self.iterchunks(), *iterables)
 
     def subtype(self) -> type:
         base = type_map[self.type]
         return type(base.__name__, (Compare, base), {})
 
-    def dictionary(self) -> pa.Array:
-        if isinstance(self.type, pa.DictionaryType):
-            for chunk in self.chunks:
-                return chunk.dictionary
-        return self[:0]
-
     def mask(self, predicate: Callable) -> pa.ChunkedArray:
         """Return boolean mask array by applying predicate."""
-        dictionary = Array.dictionary(self)
-        if not dictionary:
-            return pa.chunked_array(Array.map(self, lambda ch: predicate(np.asarray(ch))))
-        (indices,) = np.nonzero(predicate(np.asarray(dictionary)))
-        return pa.chunked_array(Array.map(self, lambda ch: np.isin(ch.indices, indices)))
-
-    def filter(self, mask: pa.ChunkedArray) -> pa.ChunkedArray:
-        """Return array filtered by a boolean mask."""
-        return pa.chunked_array(Array.map(self, pa.Array.filter, mask.chunks))
+        return pa.chunked_array(Array.map(self, lambda ch: Chunk.mask(ch, predicate)))
 
     def take(self, indices: pa.ChunkedArray) -> pa.ChunkedArray:
         """Return array with indexed elements."""
@@ -82,7 +79,7 @@ class Array(pa.ChunkedArray):
         result = collections.defaultdict(lambda: [empty] * len(self.chunks))  # type: dict
         if self.type == pa.string():
             self = self.dictionary_encode()
-        for index, items in enumerate(Array.map(self, arggroupby)):
+        for index, items in enumerate(Array.map(self, Chunk.arggroupby)):
             for key, values in items:
                 result[key][index] = values
         return {key: pa.chunked_array(result[key]) for key in result}
@@ -93,32 +90,23 @@ class Array(pa.ChunkedArray):
 
     def min(self):
         """Return min of the values."""
-        dictionary = Array.dictionary(self)
-        return np.min(dictionary) if dictionary else min(Array.map(self, np.min))
+        return min(Array.map(self, np.min))
 
     def max(self):
         """Return max of the values."""
-        dictionary = Array.dictionary(self)
-        return np.max(dictionary) if dictionary else max(Array.map(self, np.max))
-
-    def where(self, predicate: Callable):
-        offset = 0
-        for chunk in self.chunks:
-            (indices,) = np.nonzero(predicate(np.asarray(getattr(chunk, 'indices', chunk))))
-            yield from map(int, indices + offset)
-            offset += len(chunk)
+        return max(Array.map(self, np.max))
 
     def argmin(self):
         """Return first index of the minimum value."""
-        dictionary = Array.dictionary(self)
-        value = np.argmin(dictionary) if dictionary else Array.min(self)
-        return next(Array.where(self, lambda a: a == value))
+        values = list(Array.map(self, np.min))
+        index = np.argmin(values)
+        return int(np.argmin(self.chunk(index))) + sum(map(len, self.chunks[:index]))
 
     def argmax(self):
         """Return first index of the maximum value."""
-        dictionary = Array.dictionary(self)
-        value = np.argmax(dictionary) if dictionary else Array.max(self)
-        return next(Array.where(self, lambda a: a == value))
+        values = list(Array.map(self, np.max))
+        index = np.argmax(values)
+        return int(np.argmax(self.chunk(index))) + sum(map(len, self.chunks[:index]))
 
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""
@@ -138,18 +126,21 @@ class Array(pa.ChunkedArray):
             yield slice(start, stop)
 
     def unique(self) -> pa.Array:
-        """Return array of unique values."""
-        return Array.dictionary(self) or self.unique()
+        """Return array of unique values with dictionary support."""
+        if not isinstance(self.type, pa.DictionaryType):
+            return self.unique()
+        chunks = Array.map(self, lambda ch: ch.dictionary.take(ch.indices.unique()))
+        return pa.concat_arrays(chunks).unique()
 
     def value_counts(self) -> tuple:
-        """Return arrays of unique values with corresponding ounts."""
-        if not Array.dictionary(self):
-            self = self.dictionary_encode()
-        dictionary = Array.dictionary(self)
-        size = len(dictionary)
-        bins = Array.map(self, lambda arr: np.bincount(arr.indices, minlength=size))
-        counts = functools.reduce(np.ndarray.__iadd__, bins, np.full(size, 0))
-        return dictionary, pa.array(counts)
+        """Return arrays of unique values and counts with dictionary support."""
+        if not isinstance(self.type, pa.DictionaryType):
+            vc = self.value_counts()
+            return vc.field('values'), vc.field('counts')  # type: ignore
+        values, counts = zip(*Array.map(self, Chunk.value_counts))
+        values = pa.concat_arrays(values).dictionary_encode()
+        counts = np.bincount(values.indices, weights=np.concatenate(counts))
+        return values, pa.array(counts)
 
 
 class Table(pa.Table):
@@ -211,6 +202,6 @@ class Table(pa.Table):
         """Return table filtered by applying predicates to columns."""
         for name in predicates:
             mask = Array.mask(self[name], predicates[name])
-            data = Table.map(self, functools.partial(Array.filter, mask=mask))
+            data = Table.map(self, functools.partial(pa.ChunkedArray.filter, mask=mask))
             self = self.from_pydict(data)
         return self

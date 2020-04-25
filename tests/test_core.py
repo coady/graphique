@@ -20,7 +20,6 @@ def test_where():
     array = pa.chunked_array([[0, 1], [1, 2]])
     assert A.argmin(array) == 0
     assert A.argmax(array) == 3
-    assert list(A.where(array[:0], None)) == []
     with pytest.raises(ValueError):
         A.argmin(array[:0])
     with pytest.raises(ValueError):
@@ -30,7 +29,7 @@ def test_where():
 def test_filter(table):
     array = table['state'].dictionary_encode()
     mask = A.mask(array, lambda a: a == 'CA')
-    assert len(A.filter(array, mask)) == 2647
+    assert len(array.filter(mask)) == 2647
 
     tbl = T.filter(table, city=lambda a: a == 'Mountain View')
     assert len(tbl) == 11
