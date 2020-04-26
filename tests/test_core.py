@@ -16,14 +16,20 @@ def test_dictionary(table):
         A.max(array[:0])
 
 
-def test_where():
-    array = pa.chunked_array([[0, 1], [1, 2]])
+def test_chunks():
+    array = pa.chunked_array([list('aba'), list('bcb')])
     assert A.argmin(array) == 0
-    assert A.argmax(array) == 3
+    assert A.argmax(array) == 4
     with pytest.raises(ValueError):
         A.argmin(array[:0])
     with pytest.raises(ValueError):
         A.argmax(array[:0])
+    values, counts = A.value_counts(array.dictionary_encode())
+    pair = A.value_counts(array)
+    assert values.equals(pair[0])
+    assert counts.equals(pair[1])
+    groups = {key: list(value) for key, value in A.arggroupby(array).items()}
+    assert groups == {'a': [0, 2], 'b': [1, 0, 2], 'c': [1]}
 
 
 def test_filter(table):

@@ -35,14 +35,16 @@ class Compare:
 class Chunk(pa.Array):
     # TODO: reimplement or reuse spector.vector.arggroupby, optimized for ints
     def arggroupby(self) -> Iterator[tuple]:
-        """Generate unique keys with corresponding index arrays."""
-        values = np.asarray(getattr(self, 'indices', self))
-        keys, counts = np.unique(values, return_counts=True)
-        dictionary = getattr(self, 'dictionary', None)
-        keys = dictionary.take(pa.array(keys)).to_pylist() if dictionary else keys.tolist()
-        return zip(keys, np.split(np.argsort(values), np.cumsum(counts)))
+        dictionary = None
+        if isinstance(self, pa.DictionaryArray):
+            self, dictionary = self.indices, self.dictionary
+        vc = self.value_counts()
+        indices = pa.array(np.argsort(vc.field('values')))
+        keys = vc.field('values').take(indices)
+        sections = np.split(np.argsort(self), np.cumsum(vc.field('counts').take(indices)))
+        return zip((dictionary.take(keys) if dictionary else keys).to_pylist(), sections)
 
-    def value_counts(self: pa.DictionaryArray) -> tuple:
+    def value_counts(self):
         vc = self.indices.value_counts()
         return self.dictionary.take(vc.field('values')), vc.field('counts')
 
@@ -74,9 +76,12 @@ class Array(pa.ChunkedArray):
         return pa.chunked_array(Array.map(self, pa.Array.take, indices.chunks))
 
     def arggroupby(self) -> dict:
-        """Return mapping of unique keys to corresponding index arrays."""
+        """Return mapping of unique keys to corresponding index arrays.
+
+        Indices are chunked, and not offset, pending release of `ChunkedArray.take`.
+        """
         empty = np.full(0, 0)
-        result = collections.defaultdict(lambda: [empty] * len(self.chunks))  # type: dict
+        result = collections.defaultdict(lambda: [empty] * self.num_chunks)  # type: dict
         if self.type == pa.string():
             self = self.dictionary_encode()
         for index, items in enumerate(Array.map(self, Chunk.arggroupby)):
@@ -130,7 +135,7 @@ class Array(pa.ChunkedArray):
         if not isinstance(self.type, pa.DictionaryType):
             return self.unique()
         chunks = Array.map(self, lambda ch: ch.dictionary.take(ch.indices.unique()))
-        return pa.concat_arrays(chunks).unique()
+        return pa.chunked_array(chunks).unique()
 
     def value_counts(self) -> tuple:
         """Return arrays of unique values and counts with dictionary support."""
@@ -138,9 +143,9 @@ class Array(pa.ChunkedArray):
             vc = self.value_counts()
             return vc.field('values'), vc.field('counts')  # type: ignore
         values, counts = zip(*Array.map(self, Chunk.value_counts))
-        values = pa.concat_arrays(values).dictionary_encode()
-        counts = np.bincount(values.indices, weights=np.concatenate(counts))
-        return values, pa.array(counts)
+        values, indices = np.unique(np.concatenate(values), return_inverse=True)
+        counts = np.bincount(indices, weights=np.concatenate(counts)).astype(int)
+        return pa.array(values), pa.array(counts)
 
 
 class Table(pa.Table):

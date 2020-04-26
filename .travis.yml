@@ -5,7 +5,7 @@ python:
   - 3.8
 
 install:
-  - pip install -U numpy 'graphql-core<3.1'
+  - pip install -U numpy
   - pip install pyarrow strawberry-graphql pytest-cov codecov
 
 script:
