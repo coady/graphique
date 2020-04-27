@@ -48,11 +48,11 @@ class Chunk(pa.Array):
         vc = self.indices.value_counts()
         return self.dictionary.take(vc.field('values')), vc.field('counts')
 
-    def mask(self, predicate: Callable) -> pa.Array:
+    def mask(self, predicate: Callable) -> np.ndarray:
         if not isinstance(self, pa.DictionaryArray):
-            return pa.array(predicate(np.asarray(self)))
+            return predicate(np.asarray(self))
         (indices,) = np.nonzero(predicate(np.asarray(self.dictionary)))
-        return pa.array(np.isin(self.indices, indices))
+        return np.isin(self.indices, indices)
 
 
 class Array(pa.ChunkedArray):
@@ -101,17 +101,21 @@ class Array(pa.ChunkedArray):
         """Return max of the values."""
         return max(Array.map(self, np.max))
 
+    def where(self, index, value):
+        (indices,) = np.nonzero(Chunk.mask(self.chunk(index), lambda ch: ch == value))
+        return int(indices[0]) + sum(map(len, self.chunks[:index]))
+
     def argmin(self):
         """Return first index of the minimum value."""
         values = list(Array.map(self, np.min))
         index = np.argmin(values)
-        return int(np.argmin(self.chunk(index))) + sum(map(len, self.chunks[:index]))
+        return Array.where(self, index, values[index])
 
     def argmax(self):
         """Return first index of the maximum value."""
         values = list(Array.map(self, np.max))
         index = np.argmax(values)
-        return int(np.argmax(self.chunk(index))) + sum(map(len, self.chunks[:index]))
+        return Array.where(self, index, values[index])
 
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""
