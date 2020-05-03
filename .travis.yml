@@ -9,6 +9,8 @@ install:
   - pip install pyarrow strawberry-graphql pytest-cov codecov
 
 script:
+  - cythonize -X linetrace=True graphique/*.pyx
+  - python setup.py build_ext -i --define CYTHON_TRACE_NOGIL
   - pytest -v --cov
 
 after_success:

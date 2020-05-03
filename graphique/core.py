@@ -7,6 +7,7 @@ from concurrent import futures
 from typing import Callable, Iterable, Iterator
 import numpy as np
 import pyarrow as pa
+from .arrayed import arggroupby  # type: ignore
 
 max_workers = os.cpu_count() or 1  # same default as ProcessPoolExecutor
 type_map = {
@@ -33,20 +34,22 @@ class Compare:
 
 
 class Chunk(pa.Array):
-    # TODO: reimplement or reuse spector.vector.arggroupby, optimized for ints
     def arggroupby(self) -> Iterator[tuple]:
         dictionary = None
         if isinstance(self, pa.DictionaryArray):
             self, dictionary = self.indices, self.dictionary
-        vc = self.value_counts()
-        indices = pa.array(np.argsort(vc.field('values')))
-        keys = vc.field('values').take(indices)
-        sections = np.split(np.argsort(self), np.cumsum(vc.field('counts').take(indices)))
+        try:
+            keys, sections = arggroupby(self)
+        except TypeError:  # fallback to sorting
+            values, counts = self.value_counts().flatten()
+            indices = pa.array(np.argsort(values))
+            keys = values.take(indices)
+            sections = np.split(np.argsort(self), np.cumsum(counts.take(indices)))
         return zip((dictionary.take(keys) if dictionary else keys).to_pylist(), sections)
 
     def value_counts(self):
-        vc = self.indices.value_counts()
-        return self.dictionary.take(vc.field('values')), vc.field('counts')
+        values, counts = self.indices.value_counts().flatten()
+        return self.dictionary.take(values), counts
 
     def mask(self, predicate: Callable) -> np.ndarray:
         if not isinstance(self, pa.DictionaryArray):
@@ -144,8 +147,7 @@ class Array(pa.ChunkedArray):
     def value_counts(self) -> tuple:
         """Return arrays of unique values and counts with dictionary support."""
         if not isinstance(self.type, pa.DictionaryType):
-            vc = self.value_counts()
-            return vc.field('values'), vc.field('counts')  # type: ignore
+            return self.value_counts().flatten()  # type: ignore
         values, counts = zip(*Array.map(self, Chunk.value_counts))
         values, indices = np.unique(np.concatenate(values), return_inverse=True)
         counts = np.bincount(indices, weights=np.concatenate(counts)).astype(int)

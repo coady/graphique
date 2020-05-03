@@ -53,3 +53,5 @@ def test_groupby(table):
     assert len(groups) == 52
     indices = groups['CA']
     assert set(A.take(table['state'], indices)) == {'CA'}
+    groups = A.arggroupby(table['latitude'])
+    assert max(map(len, groups.values())) == 6

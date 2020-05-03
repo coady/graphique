@@ -2,3 +2,7 @@ __pycache__/
 .coverage
 docs/_build
 .mypy_cache/
+*.cpp
+*.so
+*.o
+*.html
