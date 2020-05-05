@@ -1,9 +1,9 @@
 import bisect
 import collections
-import functools
 import json
 import os
 from concurrent import futures
+from functools import partial
 from typing import Callable, Iterable, Iterator
 import numpy as np
 import pyarrow as pa
@@ -51,11 +51,11 @@ class Chunk(pa.Array):
         values, counts = self.indices.value_counts().flatten()
         return self.dictionary.take(values), counts
 
-    def mask(self, predicate: Callable) -> np.ndarray:
+    def equal(self, value) -> np.ndarray:
         if not isinstance(self, pa.DictionaryArray):
-            return predicate(np.asarray(self))
-        (indices,) = np.nonzero(predicate(np.asarray(self.dictionary)))
-        return np.isin(self.indices, indices)
+            return np.equal(self, value)
+        (indices,) = np.nonzero(np.equal(self.dictionary, value))
+        return np.equal(self.indices, *indices) if len(indices) else np.full(len(self), False)
 
 
 class Array(pa.ChunkedArray):
@@ -70,9 +70,13 @@ class Array(pa.ChunkedArray):
         base = type_map[self.type]
         return type(base.__name__, (Compare, base), {})
 
-    def mask(self, predicate: Callable) -> pa.ChunkedArray:
+    def mask(self, predicate: Callable = np.asarray) -> pa.ChunkedArray:
         """Return boolean mask array by applying predicate."""
-        return pa.chunked_array(Array.map(self, lambda ch: Chunk.mask(ch, predicate)))
+        return pa.chunked_array(Array.map(self, lambda ch: np.asarray(predicate(ch), bool)))
+
+    def equal(self, value) -> pa.ChunkedArray:
+        """Return boolean mask array which matches scalar value."""
+        return pa.chunked_array(Array.map(self, partial(Chunk.equal, value=value)))
 
     def take(self, indices: pa.ChunkedArray) -> pa.ChunkedArray:
         """Return array with indexed elements."""
@@ -104,17 +108,29 @@ class Array(pa.ChunkedArray):
         """Return max of the values."""
         return max(Array.map(self, np.max))
 
+    def any(self, predicate: Callable = np.asarray) -> bool:
+        """Return whether any value evaluates to True."""
+        return any(np.any(predicate(chunk)) for chunk in self.iterchunks())
+
+    def all(self, predicate: Callable = np.asarray) -> bool:
+        """Return whether all values evaluate to True."""
+        return all(np.all(predicate(chunk)) for chunk in self.iterchunks())
+
+    def count(self) -> int:
+        """Return count of values which evaluates to True."""
+        return sum(Array.map(self, np.count_nonzero))
+
     def where(self, index, value):
-        (indices,) = np.nonzero(Chunk.mask(self.chunk(index), lambda ch: ch == value))
+        (indices,) = np.nonzero(Chunk.equal(self.chunk(index), value))
         return int(indices[0]) + sum(map(len, self.chunks[:index]))
 
-    def argmin(self):
+    def argmin(self) -> int:
         """Return first index of the minimum value."""
         values = list(Array.map(self, np.min))
         index = np.argmin(values)
         return Array.where(self, index, values[index])
 
-    def argmax(self):
+    def argmax(self) -> int:
         """Return first index of the maximum value."""
         values = list(Array.map(self, np.max))
         index = np.argmax(values)
@@ -213,6 +229,6 @@ class Table(pa.Table):
         """Return table filtered by applying predicates to columns."""
         for name in predicates:
             mask = Array.mask(self[name], predicates[name])
-            data = Table.map(self, functools.partial(pa.ChunkedArray.filter, mask=mask))
+            data = Table.map(self, partial(pa.ChunkedArray.filter, mask=mask))
             self = self.from_pydict(data)
         return self

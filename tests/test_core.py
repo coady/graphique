@@ -1,4 +1,6 @@
+from functools import partial
 import pytest
+import numpy as np
 import pyarrow as pa
 from graphique.core import Array as A, Table as T
 
@@ -32,15 +34,24 @@ def test_chunks():
     assert groups == {'a': [0, 2], 'b': [1, 0, 2], 'c': [1]}
 
 
+def test_boolean():
+    array = pa.chunked_array([[0]])
+    assert not A.any(array) and not A.all(array) and A.count(array) == 0
+    array = pa.chunked_array([[0, 1]])
+    assert A.any(array) and not A.all(array) and A.count(array) == 1
+    array = pa.chunked_array([[1, 1]])
+    assert A.any(array) and A.all(array) and A.count(array) == 2
+
+
 def test_filter(table):
     array = table['state'].dictionary_encode()
-    mask = A.mask(array, lambda a: a == 'CA')
+    mask = A.equal(array, 'CA')
     assert len(array.filter(mask)) == 2647
 
-    tbl = T.filter(table, city=lambda a: a == 'Mountain View')
+    tbl = T.filter(table, city=partial(np.equal, 'Mountain View'))
     assert len(tbl) == 11
     assert len(tbl['state'].unique()) == 6
-    tbl = T.filter(table, state=lambda a: a == 'CA', city=lambda a: a == 'Mountain View')
+    tbl = T.filter(table, state=partial(np.equal, 'CA'), city=partial(np.equal, 'Mountain View'))
     assert len(tbl) == 6
     assert set(tbl['state']) == {'CA'}
 
