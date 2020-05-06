@@ -41,6 +41,7 @@ def test_boolean():
     assert A.any(array) and not A.all(array) and A.count(array) == 1
     array = pa.chunked_array([[1, 1]])
     assert A.any(array) and A.all(array) and A.count(array) == 2
+    assert A.contains(array, 1) and not A.contains(array, 0)
 
 
 def test_filter(table):

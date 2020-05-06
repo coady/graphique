@@ -12,7 +12,8 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.append(os.path.abspath('..'))
+import graphique
 
 
 # -- Project information -----------------------------------------------------
@@ -22,7 +23,7 @@ copyright = '2020, Aric Coady'
 author = 'Aric Coady'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0'
+release = graphique.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -56,3 +57,6 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ['_static']
+
+# Compatibility with sphinx<2.
+master_doc = 'index'

@@ -116,6 +116,10 @@ class Array(pa.ChunkedArray):
         """Return whether all values evaluate to True."""
         return all(np.all(predicate(chunk)) for chunk in self.iterchunks())
 
+    def contains(self, value) -> bool:
+        """Return whether value is in array."""
+        return Array.any(self, partial(Chunk.equal, value=value))
+
     def count(self) -> int:
         """Return count of values which evaluates to True."""
         return sum(Array.map(self, np.count_nonzero))
