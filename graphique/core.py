@@ -24,20 +24,25 @@ type_map = {
 
 
 class Compare:
-    """Comparable mixin for bisection search."""
+    """Comparable wrapper for bisection search."""
+
+    __slots__ = ('value',)
+
+    def __init__(self, value):
+        self.value = value
 
     def __lt__(self, other):
-        return super().__lt__(other.as_py())
+        return self.value < other.as_py()
 
     def __gt__(self, other):
-        return super().__gt__(other.as_py())
+        return self.value > other.as_py()
 
 
-class Chunk(pa.Array):
+class Chunk:
     def arggroupby(self) -> Iterator[tuple]:
         dictionary = None
         if isinstance(self, pa.DictionaryArray):
-            self, dictionary = self.indices, self.dictionary
+            self, dictionary = self.indices, self.dictionary  # type: ignore
         try:
             keys, sections = arggroupby(self)
         except TypeError:  # fallback to sorting
@@ -58,29 +63,25 @@ class Chunk(pa.Array):
         return np.equal(self.indices, *indices) if len(indices) else np.full(len(self), False)
 
 
-class Array(pa.ChunkedArray):
+class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 
     threader = futures.ThreadPoolExecutor(max_workers)
 
     def map(self, func: Callable, *iterables: Iterable) -> Iterator:
-        return Array.threader.map(func, self.iterchunks(), *iterables)
-
-    def subtype(self) -> type:
-        base = type_map[self.type]
-        return type(base.__name__, (Compare, base), {})
+        return Column.threader.map(func, self.iterchunks(), *iterables)
 
     def mask(self, predicate: Callable = np.asarray) -> pa.ChunkedArray:
         """Return boolean mask array by applying predicate."""
-        return pa.chunked_array(Array.map(self, lambda ch: np.asarray(predicate(ch), bool)))
+        return pa.chunked_array(Column.map(self, lambda ch: np.asarray(predicate(ch), bool)))
 
     def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
-        return pa.chunked_array(Array.map(self, partial(Chunk.equal, value=value)))
+        return pa.chunked_array(Column.map(self, partial(Chunk.equal, value=value)))
 
     def take(self, indices: pa.ChunkedArray) -> pa.ChunkedArray:
         """Return array with indexed elements."""
-        return pa.chunked_array(Array.map(self, pa.Array.take, indices.chunks))
+        return pa.chunked_array(Column.map(self, pa.Array.take, indices.chunks))
 
     def arggroupby(self) -> dict:
         """Return mapping of unique keys to corresponding index arrays.
@@ -91,22 +92,22 @@ class Array(pa.ChunkedArray):
         result = collections.defaultdict(lambda: [empty] * self.num_chunks)  # type: dict
         if self.type == pa.string():
             self = self.dictionary_encode()
-        for index, items in enumerate(Array.map(self, Chunk.arggroupby)):
+        for index, items in enumerate(Column.map(self, Chunk.arggroupby)):
             for key, values in items:
                 result[key][index] = values
         return {key: pa.chunked_array(result[key]) for key in result}
 
     def sum(self):
         """Return sum of the values."""
-        return sum(scalar.as_py() for scalar in Array.map(self, pa.Array.sum))
+        return sum(Column.map(self, lambda ch: ch.sum().as_py()))
 
     def min(self):
         """Return min of the values."""
-        return min(Array.map(self, np.min))
+        return min(Column.map(self, np.min))
 
     def max(self):
         """Return max of the values."""
-        return max(Array.map(self, np.max))
+        return max(Column.map(self, np.max))
 
     def any(self, predicate: Callable = np.asarray) -> bool:
         """Return whether any value evaluates to True."""
@@ -118,11 +119,18 @@ class Array(pa.ChunkedArray):
 
     def contains(self, value) -> bool:
         """Return whether value is in array."""
-        return Array.any(self, partial(Chunk.equal, value=value))
+        return Column.any(self, partial(Chunk.equal, value=value))
 
-    def count(self) -> int:
-        """Return count of values which evaluates to True."""
-        return sum(Array.map(self, np.count_nonzero))
+    def count(self, value) -> int:
+        """Return number of occurrences of value.
+
+        Booleans are optimized and can be used regardless of type.
+        """
+        if value is None:
+            return self.null_count
+        if not isinstance(value, bool):
+            self = Column.equal(self, value)
+        return sum(Column.map(self, np.count_nonzero))
 
     def where(self, index, value):
         (indices,) = np.nonzero(Chunk.equal(self.chunk(index), value))
@@ -130,29 +138,28 @@ class Array(pa.ChunkedArray):
 
     def argmin(self) -> int:
         """Return first index of the minimum value."""
-        values = list(Array.map(self, np.min))
+        values = list(Column.map(self, np.min))
         index = np.argmin(values)
-        return Array.where(self, index, values[index])
+        return Column.where(self, index, values[index])
 
     def argmax(self) -> int:
         """Return first index of the maximum value."""
-        values = list(Array.map(self, np.max))
+        values = list(Column.map(self, np.max))
         index = np.argmax(values)
-        return Array.where(self, index, values[index])
+        return Column.where(self, index, values[index])
 
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""
-        cls = Array.subtype(self)
         method = bisect.bisect_left if include_lower else bisect.bisect_right
-        start = 0 if lower is None else method(self, cls(lower))
+        start = 0 if lower is None else method(self, Compare(lower))
         method = bisect.bisect_right if include_upper else bisect.bisect_left
-        stop = None if upper is None else method(self, cls(upper), start)
+        stop = None if upper is None else method(self, Compare(upper), start)
         return slice(start, stop)
 
     def find(self, *values) -> Iterator[slice]:
         """Generate slices of matching rows from a sorted array."""
         stop = 0
-        for value in map(Array.subtype(self), sorted(values)):
+        for value in map(Compare, sorted(values)):
             start = bisect.bisect_left(self, value, stop)
             stop = bisect.bisect_right(self, value, start)
             yield slice(start, stop)
@@ -161,14 +168,14 @@ class Array(pa.ChunkedArray):
         """Return array of unique values with dictionary support."""
         if not isinstance(self.type, pa.DictionaryType):
             return self.unique()
-        chunks = Array.map(self, lambda ch: ch.dictionary.take(ch.indices.unique()))
+        chunks = Column.map(self, lambda ch: ch.dictionary.take(ch.indices.unique()))
         return pa.chunked_array(chunks).unique()
 
     def value_counts(self) -> tuple:
         """Return arrays of unique values and counts with dictionary support."""
         if not isinstance(self.type, pa.DictionaryType):
             return self.value_counts().flatten()  # type: ignore
-        values, counts = zip(*Array.map(self, Chunk.value_counts))
+        values, counts = zip(*Column.map(self, Chunk.value_counts))
         values, indices = np.unique(np.concatenate(values), return_inverse=True)
         counts = np.bincount(indices, weights=np.concatenate(counts)).astype(int)
         return pa.array(values), pa.array(counts)
@@ -200,39 +207,39 @@ class Table(pa.Table):
 
     def unique(self, counts=False) -> dict:
         """Return mapping to unique arrays."""
-        return Table.map(self, Array.value_counts if counts else Array.unique)
+        return Table.map(self, Column.value_counts if counts else Column.unique)
 
     def sum(self) -> dict:
         """Return mapping of sums."""
-        return Table.map(self, Array.sum)
+        return Table.map(self, Column.sum)
 
     def min(self) -> dict:
         """Return mapping of min values."""
-        return Table.map(self, Array.min)
+        return Table.map(self, Column.min)
 
     def max(self) -> dict:
         """Return mapping of max values."""
-        return Table.map(self, Array.max)
+        return Table.map(self, Column.max)
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.
 
         Assumes the table is sorted by the column name, i.e., indexed.
         """
-        return self[Array.range(self[name], lower, upper, **includes)]
+        return self[Column.range(self[name], lower, upper, **includes)]
 
     def isin(self, name: str, *values) -> pa.Table:
         """Return rows which matches one of the values.
 
         Assumes the table is sorted by the column name, i.e., indexed.
         """
-        slices = list(Array.find(self[name], *values)) or [slice(0)]
+        slices = list(Column.find(self[name], *values)) or [slice(0)]
         return pa.concat_tables(self[slc] for slc in slices)
 
     def filter(self, **predicates: Callable) -> pa.Table:
         """Return table filtered by applying predicates to columns."""
         for name in predicates:
-            mask = Array.mask(self[name], predicates[name])
+            mask = Column.mask(self[name], predicates[name])
             data = Table.map(self, partial(pa.ChunkedArray.filter, mask=mask))
             self = self.from_pydict(data)
         return self

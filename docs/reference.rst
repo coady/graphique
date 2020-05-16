@@ -1,8 +1,8 @@
 .. automodule:: graphique.core
 
-Array
+Column
 =============
-.. autoclass:: Array
+.. autoclass:: Column
    :show-inheritance:
    :members:
 
