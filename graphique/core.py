@@ -129,8 +129,9 @@ class Column(pa.ChunkedArray):
         if value is None:
             return self.null_count
         if not isinstance(value, bool):
-            self = Column.equal(self, value)
-        return sum(Column.map(self, np.count_nonzero))
+            self, value = Column.equal(self, value), True
+        count = sum(Column.map(self, np.count_nonzero))
+        return count if value else (len(self) - count - self.null_count)
 
     def where(self, index, value):
         (indices,) = np.nonzero(Chunk.equal(self.chunk(index), value))
@@ -171,14 +172,14 @@ class Column(pa.ChunkedArray):
         chunks = Column.map(self, lambda ch: ch.dictionary.take(ch.indices.unique()))
         return pa.chunked_array(chunks).unique()
 
-    def value_counts(self) -> tuple:
+    def value_counts(self) -> pa.StructArray:
         """Return arrays of unique values and counts with dictionary support."""
         if not isinstance(self.type, pa.DictionaryType):
-            return self.value_counts().flatten()  # type: ignore
+            return self.value_counts()
         values, counts = zip(*Column.map(self, Chunk.value_counts))
         values, indices = np.unique(np.concatenate(values), return_inverse=True)
         counts = np.bincount(indices, weights=np.concatenate(counts)).astype(int)
-        return pa.array(values), pa.array(counts)
+        return pa.StructArray.from_arrays([values, counts], ['values', 'counts'])
 
 
 class Table(pa.Table):

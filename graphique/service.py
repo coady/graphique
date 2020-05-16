@@ -130,9 +130,8 @@ class Query:
         for name, value in data.items():
             values[name] = value.to_pylist()
         data = T.unique(T.select(table, *counts), counts=True)
-        for name, (value, count) in data.items():
-            values[name] = value.to_pylist()
-            counts[name] = count.to_pylist()
+        for name, value_counts in data.items():
+            values[name], counts[name] = map(pa.Array.to_pylist, value_counts.flatten())
         return Uniques(Columns(**values), IntColumns(**counts))  # type: ignore
 
     @strawberry.field

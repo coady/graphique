@@ -7,7 +7,7 @@ from graphique.core import Column as C, Table as T
 
 def test_dictionary(table):
     array = table['state'].dictionary_encode()
-    values, counts = C.value_counts(array)
+    values, counts = C.value_counts(array).flatten()
     assert len(values) == len(counts) == 52
     assert set(C.unique(array)) == set(values)
     assert array[C.argmin(array)] == C.min(array) == 'AK'
@@ -26,10 +26,7 @@ def test_chunks():
         C.argmin(array[:0])
     with pytest.raises(ValueError):
         C.argmax(array[:0])
-    values, counts = C.value_counts(array.dictionary_encode())
-    pair = C.value_counts(array)
-    assert values.equals(pair[0])
-    assert counts.equals(pair[1])
+    assert array.value_counts().equals(C.value_counts(array.dictionary_encode()))
     groups = {key: list(value) for key, value in C.arggroupby(array).items()}
     assert groups == {'a': [0, 2], 'b': [1, 0, 2], 'c': [1]}
 
@@ -42,7 +39,8 @@ def test_membership():
     array = pa.chunked_array([[1, 1]])
     assert C.any(array) and C.all(array) and C.count(array, True) == 2
     assert C.contains(array, 1) and not C.contains(array, 0)
-    assert C.count(array, 0) == C.count(array, None) == 0
+    assert C.count(array, False) == C.count(array, None) == 0
+    assert C.count(array, 0) == 0 and C.count(array, 1) == 2
 
 
 def test_filter(table):
