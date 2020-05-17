@@ -198,30 +198,6 @@ class Table(pa.Table):
         """Return mapping of column types."""
         return {name: type_map[self[name].type] for name in self.column_names}
 
-    def select(self, *names: str) -> pa.Table:
-        """Return table with selected columns."""
-        return self.from_pydict({name: self[name] for name in names})
-
-    def null_count(self) -> dict:
-        """Return count of null values."""
-        return Table.map(self, pa.ChunkedArray.null_count.__get__)
-
-    def unique(self, counts=False) -> dict:
-        """Return mapping to unique arrays."""
-        return Table.map(self, Column.value_counts if counts else Column.unique)
-
-    def sum(self) -> dict:
-        """Return mapping of sums."""
-        return Table.map(self, Column.sum)
-
-    def min(self) -> dict:
-        """Return mapping of min values."""
-        return Table.map(self, Column.min)
-
-    def max(self) -> dict:
-        """Return mapping of max values."""
-        return Table.map(self, Column.max)
-
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.
 

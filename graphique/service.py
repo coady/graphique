@@ -3,7 +3,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
-from .core import Table as T
+from .core import Column as C, Table as T
 from .settings import DEBUG, INDEX, MMAP, PARQUET_PATH
 
 table = pq.read_table(PARQUET_PATH, memory_map=MMAP)
@@ -17,46 +17,20 @@ def selections(node):
     return {node.name.value: selections(node) for node in nodes}
 
 
-def select(info, tbl=table) -> pa.Table:
-    """Return table with selected columns."""
-    return T.select(tbl, *selections(*info.field_nodes))
-
-
-@strawberry.type
-class Columns:
-    __annotations__ = {
-        name: List[Optional(cls) if table[name].null_count else cls]  # type: ignore
-        for name, cls in types.items()
-    }
-    locals().update(dict.fromkeys(types, ()))
-
-
-@strawberry.type
-class Scalars:
-    __annotations__ = dict(types)
-    locals().update({name: types[name]() for name in __annotations__})
-
-
-@strawberry.type
-class Counts:
-    __annotations__ = dict.fromkeys(types, int)
-    locals().update(dict.fromkeys(types, 0))
-
-
 def __init__(self, **kwargs):  # workaround for default inputs being overridden
     for name, value in kwargs.items():
         if value is not None:
             setattr(self, name, value)
 
 
-@strawberry.type(is_input=True)
+@strawberry.input
 class Equals:
     __annotations__ = {name: Optional[types[name]] for name in index}
     locals().update(dict.fromkeys(index))
     __init__ = __init__
 
 
-@strawberry.type(is_input=True)
+@strawberry.input
 class IsIn:
     __annotations__ = {name: Optional[List[types[name]]] for name in index}  # type: ignore
     locals().update(dict.fromkeys(index))
@@ -79,85 +53,185 @@ for cls in {types[name] for name in index}:
         'include_lower': Optional[bool],
         'include_upper': Optional[bool],
     }
-    ranges[cls] = strawberry.type(type(name, (), namespace), is_input=True)
+    ranges[cls] = strawberry.input(type(name, (), namespace))
 
 
-@strawberry.type(is_input=True)
+@strawberry.input
 class Range:
     __annotations__ = {name: Optional[ranges[types[name]]] for name in index}
     locals().update(dict.fromkeys(index))
     __init__ = __init__
 
 
-@strawberry.type
-class IntColumns:
-    __annotations__ = {name: List[int] for name in types}  # type: ignore
-    locals().update(dict.fromkeys(types, ()))
+def unique(self, info):
+    if 'counts' in selections(*info.field_nodes):
+        values, counts = C.value_counts(self.array).flatten()
+    else:
+        values, counts = C.unique(self.array), pa.array([])
+    return values.to_pylist(), counts.to_pylist()
 
 
 @strawberry.type
-class Uniques:
-    values: Columns
-    counts: IntColumns
+class IntUnique:
+    """unique ints"""
+
+    values: List[int]
+    counts: List[int]
+
+    @strawberry.field
+    def length(self) -> int:
+        """number of rows"""
+        return len(self.values)
 
 
 @strawberry.type
-class Query:
-    @strawberry.field
-    def count(self, info) -> int:
-        """total row count"""
-        return len(table)
+class IntColumn:
+    """column of ints"""
+
+    def __init__(self, array):
+        self.array = array
 
     @strawberry.field
-    def null_count(self, info) -> Counts:
-        """null value counts"""
-        data = T.null_count(select(info))
-        return Counts(**data)  # type: ignore
+    def values(self) -> List[int]:
+        """list of values"""
+        return self.array.to_pylist()
 
     @strawberry.field
-    def slice(self, info, offset: int = 0, length: int = None) -> Columns:
-        """Return table slice."""
-        data = select(info).slice(offset, length)
-        return Columns(**data.to_pydict())  # type: ignore
+    def sum(self) -> int:
+        """sum of values"""
+        return C.sum(self.array)
 
     @strawberry.field
-    def unique(self, info) -> Uniques:
-        """unique values and optionally counts"""
-        names = selections(*info.field_nodes)
-        counts = dict.fromkeys(names.get('counts', []))
-        values = dict.fromkeys(set(names.get('values', [])) - set(counts))
-        data = T.unique(T.select(table, *values))
-        for name, value in data.items():
-            values[name] = value.to_pylist()
-        data = T.unique(T.select(table, *counts), counts=True)
-        for name, value_counts in data.items():
-            values[name], counts[name] = map(pa.Array.to_pylist, value_counts.flatten())
-        return Uniques(Columns(**values), IntColumns(**counts))  # type: ignore
-
-    @strawberry.field
-    def sum(self, info) -> Scalars:
-        """sum of columns"""
-        data = T.sum(select(info))
-        return Scalars(**data)  # type: ignore
-
-    @strawberry.field
-    def min(self, info) -> Scalars:
+    def min(self) -> int:
         """min of columns"""
-        data = T.min(select(info))
-        return Scalars(**data)  # type: ignore
+        return C.min(self.array)
 
     @strawberry.field
-    def max(self, info) -> Scalars:
+    def max(self) -> int:
         """max of columns"""
-        data = T.max(select(info))
-        return Scalars(**data)  # type: ignore
+        return C.max(self.array)
+
+    @strawberry.field
+    def unique(self, info) -> IntUnique:
+        """unique values and counts"""
+        return IntUnique(*unique(self, info))
+
+
+@strawberry.type
+class FloatColumn:
+    """column of floats"""
+
+    def __init__(self, array):
+        self.array = array
+
+    @strawberry.field
+    def values(self) -> List[float]:
+        """list of values"""
+        return self.array.to_pylist()
+
+    @strawberry.field
+    def sum(self) -> float:
+        """sum of values"""
+        return C.sum(self.array)
+
+    @strawberry.field
+    def min(self) -> float:
+        """min of columns"""
+        return C.min(self.array)
+
+    @strawberry.field
+    def max(self) -> float:
+        """max of columns"""
+        return C.max(self.array)
+
+
+@strawberry.type
+class StringUnique:
+    """unique strings"""
+
+    values: List[str]
+    counts: List[int]
+    length = IntUnique.length
+
+
+@strawberry.type
+class StringColumn:
+    """column of strings"""
+
+    def __init__(self, array):
+        self.array = array
+
+    @strawberry.field
+    def values(self) -> List[str]:
+        """list of values"""
+        return self.array.to_pylist()
+
+    @strawberry.field
+    def min(self) -> str:
+        """min of columns"""
+        return C.min(self.array)
+
+    @strawberry.field
+    def max(self) -> str:
+        """max of columns"""
+        return C.max(self.array)
+
+    @strawberry.field
+    def unique(self, info) -> StringUnique:
+        """unique values and counts"""
+        return StringUnique(*unique(self, info))
+
+
+column_map = {
+    int: IntColumn,
+    float: FloatColumn,
+    str: StringColumn,
+}
+
+
+def resolver(name):
+    column = column_map[types[name]]
+
+    def method(self) -> column:
+        return column(self.table[name])
+
+    return strawberry.field(method, description=column.__doc__)
+
+
+@strawberry.type
+class Columns:
+    locals().update({name: resolver(name) for name in types})
+
+    def __init__(self, table):
+        self.table = table
+
+
+@strawberry.type
+class Table:
+    def __init__(self, table):
+        self.table = table
+
+    @strawberry.field
+    def length(self) -> int:
+        """number of rows"""
+        return len(self.table)
+
+    @strawberry.field
+    def slice(self, offset: int = 0, length: int = None) -> Columns:
+        """Return table slice."""
+        return Columns(self.table.slice(offset, length))
+
+
+@strawberry.type
+class Indexed(Table):
+    def __init__(self, table):
+        self.table = table
 
     @strawberry.field
     def search(
         self, info, equals: Equals = Equals(), isin: IsIn = IsIn(), range: Range = Range(),
-    ) -> Columns:  # type: ignore
+    ) -> Table:
         f"""Return table with matching values for index: {index}.
-
         The values are matched in index order.
         Only one `range` or `isin` query is allowed, and applied last.
         """
@@ -167,16 +241,17 @@ class Query:
         names = list(equals.__dict__) + names
         if names != index[: len(names)]:
             raise ValueError(f"{names} is not a prefix of index: {index}")
-        data = table
+        table = self.table
         for name in equals.__dict__:
-            data = T.isin(data, name, getattr(equals, name))
+            table = T.isin(table, name, getattr(equals, name))
         for name in isin.__dict__:
-            data = T.isin(data, name, *getattr(isin, name))
+            table = T.isin(table, name, *getattr(isin, name))
         for name in range.__dict__:
-            data = T.range(data, name, **getattr(range, name).__dict__)
-        return Columns(**select(info, data).to_pydict())  # type: ignore
+            table = T.range(table, name, **getattr(range, name).__dict__)
+        return Table(table)
 
 
+Query = Indexed if index else Table
 schema = strawberry.Schema(query=Query)
 app = Starlette(debug=DEBUG)
-app.add_route('/graphql', strawberry.asgi.GraphQL(schema, debug=DEBUG))
+app.add_route('/graphql', strawberry.asgi.GraphQL(schema, root_value=Query(table), debug=DEBUG))
