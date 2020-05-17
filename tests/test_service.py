@@ -51,7 +51,8 @@ def test_strings(client):
 
 
 def test_search(client):
-    data = client.execute('{ search { length } }')
+    data = client.execute('{ index search { length } }')
+    assert data['index'] == ['zipcode']
     assert data['search']['length'] == 41700
     data = client.execute('{ search(equals: {}) { length } }')
     assert data['search']['length'] == 41700
@@ -77,6 +78,8 @@ def test_search(client):
     )
     assert data == {'search': {'slice': {'zipcode': {'values': [544, 601]}}}}
 
+    data = client.execute('{ search(isin: {}) { length } }')
+    assert data['search']['length'] == 41700
     data = client.execute('{ search(isin: {zipcode: []}) { length } }')
     assert data == {'search': {'length': 0}}
     data = client.execute('{ search(isin: {zipcode: [0]}) { length } }')

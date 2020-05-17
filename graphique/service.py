@@ -17,7 +17,8 @@ def selections(node):
     return {node.name.value: selections(node) for node in nodes}
 
 
-def __init__(self, **kwargs):  # workaround for default inputs being overridden
+def omit(self, **kwargs):
+    """Omit nulls for input types."""
     for name, value in kwargs.items():
         if value is not None:
             setattr(self, name, value)
@@ -26,41 +27,53 @@ def __init__(self, **kwargs):  # workaround for default inputs being overridden
 @strawberry.input
 class Equals:
     __annotations__ = {name: Optional[types[name]] for name in index}
-    locals().update(dict.fromkeys(index))
-    __init__ = __init__
+    __init__ = omit
 
 
 @strawberry.input
 class IsIn:
     __annotations__ = {name: Optional[List[types[name]]] for name in index}  # type: ignore
-    locals().update(dict.fromkeys(index))
-    __init__ = __init__
+    __init__ = omit
 
 
-ranges = {}
-namespace = {
-    'lower': None,
-    'upper': None,
-    'include_lower': True,
-    'include_upper': False,
-    '__init__': __init__,
+@strawberry.input
+class IntRange:
+    lower: Optional[int]
+    upper: Optional[int]
+    include_lower: bool = True
+    include_upper: bool = False
+
+
+@strawberry.input
+class FloatRange:
+    lower: Optional[float]
+    upper: Optional[float]
+    include_lower: bool = True
+    include_upper: bool = False
+
+
+@strawberry.input
+class StringRange:
+    lower: Optional[str]
+    upper: Optional[str]
+    include_lower: bool = True
+    include_upper: bool = False
+
+
+ranges = {
+    int: IntRange,
+    float: FloatRange,
+    str: StringRange,
 }
-for cls in {types[name] for name in index}:
-    name = cls.__name__.capitalize() + 'Range'
-    namespace['__annotations__'] = {  # type: ignore
-        'lower': Optional[cls],
-        'upper': Optional[cls],
-        'include_lower': Optional[bool],
-        'include_upper': Optional[bool],
-    }
-    ranges[cls] = strawberry.input(type(name, (), namespace))
+for rng in ranges.values():
+    rng.graphql_type.fields['includeLower'].default_value = True  # type: ignore
+    rng.graphql_type.fields['includeUpper'].default_value = False  # type: ignore
 
 
 @strawberry.input
 class Range:
     __annotations__ = {name: Optional[ranges[types[name]]] for name in index}
-    locals().update(dict.fromkeys(index))
-    __init__ = __init__
+    __init__ = omit
 
 
 def unique(self, info):
@@ -218,7 +231,7 @@ class Table:
 
     @strawberry.field
     def slice(self, offset: int = 0, length: int = None) -> Columns:
-        """Return table slice."""
+        """Return table slice with column fields."""
         return Columns(self.table.slice(offset, length))
 
 
@@ -228,10 +241,15 @@ class Indexed(Table):
         self.table = table
 
     @strawberry.field
+    def index(self) -> List[str]:
+        """indexed columns"""
+        return index
+
+    @strawberry.field
     def search(
         self, info, equals: Equals = Equals(), isin: IsIn = IsIn(), range: Range = Range(),
     ) -> Table:
-        f"""Return table with matching values for index: {index}.
+        """Return table with matching values for index.
         The values are matched in index order.
         Only one `range` or `isin` query is allowed, and applied last.
         """
