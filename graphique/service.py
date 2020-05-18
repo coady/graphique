@@ -25,7 +25,7 @@ def omit(self, **kwargs):
 
 
 @strawberry.input
-class Equals:
+class Equal:
     __annotations__ = {name: Optional[types[name]] for name in index}
     __init__ = omit
 
@@ -247,21 +247,21 @@ class Indexed(Table):
 
     @strawberry.field
     def search(
-        self, info, equals: Equals = Equals(), isin: IsIn = IsIn(), range: Range = Range(),
+        self, info, equal: Equal = Equal(), isin: IsIn = IsIn(), range: Range = Range(),
     ) -> Table:
-        """Return table with matching values for index.
+        """Return table with matching values for `index`.
         The values are matched in index order.
         Only one `range` or `isin` query is allowed, and applied last.
         """
         names = list(isin.__dict__) + list(range.__dict__)
         if len(names) > 1:
             raise ValueError(f"only one multi-valued selection allowed: {names}")
-        names = list(equals.__dict__) + names
+        names = list(equal.__dict__) + names
         if names != index[: len(names)]:
             raise ValueError(f"{names} is not a prefix of index: {index}")
         table = self.table
-        for name in equals.__dict__:
-            table = T.isin(table, name, getattr(equals, name))
+        for name in equal.__dict__:
+            table = T.isin(table, name, getattr(equal, name))
         for name in isin.__dict__:
             table = T.isin(table, name, *getattr(isin, name))
         for name in range.__dict__:

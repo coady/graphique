@@ -62,6 +62,12 @@ class Chunk:
         (indices,) = np.nonzero(np.equal(self.dictionary, value))
         return np.equal(self.indices, *indices) if len(indices) else np.full(len(self), False)
 
+    def isin(self, values) -> np.ndarray:
+        if not isinstance(self, pa.DictionaryArray):
+            return np.isin(self, values)
+        (indices,) = np.nonzero(np.isin(self.dictionary, values))
+        return np.isin(self.indices, indices)
+
 
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
@@ -78,6 +84,10 @@ class Column(pa.ChunkedArray):
     def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
         return pa.chunked_array(Column.map(self, partial(Chunk.equal, value=value)))
+
+    def isin(self, values) -> pa.ChunkedArray:
+        """Return boolean mask array which matches any value."""
+        return pa.chunked_array(Column.map(self, partial(Chunk.isin, values=values)))
 
     def take(self, indices: pa.ChunkedArray) -> pa.ChunkedArray:
         """Return array with indexed elements."""

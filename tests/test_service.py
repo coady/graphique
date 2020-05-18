@@ -54,9 +54,9 @@ def test_search(client):
     data = client.execute('{ index search { length } }')
     assert data['index'] == ['zipcode']
     assert data['search']['length'] == 41700
-    data = client.execute('{ search(equals: {}) { length } }')
+    data = client.execute('{ search(equal: {}) { length } }')
     assert data['search']['length'] == 41700
-    data = client.execute('{ search(equals: {zipcode: 501}) { slice { zipcode { values } } } }')
+    data = client.execute('{ search(equal: {zipcode: 501}) { slice { zipcode { values } } } }')
     assert data == {'search': {'slice': {'zipcode': {'values': [501]}}}}
 
     data = client.execute('{ search(range: {}) { length } }')
@@ -91,8 +91,8 @@ def test_search(client):
     assert data == {'search': {'slice': {'zipcode': {'values': [501, 601]}}}}
 
     with pytest.raises(ValueError, match="not a prefix"):
-        client.execute('{ search(equals: {zipcode: 0}, range: {zipcode: {}}) { length } }')
+        client.execute('{ search(equal: {zipcode: 0}, range: {zipcode: {}}) { length } }')
     with pytest.raises(ValueError, match="not a prefix"):
-        client.execute('{ search(equals: {zipcode: 0}, isin: {zipcode: []}) { length } }')
+        client.execute('{ search(equal: {zipcode: 0}, isin: {zipcode: []}) { length } }')
     with pytest.raises(ValueError, match="only one"):
         client.execute('{ search(range: {zipcode: {}}, isin: {zipcode: []}) { length } }')

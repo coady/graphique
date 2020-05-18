@@ -46,6 +46,7 @@ def test_membership():
 def test_filter(table):
     array = table['state'].dictionary_encode()
     mask = C.equal(array, 'CA')
+    assert mask == C.isin(array, ['CA']) == C.isin(table['state'], ['CA'])
     assert len(array.filter(mask)) == 2647
 
     tbl = T.filter(table, city=partial(np.equal, 'Mountain View'))
