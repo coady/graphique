@@ -3,6 +3,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
+from strawberry.utils.arguments import is_unset
 from .core import Column as C, Table as T
 from .settings import DEBUG, INDEX, MMAP, PARQUET_PATH
 
@@ -17,23 +18,14 @@ def selections(node):
     return {node.name.value: selections(node) for node in nodes}
 
 
-def omit(self, **kwargs):
-    """Omit nulls for input types."""
-    for name, value in kwargs.items():
-        if value is not None:
-            setattr(self, name, value)
-
-
 @strawberry.input
 class Equal:
     __annotations__ = {name: Optional[types[name]] for name in index}
-    __init__ = omit
 
 
 @strawberry.input
 class IsIn:
     __annotations__ = {name: Optional[List[types[name]]] for name in index}  # type: ignore
-    __init__ = omit
 
 
 @strawberry.input
@@ -65,15 +57,11 @@ ranges = {
     float: FloatRange,
     str: StringRange,
 }
-for rng in ranges.values():
-    rng.graphql_type.fields['includeLower'].default_value = True  # type: ignore
-    rng.graphql_type.fields['includeUpper'].default_value = False  # type: ignore
 
 
 @strawberry.input
 class Range:
     __annotations__ = {name: Optional[ranges[types[name]]] for name in index}
-    __init__ = omit
 
 
 def unique(self, info):
@@ -211,6 +199,14 @@ def resolver(name):
     return strawberry.field(method, description=column.__doc__)
 
 
+def convert(arg, default=None):
+    if is_unset(arg):
+        return default
+    if not hasattr(arg, '__dict__'):
+        return arg
+    return {name: convert(value) for name, value in arg.__dict__.items() if not is_unset(value)}
+
+
 @strawberry.type
 class Columns:
     locals().update({name: resolver(name) for name in types})
@@ -232,7 +228,7 @@ class Table:
     @strawberry.field
     def slice(self, offset: int = 0, length: int = None) -> Columns:
         """Return table slice with column fields."""
-        return Columns(self.table.slice(offset, length))
+        return Columns(self.table.slice(offset, convert(length)))
 
 
 @strawberry.type
@@ -246,26 +242,25 @@ class Indexed(Table):
         return index
 
     @strawberry.field
-    def search(
-        self, info, equal: Equal = Equal(), isin: IsIn = IsIn(), range: Range = Range(),
-    ) -> Table:
+    def search(self, info, equal: Equal = None, isin: IsIn = None, range: Range = None,) -> Table:
         """Return table with matching values for `index`.
         The values are matched in index order.
         Only one `range` or `isin` query is allowed, and applied last.
         """
-        names = list(isin.__dict__) + list(range.__dict__)
+        equals, isins, ranges = (convert(arg, {}) for arg in [equal, isin, range])
+        names = list(isins) + list(ranges)
         if len(names) > 1:
             raise ValueError(f"only one multi-valued selection allowed: {names}")
-        names = list(equal.__dict__) + names
+        names = list(equals) + names
         if names != index[: len(names)]:
             raise ValueError(f"{names} is not a prefix of index: {index}")
         table = self.table
-        for name in equal.__dict__:
-            table = T.isin(table, name, getattr(equal, name))
-        for name in isin.__dict__:
-            table = T.isin(table, name, *getattr(isin, name))
-        for name in range.__dict__:
-            table = T.range(table, name, **getattr(range, name).__dict__)
+        for name in equals:
+            table = T.isin(table, name, equals[name])
+        for name in isins:
+            table = T.isin(table, name, *isins[name])
+        for name in ranges:
+            table = T.range(table, name, **ranges[name])
         return Table(table)
 
 
