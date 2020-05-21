@@ -1,6 +1,4 @@
-from functools import partial
 import pytest
-import numpy as np
 import pyarrow as pa
 from graphique.core import Column as C, Table as T
 
@@ -43,18 +41,13 @@ def test_membership():
     assert C.count(array, 0) == 0 and C.count(array, 1) == 2
 
 
-def test_filter(table):
+def test_functional(table):
     array = table['state'].dictionary_encode()
     mask = C.equal(array, 'CA')
     assert mask == C.isin(array, ['CA']) == C.isin(table['state'], ['CA'])
     assert len(array.filter(mask)) == 2647
-
-    tbl = T.filter(table, city=partial(np.equal, 'Mountain View'))
-    assert len(tbl) == 11
-    assert len(tbl['state'].unique()) == 6
-    tbl = T.filter(table, state=partial(np.equal, 'CA'), city=partial(np.equal, 'Mountain View'))
-    assert len(tbl) == 6
-    assert set(tbl['state']) == {'CA'}
+    assert T.apply(table, len) == dict.fromkeys(table.column_names, 41700)
+    assert T.apply(table, zipcode=len) == {'zipcode': 41700}
 
 
 def test_groupby(table):

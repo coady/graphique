@@ -83,11 +83,11 @@ class Column(pa.ChunkedArray):
 
     def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
-        return pa.chunked_array(Column.map(self, partial(Chunk.equal, value=value)))
+        return Column.mask(self, partial(Chunk.equal, value=value))
 
     def isin(self, values) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
-        return pa.chunked_array(Column.map(self, partial(Chunk.isin, values=values)))
+        return Column.mask(self, partial(Chunk.isin, values=values))
 
     def take(self, indices: pa.ChunkedArray) -> pa.ChunkedArray:
         """Return array with indexed elements."""
@@ -197,8 +197,11 @@ class Table(pa.Table):
 
     threader = futures.ThreadPoolExecutor(max_workers)
 
-    def map(self, func: Callable) -> dict:
-        return dict(zip(self.column_names, Table.threader.map(func, self.columns)))
+    def apply(self, func: Callable = None, **funcs: Callable) -> dict:
+        """Apply a function to all, or selected, columns."""
+        if func is not None:
+            funcs = dict(dict.fromkeys(self.column_names, func), **funcs)
+        return dict(Table.threader.map(lambda name: (name, funcs[name](self[name])), funcs))
 
     def index(self) -> list:
         """Return index column names from pandas metadata."""
@@ -222,11 +225,3 @@ class Table(pa.Table):
         """
         slices = list(Column.find(self[name], *values)) or [slice(0)]
         return pa.concat_tables(self[slc] for slc in slices)
-
-    def filter(self, **predicates: Callable) -> pa.Table:
-        """Return table filtered by applying predicates to columns."""
-        for name in predicates:
-            mask = Column.mask(self[name], predicates[name])
-            data = Table.map(self, partial(pa.ChunkedArray.filter, mask=mask))
-            self = self.from_pydict(data)
-        return self
