@@ -54,45 +54,34 @@ def test_search(client):
     data = client.execute('{ index search { length } }')
     assert data['index'] == ['zipcode']
     assert data['search']['length'] == 41700
-    data = client.execute('{ search(equal: {}) { length } }')
-    assert data['search']['length'] == 41700
-    data = client.execute('{ search(equal: {zipcode: 501}) { slice { zipcode { values } } } }')
+    data = client.execute('{ search(zipcode: {equal: 501}) { slice { zipcode { values } } } }')
     assert data == {'search': {'slice': {'zipcode': {'values': [501]}}}}
 
-    data = client.execute('{ search(range: {}) { length } }')
-    assert data['search']['length'] == 41700
     data = client.execute(
-        '''{ search(range: {zipcode: {lower: 99929}})
+        '''{ search(zipcode: {greaterEqual: 99929})
         { slice { zipcode { values } } } }'''
     )
     assert data == {'search': {'slice': {'zipcode': {'values': [99929, 99950]}}}}
     data = client.execute(
-        '''{ search(range: {zipcode: {upper: 601}})
+        '''{ search(zipcode: {less: 601})
         { slice { zipcode { values } } } }'''
     )
     assert data == {'search': {'slice': {'zipcode': {'values': [501, 544]}}}}
     data = client.execute(
-        '''{ search(range: {zipcode:
-            {lower: 501, upper: 601, includeLower: false, includeUpper: true}})
+        '''{ search(zipcode: {greater: 501, lessEqual: 601})
         { slice { zipcode { values } } } }'''
     )
     assert data == {'search': {'slice': {'zipcode': {'values': [544, 601]}}}}
 
-    data = client.execute('{ search(isin: {}) { length } }')
-    assert data['search']['length'] == 41700
-    data = client.execute('{ search(isin: {zipcode: []}) { length } }')
+    data = client.execute('{ search(zipcode: {isin: []}) { length } }')
     assert data == {'search': {'length': 0}}
-    data = client.execute('{ search(isin: {zipcode: [0]}) { length } }')
+    data = client.execute('{ search(zipcode: {isin: [0]}) { length } }')
     assert data == {'search': {'length': 0}}
     data = client.execute(
-        '''{ search(isin: {zipcode: [501, 601]})
+        '''{ search(zipcode: {isin: [501, 601]})
         { slice { zipcode { values } } } }'''
     )
     assert data == {'search': {'slice': {'zipcode': {'values': [501, 601]}}}}
 
-    with pytest.raises(ValueError, match="not a prefix"):
-        client.execute('{ search(equal: {zipcode: 0}, range: {zipcode: {}}) { length } }')
-    with pytest.raises(ValueError, match="not a prefix"):
-        client.execute('{ search(equal: {zipcode: 0}, isin: {zipcode: []}) { length } }')
-    with pytest.raises(ValueError, match="only one"):
-        client.execute('{ search(range: {zipcode: {}}, isin: {zipcode: []}) { length } }')
+    with pytest.raises(ValueError, match="Unknown argument"):
+        client.execute('{ search(state: "") { length } }')

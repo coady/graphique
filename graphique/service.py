@@ -1,4 +1,5 @@
 from typing import List, Optional
+import graphql
 import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
@@ -9,7 +10,8 @@ from .settings import DEBUG, INDEX, MMAP, PARQUET_PATH
 
 table = pq.read_table(PARQUET_PATH, memory_map=MMAP)
 types = T.types(table)
-index = list(INDEX) or T.index(table)
+indexed = list(INDEX) or T.index(table)
+ops = 'equal', 'less', 'less_equal', 'greater', 'greater_equal'
 
 
 def selections(node):
@@ -19,49 +21,32 @@ def selections(node):
 
 
 @strawberry.input
-class Equal:
-    __annotations__ = {name: Optional[types[name]] for name in index}
+class IntQuery:
+    __annotations__ = dict.fromkeys(ops, Optional[int])
+    isin: Optional[List[int]]
 
 
 @strawberry.input
-class IsIn:
-    __annotations__ = {name: Optional[List[types[name]]] for name in index}  # type: ignore
+class FloatQuery:
+    __annotations__ = dict.fromkeys(ops, Optional[float])
+    isin: Optional[List[float]]
 
 
 @strawberry.input
-class IntRange:
-    lower: Optional[int]
-    upper: Optional[int]
-    include_lower: bool = True
-    include_upper: bool = False
+class StringQuery:
+    __annotations__ = dict.fromkeys(ops, Optional[str])
+    isin: Optional[List[str]]
 
 
-@strawberry.input
-class FloatRange:
-    lower: Optional[float]
-    upper: Optional[float]
-    include_lower: bool = True
-    include_upper: bool = False
-
-
-@strawberry.input
-class StringRange:
-    lower: Optional[str]
-    upper: Optional[str]
-    include_lower: bool = True
-    include_upper: bool = False
-
-
-ranges = {
-    int: IntRange,
-    float: FloatRange,
-    str: StringRange,
+query_map = {
+    int: IntQuery,
+    float: FloatQuery,
+    str: StringQuery,
 }
-
-
-@strawberry.input
-class Range:
-    __annotations__ = {name: Optional[ranges[types[name]]] for name in index}
+query_map = {
+    name: graphql.GraphQLArgument(query_map[types[name]].graphql_type)  # type: ignore
+    for name in types
+}
 
 
 def unique(self, info):
@@ -200,11 +185,7 @@ def resolver(name):
 
 
 def convert(arg, default=None):
-    if is_unset(arg):
-        return default
-    if not hasattr(arg, '__dict__'):
-        return arg
-    return {name: convert(value) for name, value in arg.__dict__.items() if not is_unset(value)}
+    return default if is_unset(arg) else arg
 
 
 @strawberry.type
@@ -232,39 +213,48 @@ class Table:
 
 
 @strawberry.type
-class Indexed(Table):
+class IndexedTable(Table):
     def __init__(self, table):
         self.table = table
 
     @strawberry.field
     def index(self) -> List[str]:
         """indexed columns"""
-        return index
+        return indexed
 
     @strawberry.field
-    def search(self, info, equal: Equal = None, isin: IsIn = None, range: Range = None,) -> Table:
-        """Return table with matching values for `index`.
-        The values are matched in index order.
-        Only one `range` or `isin` query is allowed, and applied last.
+    def search(self, **queries) -> Table:
+        """Return table with matching values for compound `index`.
+        Queries must be a prefix of the `index`.
+        Only one non-equal query is allowed, and applied last.
         """
-        equals, isins, ranges = (convert(arg, {}) for arg in [equal, isin, range])
-        names = list(isins) + list(ranges)
-        if len(names) > 1:
-            raise ValueError(f"only one multi-valued selection allowed: {names}")
-        names = list(equals) + names
-        if names != index[: len(names)]:
-            raise ValueError(f"{names} is not a prefix of index: {index}")
         table = self.table
-        for name in equals:
-            table = T.isin(table, name, equals[name])
-        for name in isins:
-            table = T.isin(table, name, *isins[name])
-        for name in ranges:
-            table = T.range(table, name, **ranges[name])
+        for name in indexed:
+            query = queries.pop(name, None)
+            if query is None:
+                break
+            if 'equal' in query:
+                table = T.isin(table, name, query.pop('equal'))
+            if query and queries:  # pragma: no cover
+                raise ValueError(f"non-equal query for {name} not last; have {queries} remaining")
+            if 'isin' in query:
+                table = T.isin(table, name, *query['isin'])
+            if 'less' in query:
+                table = T.range(table, name, upper=query['less'])
+            if 'lessEqual' in query:
+                table = T.range(table, name, upper=query['lessEqual'], include_upper=True)
+            if 'greater' in query:
+                table = T.range(table, name, lower=query['greater'], include_lower=False)
+            if 'greaterEqual' in query:
+                table = T.range(table, name, lower=query['greaterEqual'])
+        if queries:  # pragma: no cover
+            raise ValueError(f"expected query for {name}; have {queries} remaining")
         return Table(table)
 
+    search.graphql_type.args.update({name: query_map[name] for name in indexed})
 
-Query = Indexed if index else Table
+
+Query = IndexedTable if indexed else Table
 schema = strawberry.Schema(query=Query)
 app = Starlette(debug=DEBUG)
 app.add_route('/graphql', strawberry.asgi.GraphQL(schema, root_value=Query(table), debug=DEBUG))
