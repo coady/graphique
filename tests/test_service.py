@@ -85,3 +85,14 @@ def test_search(client):
 
     with pytest.raises(ValueError, match="Unknown argument"):
         client.execute('{ search(state: "") { length } }')
+
+
+def test_filter(client):
+    data = client.execute('{ filter { length } }')
+    assert data['filter']['length'] == 41700
+    data = client.execute('{ filter(city: {equal: "Mountain View"}) { length } }')
+    assert data['filter']['length'] == 11
+    data = client.execute(
+        '{ filter(city: {equal: "Mountain View"}, state: {lessEqual: "CA"}) { length } }'
+    )
+    assert data['filter']['length'] == 7

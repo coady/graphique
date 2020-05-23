@@ -1,10 +1,11 @@
 from typing import List, Optional
 import graphql
+import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
-from strawberry.utils.arguments import is_unset
+from strawberry.utils.str_converters import to_snake_case
 from .core import Column as C, Table as T
 from .settings import DEBUG, INDEX, MMAP, PARQUET_PATH
 
@@ -22,18 +23,24 @@ def selections(node):
 
 @strawberry.input
 class IntQuery:
+    """predicates for ints"""
+
     __annotations__ = dict.fromkeys(ops, Optional[int])
     isin: Optional[List[int]]
 
 
 @strawberry.input
 class FloatQuery:
+    """predicates for floats"""
+
     __annotations__ = dict.fromkeys(ops, Optional[float])
     isin: Optional[List[float]]
 
 
 @strawberry.input
 class StringQuery:
+    """predicates for strings"""
+
     __annotations__ = dict.fromkeys(ops, Optional[str])
     isin: Optional[List[str]]
 
@@ -184,12 +191,10 @@ def resolver(name):
     return strawberry.field(method, description=column.__doc__)
 
 
-def convert(arg, default=None):
-    return default if is_unset(arg) else arg
-
-
 @strawberry.type
 class Columns:
+    """fields for each column"""
+
     locals().update({name: resolver(name) for name in types})
 
     def __init__(self, table):
@@ -198,6 +203,8 @@ class Columns:
 
 @strawberry.type
 class Table:
+    """a column-oriented table"""
+
     def __init__(self, table):
         self.table = table
 
@@ -209,11 +216,30 @@ class Table:
     @strawberry.field
     def slice(self, offset: int = 0, length: int = None) -> Columns:
         """Return table slice with column fields."""
-        return Columns(self.table.slice(offset, convert(length)))
+        return Columns(self.table.slice(offset, length))
+
+    @strawberry.field
+    def filter(self, **queries) -> 'Table':
+        """Return table with matching rows."""
+        table = self.table
+        for name, query in queries.items():
+            for op, value in query.items():
+                if hasattr(C, op):
+                    mask = getattr(C, op)(table[name], value)
+                else:
+                    ufunc = getattr(np, to_snake_case(op))
+                    mask = C.mask(table[name], lambda ch: ufunc(ch, value))
+                table = table.filter(mask)
+        return Table(table)
+
+
+Table.filter.graphql_type.args.update(query_map)
 
 
 @strawberry.type
 class IndexedTable(Table):
+    """a table sorted by a composite index"""
+
     def __init__(self, table):
         self.table = table
 
@@ -239,14 +265,14 @@ class IndexedTable(Table):
                 raise ValueError(f"non-equal query for {name} not last; have {queries} remaining")
             if 'isin' in query:
                 table = T.isin(table, name, *query['isin'])
-            if 'less' in query:
-                table = T.range(table, name, upper=query['less'])
-            if 'lessEqual' in query:
-                table = T.range(table, name, upper=query['lessEqual'], include_upper=True)
-            if 'greater' in query:
-                table = T.range(table, name, lower=query['greater'], include_lower=False)
-            if 'greaterEqual' in query:
-                table = T.range(table, name, lower=query['greaterEqual'])
+            lower, upper = query.get('greater'), query.get('less')
+            includes = {'include_lower': False, 'include_upper': False}
+            if 'greaterEqual' in query and (lower is None or query['greaterEqual'] > lower):
+                lower, includes['include_lower'] = query['greaterEqual'], True
+            if 'lessEqual' in query and (upper is None or query['lessEqual'] > upper):
+                upper, includes['include_upper'] = query['lessEqual'], True
+            if {lower, upper} != {None}:
+                table = T.range(table, name, lower, upper, **includes)
         if queries:  # pragma: no cover
             raise ValueError(f"expected query for {name}; have {queries} remaining")
         return Table(table)
