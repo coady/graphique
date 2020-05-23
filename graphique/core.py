@@ -1,9 +1,9 @@
 import bisect
 import collections
+import functools
 import json
 import os
 from concurrent import futures
-from functools import partial
 from typing import Callable, Iterable, Iterator
 import numpy as np
 import pyarrow as pa
@@ -36,6 +36,11 @@ class Compare:
 
     def __gt__(self, other):
         return self.value > other.as_py()
+
+
+def rpartial(func, *values):
+    """Return function with right arguments partially bound."""
+    return lambda arg: func(arg, *values)
 
 
 class Chunk:
@@ -77,17 +82,24 @@ class Column(pa.ChunkedArray):
     def map(self, func: Callable, *iterables: Iterable) -> Iterator:
         return Column.threader.map(func, self.iterchunks(), *iterables)
 
+    def predicate(**query):
+        """Return predicate ufunc by intersecting operators."""
+        ufuncs = [rpartial(getattr(Chunk, op, getattr(np, op)), query[op]) for op in query]
+        if not ufuncs:
+            return np.asarray
+        return lambda ch: functools.reduce(np.bitwise_and, (ufunc(ch) for ufunc in ufuncs))
+
     def mask(self, predicate: Callable = np.asarray) -> pa.ChunkedArray:
         """Return boolean mask array by applying predicate."""
         return pa.chunked_array(Column.map(self, lambda ch: np.asarray(predicate(ch), bool)))
 
     def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
-        return Column.mask(self, partial(Chunk.equal, value=value))
+        return Column.mask(self, rpartial(Chunk.equal, value))
 
     def isin(self, values) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
-        return Column.mask(self, partial(Chunk.isin, values=values))
+        return Column.mask(self, rpartial(Chunk.isin, values))
 
     def take(self, indices: pa.ChunkedArray) -> pa.ChunkedArray:
         """Return array with indexed elements."""
@@ -129,7 +141,7 @@ class Column(pa.ChunkedArray):
 
     def contains(self, value) -> bool:
         """Return whether value is in array."""
-        return Column.any(self, partial(Chunk.equal, value=value))
+        return Column.any(self, rpartial(Chunk.equal, value))
 
     def count(self, value) -> int:
         """Return number of occurrences of value.

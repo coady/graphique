@@ -1,6 +1,5 @@
 from typing import List, Optional
 import graphql
-import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
@@ -56,12 +55,31 @@ query_map = {
 }
 
 
-def unique(self, info):
-    if 'counts' in selections(*info.field_nodes):
-        values, counts = C.value_counts(self.array).flatten()
-    else:
-        values, counts = C.unique(self.array), pa.array([])
-    return values.to_pylist(), counts.to_pylist()
+class BaseColumn:
+    array: pa.ChunkedArray
+
+    def unique(self, info):
+        if 'counts' in selections(*info.field_nodes):
+            values, counts = C.value_counts(self.array).flatten()
+        else:
+            values, counts = C.unique(self.array), pa.array([])
+        return values.to_pylist(), counts.to_pylist()
+
+    def predicate(**query):
+        return C.predicate(**{to_snake_case(op): query[op] for op in query})
+
+    def count(self, **query) -> int:
+        """Return number of matching values."""
+        mask = C.mask(self.array, BaseColumn.predicate(**query)) if query else self.array
+        return C.count(mask, True)
+
+    def any(self, **query) -> bool:
+        """Return whether any value evaluates to True."""
+        return C.any(self.array, BaseColumn.predicate(**query))
+
+    def all(self, **query) -> bool:
+        """Return whether all values evaluate to True."""
+        return C.all(self.array, BaseColumn.predicate(**query))
 
 
 @strawberry.type
@@ -80,6 +98,13 @@ class IntUnique:
 @strawberry.type
 class IntColumn:
     """column of ints"""
+
+    count = strawberry.field(BaseColumn.count)
+    count.graphql_type.args.update(IntQuery.graphql_type.fields)  # type: ignore
+    any = strawberry.field(BaseColumn.any)
+    any.graphql_type.args.update(IntQuery.graphql_type.fields)  # type: ignore
+    all = strawberry.field(BaseColumn.all)
+    all.graphql_type.args.update(IntQuery.graphql_type.fields)  # type: ignore
 
     def __init__(self, array):
         self.array = array
@@ -107,12 +132,19 @@ class IntColumn:
     @strawberry.field
     def unique(self, info) -> IntUnique:
         """unique values and counts"""
-        return IntUnique(*unique(self, info))
+        return IntUnique(*BaseColumn.unique(self, info))  # type: ignore
 
 
 @strawberry.type
 class FloatColumn:
     """column of floats"""
+
+    count = strawberry.field(BaseColumn.count)
+    count.graphql_type.args.update(FloatQuery.graphql_type.fields)  # type: ignore
+    any = strawberry.field(BaseColumn.any)
+    any.graphql_type.args.update(FloatQuery.graphql_type.fields)  # type: ignore
+    all = strawberry.field(BaseColumn.all)
+    all.graphql_type.args.update(FloatQuery.graphql_type.fields)  # type: ignore
 
     def __init__(self, array):
         self.array = array
@@ -151,6 +183,13 @@ class StringUnique:
 class StringColumn:
     """column of strings"""
 
+    count = strawberry.field(BaseColumn.count)
+    count.graphql_type.args.update(StringQuery.graphql_type.fields)  # type: ignore
+    any = strawberry.field(BaseColumn.any)
+    any.graphql_type.args.update(StringQuery.graphql_type.fields)  # type: ignore
+    all = strawberry.field(BaseColumn.all)
+    all.graphql_type.args.update(StringQuery.graphql_type.fields)  # type: ignore
+
     def __init__(self, array):
         self.array = array
 
@@ -172,7 +211,7 @@ class StringColumn:
     @strawberry.field
     def unique(self, info) -> StringUnique:
         """unique values and counts"""
-        return StringUnique(*unique(self, info))
+        return StringUnique(*BaseColumn.unique(self, info))  # type: ignore
 
 
 column_map = {
@@ -216,20 +255,15 @@ class Table:
     @strawberry.field
     def slice(self, offset: int = 0, length: int = None) -> Columns:
         """Return table slice with column fields."""
-        return Columns(self.table.slice(offset, length))
+        # ARROW-8911: slicing an empty table may crash
+        return Columns(self.table and self.table.slice(offset, length))
 
     @strawberry.field
     def filter(self, **queries) -> 'Table':
         """Return table with matching rows."""
         table = self.table
         for name, query in queries.items():
-            for op, value in query.items():
-                if hasattr(C, op):
-                    mask = getattr(C, op)(table[name], value)
-                else:
-                    ufunc = getattr(np, to_snake_case(op))
-                    mask = C.mask(table[name], lambda ch: ufunc(ch, value))
-                table = table.filter(mask)
+            table = table.filter(C.mask(table[name], BaseColumn.predicate(**query)))
         return Table(table)
 
 

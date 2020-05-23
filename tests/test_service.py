@@ -19,6 +19,19 @@ def test_ints(client):
     assert zipcodes['max'] == 99950
     assert len(zipcodes['unique']['values']) == 41700
     assert set(zipcodes['unique']['counts']) == {1}
+    data = client.execute('{ slice { zipcode { truthy: count count(equal: 0) } } }')
+    zipcodes = data['slice']['zipcode']
+    assert zipcodes['truthy'] == 41700
+    assert zipcodes['count'] == 0
+    data = client.execute('{ slice { zipcode { count(equal: 501) } } }')
+    zipcodes = data['slice']['zipcode']
+    assert zipcodes['count'] == 1
+    data = client.execute('{ slice { zipcode { any all } } }')
+    zipcodes = data['slice']['zipcode']
+    assert zipcodes['any'] and zipcodes['all']
+    data = client.execute('{ slice { zipcode { any(greater: 1000) all(greater: 1000) } } }')
+    zipcodes = data['slice']['zipcode']
+    assert zipcodes['any'] and not zipcodes['all']
 
 
 def test_floats(client):
@@ -29,6 +42,16 @@ def test_floats(client):
     longitudes = data['slice']['longitude']
     assert longitudes['min'] == pytest.approx(-174.21333)
     assert longitudes['max'] == pytest.approx(-65.301389)
+    data = client.execute('{ slice { latitude { truthy: count count(equal: 0.0) } } }')
+    latitudes = data['slice']['latitude']
+    assert latitudes['truthy'] == 41700
+    assert latitudes['count'] == 0
+    data = client.execute('{ slice { latitude { any all } } }')
+    latitudes = data['slice']['latitude']
+    assert latitudes['any'] and latitudes['all']
+    data = client.execute('{ slice { latitude { any(greater: 45.0) all(greater: 45.0) } } }')
+    latitudes = data['slice']['latitude']
+    assert latitudes['any'] and not latitudes['all']
 
 
 def test_strings(client):
@@ -48,6 +71,19 @@ def test_strings(client):
     cities = data['slice']['city']
     assert cities['min'] == 'Aaronsburg'
     assert cities['max'] == 'Zwolle'
+    data = client.execute('{ slice { state { truthy: count count(equal: "") } } }')
+    states = data['slice']['state']
+    assert states['truthy'] == 41700
+    assert states['count'] == 0
+    data = client.execute('{ slice { state { count(equal: "CA") } } }')
+    states = data['slice']['state']
+    assert states['count'] == 2647
+    data = client.execute('{ slice { state { any all } } }')
+    states = data['slice']['state']
+    assert states['any'] and states['all']
+    data = client.execute('{ slice { state { any(greater: "CA") all(greater: "CA") } } }')
+    states = data['slice']['state']
+    assert states['any'] and not states['all']
 
 
 def test_search(client):
@@ -96,3 +132,4 @@ def test_filter(client):
         '{ filter(city: {equal: "Mountain View"}, state: {lessEqual: "CA"}) { length } }'
     )
     assert data['filter']['length'] == 7
+    data = client.execute('{ filter(state: {equal: null}) {slice {state { values } } } }')
