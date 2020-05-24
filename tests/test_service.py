@@ -92,6 +92,8 @@ def test_search(client):
     assert data['search']['length'] == 41700
     data = client.execute('{ search(zipcode: {equal: 501}) { slice { zipcode { values } } } }')
     assert data == {'search': {'slice': {'zipcode': {'values': [501]}}}}
+    data = client.execute('{ search(zipcode: {notEqual: 501}) { length } }')
+    assert data['search']['length'] == 41699
 
     data = client.execute(
         '''{ search(zipcode: {greaterEqual: 99929})
@@ -128,6 +130,8 @@ def test_filter(client):
     assert data['filter']['length'] == 41700
     data = client.execute('{ filter(city: {equal: "Mountain View"}) { length } }')
     assert data['filter']['length'] == 11
+    data = client.execute('{ filter(state: {notEqual: "CA"}) { length } }')
+    assert data['filter']['length'] == 39053
     data = client.execute(
         '{ filter(city: {equal: "Mountain View"}, state: {lessEqual: "CA"}) { length } }'
     )

@@ -30,6 +30,7 @@ def test_chunks():
     chunk = array.chunk(0)
     assert list(C.predicate()(chunk)) == list(chunk)
     assert list(C.predicate(equal="a", less="c")(chunk)) == [True, False, True]
+    assert list(C.predicate(not_equal="a")(chunk)) == [False, True, False]
 
 
 def test_membership():

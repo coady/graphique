@@ -67,6 +67,9 @@ class Chunk:
         (indices,) = np.nonzero(np.equal(self.dictionary, value))
         return np.equal(self.indices, *indices) if len(indices) else np.full(len(self), False)
 
+    def not_equal(self, value) -> np.ndarray:
+        return ~Chunk.equal(self, value)
+
     def isin(self, values) -> np.ndarray:
         if not isinstance(self, pa.DictionaryArray):
             return np.isin(self, values)
@@ -237,3 +240,11 @@ class Table(pa.Table):
         """
         slices = list(Column.find(self[name], *values)) or [slice(0)]
         return pa.concat_tables(self[slc] for slc in slices)
+
+    def not_equal(self, name: str, value) -> pa.Table:
+        """Return rows which don't match the value.
+
+        Assumes the table is sorted by the column name, i.e., indexed.
+        """
+        (slc,) = Column.find(self[name], value)
+        return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # # noqa: E203

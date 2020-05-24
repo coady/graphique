@@ -11,7 +11,7 @@ from .settings import DEBUG, INDEX, MMAP, PARQUET_PATH
 table = pq.read_table(PARQUET_PATH, memory_map=MMAP)
 types = T.types(table)
 indexed = list(INDEX) or T.index(table)
-ops = 'equal', 'less', 'less_equal', 'greater', 'greater_equal'
+ops = 'equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'
 
 
 def selections(node):
@@ -297,6 +297,8 @@ class IndexedTable(Table):
                 table = T.isin(table, name, query.pop('equal'))
             if query and queries:  # pragma: no cover
                 raise ValueError(f"non-equal query for {name} not last; have {queries} remaining")
+            if 'notEqual' in query:
+                table = T.not_equal(table, name, query['notEqual'])
             if 'isin' in query:
                 table = T.isin(table, name, *query['isin'])
             lower, upper = query.get('greater'), query.get('less')
