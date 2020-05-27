@@ -10,17 +10,6 @@ import pyarrow as pa
 from .arrayed import arggroupby  # type: ignore
 
 max_workers = os.cpu_count() or 1  # same default as ProcessPoolExecutor
-type_map = {
-    pa.bool_(): bool,
-    pa.float16(): float,
-    pa.float32(): float,
-    pa.float64(): float,
-    pa.int8(): int,
-    pa.int16(): int,
-    pa.int32(): int,
-    pa.int64(): int,
-    pa.string(): str,
-}
 
 
 class Compare:
@@ -128,11 +117,11 @@ class Column(pa.ChunkedArray):
 
     def min(self):
         """Return min of the values."""
-        return min(Column.map(self, np.min))
+        return min(Column.map(self, np.nanmin))
 
     def max(self):
         """Return max of the values."""
-        return max(Column.map(self, np.max))
+        return max(Column.map(self, np.nanmax))
 
     def any(self, predicate: Callable = np.asarray) -> bool:
         """Return whether any value evaluates to True."""
@@ -164,13 +153,13 @@ class Column(pa.ChunkedArray):
 
     def argmin(self) -> int:
         """Return first index of the minimum value."""
-        values = list(Column.map(self, np.min))
+        values = list(Column.map(self, np.nanmin))
         index = np.argmin(values)
         return Column.where(self, index, values[index])
 
     def argmax(self) -> int:
         """Return first index of the maximum value."""
-        values = list(Column.map(self, np.max))
+        values = list(Column.map(self, np.nanmax))
         index = np.argmax(values)
         return Column.where(self, index, values[index])
 
@@ -220,11 +209,13 @@ class Table(pa.Table):
 
     def index(self) -> list:
         """Return index column names from pandas metadata."""
-        return json.loads(self.schema.metadata.get(b'pandas', b'{}')).get('index_columns', [])
+        metadata = self.schema.metadata or {}
+        return json.loads(metadata.get(b'pandas', b'{}')).get('index_columns', [])
 
     def types(self) -> dict:
         """Return mapping of column types."""
-        return {name: type_map[self[name].type] for name in self.column_names}
+        types = [getattr(col.type, 'value_type', col.type) for col in self.columns]
+        return dict(zip(self.column_names, types))
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.

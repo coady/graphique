@@ -1,0 +1,380 @@
+"""predicates for booleans"""
+input BooleanQuery {
+  equal: Boolean
+  notEqual: Boolean
+}
+
+"""unique booleans"""
+type BooleanSet {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Boolean]!
+}
+
+"""column of booleans"""
+type BooleanColumn {
+  """Return number of matching values."""
+  count(equal: Boolean, notEqual: Boolean): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: Boolean, notEqual: Boolean): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: Boolean, notEqual: Boolean): Boolean!
+
+  """list of values"""
+  values: [Boolean]!
+
+  """unique values and counts"""
+  unique: BooleanSet!
+}
+
+"""predicates for ints"""
+input IntQuery {
+  equal: Int
+  notEqual: Int
+  less: Int
+  lessEqual: Int
+  greater: Int
+  greaterEqual: Int
+  isin: [Int!]
+}
+
+"""unique ints"""
+type IntSet {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Int]!
+}
+
+"""column of ints"""
+type IntColumn {
+  """Return number of matching values."""
+  count(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Boolean!
+
+  """list of values"""
+  values: [Int]!
+
+  """sum of values"""
+  sum: Int!
+
+  """min of columns"""
+  min: Int!
+
+  """max of columns"""
+  max: Int!
+
+  """unique values and counts"""
+  unique: IntSet!
+}
+
+"""predicates for longs"""
+input LongQuery {
+  equal: Long
+  notEqual: Long
+  less: Long
+  lessEqual: Long
+  greater: Long
+  greaterEqual: Long
+  isin: [Long!]
+}
+
+"""unique longs"""
+type LongSet {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Long]!
+}
+
+"""column of longs"""
+type LongColumn {
+  """Return number of matching values."""
+  count(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Boolean!
+
+  """list of values"""
+  values: [Long]!
+
+  """sum of values"""
+  sum: Long!
+
+  """min of columns"""
+  min: Long!
+
+  """max of columns"""
+  max: Long!
+
+  """unique values and counts"""
+  unique: LongSet!
+}
+
+"""predicates for floats"""
+input FloatQuery {
+  equal: Float
+  notEqual: Float
+  less: Float
+  lessEqual: Float
+  greater: Float
+  greaterEqual: Float
+  isin: [Float!]
+}
+
+"""column of floats"""
+type FloatColumn {
+  """Return number of matching values."""
+  count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
+
+  """list of values"""
+  values: [Float]!
+
+  """sum of values"""
+  sum: Float!
+
+  """min of columns"""
+  min: Float!
+
+  """max of columns"""
+  max: Float!
+}
+
+"""predicates for decimals"""
+input DecimalQuery {
+  equal: Decimal
+  notEqual: Decimal
+  less: Decimal
+  lessEqual: Decimal
+  greater: Decimal
+  greaterEqual: Decimal
+  isin: [Decimal!]
+}
+
+"""column of decimals"""
+type DecimalColumn {
+  """Return number of matching values."""
+  count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
+
+  """list of values"""
+  values: [Decimal]!
+
+  """sum of values"""
+  sum: Decimal!
+
+  """min of columns"""
+  min: Decimal!
+
+  """max of columns"""
+  max: Decimal!
+}
+
+"""predicates for dates"""
+input DateQuery {
+  equal: Date
+  notEqual: Date
+  less: Date
+  lessEqual: Date
+  greater: Date
+  greaterEqual: Date
+  isin: [Date!]
+}
+
+"""unique dates"""
+type DateSet {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Date]!
+}
+
+"""column of dates"""
+type DateColumn {
+  """Return number of matching values."""
+  count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
+
+  """list of values"""
+  values: [Date]!
+
+  """min of columns"""
+  min: Date!
+
+  """max of columns"""
+  max: Date!
+
+  """unique values and counts"""
+  unique: DateSet!
+}
+
+"""predicates for timestamps"""
+input TimestampQuery {
+  equal: Timestamp
+  notEqual: Timestamp
+  less: Timestamp
+  lessEqual: Timestamp
+  greater: Timestamp
+  greaterEqual: Timestamp
+  isin: [Timestamp!]
+}
+
+"""column of timestamps"""
+type TimestampColumn {
+  """Return number of matching values."""
+  count(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Boolean!
+
+  """list of values"""
+  values: [Timestamp]!
+
+  """min of columns"""
+  min: Timestamp!
+
+  """max of columns"""
+  max: Timestamp!
+}
+
+"""predicates for times"""
+input TimeQuery {
+  equal: Time
+  notEqual: Time
+  less: Time
+  lessEqual: Time
+  greater: Time
+  greaterEqual: Time
+  isin: [Time!]
+}
+
+"""column of times"""
+type TimeColumn {
+  """Return number of matching values."""
+  count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
+
+  """list of values"""
+  values: [Time]!
+
+  """min of columns"""
+  min: Time!
+
+  """max of columns"""
+  max: Time!
+}
+
+"""predicates for binaries"""
+input BinaryQuery {
+  equal: Binary
+  notEqual: Binary
+  isin: [Binary!]
+}
+
+"""column of binaries"""
+type BinaryColumn {
+  """Return number of matching values."""
+  count(equal: Binary, notEqual: Binary, isin: [Binary!]): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
+
+  """list of values"""
+  values: [Binary]!
+}
+
+"""predicates for strings"""
+input StringQuery {
+  equal: String
+  notEqual: String
+  less: String
+  lessEqual: String
+  greater: String
+  greaterEqual: String
+  isin: [String!]
+}
+
+"""unique dates"""
+type StringSet {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [String]!
+}
+
+"""column of strings"""
+type StringColumn {
+  """Return number of matching values."""
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Long!
+
+  """Return whether any value evaluates to True."""
+  any(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Boolean!
+
+  """Return whether all values evaluate to True."""
+  all(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Boolean!
+
+  """list of values"""
+  values: [String]!
+
+  """min of columns"""
+  min: String!
+
+  """max of columns"""
+  max: String!
+
+  """unique values and counts"""
+  unique: StringSet!
+}

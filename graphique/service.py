@@ -1,223 +1,20 @@
-from typing import List, Optional
+from typing import List
 import graphql
-import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
-from strawberry.utils.str_converters import to_snake_case
 from .core import Column as C, Table as T
+from .models import Long, column_map, query_map, resolvers, type_map
 from .settings import DEBUG, INDEX, MMAP, PARQUET_PATH
 
 table = pq.read_table(PARQUET_PATH, memory_map=MMAP)
-types = T.types(table)
 indexed = list(INDEX) or T.index(table)
-ops = 'equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'
+types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
 
 
-def selections(node):
-    """Return tree of field name selections."""
-    nodes = getattr(node.selection_set, 'selections', [])
-    return {node.name.value: selections(node) for node in nodes}
-
-
-@strawberry.input
-class IntQuery:
-    """predicates for ints"""
-
-    __annotations__ = dict.fromkeys(ops, Optional[int])
-    isin: Optional[List[int]]
-
-
-@strawberry.input
-class FloatQuery:
-    """predicates for floats"""
-
-    __annotations__ = dict.fromkeys(ops, Optional[float])
-    isin: Optional[List[float]]
-
-
-@strawberry.input
-class StringQuery:
-    """predicates for strings"""
-
-    __annotations__ = dict.fromkeys(ops, Optional[str])
-    isin: Optional[List[str]]
-
-
-query_map = {
-    int: IntQuery,
-    float: FloatQuery,
-    str: StringQuery,
-}
 query_map = {
     name: graphql.GraphQLArgument(query_map[types[name]].graphql_type)  # type: ignore
     for name in types
-}
-
-
-class BaseColumn:
-    array: pa.ChunkedArray
-
-    def unique(self, info):
-        if 'counts' in selections(*info.field_nodes):
-            values, counts = C.value_counts(self.array).flatten()
-        else:
-            values, counts = C.unique(self.array), pa.array([])
-        return values.to_pylist(), counts.to_pylist()
-
-    def predicate(**query):
-        return C.predicate(**{to_snake_case(op): query[op] for op in query})
-
-    def count(self, **query) -> int:
-        """Return number of matching values."""
-        mask = C.mask(self.array, BaseColumn.predicate(**query)) if query else self.array
-        return C.count(mask, True)
-
-    def any(self, **query) -> bool:
-        """Return whether any value evaluates to True."""
-        return C.any(self.array, BaseColumn.predicate(**query))
-
-    def all(self, **query) -> bool:
-        """Return whether all values evaluate to True."""
-        return C.all(self.array, BaseColumn.predicate(**query))
-
-
-@strawberry.type
-class IntUnique:
-    """unique ints"""
-
-    values: List[int]
-    counts: List[int]
-
-    @strawberry.field
-    def length(self) -> int:
-        """number of rows"""
-        return len(self.values)
-
-
-@strawberry.type
-class IntColumn:
-    """column of ints"""
-
-    count = strawberry.field(BaseColumn.count)
-    count.graphql_type.args.update(IntQuery.graphql_type.fields)  # type: ignore
-    any = strawberry.field(BaseColumn.any)
-    any.graphql_type.args.update(IntQuery.graphql_type.fields)  # type: ignore
-    all = strawberry.field(BaseColumn.all)
-    all.graphql_type.args.update(IntQuery.graphql_type.fields)  # type: ignore
-
-    def __init__(self, array):
-        self.array = array
-
-    @strawberry.field
-    def values(self) -> List[int]:
-        """list of values"""
-        return self.array.to_pylist()
-
-    @strawberry.field
-    def sum(self) -> int:
-        """sum of values"""
-        return C.sum(self.array)
-
-    @strawberry.field
-    def min(self) -> int:
-        """min of columns"""
-        return C.min(self.array)
-
-    @strawberry.field
-    def max(self) -> int:
-        """max of columns"""
-        return C.max(self.array)
-
-    @strawberry.field
-    def unique(self, info) -> IntUnique:
-        """unique values and counts"""
-        return IntUnique(*BaseColumn.unique(self, info))  # type: ignore
-
-
-@strawberry.type
-class FloatColumn:
-    """column of floats"""
-
-    count = strawberry.field(BaseColumn.count)
-    count.graphql_type.args.update(FloatQuery.graphql_type.fields)  # type: ignore
-    any = strawberry.field(BaseColumn.any)
-    any.graphql_type.args.update(FloatQuery.graphql_type.fields)  # type: ignore
-    all = strawberry.field(BaseColumn.all)
-    all.graphql_type.args.update(FloatQuery.graphql_type.fields)  # type: ignore
-
-    def __init__(self, array):
-        self.array = array
-
-    @strawberry.field
-    def values(self) -> List[float]:
-        """list of values"""
-        return self.array.to_pylist()
-
-    @strawberry.field
-    def sum(self) -> float:
-        """sum of values"""
-        return C.sum(self.array)
-
-    @strawberry.field
-    def min(self) -> float:
-        """min of columns"""
-        return C.min(self.array)
-
-    @strawberry.field
-    def max(self) -> float:
-        """max of columns"""
-        return C.max(self.array)
-
-
-@strawberry.type
-class StringUnique:
-    """unique strings"""
-
-    values: List[str]
-    counts: List[int]
-    length = IntUnique.length
-
-
-@strawberry.type
-class StringColumn:
-    """column of strings"""
-
-    count = strawberry.field(BaseColumn.count)
-    count.graphql_type.args.update(StringQuery.graphql_type.fields)  # type: ignore
-    any = strawberry.field(BaseColumn.any)
-    any.graphql_type.args.update(StringQuery.graphql_type.fields)  # type: ignore
-    all = strawberry.field(BaseColumn.all)
-    all.graphql_type.args.update(StringQuery.graphql_type.fields)  # type: ignore
-
-    def __init__(self, array):
-        self.array = array
-
-    @strawberry.field
-    def values(self) -> List[str]:
-        """list of values"""
-        return self.array.to_pylist()
-
-    @strawberry.field
-    def min(self) -> str:
-        """min of columns"""
-        return C.min(self.array)
-
-    @strawberry.field
-    def max(self) -> str:
-        """max of columns"""
-        return C.max(self.array)
-
-    @strawberry.field
-    def unique(self, info) -> StringUnique:
-        """unique values and counts"""
-        return StringUnique(*BaseColumn.unique(self, info))  # type: ignore
-
-
-column_map = {
-    int: IntColumn,
-    float: FloatColumn,
-    str: StringColumn,
 }
 
 
@@ -248,12 +45,12 @@ class Table:
         self.table = table
 
     @strawberry.field
-    def length(self) -> int:
+    def length(self) -> Long:
         """number of rows"""
-        return len(self.table)
+        return len(self.table)  # type: ignore
 
     @strawberry.field
-    def slice(self, offset: int = 0, length: int = None) -> Columns:
+    def slice(self, offset: Long = 0, length: Long = None) -> Columns:  # type: ignore
         """Return table slice with column fields."""
         # ARROW-8911: slicing an empty table may crash
         return Columns(self.table and self.table.slice(offset, length))
@@ -263,7 +60,7 @@ class Table:
         """Return table with matching rows."""
         table = self.table
         for name, query in queries.items():
-            table = table.filter(C.mask(table[name], BaseColumn.predicate(**query)))
+            table = table.filter(C.mask(table[name], resolvers.predicate(**query)))
         return Table(table)
 
 

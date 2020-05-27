@@ -8,6 +8,12 @@ def test_slice(client):
     zipcodes = data['slice']['zipcode']['values']
     assert zipcodes[0] == 544
     assert len(zipcodes) == 41699
+    data = client.execute('{ slice { zipcode { any(equal: null) count(notEqual: null) } } }')
+    zipcodes = data['slice']['zipcode']
+    assert not zipcodes['any'] and zipcodes['count'] == 41700
+    data = client.execute('{ slice { zipcode { all(notEqual: null) count(equal: null) } } }')
+    zipcodes = data['slice']['zipcode']
+    assert zipcodes['all'] and zipcodes['count'] == 0
 
 
 def test_ints(client):
