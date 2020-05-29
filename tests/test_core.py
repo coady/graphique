@@ -49,6 +49,7 @@ def test_functional(table):
     array = table['state'].dictionary_encode()
     mask = C.equal(array, 'CA')
     assert mask == C.isin(array, ['CA']) == C.isin(table['state'], ['CA'])
+    assert C.not_equal(array, 'CA') == C.isin(array, ['CA'], invert=True)
     assert len(array.filter(mask)) == 2647
     assert T.apply(table, len) == dict.fromkeys(table.column_names, 41700)
     assert T.apply(table, zipcode=len) == {'zipcode': 41700}

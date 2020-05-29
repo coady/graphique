@@ -57,13 +57,15 @@ class Chunk:
         return np.equal(self.indices, *indices) if len(indices) else np.full(len(self), False)
 
     def not_equal(self, value) -> np.ndarray:
+        if not isinstance(self, pa.DictionaryArray):
+            return np.not_equal(self, value)
         return ~Chunk.equal(self, value)
 
-    def isin(self, values) -> np.ndarray:
+    def isin(self, values, invert=False) -> np.ndarray:
         if not isinstance(self, pa.DictionaryArray):
-            return np.isin(self, values)
+            return np.isin(self, values, invert=invert)
         (indices,) = np.nonzero(np.isin(self.dictionary, values))
-        return np.isin(self.indices, indices)
+        return np.isin(self.indices, indices, invert=invert)
 
 
 class Column(pa.ChunkedArray):
@@ -74,12 +76,12 @@ class Column(pa.ChunkedArray):
     def map(self, func: Callable, *iterables: Iterable) -> Iterator:
         return Column.threader.map(func, self.iterchunks(), *iterables)
 
-    def predicate(**query):
-        """Return predicate ufunc by intersecting operators."""
+    def predicate(func=np.bitwise_and, **query):
+        """Return predicate ufunc by combining operators, by default intersecting."""
         ufuncs = [rpartial(getattr(Chunk, op, getattr(np, op)), query[op]) for op in query]
         if not ufuncs:
             return np.asarray
-        return lambda ch: functools.reduce(np.bitwise_and, (ufunc(ch) for ufunc in ufuncs))
+        return lambda ch: functools.reduce(func, (ufunc(ch) for ufunc in ufuncs))
 
     def mask(self, predicate: Callable = np.asarray) -> pa.ChunkedArray:
         """Return boolean mask array by applying predicate."""
@@ -89,9 +91,13 @@ class Column(pa.ChunkedArray):
         """Return boolean mask array which matches scalar value."""
         return Column.mask(self, rpartial(Chunk.equal, value))
 
-    def isin(self, values) -> pa.ChunkedArray:
+    def not_equal(self, value) -> pa.ChunkedArray:
+        """Return boolean mask array which doesn't match scalar value."""
+        return Column.mask(self, rpartial(Chunk.not_equal, value))
+
+    def isin(self, values, invert=False) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
-        return Column.mask(self, rpartial(Chunk.isin, values))
+        return Column.mask(self, rpartial(Chunk.isin, values, invert))
 
     def take(self, indices: pa.ChunkedArray) -> pa.ChunkedArray:
         """Return array with indexed elements."""
@@ -238,4 +244,4 @@ class Table(pa.Table):
         Assumes the table is sorted by the column name, i.e., indexed.
         """
         (slc,) = Column.find(self[name], value)
-        return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # # noqa: E203
+        return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203

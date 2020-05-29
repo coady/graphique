@@ -6,7 +6,6 @@
 [![image](https://img.shields.io/codecov/c/github/coady/graphique.svg)](https://codecov.io/github/coady/graphique)
 [![image](https://readthedocs.org/projects/graphique/badge)](https://graphique.readthedocs.io)
 [![image](https://requires.io/github/coady/graphique/requirements.svg)](https://requires.io/github/coady/graphique/requirements/)
-[![image](https://api.codeclimate.com/v1/badges/c6d16624c2c444f531c4/maintainability)](https://codeclimate.com/github/coady/graphique/maintainability)
 [![image](https://img.shields.io/badge/code%20style-black-000000.svg)](https://pypi.org/project/black/)
 [![image](http://mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 
@@ -25,6 +24,11 @@ Open http://localhost:8000/graphql.
 ```console
 % pip install graphique
 ```
+
+# Dependencies
+* pyarrow >=0.17
+* strawberry-graphql >=0.26.1
+* pytz (optional timestamp support)
 
 # Tests
 100% branch coverage.
