@@ -73,8 +73,11 @@ class Column(pa.ChunkedArray):
 
     threader = futures.ThreadPoolExecutor(max_workers)
 
-    def map(self, func: Callable, *iterables: Iterable) -> Iterator:
-        return Column.threader.map(func, self.iterchunks(), *iterables)
+    def map(func: Callable, *arrays: pa.ChunkedArray) -> Iterator:
+        return Column.threader.map(func, *(arr.iterchunks() for arr in arrays))
+
+    def reduce(func: Callable, arrays: Iterable[pa.ChunkedArray]) -> pa.ChunkedArray:
+        return pa.chunked_array(Column.map(lambda *chs: functools.reduce(func, chs), *arrays))
 
     def predicate(func=np.bitwise_and, **query):
         """Return predicate ufunc by combining operators, by default intersecting."""
@@ -85,7 +88,7 @@ class Column(pa.ChunkedArray):
 
     def mask(self, predicate: Callable = np.asarray) -> pa.ChunkedArray:
         """Return boolean mask array by applying predicate."""
-        return pa.chunked_array(Column.map(self, lambda ch: np.asarray(predicate(ch), bool)))
+        return pa.chunked_array(Column.map(lambda ch: np.asarray(predicate(ch), bool), self))
 
     def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
@@ -99,35 +102,30 @@ class Column(pa.ChunkedArray):
         """Return boolean mask array which matches any value."""
         return Column.mask(self, rpartial(Chunk.isin, values, invert))
 
-    def take(self, indices: pa.ChunkedArray) -> pa.ChunkedArray:
-        """Return array with indexed elements."""
-        return pa.chunked_array(Column.map(self, pa.Array.take, indices.chunks))
-
     def arggroupby(self) -> dict:
-        """Return mapping of unique keys to corresponding index arrays.
-
-        Indices are chunked, and not offset, pending release of `ChunkedArray.take`.
-        """
+        """Return mapping of unique keys to corresponding index arrays."""
         empty = np.full(0, 0)
         result = collections.defaultdict(lambda: [empty] * self.num_chunks)  # type: dict
         if self.type == pa.string():
             self = self.dictionary_encode()
-        for index, items in enumerate(Column.map(self, Chunk.arggroupby)):
+        offset = 0
+        for index, items in enumerate(Column.map(Chunk.arggroupby, self)):
             for key, values in items:
-                result[key][index] = values
-        return {key: pa.chunked_array(result[key]) for key in result}
+                result[key][index] = values + offset
+            offset += len(self.chunk(index))
+        return {key: pa.array(np.concatenate(result[key])) for key in result}
 
     def sum(self):
         """Return sum of the values."""
-        return sum(Column.map(self, lambda ch: ch.sum().as_py()))
+        return sum(Column.map(lambda ch: ch.sum().as_py(), self))
 
     def min(self):
         """Return min of the values."""
-        return min(Column.map(self, np.nanmin))
+        return min(Column.map(np.nanmin, self))
 
     def max(self):
         """Return max of the values."""
-        return max(Column.map(self, np.nanmax))
+        return max(Column.map(np.nanmax, self))
 
     def any(self, predicate: Callable = np.asarray) -> bool:
         """Return whether any value evaluates to True."""
@@ -150,7 +148,7 @@ class Column(pa.ChunkedArray):
             return self.null_count
         if not isinstance(value, bool):
             self, value = Column.equal(self, value), True
-        count = sum(Column.map(self, np.count_nonzero))
+        count = sum(Column.map(np.count_nonzero, self))
         return count if value else (len(self) - count - self.null_count)
 
     def where(self, index, value):
@@ -159,13 +157,13 @@ class Column(pa.ChunkedArray):
 
     def argmin(self) -> int:
         """Return first index of the minimum value."""
-        values = list(Column.map(self, np.nanmin))
+        values = list(Column.map(np.nanmin, self))
         index = np.argmin(values)
         return Column.where(self, index, values[index])
 
     def argmax(self) -> int:
         """Return first index of the maximum value."""
-        values = list(Column.map(self, np.nanmax))
+        values = list(Column.map(np.nanmax, self))
         index = np.argmax(values)
         return Column.where(self, index, values[index])
 
@@ -189,14 +187,14 @@ class Column(pa.ChunkedArray):
         """Return array of unique values with dictionary support."""
         if not isinstance(self.type, pa.DictionaryType):
             return self.unique()
-        chunks = Column.map(self, lambda ch: ch.dictionary.take(ch.indices.unique()))
+        chunks = Column.map(lambda ch: ch.dictionary.take(ch.indices.unique()), self)
         return pa.chunked_array(chunks).unique()
 
     def value_counts(self) -> pa.StructArray:
         """Return arrays of unique values and counts with dictionary support."""
         if not isinstance(self.type, pa.DictionaryType):
             return self.value_counts()
-        values, counts = zip(*Column.map(self, Chunk.value_counts))
+        values, counts = zip(*Column.map(Chunk.value_counts, self))
         values, indices = np.unique(np.concatenate(values), return_inverse=True)
         counts = np.bincount(indices, weights=np.concatenate(counts)).astype(int)
         return pa.StructArray.from_arrays([values, counts], ['values', 'counts'])
@@ -212,6 +210,11 @@ class Table(pa.Table):
         if func is not None:
             funcs = dict(dict.fromkeys(self.column_names, func), **funcs)
         return dict(Table.threader.map(lambda name: (name, funcs[name](self[name])), funcs))
+
+    def mask(self, func=np.bitwise_and, **predicates: Callable) -> pa.ChunkedArray:
+        """Return boolean mask array by applying predicates to columns and reducing."""
+        columns = [self[name] for name in predicates]
+        return Column.reduce(func, Table.threader.map(Column.mask, columns, predicates.values()))
 
     def index(self) -> list:
         """Return index column names from pandas metadata."""

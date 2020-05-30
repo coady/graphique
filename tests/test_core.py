@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 import pyarrow as pa
 from graphique.core import Column as C, Table as T
 
@@ -26,7 +27,7 @@ def test_chunks():
         C.argmax(array[:0])
     assert array.value_counts().equals(C.value_counts(array.dictionary_encode()))
     groups = {key: list(value) for key, value in C.arggroupby(array).items()}
-    assert groups == {'a': [0, 2], 'b': [1, 0, 2], 'c': [1]}
+    assert groups == {'a': [0, 2], 'b': [1, 3, 5], 'c': [4]}
     chunk = array.chunk(0)
     assert list(C.predicate()(chunk)) == list(chunk)
     assert list(C.predicate(equal="a", less="c")(chunk)) == [True, False, True]
@@ -53,6 +54,8 @@ def test_functional(table):
     assert len(array.filter(mask)) == 2647
     assert T.apply(table, len) == dict.fromkeys(table.column_names, 41700)
     assert T.apply(table, zipcode=len) == {'zipcode': 41700}
+    mask = T.mask(table, state=lambda ch: np.equal(ch, 'CA'))
+    assert len(table.filter(mask)) == 2647
 
 
 def test_groupby(table):
@@ -61,7 +64,6 @@ def test_groupby(table):
     assert set(map(len, groups.values())) == {1}
     groups = C.arggroupby(table['state'])
     assert len(groups) == 52
-    indices = groups['CA']
-    assert set(C.take(table['state'], indices)) == {'CA'}
+    assert set(table['state'].chunks[0].take(groups['CA'])) == {'CA'}
     groups = C.arggroupby(table['latitude'])
     assert max(map(len, groups.values())) == 6

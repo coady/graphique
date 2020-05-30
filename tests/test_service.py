@@ -142,4 +142,9 @@ def test_filter(client):
         '{ filter(city: {equal: "Mountain View"}, state: {lessEqual: "CA"}) { length } }'
     )
     assert data['filter']['length'] == 7
-    data = client.execute('{ filter(state: {equal: null}) {slice {state { values } } } }')
+    data = client.execute('{ filter(state: {equal: null}) { slice {state { values } } } }')
+    assert data['filter']['slice']['state']['values'] == []
+    data = client.execute('{ exclude { length } }')
+    assert data['exclude']['length'] == 41700
+    data = client.execute('{ exclude(state: {equal: "CA"}) { length } }')
+    assert data['exclude']['length'] == 39053

@@ -1,5 +1,6 @@
 from typing import List
 import graphql
+import numpy as np
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
@@ -57,14 +58,23 @@ class Table:
 
     @strawberry.field
     def filter(self, **queries) -> 'Table':
-        """Return table with matching rows."""
-        table = self.table
-        for name, query in queries.items():
-            table = table.filter(C.mask(table[name], resolvers.predicate(**query)))
-        return Table(table)
+        """Return table with rows which match all queries."""
+        if not queries:
+            return self
+        predicates = {name: resolvers.predicate(**queries[name]) for name in queries}
+        return Table(table.filter(T.mask(self.table, **predicates)))
+
+    @strawberry.field
+    def exclude(self, **queries) -> 'Table':
+        """Return table with rows which don't match all queries; inverse of filter."""
+        if not queries:
+            return self
+        predicates = {name: resolvers.predicate(**queries[name]) for name in queries}
+        return Table(table.filter(C.mask(T.mask(self.table, **predicates), np.invert)))
 
 
 Table.filter.graphql_type.args.update(query_map)
+Table.exclude.graphql_type.args.update(query_map)
 
 
 @strawberry.type
