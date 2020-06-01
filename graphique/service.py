@@ -57,6 +57,14 @@ class Table:
         return Columns(self.table and self.table.slice(offset, length))
 
     @strawberry.field
+    def sort_by(self, names: List[str], reverse: bool = False, length: int = None) -> Columns:
+        """Return table slice sorted by specified columns.
+        Optimized for a single column with fixed length.
+        """
+        indices = T.argsort(self.table, *names, reverse=reverse, length=length)
+        return Columns(T.from_pydict(T.apply(self.table, lambda col: np.take(col, indices))))
+
+    @strawberry.field
     def filter(self, **queries) -> 'Table':
         """Return table with rows which match all queries."""
         if not queries:

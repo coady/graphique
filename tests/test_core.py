@@ -67,3 +67,20 @@ def test_groupby(table):
     assert set(table['state'].chunks[0].take(groups['CA'])) == {'CA'}
     groups = C.arggroupby(table['latitude'])
     assert max(map(len, groups.values())) == 6
+
+
+def test_sort(table):
+    indices = C.argsort(table['state']).tolist()
+    states = C.sort(table['state'])
+    assert states[0] == table['state'][indices[0]] == 'AK'
+    assert states[-1] == table['state'][indices[-1]] == 'WY'
+    indices = C.argsort(table['state'], reverse=True).tolist()
+    states = C.sort(table['state'], reverse=True)
+    assert states[0] == table['state'][indices[0]] == 'WY'
+    assert states[-1] == table['state'][indices[-1]] == 'AK'
+    indices = C.argsort(table['state'], length=1).tolist()
+    states = C.sort(table['state'], length=1)
+    assert list(states) == [table['state'][i] for i in indices] == ['AK']
+    indices = C.argsort(table['state'], reverse=True, length=1).tolist()
+    states = C.sort(table['state'], reverse=True, length=1)
+    assert list(states) == [table['state'][i] for i in indices] == ['WY']

@@ -38,6 +38,10 @@ def test_ints(client):
     data = client.execute('{ slice { zipcode { any(greater: 1000) all(greater: 1000) } } }')
     zipcodes = data['slice']['zipcode']
     assert zipcodes['any'] and not zipcodes['all']
+    data = client.execute('{ slice { zipcode { sort desc: sort(reverse: true)} } }')
+    zipcodes = data['slice']['zipcode']
+    assert zipcodes['sort'][0] == zipcodes['desc'][-1] == 501
+    assert zipcodes['sort'][-1] == zipcodes['desc'][0] == 99950
 
 
 def test_floats(client):
@@ -65,7 +69,7 @@ def test_strings(client):
         '''{ slice {
         state { values unique { values counts } }
         county { unique { length values } }
-        city { min max }
+        city { min max sort(length: 1), desc: sort(reverse: true, length: 1) }
     } }'''
     )
     states = data['slice']['state']
@@ -75,8 +79,8 @@ def test_strings(client):
     counties = data['slice']['county']
     assert len(counties['unique']['values']) == counties['unique']['length'] == 1920
     cities = data['slice']['city']
-    assert cities['min'] == 'Aaronsburg'
-    assert cities['max'] == 'Zwolle'
+    assert [cities['min']] == cities['sort'] == ['Aaronsburg']
+    assert [cities['max']] == cities['desc'] == ['Zwolle']
     data = client.execute('{ slice { state { truthy: count count(equal: "") } } }')
     states = data['slice']['state']
     assert states['truthy'] == 41700
@@ -148,3 +152,26 @@ def test_filter(client):
     assert data['exclude']['length'] == 41700
     data = client.execute('{ exclude(state: {equal: "CA"}) { length } }')
     assert data['exclude']['length'] == 39053
+
+
+def test_sort(client):
+    with pytest.raises(ValueError, match="is required"):
+        client.execute('{ sortBy { state { values } } }')
+    with pytest.raises(ValueError, match="sequence of keys"):
+        client.execute('{ sortBy(names: []) { state { values } } }')
+    data = client.execute('{ sortBy(names: ["state"]) { state { values } } }')
+    assert data['sortBy']['state']['values'][0] == 'AK'
+    data = client.execute('{ sortBy(names: ["state"], reverse: true) { state { values } } }')
+    assert data['sortBy']['state']['values'][0] == 'WY'
+    data = client.execute('{ sortBy(names: ["state"], length: 1) { state { values } } }')
+    assert data['sortBy']['state']['values'] == ['AK']
+    data = client.execute(
+        '{ sortBy(names: ["state"], reverse: true, length: 1) { state { values } } }'
+    )
+    assert data['sortBy']['state']['values'] == ['WY']
+    data = client.execute('{ sortBy(names: ["state", "county"]) { county { values } } }')
+    assert data['sortBy']['county']['values'][0] == 'Aleutians East'
+    data = client.execute(
+        '{ sortBy(names: ["state", "county"], reverse: true, length: 1) { county { values } } }'
+    )
+    assert data['sortBy']['county']['values'] == ['Weston']

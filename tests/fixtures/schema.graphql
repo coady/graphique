@@ -69,6 +69,9 @@ type IntColumn {
   """list of values"""
   values: [Int]!
 
+  """Return sorted values, optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Int]!
+
   """sum of values"""
   sum: Int!
 
@@ -118,6 +121,9 @@ type LongColumn {
   """list of values"""
   values: [Long]!
 
+  """Return sorted values, optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Long]!
+
   """sum of values"""
   sum: Long!
 
@@ -156,6 +162,9 @@ type FloatColumn {
   """list of values"""
   values: [Float]!
 
+  """Return sorted values, optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Float]!
+
   """sum of values"""
   sum: Float!
 
@@ -190,6 +199,9 @@ type DecimalColumn {
 
   """list of values"""
   values: [Decimal]!
+
+  """Return sorted values, optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Decimal]!
 
   """sum of values"""
   sum: Decimal!
@@ -237,6 +249,9 @@ type DateColumn {
   """list of values"""
   values: [Date]!
 
+  """Return sorted values, optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Date]!
+
   """min of columns"""
   min: Date!
 
@@ -272,6 +287,9 @@ type TimestampColumn {
   """list of values"""
   values: [Timestamp]!
 
+  """Return sorted values, optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Timestamp]!
+
   """min of columns"""
   min: Timestamp!
 
@@ -303,6 +321,9 @@ type TimeColumn {
 
   """list of values"""
   values: [Time]!
+
+  """Return sorted values, optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Time]!
 
   """min of columns"""
   min: Time!
@@ -368,6 +389,9 @@ type StringColumn {
 
   """list of values"""
   values: [String]!
+
+  """Return sorted values, optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [String]!
 
   """min of columns"""
   min: String!

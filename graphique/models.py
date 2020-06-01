@@ -213,6 +213,10 @@ class resolvers:
         """max of columns"""
         return C.max(self.array)
 
+    def sort(self, reverse: bool = False, length: Long = None):
+        """Return sorted values, optimized for fixed length."""
+        return C.sort(self.array, reverse, length).to_pylist()
+
 
 def annotate(func, return_type):
     func = copy.copy(func)
@@ -271,6 +275,7 @@ class IntColumn:
     any = query_args(resolvers.any, IntQuery)
     all = query_args(resolvers.all, IntQuery)
     values = annotate(resolvers.values, List[Optional[int]])
+    sort = annotate(resolvers.sort, List[Optional[int]])
     sum = annotate(resolvers.sum, int)
     min = annotate(resolvers.min, int)
     max = annotate(resolvers.max, int)
@@ -297,6 +302,7 @@ class LongColumn:
     any = query_args(resolvers.any, LongQuery)
     all = query_args(resolvers.all, LongQuery)
     values = annotate(resolvers.values, List[Optional[Long]])
+    sort = annotate(resolvers.sort, List[Optional[Long]])
     sum = annotate(resolvers.sum, Long)
     min = annotate(resolvers.min, Long)
     max = annotate(resolvers.max, Long)
@@ -312,6 +318,7 @@ class FloatColumn:
     any = query_args(resolvers.any, FloatQuery)
     all = query_args(resolvers.all, FloatQuery)
     values = annotate(resolvers.values, List[Optional[float]])
+    sort = annotate(resolvers.sort, List[Optional[float]])
     sum = annotate(resolvers.sum, float)
     min = annotate(resolvers.min, float)
     max = annotate(resolvers.max, float)
@@ -326,6 +333,7 @@ class DecimalColumn:
     any = query_args(resolvers.any, DecimalQuery)
     all = query_args(resolvers.all, DecimalQuery)
     values = annotate(resolvers.values, List[Optional[Decimal]])
+    sort = annotate(resolvers.sort, List[Optional[Decimal]])
     sum = annotate(resolvers.sum, Decimal)
     min = annotate(resolvers.min, Decimal)
     max = annotate(resolvers.max, Decimal)
@@ -351,6 +359,7 @@ class DateColumn:
     any = query_args(resolvers.any, DateQuery)
     all = query_args(resolvers.all, DateQuery)
     values = annotate(resolvers.values, List[Optional[date]])
+    sort = annotate(resolvers.sort, List[Optional[date]])
     min = annotate(resolvers.min, date)
     max = annotate(resolvers.max, date)
     unique = annotate(resolvers.unique, Set)
@@ -365,6 +374,7 @@ class TimestampColumn:
     any = query_args(resolvers.any, TimestampQuery)
     all = query_args(resolvers.all, TimestampQuery)
     values = annotate(resolvers.values, List[Optional[datetime]])
+    sort = annotate(resolvers.sort, List[Optional[datetime]])
     min = annotate(resolvers.min, datetime)
     max = annotate(resolvers.max, datetime)
 
@@ -378,6 +388,7 @@ class TimeColumn:
     any = query_args(resolvers.any, TimeQuery)
     all = query_args(resolvers.all, TimeQuery)
     values = annotate(resolvers.values, List[Optional[time]])
+    sort = annotate(resolvers.sort, List[Optional[time]])
     min = annotate(resolvers.min, time)
     max = annotate(resolvers.max, time)
 
@@ -413,6 +424,7 @@ class StringColumn:
     any = query_args(resolvers.any, StringQuery)
     all = query_args(resolvers.all, StringQuery)
     values = annotate(resolvers.values, List[Optional[str]])
+    sort = annotate(resolvers.sort, List[Optional[str]])
     min = annotate(resolvers.min, str)
     max = annotate(resolvers.max, str)
     unique = annotate(resolvers.unique, Set)

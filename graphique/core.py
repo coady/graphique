@@ -1,6 +1,7 @@
 import bisect
 import collections
 import functools
+import itertools
 import json
 import os
 from concurrent import futures
@@ -114,6 +115,33 @@ class Column(pa.ChunkedArray):
                 result[key][index] = values + offset
             offset += len(self.chunk(index))
         return {key: pa.array(np.concatenate(result[key])) for key in result}
+
+    def sort(self, reverse=False, length: int = None) -> pa.Array:
+        """Return sorted values, optimized for fixed length."""
+        if length is not None:
+            if reverse:
+                select = lambda ch: np.partition(ch, -length)[-length:]  # noqa
+            else:
+                select = lambda ch: np.partition(ch, length)[:length]  # noqa
+            self = np.concatenate(list(Column.map(select, self)))
+        values = np.sort(self)
+        return pa.array(values[::-1] if reverse else values)
+
+    def argsort(self, reverse=False, length: int = None) -> np.ndarray:
+        """Return indices which would sort the values, optimized for fixed length."""
+        if length is None:
+            indices = np.argsort(self)
+        else:
+            if reverse:
+                select = lambda ch: np.argpartition(ch, -length)[-length:]  # noqa
+            else:
+                select = lambda ch: np.argpartition(ch, length)[:length]  # noqa
+            chunks = list(Column.map(select, self))
+            offsets = itertools.accumulate(map(len, self.iterchunks()))
+            indices = np.concatenate(chunks[:1] + list(map(np.add, chunks[1:], offsets)))
+            values = np.concatenate(list(map(np.take, self.iterchunks(), chunks)))
+            indices = np.take(indices, np.argsort(values))
+        return indices[::-1] if reverse else indices
 
     def sum(self):
         """Return sum of the values."""
@@ -248,3 +276,13 @@ class Table(pa.Table):
         """
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
+
+    def argsort(self, *names: str, reverse=False, length: int = None) -> np.ndarray:
+        """Return indices which would sort the table by given columns.
+
+        Optimized for a single column with fixed length.
+        """
+        if length is not None and len(names) == 1:
+            return Column.argsort(self.column(*names), reverse, length)
+        indices = np.lexsort([self[name] for name in reversed(names)])
+        return (indices[::-1] if reverse else indices)[:length]
