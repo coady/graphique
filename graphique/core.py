@@ -44,7 +44,7 @@ class Chunk:
             values, counts = self.value_counts().flatten()
             indices = pa.array(np.argsort(values))
             keys = values.take(indices)
-            sections = np.split(np.argsort(self), np.cumsum(counts.take(indices)))
+            sections = np.split(np.argsort(self, kind='stable'), np.cumsum(counts.take(indices)))
         return zip((dictionary.take(keys) if dictionary else keys).to_pylist(), sections)
 
     def value_counts(self):
@@ -124,13 +124,13 @@ class Column(pa.ChunkedArray):
             else:
                 select = lambda ch: np.partition(ch, length)[:length]  # noqa
             self = np.concatenate(list(Column.map(select, self)))
-        values = np.sort(self)
+        values = np.sort(self, kind='stable')
         return pa.array(values[::-1] if reverse else values)
 
     def argsort(self, reverse=False, length: int = None) -> np.ndarray:
         """Return indices which would sort the values, optimized for fixed length."""
         if length is None:
-            indices = np.argsort(self)
+            indices = np.argsort(self, kind='stable')
         else:
             if reverse:
                 select = lambda ch: np.argpartition(ch, -length)[-length:]  # noqa
@@ -282,7 +282,11 @@ class Table(pa.Table):
 
         Optimized for a single column with fixed length.
         """
-        if length is not None and len(names) == 1:
-            return Column.argsort(self.column(*names), reverse, length)
-        indices = np.lexsort([self[name] for name in reversed(names)])
-        return (indices[::-1] if reverse else indices)[:length]
+        if length is None or len(names) > 1:
+            indices = np.lexsort([self[name] for name in reversed(names)])
+            return (indices[::-1] if reverse else indices)[:length]
+        column = self.column(*names)
+        if length > 1:
+            return Column.argsort(column, reverse, length)
+        select = Column.argmax if reverse else Column.argmin
+        return np.array([select(column)])

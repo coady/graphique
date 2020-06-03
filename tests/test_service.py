@@ -156,22 +156,24 @@ def test_filter(client):
 
 def test_sort(client):
     with pytest.raises(ValueError, match="is required"):
-        client.execute('{ sortBy { state { values } } }')
+        client.execute('{ sort { state { values } } }')
     with pytest.raises(ValueError, match="sequence of keys"):
-        client.execute('{ sortBy(names: []) { state { values } } }')
-    data = client.execute('{ sortBy(names: ["state"]) { state { values } } }')
-    assert data['sortBy']['state']['values'][0] == 'AK'
-    data = client.execute('{ sortBy(names: ["state"], reverse: true) { state { values } } }')
-    assert data['sortBy']['state']['values'][0] == 'WY'
-    data = client.execute('{ sortBy(names: ["state"], length: 1) { state { values } } }')
-    assert data['sortBy']['state']['values'] == ['AK']
+        client.execute('{ sort(names: []) { state { values } } }')
+    data = client.execute('{ sort(names: ["state"]) { state { values } } }')
+    assert data['sort']['state']['values'][0] == 'AK'
+    data = client.execute('{ sort(names: ["state"], reverse: true) { state { values } } }')
+    assert data['sort']['state']['values'][0] == 'WY'
+    data = client.execute('{ sort(names: ["state"], length: 1) { state { values } } }')
+    assert data['sort']['state']['values'] == ['AK']
     data = client.execute(
-        '{ sortBy(names: ["state"], reverse: true, length: 1) { state { values } } }'
+        '{ sort(names: ["state"], reverse: true, length: 1) { state { values } } }'
     )
-    assert data['sortBy']['state']['values'] == ['WY']
-    data = client.execute('{ sortBy(names: ["state", "county"]) { county { values } } }')
-    assert data['sortBy']['county']['values'][0] == 'Aleutians East'
+    assert data['sort']['state']['values'] == ['WY']
+    data = client.execute('{ sort(names: ["state", "county"]) { county { values } } }')
+    assert data['sort']['county']['values'][0] == 'Aleutians East'
     data = client.execute(
-        '{ sortBy(names: ["state", "county"], reverse: true, length: 1) { county { values } } }'
+        '{ sort(names: ["state", "county"], reverse: true, length: 1) { county { values } } }'
     )
-    assert data['sortBy']['county']['values'] == ['Weston']
+    assert data['sort']['county']['values'] == ['Weston']
+    data = client.execute('{ sort(names: ["state"], length: 2) { state { values } } }')
+    assert data['sort']['state']['values'] == ['AK', 'AK']

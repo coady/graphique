@@ -57,7 +57,7 @@ class Table:
         return Columns(self.table and self.table.slice(offset, length))
 
     @strawberry.field
-    def sort_by(self, names: List[str], reverse: bool = False, length: int = None) -> Columns:
+    def sort(self, names: List[str], reverse: bool = False, length: int = None) -> Columns:
         """Return table slice sorted by specified columns.
         Optimized for a single column with fixed length.
         """
