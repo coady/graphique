@@ -17,13 +17,22 @@ type BooleanSet {
 
 """column of booleans"""
 type BooleanColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: Boolean, notEqual: Boolean): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: Boolean, notEqual: Boolean): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: Boolean, notEqual: Boolean): Boolean!
 
   """Return scalar value at index."""
@@ -60,13 +69,22 @@ type IntSet {
 
 """column of ints"""
 type IntColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Boolean!
 
   """Return scalar value at index."""
@@ -75,16 +93,16 @@ type IntColumn {
   """list of values"""
   values: [Int]!
 
-  """Return sorted values, optimized for fixed length."""
+  """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Int]!
 
-  """sum of values"""
-  sum: Int!
+  """Return sum of the values, with optional exponentiation."""
+  sum(exp: Int! = 1): Int!
 
-  """min of columns"""
+  """minimum value"""
   min: Int!
 
-  """max of columns"""
+  """maximum value"""
   max: Int!
 
   """unique values and counts"""
@@ -115,13 +133,22 @@ type LongSet {
 
 """column of longs"""
 type LongColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Boolean!
 
   """Return scalar value at index."""
@@ -130,16 +157,16 @@ type LongColumn {
   """list of values"""
   values: [Long]!
 
-  """Return sorted values, optimized for fixed length."""
+  """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Long]!
 
-  """sum of values"""
-  sum: Long!
+  """Return sum of the values, with optional exponentiation."""
+  sum(exp: Int! = 1): Long!
 
-  """min of columns"""
+  """minimum value"""
   min: Long!
 
-  """max of columns"""
+  """maximum value"""
   max: Long!
 
   """unique values and counts"""
@@ -159,13 +186,22 @@ input FloatQuery {
 
 """column of floats"""
 type FloatColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
 
   """Return scalar value at index."""
@@ -174,16 +210,16 @@ type FloatColumn {
   """list of values"""
   values: [Float]!
 
-  """Return sorted values, optimized for fixed length."""
+  """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Float]!
 
-  """sum of values"""
-  sum: Float!
+  """Return sum of the values, with optional exponentiation."""
+  sum(exp: Int! = 1): Float!
 
-  """min of columns"""
+  """minimum value"""
   min: Float!
 
-  """max of columns"""
+  """maximum value"""
   max: Float!
 }
 
@@ -200,13 +236,22 @@ input DecimalQuery {
 
 """column of decimals"""
 type DecimalColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
 
   """Return scalar value at index."""
@@ -215,16 +260,16 @@ type DecimalColumn {
   """list of values"""
   values: [Decimal]!
 
-  """Return sorted values, optimized for fixed length."""
+  """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Decimal]!
 
-  """sum of values"""
-  sum: Decimal!
+  """Return sum of the values, with optional exponentiation."""
+  sum(exp: Int! = 1): Decimal!
 
-  """min of columns"""
+  """minimum value"""
   min: Decimal!
 
-  """max of columns"""
+  """maximum value"""
   max: Decimal!
 }
 
@@ -252,13 +297,22 @@ type DateSet {
 
 """column of dates"""
 type DateColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
 
   """Return scalar value at index."""
@@ -267,13 +321,13 @@ type DateColumn {
   """list of values"""
   values: [Date]!
 
-  """Return sorted values, optimized for fixed length."""
+  """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Date]!
 
-  """min of columns"""
+  """minimum value"""
   min: Date!
 
-  """max of columns"""
+  """maximum value"""
   max: Date!
 
   """unique values and counts"""
@@ -293,13 +347,22 @@ input TimestampQuery {
 
 """column of timestamps"""
 type TimestampColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Boolean!
 
   """Return scalar value at index."""
@@ -308,13 +371,13 @@ type TimestampColumn {
   """list of values"""
   values: [Timestamp]!
 
-  """Return sorted values, optimized for fixed length."""
+  """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Timestamp]!
 
-  """min of columns"""
+  """minimum value"""
   min: Timestamp!
 
-  """max of columns"""
+  """maximum value"""
   max: Timestamp!
 }
 
@@ -331,13 +394,22 @@ input TimeQuery {
 
 """column of times"""
 type TimeColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
 
   """Return scalar value at index."""
@@ -346,13 +418,13 @@ type TimeColumn {
   """list of values"""
   values: [Time]!
 
-  """Return sorted values, optimized for fixed length."""
+  """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Time]!
 
-  """min of columns"""
+  """minimum value"""
   min: Time!
 
-  """max of columns"""
+  """maximum value"""
   max: Time!
 }
 
@@ -365,13 +437,22 @@ input BinaryQuery {
 
 """column of binaries"""
 type BinaryColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: Binary, notEqual: Binary, isin: [Binary!]): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
 
   """Return scalar value at index."""
@@ -405,13 +486,22 @@ type StringSet {
 
 """column of strings"""
 type StringColumn {
-  """Return number of matching values."""
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Long!
 
-  """Return whether any value evaluates to True."""
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   any(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Boolean!
 
-  """Return whether all values evaluate to True."""
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
   all(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Boolean!
 
   """Return scalar value at index."""
@@ -420,13 +510,13 @@ type StringColumn {
   """list of values"""
   values: [String]!
 
-  """Return sorted values, optimized for fixed length."""
+  """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [String]!
 
-  """min of columns"""
+  """minimum value"""
   min: String!
 
-  """max of columns"""
+  """maximum value"""
   max: String!
 
   """unique values and counts"""

@@ -176,7 +176,8 @@ class resolvers:
         return C.predicate(**{to_snake_case(op): query[op] for op in query})
 
     def count(self, **query) -> Long:
-        """Return number of matching values."""
+        """Return number of matching values.
+Optimized for `null`, and empty queries are implicitly boolean."""
         if query == {'equal': None}:
             return self.array.null_count
         if query == {'notEqual': None}:
@@ -185,13 +186,15 @@ class resolvers:
         return C.count(mask, True)  # type: ignore
 
     def any(self, **query) -> bool:
-        """Return whether any value evaluates to True."""
+        """Return whether any value evaluates to `true`.
+Optimized for `null`, and empty queries are implicitly boolean."""
         if query in ({'equal': None}, {'notEqual': None}):
             return bool(resolvers.count(self, **query))
         return C.any(self.array, resolvers.predicate(**query))
 
     def all(self, **query) -> bool:
-        """Return whether all values evaluate to True."""
+        """Return whether all values evaluate to `true`.
+Optimized for `null`, and empty queries are implicitly boolean."""
         if query in ({'equal': None}, {'notEqual': None}):
             (op,) = {'equal', 'notEqual'} - set(query)
             return not resolvers.count(self, **{op: None})
@@ -205,20 +208,20 @@ class resolvers:
         """list of values"""
         return self.array.to_pylist()
 
-    def sum(self):
-        """sum of values"""
-        return C.sum(self.array)
+    def sum(self, exp: int = 1):
+        """Return sum of the values, with optional exponentiation."""
+        return C.sum(self.array, exp)
 
     def min(self):
-        """min of columns"""
+        """minimum value"""
         return C.min(self.array)
 
     def max(self):
-        """max of columns"""
+        """maximum value"""
         return C.max(self.array)
 
     def sort(self, reverse: bool = False, length: Long = None):
-        """Return sorted values, optimized for fixed length."""
+        """Return sorted values. Optimized for fixed length."""
         return C.sort(self.array, reverse, length).to_pylist()
 
 

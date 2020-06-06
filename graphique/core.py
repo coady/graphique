@@ -159,9 +159,10 @@ class Column(pa.ChunkedArray):
             indices = np.take(indices, np.argsort(values))
         return pa.array((indices[::-1] if reverse else indices)[:length])
 
-    def sum(self):
-        """Return sum of the values."""
-        return sum(Column.map(lambda ch: ch.sum().as_py(), self))
+    def sum(self, exp: int = 1):
+        """Return sum of the values, with optional exponentiation."""
+        func = (lambda ch: ch.sum().as_py()) if exp == 1 else (lambda ch: np.sum(np.power(ch, exp)))
+        return sum(Column.map(func, self))
 
     def min(self):
         """Return min of the values."""

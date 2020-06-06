@@ -47,10 +47,10 @@ def test_ints(client):
 
 
 def test_floats(client):
-    data = client.execute('{ slice { latitude { values sum } longitude { min max } } }')
+    data = client.execute('{ slice { latitude { values sum(exp: 2) } longitude { min max } } }')
     latitudes = data['slice']['latitude']
     assert len(latitudes['values']) == 41700
-    assert latitudes['sum'] == pytest.approx(1606220.07592)
+    assert latitudes['sum'] == pytest.approx(63075443.42831)
     longitudes = data['slice']['longitude']
     assert longitudes['min'] == pytest.approx(-174.21333)
     assert longitudes['max'] == pytest.approx(-65.301389)

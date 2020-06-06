@@ -36,6 +36,14 @@ def test_chunks():
     assert list(C.argsort(array, length=1)) == [0]
 
 
+def test_reduce():
+    array = pa.chunked_array([[0, 1], [2, 3]])
+    assert C.min(array) == 0
+    assert C.max(array) == 3
+    assert C.sum(array) == 6
+    assert C.sum(array, exp=2) == 14
+
+
 def test_membership():
     array = pa.chunked_array([[0]])
     assert not C.any(array) and not C.all(array) and C.count(array, True) == 0
