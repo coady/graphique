@@ -42,6 +42,8 @@ def test_ints(client):
     zipcodes = data['slice']['zipcode']
     assert zipcodes['sort'][0] == zipcodes['desc'][-1] == 501
     assert zipcodes['sort'][-1] == zipcodes['desc'][0] == 99950
+    data = client.execute('{ slice { zipcode { item last: item(index: -1) } } }')
+    assert data['slice']['zipcode'] == {'item': 501, 'last': 99950}
 
 
 def test_floats(client):
@@ -94,6 +96,8 @@ def test_strings(client):
     data = client.execute('{ slice { state { any(greater: "CA") all(greater: "CA") } } }')
     states = data['slice']['state']
     assert states['any'] and not states['all']
+    data = client.execute('{ slice { state { item last: item(index: -1) } } }')
+    assert data['slice']['state'] == {'item': 'NY', 'last': "AK"}
 
 
 def test_search(client):

@@ -26,6 +26,9 @@ type BooleanColumn {
   """Return whether all values evaluate to True."""
   all(equal: Boolean, notEqual: Boolean): Boolean!
 
+  """Return scalar value at index."""
+  item(index: Long! = 0): Boolean
+
   """list of values"""
   values: [Boolean]!
 
@@ -65,6 +68,9 @@ type IntColumn {
 
   """Return whether all values evaluate to True."""
   all(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Boolean!
+
+  """Return scalar value at index."""
+  item(index: Long! = 0): Int
 
   """list of values"""
   values: [Int]!
@@ -118,6 +124,9 @@ type LongColumn {
   """Return whether all values evaluate to True."""
   all(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Boolean!
 
+  """Return scalar value at index."""
+  item(index: Long! = 0): Long
+
   """list of values"""
   values: [Long]!
 
@@ -159,6 +168,9 @@ type FloatColumn {
   """Return whether all values evaluate to True."""
   all(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
 
+  """Return scalar value at index."""
+  item(index: Long! = 0): Float
+
   """list of values"""
   values: [Float]!
 
@@ -196,6 +208,9 @@ type DecimalColumn {
 
   """Return whether all values evaluate to True."""
   all(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
+
+  """Return scalar value at index."""
+  item(index: Long! = 0): Decimal
 
   """list of values"""
   values: [Decimal]!
@@ -246,6 +261,9 @@ type DateColumn {
   """Return whether all values evaluate to True."""
   all(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
 
+  """Return scalar value at index."""
+  item(index: Long! = 0): Date
+
   """list of values"""
   values: [Date]!
 
@@ -284,6 +302,9 @@ type TimestampColumn {
   """Return whether all values evaluate to True."""
   all(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Boolean!
 
+  """Return scalar value at index."""
+  item(index: Long! = 0): Timestamp
+
   """list of values"""
   values: [Timestamp]!
 
@@ -319,6 +340,9 @@ type TimeColumn {
   """Return whether all values evaluate to True."""
   all(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
 
+  """Return scalar value at index."""
+  item(index: Long! = 0): Time
+
   """list of values"""
   values: [Time]!
 
@@ -349,6 +373,9 @@ type BinaryColumn {
 
   """Return whether all values evaluate to True."""
   all(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
+
+  """Return scalar value at index."""
+  item(index: Long! = 0): Binary
 
   """list of values"""
   values: [Binary]!
@@ -386,6 +413,9 @@ type StringColumn {
 
   """Return whether all values evaluate to True."""
   all(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Boolean!
+
+  """Return scalar value at index."""
+  item(index: Long! = 0): String
 
   """list of values"""
   values: [String]!
