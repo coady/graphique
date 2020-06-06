@@ -33,6 +33,22 @@ def rpartial(func, *values):
     return lambda arg: func(arg, *values)
 
 
+def argsplit(dictionary: pa.Array, indices: np.ndarray, *arrays: np.ndarray) -> dict:
+    """Return nested groups of indices given an argsort index.
+
+    :param dictionary: an original set of indices to enable working with existing chunks
+    :param indices: indices which would sort the arrays
+    :param arrays: values that will be grouped in order
+    """
+    if not arrays:
+        return dictionary.take(pa.array(indices))
+    values = np.take(arrays[0], np.take(dictionary, indices))
+    steps = np.nonzero(np.not_equal(values[1:], values[:-1]))[0] + 1
+    keys = np.take(values, np.concatenate([[0], steps]))
+    groups = [argsplit(dictionary, idx, *arrays[1:]) for idx in np.split(indices, steps)]
+    return dict(zip(keys.tolist(), groups))
+
+
 class Chunk:
     def arggroupby(self) -> Iterator[tuple]:
         dictionary = None
@@ -80,7 +96,7 @@ class Column(pa.ChunkedArray):
     def reduce(func: Callable, arrays: Iterable[pa.ChunkedArray]) -> pa.ChunkedArray:
         return pa.chunked_array(Column.map(lambda *chs: functools.reduce(func, chs), *arrays))
 
-    def predicate(func=np.bitwise_and, **query):
+    def predicate(func=np.logical_and, **query):
         """Return predicate ufunc by combining operators, by default intersecting."""
         ufuncs = [rpartial(getattr(Chunk, op, getattr(np, op)), query[op]) for op in query]
         if not ufuncs:
@@ -118,30 +134,30 @@ class Column(pa.ChunkedArray):
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
-        if length is not None:
-            if reverse:
-                select = lambda ch: np.partition(ch, -length)[-length:]  # noqa
-            else:
-                select = lambda ch: np.partition(ch, length)[:length]  # noqa
-            self = np.concatenate(list(Column.map(select, self)))
-        values = np.sort(self, kind='stable')
-        return pa.array(values[::-1] if reverse else values)
+        if length is None:
+            select = functools.partial(np.sort, kind='stable')  # type: Callable
+        elif reverse:
+            select = lambda ch: np.partition(ch, -length)[-length:]  # type: ignore
+        else:
+            select = lambda ch: np.partition(ch, length)[:length]
+        values = np.sort(np.concatenate(list(Column.map(select, self))), kind='stable')
+        return pa.array((values[::-1] if reverse else values)[:length])
 
-    def argsort(self, reverse=False, length: int = None) -> np.ndarray:
+    def argsort(self, reverse=False, length: int = None) -> pa.Array:
         """Return indices which would sort the values, optimized for fixed length."""
         if length is None:
             indices = np.argsort(self, kind='stable')
         else:
             if reverse:
-                select = lambda ch: np.argpartition(ch, -length)[-length:]  # noqa
+                select = lambda ch: np.argpartition(ch, -length)[-length:]
             else:
-                select = lambda ch: np.argpartition(ch, length)[:length]  # noqa
+                select = lambda ch: np.argpartition(ch, length)[:length]
             chunks = list(Column.map(select, self))
             offsets = itertools.accumulate(map(len, self.iterchunks()))
             indices = np.concatenate(chunks[:1] + list(map(np.add, chunks[1:], offsets)))
             values = np.concatenate(list(map(np.take, self.iterchunks(), chunks)))
             indices = np.take(indices, np.argsort(values))
-        return indices[::-1] if reverse else indices
+        return pa.array((indices[::-1] if reverse else indices)[:length])
 
     def sum(self):
         """Return sum of the values."""
@@ -239,7 +255,7 @@ class Table(pa.Table):
             funcs = dict(dict.fromkeys(self.column_names, func), **funcs)
         return dict(Table.threader.map(lambda name: (name, funcs[name](self[name])), funcs))
 
-    def mask(self, func=np.bitwise_and, **predicates: Callable) -> pa.ChunkedArray:
+    def mask(self, func=np.logical_and, **predicates: Callable) -> pa.ChunkedArray:
         """Return boolean mask array by applying predicates to columns and reducing."""
         columns = [self[name] for name in predicates]
         return Column.reduce(func, Table.threader.map(Column.mask, columns, predicates.values()))
@@ -277,16 +293,26 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
-    def argsort(self, *names: str, reverse=False, length: int = None) -> np.ndarray:
+    def arggroupby(self, *names: str) -> dict:
+        """Generate keys and indices from grouping by columns."""
+        groups = Column.arggroupby(self[names[0]])
+        arrays = [np.asarray(self[name]) for name in names[1:]]
+        if arrays:
+            for key, group in groups.items():
+                indices = np.lexsort([np.take(array, group) for array in arrays[::-1]])
+                groups[key] = argsplit(group, indices, *arrays)
+        return groups
+
+    def argsort(self, *names: str, reverse=False, length: int = None) -> pa.Array:
         """Return indices which would sort the table by given columns.
 
         Optimized for a single column with fixed length.
         """
         if length is None or len(names) > 1:
             indices = np.lexsort([self[name] for name in reversed(names)])
-            return (indices[::-1] if reverse else indices)[:length]
+            return pa.array((indices[::-1] if reverse else indices)[:length])
         column = self.column(*names)
         if length > 1:
             return Column.argsort(column, reverse, length)
         select = Column.argmax if reverse else Column.argmin
-        return np.array([select(column)])
+        return pa.array([select(column)])

@@ -1,6 +1,8 @@
-from typing import List
+import itertools
+from typing import Iterator, List
 import graphql
 import numpy as np
+import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
@@ -17,6 +19,15 @@ query_map = {
     name: graphql.GraphQLArgument(query_map[types[name]].graphql_type)  # type: ignore
     for name in types
 }
+
+
+def flatten(tree: dict, reverse=False) -> Iterator:
+    """Generate breadth first leaf nodes."""
+    if isinstance(tree, dict):
+        for key in sorted(tree, reverse=reverse):
+            yield from flatten(tree[key], reverse=reverse)
+    else:
+        yield tree
 
 
 def resolver(name):
@@ -57,7 +68,22 @@ class Table:
         return Columns(self.table and self.table.slice(offset, length))
 
     @strawberry.field
-    def sort(self, names: List[str], reverse: bool = False, length: int = None) -> Columns:
+    def groupby(  # type: ignore
+        self, names: List[str], reverse: bool = False, length: Long = None
+    ) -> List['Table']:
+        """Return tables grouped by specified columns.
+        Optimized for a single column.
+        Groups are sorted and have stable ordering within a group.
+        """
+        groups = flatten(T.arggroupby(self.table, *names), reverse=reverse)
+        columns = [pa.concat_arrays(column.chunks) for column in self.table.columns]
+        for indices in itertools.islice(groups, length):
+            yield Table(
+                T.from_arrays([col.take(indices) for col in columns], self.table.column_names)
+            )
+
+    @strawberry.field
+    def sort(self, names: List[str], reverse: bool = False, length: Long = None) -> Columns:
         """Return table slice sorted by specified columns.
         Optimized for a single column with fixed length.
         """

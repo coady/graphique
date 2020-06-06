@@ -32,6 +32,8 @@ def test_chunks():
     assert list(C.predicate()(chunk)) == list(chunk)
     assert list(C.predicate(equal="a", less="c")(chunk)) == [True, False, True]
     assert list(C.predicate(not_equal="a")(chunk)) == [False, True, False]
+    assert list(C.sort(array, length=1)) == ["a"]
+    assert list(C.argsort(array, length=1)) == [0]
 
 
 def test_membership():
@@ -63,24 +65,34 @@ def test_groupby(table):
     assert len(groups) == 41700
     assert set(map(len, groups.values())) == {1}
     groups = C.arggroupby(table['state'])
+    for key, group in T.arggroupby(table, 'state').items():
+        assert groups[key].equals(group)
     assert len(groups) == 52
     assert set(table['state'].chunks[0].take(groups['CA'])) == {'CA'}
     groups = C.arggroupby(table['latitude'])
     assert max(map(len, groups.values())) == 6
+    groups = T.arggroupby(table, 'state', 'county')
+    group = groups['CA']['Santa Clara']
+    assert len(group) == 108
+    assert set(table['county'].chunks[0].take(group)) == {'Santa Clara'}
+    groups = T.arggroupby(table, 'state', 'county', 'city')
+    group = groups['CA']['Santa Clara']['Mountain View']
+    assert len(group) == 6
+    assert set(table['city'].chunks[0].take(group)) == {'Mountain View'}
 
 
 def test_sort(table):
-    indices = C.argsort(table['state']).tolist()
+    indices = C.argsort(table['state']).to_pylist()
     states = C.sort(table['state'])
     assert states[0] == table['state'][indices[0]] == 'AK'
     assert states[-1] == table['state'][indices[-1]] == 'WY'
-    indices = C.argsort(table['state'], reverse=True).tolist()
+    indices = C.argsort(table['state'], reverse=True).to_pylist()
     states = C.sort(table['state'], reverse=True)
     assert states[0] == table['state'][indices[0]] == 'WY'
     assert states[-1] == table['state'][indices[-1]] == 'AK'
-    indices = C.argsort(table['state'], length=1).tolist()
+    indices = C.argsort(table['state'], length=1).to_pylist()
     states = C.sort(table['state'], length=1)
     assert list(states) == [table['state'][i] for i in indices] == ['AK']
-    indices = C.argsort(table['state'], reverse=True, length=1).tolist()
+    indices = C.argsort(table['state'], reverse=True, length=1).to_pylist()
     states = C.sort(table['state'], reverse=True, length=1)
     assert list(states) == [table['state'][i] for i in indices] == ['WY']

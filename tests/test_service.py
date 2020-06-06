@@ -181,3 +181,23 @@ def test_sort(client):
     assert data['sort']['county']['values'] == ['Weston']
     data = client.execute('{ sort(names: ["state"], length: 2) { state { values } } }')
     assert data['sort']['state']['values'] == ['AK', 'AK']
+
+
+def test_groupby(client):
+    with pytest.raises(ValueError, match="is required"):
+        client.execute('{ groupby { length } }')
+    with pytest.raises(ValueError, match="out of range"):
+        client.execute('{ groupby(names: []) { length } }')
+    data = client.execute('{ groupby(names: ["state"]) { length slice { state { min max } } } }')
+    assert len(data['groupby']) == 52
+    assert data['groupby'][0]['length'] == 273
+    states = data['groupby'][0]['slice']['state']
+    assert states['min'] == states['max'] == 'AK'
+    data = client.execute(
+        '''{ groupby(names: ["state", "county"], reverse: true, length: 3)
+        { length slice { state { item } county { item } } } }'''
+    )
+    assert [group['length'] for group in data['groupby']] == [4, 2, 7]
+    tables = [group['slice'] for group in data['groupby']]
+    assert [table['state']['item'] for table in tables] == ['WY'] * 3
+    assert [table['county']['item'] for table in tables] == ['Weston', 'Washakie', 'Uinta']
