@@ -15,7 +15,7 @@ The schema is derived automatically.
 
 # Usage
 ```console
-% PARQUET_PATH=... uvicorn graphique.service:app [--reload]
+% env PARQUET_PATH=... uvicorn graphique.service:app [--reload]
 ```
 
 Open http://localhost:8000/graphql.

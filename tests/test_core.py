@@ -4,6 +4,10 @@ import pyarrow as pa
 from graphique.core import Column as C, Table as T
 
 
+def eq(left, right):
+    return left == right and type(left) is type(right)
+
+
 def test_dictionary(table):
     array = table['state'].dictionary_encode()
     values, counts = C.value_counts(array).flatten()
@@ -38,10 +42,10 @@ def test_chunks():
 
 def test_reduce():
     array = pa.chunked_array([[0, 1], [2, 3]])
-    assert C.min(array) == 0
-    assert C.max(array) == 3
-    assert C.sum(array) == 6
-    assert C.sum(array, exp=2) == 14
+    assert eq(C.min(array), 0)
+    assert eq(C.max(array), 3)
+    assert eq(C.sum(array), 6)
+    assert eq(C.sum(array, exp=2), 14)
 
 
 def test_membership():

@@ -64,6 +64,9 @@ def test_floats(client):
     data = client.execute('{ slice { latitude { any(greater: 45.0) all(greater: 45.0) } } }')
     latitudes = data['slice']['latitude']
     assert latitudes['any'] and not latitudes['all']
+    data = client.execute('{ slice { latitude { quantile(q: [0.5]) } } }')
+    (quantile,) = data['slice']['latitude']['quantile']
+    assert quantile == pytest.approx(39.12054)
 
 
 def test_strings(client):

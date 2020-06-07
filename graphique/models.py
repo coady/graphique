@@ -3,6 +3,7 @@ import copy
 import decimal
 from datetime import date, datetime, time
 from typing import List, NewType, Optional
+import numpy as np
 import pyarrow as pa
 import strawberry
 from strawberry.utils.str_converters import to_snake_case
@@ -220,6 +221,10 @@ Optimized for `null`, and empty queries are implicitly boolean."""
         """maximum value"""
         return C.max(self.array)
 
+    def quantile(self, q: List[float]) -> List[float]:
+        """Return q-th quantiles for values."""
+        return np.nanquantile(self.array, q).tolist()
+
     def sort(self, reverse: bool = False, length: Long = None):
         """Return sorted values. Optimized for fixed length."""
         return C.sort(self.array, reverse, length).to_pylist()
@@ -288,6 +293,7 @@ class IntColumn:
     sum = annotate(resolvers.sum, int)
     min = annotate(resolvers.min, int)
     max = annotate(resolvers.max, int)
+    quantile = strawberry.field(resolvers.quantile)
     unique = annotate(resolvers.unique, Set)
 
 
@@ -316,6 +322,7 @@ class LongColumn:
     sum = annotate(resolvers.sum, Long)
     min = annotate(resolvers.min, Long)
     max = annotate(resolvers.max, Long)
+    quantile = strawberry.field(resolvers.quantile)
     unique = annotate(resolvers.unique, Set)
 
 
@@ -333,6 +340,7 @@ class FloatColumn:
     sum = annotate(resolvers.sum, float)
     min = annotate(resolvers.min, float)
     max = annotate(resolvers.max, float)
+    quantile = strawberry.field(resolvers.quantile)
 
 
 @strawberry.type
@@ -346,7 +354,6 @@ class DecimalColumn:
     item = annotate(resolvers.item, Optional[Decimal])
     values = annotate(resolvers.values, List[Optional[Decimal]])
     sort = annotate(resolvers.sort, List[Optional[Decimal]])
-    sum = annotate(resolvers.sum, Decimal)
     min = annotate(resolvers.min, Decimal)
     max = annotate(resolvers.max, Decimal)
 

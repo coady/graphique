@@ -161,16 +161,21 @@ class Column(pa.ChunkedArray):
 
     def sum(self, exp: int = 1):
         """Return sum of the values, with optional exponentiation."""
-        func = (lambda ch: ch.sum().as_py()) if exp == 1 else (lambda ch: np.sum(np.power(ch, exp)))
+        if exp == 1:
+            func = lambda ch: ch.sum().as_py()
+        else:
+            func = lambda ch: np.nansum(np.power(ch, exp)).item()
         return sum(Column.map(func, self))
 
     def min(self):
         """Return min of the values."""
-        return min(Column.map(np.nanmin, self))
+        value = min(Column.map(np.nanmin, self))
+        return value.item() if isinstance(value, np.generic) else value
 
     def max(self):
         """Return max of the values."""
-        return max(Column.map(np.nanmax, self))
+        value = max(Column.map(np.nanmax, self))
+        return value.item() if isinstance(value, np.generic) else value
 
     def any(self, predicate: Callable = np.asarray) -> bool:
         """Return whether any value evaluates to True."""

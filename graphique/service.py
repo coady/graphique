@@ -8,13 +8,11 @@ import strawberry.asgi
 from starlette.applications import Starlette
 from .core import Column as C, Table as T
 from .models import Long, column_map, query_map, resolvers, type_map
-from .settings import DEBUG, INDEX, MMAP, PARQUET_PATH
+from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
-table = pq.read_table(PARQUET_PATH, memory_map=MMAP)
-indexed = list(INDEX) or T.index(table)
+table = pq.read_table(PARQUET_PATH, COLUMNS, memory_map=MMAP, read_dictionary=DICTIONARIES)
+indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
-
-
 query_map = {
     name: graphql.GraphQLArgument(query_map[types[name]].graphql_type)  # type: ignore
     for name in types

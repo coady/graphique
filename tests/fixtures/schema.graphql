@@ -105,6 +105,9 @@ type IntColumn {
   """maximum value"""
   max: Int!
 
+  """Return q-th quantiles for values."""
+  quantile(q: [Float!]!): [Float!]!
+
   """unique values and counts"""
   unique: IntSet!
 }
@@ -169,6 +172,9 @@ type LongColumn {
   """maximum value"""
   max: Long!
 
+  """Return q-th quantiles for values."""
+  quantile(q: [Float!]!): [Float!]!
+
   """unique values and counts"""
   unique: LongSet!
 }
@@ -221,6 +227,9 @@ type FloatColumn {
 
   """maximum value"""
   max: Float!
+
+  """Return q-th quantiles for values."""
+  quantile(q: [Float!]!): [Float!]!
 }
 
 """predicates for decimals"""
@@ -262,9 +271,6 @@ type DecimalColumn {
 
   """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Decimal]!
-
-  """Return sum of the values, with optional exponentiation."""
-  sum(exp: Int! = 1): Decimal!
 
   """minimum value"""
   min: Decimal!
