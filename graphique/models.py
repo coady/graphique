@@ -429,7 +429,7 @@ class BinaryColumn:
 
 @strawberry.type
 class StringSet:
-    """unique dates"""
+    """unique strings"""
 
     counts: List[Long]
     __init__ = resolvers.__init__  # type: ignore

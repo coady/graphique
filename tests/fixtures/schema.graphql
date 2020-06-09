@@ -479,7 +479,7 @@ input StringQuery {
   isin: [String!]
 }
 
-"""unique dates"""
+"""unique strings"""
 type StringSet {
   counts: [Long!]!
 

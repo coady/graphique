@@ -6,6 +6,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
+from strawberry.utils.str_converters import to_snake_case
 from .core import Column as C, Table as T
 from .models import Long, column_map, query_map, resolvers, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -20,7 +21,7 @@ query_map = {
 
 
 def flatten(tree: dict, reverse=False) -> Iterator:
-    """Generate breadth first leaf nodes."""
+    """Generate leaf nodes sorted by keys."""
     if isinstance(tree, dict):
         for key in sorted(tree, reverse=reverse):
             yield from flatten(tree[key], reverse=reverse)
@@ -60,10 +61,15 @@ class Table:
         return len(self.table)  # type: ignore
 
     @strawberry.field
-    def slice(self, offset: Long = 0, length: Long = None) -> Columns:  # type: ignore
-        """Return table slice with column fields."""
+    def columns(self) -> Columns:
+        """fields for each column"""
+        return Columns(self.table)
+
+    @strawberry.field
+    def slice(self, offset: Long = 0, length: Long = None) -> 'Table':  # type: ignore
+        """Return table slice."""
         # ARROW-8911: slicing an empty table may crash
-        return Columns(self.table and self.table.slice(offset, length))
+        return Table(self.table and self.table.slice(offset, length))
 
     @strawberry.field
     def groupby(  # type: ignore
@@ -73,7 +79,7 @@ class Table:
         Optimized for a single column.
         Groups are sorted and have stable ordering within a group.
         """
-        groups = flatten(T.arggroupby(self.table, *names), reverse=reverse)
+        groups = flatten(T.arggroupby(self.table, *map(to_snake_case, names)), reverse=reverse)
         columns = [pa.concat_arrays(column.chunks) for column in self.table.columns]
         for indices in itertools.islice(groups, length):
             yield Table(
@@ -81,12 +87,12 @@ class Table:
             )
 
     @strawberry.field
-    def sort(self, names: List[str], reverse: bool = False, length: Long = None) -> Columns:
+    def sort(self, names: List[str], reverse: bool = False, length: Long = None) -> 'Table':
         """Return table slice sorted by specified columns.
         Optimized for a single column with fixed length.
         """
-        indices = T.argsort(self.table, *names, reverse=reverse, length=length)
-        return Columns(T.from_pydict(T.apply(self.table, lambda col: np.take(col, indices))))
+        indices = T.argsort(self.table, *map(to_snake_case, names), reverse=reverse, length=length)
+        return Table(T.from_pydict(T.apply(self.table, lambda col: np.take(col, indices))))
 
     @strawberry.field
     def filter(self, **queries) -> 'Table':
