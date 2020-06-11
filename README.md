@@ -27,7 +27,7 @@ Open http://localhost:8000/graphql.
 
 # Dependencies
 * pyarrow >=0.17
-* strawberry-graphql >=0.26.1
+* strawberry-graphql >=0.27
 * pytz (optional timestamp support)
 
 # Tests

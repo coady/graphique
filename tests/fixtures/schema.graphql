@@ -340,51 +340,51 @@ type DateColumn {
   unique: DateSet!
 }
 
-"""predicates for timestamps"""
-input TimestampQuery {
-  equal: Timestamp
-  notEqual: Timestamp
-  less: Timestamp
-  lessEqual: Timestamp
-  greater: Timestamp
-  greaterEqual: Timestamp
-  isin: [Timestamp!]
+"""predicates for datetimes"""
+input DateTimeQuery {
+  equal: DateTime
+  notEqual: DateTime
+  less: DateTime
+  lessEqual: DateTime
+  greater: DateTime
+  greaterEqual: DateTime
+  isin: [DateTime!]
 }
 
-"""column of timestamps"""
-type TimestampColumn {
+"""column of datetimes"""
+type DateTimeColumn {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Long!
+  count(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Boolean!
+  any(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: Timestamp, notEqual: Timestamp, less: Timestamp, lessEqual: Timestamp, greater: Timestamp, greaterEqual: Timestamp, isin: [Timestamp!]): Boolean!
+  all(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Boolean!
 
   """Return scalar value at index."""
-  item(index: Long! = 0): Timestamp
+  item(index: Long! = 0): DateTime
 
   """list of values"""
-  values: [Timestamp]!
+  values: [DateTime]!
 
   """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [Timestamp]!
+  sort(reverse: Boolean! = false, length: Long): [DateTime]!
 
   """minimum value"""
-  min: Timestamp!
+  min: DateTime!
 
   """maximum value"""
-  max: Timestamp!
+  max: DateTime!
 }
 
 """predicates for times"""

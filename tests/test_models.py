@@ -75,8 +75,8 @@ def test_date(schema):
 
 
 def test_timestamp(schema):
-    assert print_type(models.TimestampQuery) in schema
-    assert print_type(models.TimestampColumn) in schema
+    assert print_type(models.DateTimeQuery) in schema
+    assert print_type(models.DateTimeColumn) in schema
 
 
 def test_time(schema):

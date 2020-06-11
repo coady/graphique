@@ -1,7 +1,7 @@
 import base64
 import copy
-import decimal
 from datetime import date, datetime, time
+from decimal import Decimal
 from typing import List, NewType, Optional
 import numpy as np
 import pyarrow as pa
@@ -11,18 +11,7 @@ from .core import Column as C
 
 
 Long = NewType('Long', int)
-Decimal = NewType('Decimal', str)
 strawberry.scalar(Long, description="64-bit int")
-strawberry.scalar(
-    Decimal, description="fixed point decimal", serialize=str, parse_value=decimal.Decimal,
-)
-strawberry.scalar(
-    datetime,
-    name='Timestamp',
-    description="datetime (isoformat)",
-    serialize=datetime.isoformat,
-    parse_value=datetime.fromisoformat,
-)
 strawberry.scalar(
     bytes,
     name='Binary',
@@ -103,8 +92,8 @@ class DateQuery:
 
 
 @strawberry.input
-class TimestampQuery:
-    """predicates for timestamps"""
+class DateTimeQuery:
+    """predicates for datetimes"""
 
     __annotations__ = dict.fromkeys(ops, Optional[datetime])
     isin: Optional[List[datetime]]
@@ -141,7 +130,7 @@ query_map = {
     float: FloatQuery,
     Decimal: DecimalQuery,
     date: DateQuery,
-    datetime: TimestampQuery,
+    datetime: DateTimeQuery,
     time: TimeQuery,
     bytes: BinaryQuery,
     str: StringQuery,
@@ -386,13 +375,13 @@ class DateColumn:
 
 
 @strawberry.type
-class TimestampColumn:
-    """column of timestamps"""
+class DateTimeColumn:
+    """column of datetimes"""
 
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, TimestampQuery)
-    any = query_args(resolvers.any, TimestampQuery)
-    all = query_args(resolvers.all, TimestampQuery)
+    count = query_args(resolvers.count, DateTimeQuery)
+    any = query_args(resolvers.any, DateTimeQuery)
+    all = query_args(resolvers.all, DateTimeQuery)
     item = annotate(resolvers.item, Optional[datetime])
     values = annotate(resolvers.values, List[Optional[datetime]])
     sort = annotate(resolvers.sort, List[Optional[datetime]])
@@ -461,7 +450,7 @@ column_map = {
     float: FloatColumn,
     Decimal: DecimalColumn,
     date: DateColumn,
-    datetime: TimestampColumn,
+    datetime: DateTimeColumn,
     time: TimeColumn,
     bytes: BinaryColumn,
     str: StringColumn,
