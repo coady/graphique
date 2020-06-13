@@ -159,45 +159,43 @@ def test_sort(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ sort { columns { state { values } } } }')
     with pytest.raises(ValueError, match="sequence of keys"):
-        client.execute('{ sort(names: []) { columns { state { values } } } }')
-    data = client.execute('{ sort(names: ["state"]) { columns { state { values } } } }')
+        client.execute('{ sort(by: []) { columns { state { values } } } }')
+    data = client.execute('{ sort(by: ["state"]) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'][0] == 'AK'
-    data = client.execute(
-        '{ sort(names: ["state"], reverse: true) { columns { state { values } } } }'
-    )
+    data = client.execute('{ sort(by: ["state"], reverse: true) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'][0] == 'WY'
-    data = client.execute('{ sort(names: ["state"], length: 1) { columns { state { values } } } }')
+    data = client.execute('{ sort(by: ["state"], length: 1) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'] == ['AK']
     data = client.execute(
-        '{ sort(names: ["state"], reverse: true, length: 1) { columns { state { values } } } }'
+        '{ sort(by: ["state"], reverse: true, length: 1) { columns { state { values } } } }'
     )
     assert data['sort']['columns']['state']['values'] == ['WY']
-    data = client.execute('{ sort(names: ["state", "county"]) { columns { county { values } } } }')
+    data = client.execute('{ sort(by: ["state", "county"]) { columns { county { values } } } }')
     assert data['sort']['columns']['county']['values'][0] == 'Aleutians East'
     data = client.execute(
-        '''{ sort(names: ["state", "county"], reverse: true, length: 1)
+        '''{ sort(by: ["state", "county"], reverse: true, length: 1)
         { columns { county { values } } } }'''
     )
     assert data['sort']['columns']['county']['values'] == ['Weston']
-    data = client.execute('{ sort(names: ["state"], length: 2) { columns { state { values } } } }')
+    data = client.execute('{ sort(by: ["state"], length: 2) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'] == ['AK', 'AK']
 
 
-def test_groupby(client):
+def test_group(client):
     with pytest.raises(ValueError, match="is required"):
-        client.execute('{ groupby { length } }')
+        client.execute('{ group { length } }')
     with pytest.raises(ValueError, match="out of range"):
-        client.execute('{ groupby(names: []) { length } }')
-    data = client.execute('{ groupby(names: ["state"]) { length columns { state { min max } } } }')
-    assert len(data['groupby']) == 52
-    assert data['groupby'][0]['length'] == 273
-    states = data['groupby'][0]['columns']['state']
+        client.execute('{ group(by: []) { length } }')
+    data = client.execute('{ group(by: ["state"]) { length columns { state { min max } } } }')
+    assert len(data['group']) == 52
+    assert data['group'][0]['length'] == 273
+    states = data['group'][0]['columns']['state']
     assert states['min'] == states['max'] == 'AK'
     data = client.execute(
-        '''{ groupby(names: ["state", "county"], reverse: true, length: 3)
+        '''{ group(by: ["state", "county"], reverse: true, length: 3)
         { length columns { state { item } county { item } } } }'''
     )
-    assert [group['length'] for group in data['groupby']] == [4, 2, 7]
-    tables = [group['columns'] for group in data['groupby']]
+    assert [group['length'] for group in data['group']] == [4, 2, 7]
+    tables = [group['columns'] for group in data['group']]
     assert [table['state']['item'] for table in tables] == ['WY'] * 3
     assert [table['county']['item'] for table in tables] == ['Weston', 'Washakie', 'Uinta']

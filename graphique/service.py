@@ -72,14 +72,14 @@ class Table:
         return Table(self.table and self.table.slice(offset, length))
 
     @strawberry.field
-    def groupby(  # type: ignore
-        self, names: List[str], reverse: bool = False, length: Long = None
+    def group(  # type: ignore
+        self, by: List[str], reverse: bool = False, length: Long = None
     ) -> List['Table']:
         """Return tables grouped by specified columns.
         Optimized for a single column.
         Groups are sorted and have stable ordering within a group.
         """
-        groups = flatten(T.arggroupby(self.table, *map(to_snake_case, names)), reverse=reverse)
+        groups = flatten(T.arggroupby(self.table, *map(to_snake_case, by)), reverse=reverse)
         columns = [pa.concat_arrays(column.chunks) for column in self.table.columns]
         for indices in itertools.islice(groups, length):
             yield Table(
@@ -87,11 +87,11 @@ class Table:
             )
 
     @strawberry.field
-    def sort(self, names: List[str], reverse: bool = False, length: Long = None) -> 'Table':
+    def sort(self, by: List[str], reverse: bool = False, length: Long = None) -> 'Table':
         """Return table slice sorted by specified columns.
         Optimized for a single column with fixed length.
         """
-        indices = T.argsort(self.table, *map(to_snake_case, names), reverse=reverse, length=length)
+        indices = T.argsort(self.table, *map(to_snake_case, by), reverse=reverse, length=length)
         return Table(T.from_pydict(T.apply(self.table, lambda col: np.take(col, indices))))
 
     @strawberry.field

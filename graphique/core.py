@@ -3,14 +3,11 @@ import collections
 import functools
 import itertools
 import json
-import os
 from concurrent import futures
 from typing import Callable, Iterable, Iterator
 import numpy as np
 import pyarrow as pa
 from .arrayed import arggroupby  # type: ignore
-
-max_workers = os.cpu_count() or 1  # same default as ProcessPoolExecutor
 
 
 class Compare:
@@ -88,7 +85,7 @@ class Chunk:
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 
-    threader = futures.ThreadPoolExecutor(max_workers)
+    threader = futures.ThreadPoolExecutor(pa.cpu_count())
 
     def map(func: Callable, *arrays: pa.ChunkedArray) -> Iterator:
         return Column.threader.map(func, *(arr.iterchunks() for arr in arrays))
@@ -253,7 +250,7 @@ class Column(pa.ChunkedArray):
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
-    threader = futures.ThreadPoolExecutor(max_workers)
+    threader = futures.ThreadPoolExecutor(pa.cpu_count())
 
     def apply(self, func: Callable = None, **funcs: Callable) -> dict:
         """Apply a function to all, or selected, columns."""
