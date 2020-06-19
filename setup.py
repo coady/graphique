@@ -26,7 +26,7 @@ setup(
     packages=['graphique'],
     ext_modules=cythonize([ext_module]) if cythonize else [ext_module],
     install_requires=['pyarrow>=0.17', 'strawberry-graphql>=0.27'],
-    extras_require={'docs': ['m2r', 'sphinx'], 'timestamp': ['pytz']},
+    extras_require={'docs': ['recommonmark', 'sphinx'], 'timestamp': ['pytz']},
     python_requires='>=3.7',
     tests_require=['pytest-cov'],
     keywords='graphql arrow parquet',
