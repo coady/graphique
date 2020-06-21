@@ -199,3 +199,20 @@ def test_group(client):
     tables = [group['columns'] for group in data['group']]
     assert [table['state']['item'] for table in tables] == ['WY'] * 3
     assert [table['county']['item'] for table in tables] == ['Weston', 'Washakie', 'Uinta']
+
+
+def test_unique(client):
+    with pytest.raises(ValueError, match="is required"):
+        client.execute('{ unique { length } }')
+    with pytest.raises(ValueError, match="out of range"):
+        client.execute('{ unique(by: []) { length } }')
+    data = client.execute('{ unique(by: ["state"]) { length columns { zipcode { min max } } } }')
+    assert data == {'unique': {'length': 52, 'columns': {'zipcode': {'min': 501, 'max': 99501}}}}
+    data = client.execute(
+        '{ unique(by: ["state"], reverse: true) { length columns { zipcode { min max } } } }'
+    )
+    assert data == {'unique': {'length': 52, 'columns': {'zipcode': {'min': 988, 'max': 99950}}}}
+    data = client.execute(
+        '{ unique(by: ["state", "county"]) { length columns { zipcode { min max } } } }'
+    )
+    assert data == {'unique': {'length': 3216, 'columns': {'zipcode': {'min': 501, 'max': 99903}}}}

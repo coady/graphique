@@ -1,5 +1,5 @@
 import itertools
-from typing import Iterator, List
+from typing import List
 import graphql
 import numpy as np
 import pyarrow as pa
@@ -7,7 +7,7 @@ import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
 from strawberry.utils.str_converters import to_snake_case
-from .core import Column as C, Table as T
+from .core import Column as C, Table as T, flatten
 from .models import Long, column_map, query_map, resolvers, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
@@ -18,15 +18,6 @@ query_map = {
     name: graphql.GraphQLArgument(query_map[types[name]].graphql_type)  # type: ignore
     for name in types
 }
-
-
-def flatten(tree: dict, reverse=False) -> Iterator:
-    """Generate leaf nodes sorted by keys."""
-    if isinstance(tree, dict):
-        for key in sorted(tree, reverse=reverse):
-            yield from flatten(tree[key], reverse=reverse)
-    else:
-        yield tree
 
 
 def resolver(name):
@@ -85,6 +76,14 @@ class Table:
             yield Table(
                 T.from_arrays([col.take(indices) for col in columns], self.table.column_names)
             )
+
+    @strawberry.field
+    def unique(self, by: List[str], reverse: bool = False) -> 'Table':
+        """Return table of first or last occurrences grouped by specified columns.
+        Optimized for a single column.
+        """
+        indices = T.argunique(self.table, *map(to_snake_case, by), reverse=reverse)
+        return Table(T.from_pydict(T.apply(self.table, lambda col: np.take(col, indices))))
 
     @strawberry.field
     def sort(self, by: List[str], reverse: bool = False, length: Long = None) -> 'Table':

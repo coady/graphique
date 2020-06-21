@@ -46,6 +46,15 @@ def argsplit(dictionary: pa.Array, indices: np.ndarray, *arrays: np.ndarray) -> 
     return dict(zip(keys.tolist(), groups))
 
 
+def flatten(tree: dict, reverse=False) -> Iterator:
+    """Generate leaf nodes sorted by keys."""
+    if isinstance(tree, dict):
+        for key in sorted(tree, reverse=reverse):
+            yield from flatten(tree[key], reverse=reverse)
+    else:
+        yield tree
+
+
 class Chunk:
     def arggroupby(self) -> Iterator[tuple]:
         dictionary = None
@@ -143,7 +152,7 @@ class Column(pa.ChunkedArray):
         return np.concatenate(chunks[:1] + list(map(np.add, chunks[1:], offsets)))
 
     def argunique(self, reverse=False) -> pa.Array:
-        """Return index array of first occurrences."""
+        """Return index array of first or last occurrences."""
         if self.type == pa.string():
             self = self.dictionary_encode()
         chunks = list(Column.map(rpartial(Chunk.argunique, reverse), self))
@@ -325,6 +334,19 @@ class Table(pa.Table):
                 indices = np.lexsort([np.take(array, group) for array in arrays[::-1]])
                 groups[key] = argsplit(group, indices, *arrays)
         return groups
+
+    def argunique(self, *names: str, reverse=False) -> pa.Array:
+        """Return index array of first or last occurrences from grouping by columns.
+
+        Optimized for a single column with fixed length.
+        """
+        if len(names) <= 1:
+            return Column.argunique(self[names[0]], reverse)
+        values = pa.concat_arrays(self[names[-1]].iterchunks())
+        return pa.concat_arrays(
+            indices.take(pa.array(Chunk.argunique(values.take(indices), reverse)))
+            for indices in flatten(Table.arggroupby(self, *names[:-1]), reverse)
+        )
 
     def argsort(self, *names: str, reverse=False, length: int = None) -> pa.Array:
         """Return indices which would sort the table by given columns.

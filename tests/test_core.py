@@ -99,6 +99,7 @@ def test_unique(table):
     indices = C.argunique(table['zipcode'])
     assert len(indices) == 41700
     indices = C.argunique(table['state'])
+    assert T.argunique(table, 'state').equals(indices)
     states = table['state'].chunk(0)
     assert C.argunique(table['state'].dictionary_encode()).equals(indices)
     assert len(indices) == 52
@@ -106,10 +107,14 @@ def test_unique(table):
     first, last = C.argmin(table['zipcode']), C.argmax(table['zipcode'])
     assert first in indices.to_pylist() and last not in indices.to_pylist()
     indices = C.argunique(table['state'], reverse=True)
+    assert T.argunique(table, 'state', reverse=True).equals(indices)
     assert first not in indices.to_pylist() and last in indices.to_pylist()
     indices = C.argunique(table['latitude'])
     assert len(indices) < 41700
     assert not C.argunique(table['latitude'], reverse=True).equals(indices)
+    indices = T.argunique(table, 'state', 'county')
+    keys = zip(states.take(indices), table['county'].chunk(0).take(indices))
+    assert len(indices) == len(set(keys)) == 3216
 
 
 def test_sort(table):
