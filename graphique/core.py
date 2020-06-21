@@ -7,7 +7,7 @@ from concurrent import futures
 from typing import Callable, Iterable, Iterator
 import numpy as np
 import pyarrow as pa
-from .arrayed import arggroupby  # type: ignore
+from .arrayed import arggroupby, argunique  # type: ignore
 
 
 class Compare:
@@ -59,6 +59,15 @@ class Chunk:
             keys = values.take(indices)
             sections = np.split(np.argsort(self, kind='stable'), np.cumsum(counts.take(indices)))
         return zip((dictionary.take(keys) if dictionary else keys).to_pylist(), sections)
+
+    def argunique(self, reverse=False) -> np.ndarray:
+        if isinstance(self, pa.DictionaryArray):
+            self = self.indices
+        try:
+            return argunique(self, reverse)
+        except TypeError:  # fallback to sorting
+            _, indices = np.unique(np.asarray(self)[::-1] if reverse else self, return_index=True)
+        return indices
 
     def value_counts(self):
         values, counts = self.indices.value_counts().flatten()
@@ -129,6 +138,19 @@ class Column(pa.ChunkedArray):
             offset += len(self.chunk(index))
         return {key: pa.array(np.concatenate(result[key])) for key in result}
 
+    def offset(self, chunks):
+        offsets = itertools.accumulate(map(len, self.iterchunks()))
+        return np.concatenate(chunks[:1] + list(map(np.add, chunks[1:], offsets)))
+
+    def argunique(self, reverse=False) -> pa.Array:
+        """Return index array of first occurrences."""
+        if self.type == pa.string():
+            self = self.dictionary_encode()
+        chunks = list(Column.map(rpartial(Chunk.argunique, reverse), self))
+        keys = map(pa.Array.take, self.iterchunks(), map(pa.array, chunks))
+        indices = Chunk.argunique(pa.concat_arrays(keys), reverse)
+        return pa.array(np.take(Column.offset(self, chunks), indices))
+
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
         if length is None:
@@ -150,10 +172,8 @@ class Column(pa.ChunkedArray):
             else:
                 select = lambda ch: np.argpartition(ch, length)[:length]
             chunks = list(Column.map(select, self))
-            offsets = itertools.accumulate(map(len, self.iterchunks()))
-            indices = np.concatenate(chunks[:1] + list(map(np.add, chunks[1:], offsets)))
             values = np.concatenate(list(map(np.take, self.iterchunks(), chunks)))
-            indices = np.take(indices, np.argsort(values))
+            indices = np.take(Column.offset(self, chunks), np.argsort(values))
         return pa.array((indices[::-1] if reverse else indices)[:length])
 
     def sum(self, exp: int = 1):

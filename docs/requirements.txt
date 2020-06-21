@@ -1,2 +1,1 @@
 cython
-m2r

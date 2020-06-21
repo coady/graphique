@@ -38,6 +38,8 @@ def test_chunks():
     assert list(C.predicate(not_equal="a")(chunk)) == [False, True, False]
     assert list(C.sort(array, length=1)) == ["a"]
     assert list(C.argsort(array, length=1)) == [0]
+    assert set(C.argunique(array)) == {0, 1, 4}
+    assert set(C.argunique(array, reverse=True)) == {5, 4, 2}
 
 
 def test_reduce():
@@ -80,17 +82,34 @@ def test_groupby(table):
     for key, group in T.arggroupby(table, 'state').items():
         assert groups[key].equals(group)
     assert len(groups) == 52
-    assert set(table['state'].chunks[0].take(groups['CA'])) == {'CA'}
+    assert set(table['state'].chunk(0).take(groups['CA'])) == {'CA'}
     groups = C.arggroupby(table['latitude'])
     assert max(map(len, groups.values())) == 6
     groups = T.arggroupby(table, 'state', 'county')
     group = groups['CA']['Santa Clara']
     assert len(group) == 108
-    assert set(table['county'].chunks[0].take(group)) == {'Santa Clara'}
+    assert set(table['county'].chunk(0).take(group)) == {'Santa Clara'}
     groups = T.arggroupby(table, 'state', 'county', 'city')
     group = groups['CA']['Santa Clara']['Mountain View']
     assert len(group) == 6
-    assert set(table['city'].chunks[0].take(group)) == {'Mountain View'}
+    assert set(table['city'].chunk(0).take(group)) == {'Mountain View'}
+
+
+def test_unique(table):
+    indices = C.argunique(table['zipcode'])
+    assert len(indices) == 41700
+    indices = C.argunique(table['state'])
+    states = table['state'].chunk(0)
+    assert C.argunique(table['state'].dictionary_encode()).equals(indices)
+    assert len(indices) == 52
+    assert set(states.take(indices)) == set(states)
+    first, last = C.argmin(table['zipcode']), C.argmax(table['zipcode'])
+    assert first in indices.to_pylist() and last not in indices.to_pylist()
+    indices = C.argunique(table['state'], reverse=True)
+    assert first not in indices.to_pylist() and last in indices.to_pylist()
+    indices = C.argunique(table['latitude'])
+    assert len(indices) < 41700
+    assert not C.argunique(table['latitude'], reverse=True).equals(indices)
 
 
 def test_sort(table):
