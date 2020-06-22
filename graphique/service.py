@@ -1,5 +1,5 @@
 import itertools
-from typing import List
+from typing import List, Optional
 import graphql
 import numpy as np
 import pyarrow as pa
@@ -40,6 +40,14 @@ class Columns:
 
 
 @strawberry.type
+class Row:
+    """scalar fields"""
+
+    __annotations__ = {name: Optional[types[name]] for name in types}
+    locals().update(dict.fromkeys(types))
+
+
+@strawberry.type
 class Table:
     """a column-oriented table"""
 
@@ -55,6 +63,12 @@ class Table:
     def columns(self) -> Columns:
         """fields for each column"""
         return Columns(self.table)
+
+    @strawberry.field
+    def row(self, index: Long = 0) -> Row:  # type: ignore
+        """scalar fields"""
+        data = self.table[index:][:1].to_pydict()
+        return Row(**{name: data[name][0] for name in data})  # type: ignore
 
     @strawberry.field
     def slice(self, offset: Long = 0, length: Long = None) -> 'Table':  # type: ignore
@@ -94,20 +108,26 @@ class Table:
         return Table(T.from_pydict(T.apply(self.table, lambda col: np.take(col, indices))))
 
     @strawberry.field
+    def min(self, by: List[str]) -> 'Table':
+        """Return table with minimum values per column."""
+        return Table(T.matched(self.table, C.min, *by))
+
+    @strawberry.field
+    def max(self, by: List[str]) -> 'Table':
+        """Return table with maximum values per column."""
+        return Table(T.matched(self.table, C.max, *by))
+
+    @strawberry.field
     def filter(self, **queries) -> 'Table':
         """Return table with rows which match all queries."""
-        if not queries:
-            return self
         predicates = {name: resolvers.predicate(**queries[name]) for name in queries}
-        return Table(table.filter(T.mask(self.table, **predicates)))
+        return Table(T.filtered(self.table, predicates, invert=False))
 
     @strawberry.field
     def exclude(self, **queries) -> 'Table':
         """Return table with rows which don't match all queries; inverse of filter."""
-        if not queries:
-            return self
         predicates = {name: resolvers.predicate(**queries[name]) for name in queries}
-        return Table(table.filter(C.mask(T.mask(self.table, **predicates), np.invert)))
+        return Table(T.filtered(self.table, predicates, invert=True))
 
 
 Table.filter.graphql_type.args.update(query_map)

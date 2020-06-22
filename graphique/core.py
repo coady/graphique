@@ -361,3 +361,14 @@ class Table(pa.Table):
             return Column.argsort(column, reverse, length)
         select = Column.argmax if reverse else Column.argmin
         return pa.array([select(column)])
+
+    def matched(self, func: Callable, *names: str):
+        for name in names:
+            self = self.filter(Column.equal(self[name], func(self[name])))
+        return self
+
+    def filtered(self, predicates: dict, invert=False) -> pa.Table:
+        if not predicates:
+            return self
+        mask = Table.mask(self, **predicates)
+        return self.filter(Column.mask(mask, np.invert) if invert else mask)

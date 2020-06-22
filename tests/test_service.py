@@ -216,3 +216,16 @@ def test_unique(client):
         '{ unique(by: ["state", "county"]) { length columns { zipcode { min max } } } }'
     )
     assert data == {'unique': {'length': 3216, 'columns': {'zipcode': {'min': 501, 'max': 99903}}}}
+
+
+def test_rows(client):
+    with pytest.raises(ValueError, match="out of range"):
+        client.execute('{ row(index: 100000) { zipcode } }')
+    data = client.execute('{ row { state } }')
+    assert data == {'row': {'state': 'NY'}}
+    data = client.execute('{ row(index: -1) { state } }')
+    assert data == {'row': {'state': 'AK'}}
+    data = client.execute('{ min(by: ["latitude"]) { row { state } } }')
+    assert data == {'min': {'row': {'state': 'PR'}}}
+    data = client.execute('{ max(by: ["latitude", "longitude"]) { row { state } } }')
+    assert data == {'max': {'row': {'state': 'AK'}}}
