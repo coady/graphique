@@ -190,10 +190,6 @@ Optimized for `null`, and empty queries are implicitly boolean."""
             return not resolvers.count(self, **{op: None})
         return C.all(self.array, resolvers.predicate(**query))
 
-    def item(self, index: Long = 0):  # type: ignore
-        """Return scalar value at index."""
-        return self.array[index].as_py()
-
     def values(self):
         """list of values"""
         return self.array.to_pylist()
@@ -252,7 +248,6 @@ class BooleanColumn:
     count = query_args(resolvers.count, BooleanQuery)
     any = query_args(resolvers.any, BooleanQuery)
     all = query_args(resolvers.all, BooleanQuery)
-    item = annotate(resolvers.item, Optional[bool])
     values = annotate(resolvers.values, List[Optional[bool]])
     unique = annotate(resolvers.unique, Set)
 
@@ -276,7 +271,6 @@ class IntColumn:
     count = query_args(resolvers.count, IntQuery)
     any = query_args(resolvers.any, IntQuery)
     all = query_args(resolvers.all, IntQuery)
-    item = annotate(resolvers.item, Optional[int])
     values = annotate(resolvers.values, List[Optional[int]])
     sort = annotate(resolvers.sort, List[Optional[int]])
     sum = annotate(resolvers.sum, int)
@@ -305,7 +299,6 @@ class LongColumn:
     count = query_args(resolvers.count, LongQuery)
     any = query_args(resolvers.any, LongQuery)
     all = query_args(resolvers.all, LongQuery)
-    item = annotate(resolvers.item, Optional[Long])
     values = annotate(resolvers.values, List[Optional[Long]])
     sort = annotate(resolvers.sort, List[Optional[Long]])
     sum = annotate(resolvers.sum, Long)
@@ -323,7 +316,6 @@ class FloatColumn:
     count = query_args(resolvers.count, FloatQuery)
     any = query_args(resolvers.any, FloatQuery)
     all = query_args(resolvers.all, FloatQuery)
-    item = annotate(resolvers.item, Optional[float])
     values = annotate(resolvers.values, List[Optional[float]])
     sort = annotate(resolvers.sort, List[Optional[float]])
     sum = annotate(resolvers.sum, float)
@@ -340,7 +332,6 @@ class DecimalColumn:
     count = query_args(resolvers.count, DecimalQuery)
     any = query_args(resolvers.any, DecimalQuery)
     all = query_args(resolvers.all, DecimalQuery)
-    item = annotate(resolvers.item, Optional[Decimal])
     values = annotate(resolvers.values, List[Optional[Decimal]])
     sort = annotate(resolvers.sort, List[Optional[Decimal]])
     min = annotate(resolvers.min, Decimal)
@@ -366,7 +357,6 @@ class DateColumn:
     count = query_args(resolvers.count, DateQuery)
     any = query_args(resolvers.any, DateQuery)
     all = query_args(resolvers.all, DateQuery)
-    item = annotate(resolvers.item, Optional[date])
     values = annotate(resolvers.values, List[Optional[date]])
     sort = annotate(resolvers.sort, List[Optional[date]])
     min = annotate(resolvers.min, date)
@@ -382,7 +372,6 @@ class DateTimeColumn:
     count = query_args(resolvers.count, DateTimeQuery)
     any = query_args(resolvers.any, DateTimeQuery)
     all = query_args(resolvers.all, DateTimeQuery)
-    item = annotate(resolvers.item, Optional[datetime])
     values = annotate(resolvers.values, List[Optional[datetime]])
     sort = annotate(resolvers.sort, List[Optional[datetime]])
     min = annotate(resolvers.min, datetime)
@@ -397,7 +386,6 @@ class TimeColumn:
     count = query_args(resolvers.count, TimeQuery)
     any = query_args(resolvers.any, TimeQuery)
     all = query_args(resolvers.all, TimeQuery)
-    item = annotate(resolvers.item, Optional[time])
     values = annotate(resolvers.values, List[Optional[time]])
     sort = annotate(resolvers.sort, List[Optional[time]])
     min = annotate(resolvers.min, time)
@@ -412,7 +400,6 @@ class BinaryColumn:
     count = query_args(resolvers.count, BinaryQuery)
     any = query_args(resolvers.any, BinaryQuery)
     all = query_args(resolvers.all, BinaryQuery)
-    item = annotate(resolvers.item, Optional[bytes])
     values = annotate(resolvers.values, List[Optional[bytes]])
 
 
@@ -435,7 +422,6 @@ class StringColumn:
     count = query_args(resolvers.count, StringQuery)
     any = query_args(resolvers.any, StringQuery)
     all = query_args(resolvers.all, StringQuery)
-    item = annotate(resolvers.item, Optional[str])
     values = annotate(resolvers.values, List[Optional[str]])
     sort = annotate(resolvers.sort, List[Optional[str]])
     min = annotate(resolvers.min, str)

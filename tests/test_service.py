@@ -42,8 +42,6 @@ def test_ints(client):
     zipcodes = data['columns']['zipcode']
     assert zipcodes['sort'][0] == zipcodes['desc'][-1] == 501
     assert zipcodes['sort'][-1] == zipcodes['desc'][0] == 99950
-    data = client.execute('{ columns { zipcode { item last: item(index: -1) } } }')
-    assert data['columns']['zipcode'] == {'item': 501, 'last': 99950}
 
 
 def test_floats(client):
@@ -99,8 +97,6 @@ def test_strings(client):
     data = client.execute('{ columns { state { any(greater: "CA") all(greater: "CA") } } }')
     states = data['columns']['state']
     assert states['any'] and not states['all']
-    data = client.execute('{ columns { state { item last: item(index: -1) } } }')
-    assert data['columns']['state'] == {'item': 'NY', 'last': "AK"}
 
 
 def test_search(client):
@@ -193,12 +189,12 @@ def test_group(client):
     assert states['min'] == states['max'] == 'AK'
     data = client.execute(
         '''{ group(by: ["state", "county"], reverse: true, length: 3)
-        { length columns { state { item } county { item } } } }'''
+        { length row { state county } } }'''
     )
     assert [group['length'] for group in data['group']] == [4, 2, 7]
-    tables = [group['columns'] for group in data['group']]
-    assert [table['state']['item'] for table in tables] == ['WY'] * 3
-    assert [table['county']['item'] for table in tables] == ['Weston', 'Washakie', 'Uinta']
+    rows = [group['row'] for group in data['group']]
+    assert [row['state'] for row in rows] == ['WY'] * 3
+    assert [row['county'] for row in rows] == ['Weston', 'Washakie', 'Uinta']
 
 
 def test_unique(client):
@@ -219,7 +215,7 @@ def test_unique(client):
 
 
 def test_rows(client):
-    with pytest.raises(ValueError, match="out of range"):
+    with pytest.raises(ValueError, match="out of bounds"):
         client.execute('{ row(index: 100000) { zipcode } }')
     data = client.execute('{ row { state } }')
     assert data == {'row': {'state': 'NY'}}

@@ -8,7 +8,7 @@ import strawberry.asgi
 from starlette.applications import Starlette
 from strawberry.utils.str_converters import to_snake_case
 from .core import Column as C, Table as T, flatten
-from .models import Long, column_map, query_map, resolvers, type_map
+from .models import Long, column_map, query_map, resolvers, selections, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
 table = pq.read_table(PARQUET_PATH, COLUMNS, memory_map=MMAP, read_dictionary=DICTIONARIES)
@@ -65,10 +65,10 @@ class Table:
         return Columns(self.table)
 
     @strawberry.field
-    def row(self, index: Long = 0) -> Row:  # type: ignore
-        """scalar fields"""
-        data = self.table[index:][:1].to_pydict()
-        return Row(**{name: data[name][0] for name in data})  # type: ignore
+    def row(self, info, index: Long = 0) -> Row:  # type: ignore
+        """Return scalar values at index."""
+        data = {name: self.table[name][index] for name in selections(*info.field_nodes)}
+        return Row(**data)  # type: ignore
 
     @strawberry.field
     def slice(self, offset: Long = 0, length: Long = None) -> 'Table':  # type: ignore

@@ -35,9 +35,6 @@ type BooleanColumn {
   """
   all(equal: Boolean, notEqual: Boolean): Boolean!
 
-  """Return scalar value at index."""
-  item(index: Long! = 0): Boolean
-
   """list of values"""
   values: [Boolean]!
 
@@ -86,9 +83,6 @@ type IntColumn {
   Optimized for `null`, and empty queries are implicitly boolean.
   """
   all(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Boolean!
-
-  """Return scalar value at index."""
-  item(index: Long! = 0): Int
 
   """list of values"""
   values: [Int]!
@@ -154,9 +148,6 @@ type LongColumn {
   """
   all(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Boolean!
 
-  """Return scalar value at index."""
-  item(index: Long! = 0): Long
-
   """list of values"""
   values: [Long]!
 
@@ -210,9 +201,6 @@ type FloatColumn {
   """
   all(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
 
-  """Return scalar value at index."""
-  item(index: Long! = 0): Float
-
   """list of values"""
   values: [Float]!
 
@@ -262,9 +250,6 @@ type DecimalColumn {
   Optimized for `null`, and empty queries are implicitly boolean.
   """
   all(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
-
-  """Return scalar value at index."""
-  item(index: Long! = 0): Decimal
 
   """list of values"""
   values: [Decimal]!
@@ -321,9 +306,6 @@ type DateColumn {
   """
   all(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
 
-  """Return scalar value at index."""
-  item(index: Long! = 0): Date
-
   """list of values"""
   values: [Date]!
 
@@ -371,9 +353,6 @@ type DateTimeColumn {
   """
   all(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Boolean!
 
-  """Return scalar value at index."""
-  item(index: Long! = 0): DateTime
-
   """list of values"""
   values: [DateTime]!
 
@@ -418,9 +397,6 @@ type TimeColumn {
   """
   all(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
 
-  """Return scalar value at index."""
-  item(index: Long! = 0): Time
-
   """list of values"""
   values: [Time]!
 
@@ -460,9 +436,6 @@ type BinaryColumn {
   Optimized for `null`, and empty queries are implicitly boolean.
   """
   all(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
-
-  """Return scalar value at index."""
-  item(index: Long! = 0): Binary
 
   """list of values"""
   values: [Binary]!
@@ -509,9 +482,6 @@ type StringColumn {
   Optimized for `null`, and empty queries are implicitly boolean.
   """
   all(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Boolean!
-
-  """Return scalar value at index."""
-  item(index: Long! = 0): String
 
   """list of values"""
   values: [String]!
