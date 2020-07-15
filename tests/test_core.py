@@ -40,6 +40,8 @@ def test_chunks():
     assert list(C.argsort(array, length=1)) == [0]
     assert set(C.argunique(array)) == {0, 1, 4}
     assert set(C.argunique(array, reverse=True)) == {5, 4, 2}
+    arr = pa.chunked_array([[0.0, 1.0, 0.0]])
+    assert C.argunique(arr, reverse=True).equals(pa.array([2, 1]))
 
 
 def test_reduce():

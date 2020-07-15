@@ -7,7 +7,7 @@ from concurrent import futures
 from typing import Callable, Iterable, Iterator
 import numpy as np
 import pyarrow as pa
-from .arrayed import arggroupby, argunique  # type: ignore
+from .arrayed import arggroupby, argunique, asiarray  # type: ignore
 
 
 class Compare:
@@ -73,10 +73,10 @@ class Chunk:
         if isinstance(self, pa.DictionaryArray):
             self = self.indices
         try:
-            return argunique(self, reverse)
+            indices = argunique(pa.array(asiarray(self)[::-1]) if reverse else self)
         except TypeError:  # fallback to sorting
             _, indices = np.unique(np.asarray(self)[::-1] if reverse else self, return_index=True)
-        return indices
+        return (len(self) - 1 - indices) if reverse else indices  # type: ignore
 
     def value_counts(self):
         values, counts = self.indices.value_counts().flatten()

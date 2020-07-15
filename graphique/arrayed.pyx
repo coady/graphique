@@ -30,22 +30,20 @@ def arggroupby(array):
     return values, np.split(indices, np.cumsum(counts))
 
 
-def argunique(array, reverse=False):
-    """Return index array of first or last occurrences."""
+def argunique(array):
+    """Return index array of first occurrences.
+
+    Relies on `Array.unique` having stable ordering.
+    """
     cdef const Py_ssize_t [:] array_view = asiarray(array)
-    cdef unordered_map[Py_ssize_t, Py_ssize_t] positions
-    if reverse:
-        with nogil:
-            for i in range(array_view.shape[0]):
-                positions[array_view[i]] = i
-    else:
-        with nogil:
-            for i in range(array_view.shape[0] - 1, -1, -1):
-                positions[array_view[i]] = i
-    indices = np.empty(positions.size(), np.intp)
+    cdef const Py_ssize_t [:] values_view = asiarray(array.unique())
+    indices = np.empty(values_view.size, np.intp)
     cdef Py_ssize_t [:] indices_view = indices
+    cdef Py_ssize_t j = 0
     with nogil:
-        i = 0
-        for p in positions:
-            indices_view[postincrement(i)] = p.second
+        for i in range(values_view.shape[0]):
+            for j in range(j, array_view.shape[0]):
+                if values_view[i] == array_view[j]:
+                    break
+            indices_view[i] = postincrement(j)
     return indices
