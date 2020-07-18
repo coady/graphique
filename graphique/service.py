@@ -6,7 +6,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
-from strawberry.utils.str_converters import to_snake_case
+from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T, flatten
 from .models import Long, column_map, query_map, resolvers, selections, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -14,9 +14,10 @@ from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 table = pq.read_table(PARQUET_PATH, COLUMNS, memory_map=MMAP, read_dictionary=DICTIONARIES)
 indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
+to_snake_case = {to_camel_case(name): name for name in types}.__getitem__
 query_map = {
-    name: graphql.GraphQLArgument(query_map[types[name]].graphql_type)  # type: ignore
-    for name in types
+    to_camel_case(name): graphql.GraphQLArgument(query_map[tp].graphql_type)  # type: ignore
+    for name, tp in types.items()
 }
 
 
@@ -67,8 +68,8 @@ class Table:
     @strawberry.field
     def row(self, info, index: Long = 0) -> Row:  # type: ignore
         """Return scalar values at index."""
-        data = {name: self.table[name][index] for name in selections(*info.field_nodes)}
-        return Row(**data)  # type: ignore
+        names = map(to_snake_case, selections(*info.field_nodes))
+        return Row(**{name: self.table[name][index] for name in names})  # type: ignore
 
     @strawberry.field
     def slice(self, offset: Long = 0, length: Long = None) -> 'Table':  # type: ignore
@@ -120,13 +121,13 @@ class Table:
     @strawberry.field
     def filter(self, **queries) -> 'Table':
         """Return table with rows which match all queries."""
-        predicates = {name: resolvers.predicate(**queries[name]) for name in queries}
+        predicates = {to_snake_case(name): resolvers.predicate(**queries[name]) for name in queries}
         return Table(T.filtered(self.table, predicates, invert=False))
 
     @strawberry.field
     def exclude(self, **queries) -> 'Table':
         """Return table with rows which don't match all queries; inverse of filter."""
-        predicates = {name: resolvers.predicate(**queries[name]) for name in queries}
+        predicates = {to_snake_case(name): resolvers.predicate(**queries[name]) for name in queries}
         return Table(T.filtered(self.table, predicates, invert=True))
 
 
@@ -144,7 +145,7 @@ class IndexedTable(Table):
     @strawberry.field
     def index(self) -> List[str]:
         """indexed columns"""
-        return indexed
+        return list(map(to_camel_case, indexed))
 
     @strawberry.field
     def search(self, **queries) -> Table:
@@ -154,7 +155,7 @@ class IndexedTable(Table):
         """
         table = self.table
         for name in indexed:
-            query = queries.pop(name, None)
+            query = queries.pop(to_camel_case(name), None)
             if query is None:
                 break
             if 'equal' in query:
@@ -177,7 +178,7 @@ class IndexedTable(Table):
             raise ValueError(f"expected query for {name}; have {queries} remaining")
         return Table(table)
 
-    search.graphql_type.args.update({name: query_map[name] for name in indexed})
+    search.graphql_type.args.update({name: query_map[name] for name in map(to_camel_case, indexed)})
 
 
 Query = IndexedTable if indexed else Table

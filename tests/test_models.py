@@ -7,7 +7,23 @@ def test_schema(schema):
     assert graphql.parse(schema)
 
 
-def test_columns(execute):
+def test_case(executor):
+    data = executor('{ columns { snakeId { values } camelId { values } } }')
+    assert data == {'columns': {'snakeId': {'values': [1, 2]}, 'camelId': {'values': [1, 2]}}}
+    data = executor('{ row { snakeId camelId } }')
+    assert data == {'row': {'snakeId': 1, 'camelId': 1}}
+    data = executor('{ filter(snakeId: {equal: 1}, camelId: {equal: 1}) { length } }')
+    assert data == {'filter': {'length': 1}}
+    data = executor('{ exclude(snakeId: {equal: 1}, camelId: {equal: 1}) { length } }')
+    assert data == {'exclude': {'length': 1}}
+    data = executor('{ index search(snakeId: {equal: 1}) { length } }')
+    assert data == {'index': ['snakeId'], 'search': {'length': 1}}
+
+
+def test_columns(executor):
+    def execute(query):
+        return executor(f'{{ columns {query} }}')['columns']
+
     assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
     assert execute('{ bool { count(equal: false) } }') == {'bool': {'count': 1}}
 

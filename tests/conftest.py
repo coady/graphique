@@ -24,12 +24,15 @@ class TestClient(testclient.TestClient):
         return result['data']
 
 
-def load(path):
+def load(path, **vars):
     os.environ['PARQUET_PATH'] = str(fixtures / path)
+    os.environ.update(vars)
     sys.modules.pop('graphique.service', None)
     sys.modules.pop('graphique.settings', None)
     from graphique.service import table
 
+    for var in vars:
+        del os.environ[var]
     return table
 
 
@@ -39,14 +42,14 @@ def table():
 
 
 @pytest.fixture(scope='module')
-def execute():
-    table = load('alltypes.parquet')
-    from graphique.service import Columns
+def executor():
+    table = load('alltypes.parquet', INDEX='snake_id')
+    from graphique.service import IndexedTable
 
-    schema = strawberry.Schema(query=Columns)
+    schema = strawberry.Schema(query=IndexedTable)
 
     def execute(query):
-        result = graphql.graphql_sync(schema, query, root_value=Columns(table))
+        result = graphql.graphql_sync(schema, query, root_value=IndexedTable(table))
         for error in result.errors or ():
             raise ValueError(error)
         return result.data
