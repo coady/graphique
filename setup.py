@@ -25,10 +25,10 @@ setup(
     license='Apache Software License',
     packages=['graphique'],
     ext_modules=cythonize([ext_module]) if cythonize else [ext_module],
-    install_requires=['pyarrow>=0.17', 'strawberry-graphql>=0.27'],
+    install_requires=['pyarrow>=0.18', 'strawberry-graphql>=0.27'],
     extras_require={'docs': ['recommonmark', 'sphinx'], 'timestamp': ['pytz']},
     python_requires='>=3.7',
-    tests_require=['pytest-cov'],
+    tests_require=['pytest-cov', 'requests'],
     keywords='graphql arrow parquet',
     classifiers=[
         'Development Status :: 3 - Alpha',

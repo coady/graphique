@@ -63,7 +63,7 @@ class Chunk:
         try:
             keys, sections = arggroupby(self)
         except TypeError:  # fallback to sorting
-            values, counts = self.value_counts().flatten()
+            values, counts = self.value_counts().flatten()  # type: ignore
             indices = pa.array(np.argsort(values))
             keys = values.take(indices)
             sections = np.split(np.argsort(self, kind='stable'), np.cumsum(counts.take(indices)))
@@ -77,10 +77,6 @@ class Chunk:
         except TypeError:  # fallback to sorting
             _, indices = np.unique(np.asarray(self)[::-1] if reverse else self, return_index=True)
         return (len(self) - 1 - indices) if reverse else indices  # type: ignore
-
-    def value_counts(self):
-        values, counts = self.indices.value_counts().flatten()
-        return self.dictionary.take(values), counts
 
     def equal(self, value) -> np.ndarray:
         if not isinstance(self, pa.DictionaryArray):
@@ -258,22 +254,6 @@ class Column(pa.ChunkedArray):
             start = bisect.bisect_left(self, value, stop)
             stop = bisect.bisect_right(self, value, start)
             yield slice(start, stop)
-
-    def unique(self) -> pa.Array:
-        """Return array of unique values with dictionary support."""
-        if not isinstance(self.type, pa.DictionaryType):
-            return self.unique()
-        chunks = Column.map(lambda ch: ch.dictionary.take(ch.indices.unique()), self)
-        return pa.chunked_array(chunks).unique()
-
-    def value_counts(self) -> pa.StructArray:
-        """Return arrays of unique values and counts with dictionary support."""
-        if not isinstance(self.type, pa.DictionaryType):
-            return self.value_counts()
-        values, counts = zip(*Column.map(Chunk.value_counts, self))
-        values, indices = np.unique(np.concatenate(values), return_inverse=True)
-        counts = np.bincount(indices, weights=np.concatenate(counts)).astype(int)
-        return pa.StructArray.from_arrays([values, counts], ['values', 'counts'])
 
 
 class Table(pa.Table):

@@ -13,8 +13,8 @@ def test_dictionary(table):
     values, counts = C.value_counts(array).flatten()
     assert len(values) == len(counts) == 52
     assert set(C.unique(array)) == set(values)
-    assert array[C.argmin(array)] == C.min(array) == 'AK'
-    assert array[C.argmax(array)] == C.max(array) == 'WY'
+    assert array[C.argmin(array)].as_py() == C.min(array) == 'AK'
+    assert array[C.argmax(array)].as_py() == C.max(array) == 'WY'
     with pytest.raises(ValueError):
         C.min(array[:0])
     with pytest.raises(ValueError):
@@ -29,17 +29,16 @@ def test_chunks():
         C.argmin(array[:0])
     with pytest.raises(ValueError):
         C.argmax(array[:0])
-    assert array.value_counts().equals(C.value_counts(array.dictionary_encode()))
-    groups = {key: list(value) for key, value in C.arggroupby(array).items()}
+    groups = {key: value.to_pylist() for key, value in C.arggroupby(array).items()}
     assert groups == {'a': [0, 2], 'b': [1, 3, 5], 'c': [4]}
     chunk = array.chunk(0)
-    assert list(C.predicate()(chunk)) == list(chunk)
+    assert list(C.predicate()(chunk)) == chunk.to_pylist()
     assert list(C.predicate(equal="a", less="c")(chunk)) == [True, False, True]
     assert list(C.predicate(not_equal="a")(chunk)) == [False, True, False]
-    assert list(C.sort(array, length=1)) == ["a"]
-    assert list(C.argsort(array, length=1)) == [0]
-    assert set(C.argunique(array)) == {0, 1, 4}
-    assert set(C.argunique(array, reverse=True)) == {5, 4, 2}
+    assert C.sort(array, length=1).to_pylist() == ["a"]
+    assert C.argsort(array, length=1).to_pylist() == [0]
+    assert set(C.argunique(array).to_pylist()) == {0, 1, 4}
+    assert set(C.argunique(array, reverse=True).to_pylist()) == {5, 4, 2}
     arr = pa.chunked_array([[0.0, 1.0, 0.0]])
     assert C.argunique(arr, reverse=True).equals(pa.array([2, 1]))
 
@@ -84,17 +83,17 @@ def test_groupby(table):
     for key, group in T.arggroupby(table, 'state').items():
         assert groups[key].equals(group)
     assert len(groups) == 52
-    assert set(table['state'].chunk(0).take(groups['CA'])) == {'CA'}
+    assert set(table['state'].chunk(0).take(groups['CA'])) == {pa.scalar('CA')}
     groups = C.arggroupby(table['latitude'])
     assert max(map(len, groups.values())) == 6
     groups = T.arggroupby(table, 'state', 'county')
     group = groups['CA']['Santa Clara']
     assert len(group) == 108
-    assert set(table['county'].chunk(0).take(group)) == {'Santa Clara'}
+    assert set(table['county'].chunk(0).take(group)) == {pa.scalar('Santa Clara')}
     groups = T.arggroupby(table, 'state', 'county', 'city')
     group = groups['CA']['Santa Clara']['Mountain View']
     assert len(group) == 6
-    assert set(table['city'].chunk(0).take(group)) == {'Mountain View'}
+    assert set(table['city'].chunk(0).take(group)) == {pa.scalar('Mountain View')}
 
 
 def test_unique(table):
@@ -122,15 +121,15 @@ def test_unique(table):
 def test_sort(table):
     indices = C.argsort(table['state']).to_pylist()
     states = C.sort(table['state'])
-    assert states[0] == table['state'][indices[0]] == 'AK'
-    assert states[-1] == table['state'][indices[-1]] == 'WY'
+    assert states[0] == table['state'][indices[0]] == pa.scalar('AK')
+    assert states[-1] == table['state'][indices[-1]] == pa.scalar('WY')
     indices = C.argsort(table['state'], reverse=True).to_pylist()
     states = C.sort(table['state'], reverse=True)
-    assert states[0] == table['state'][indices[0]] == 'WY'
-    assert states[-1] == table['state'][indices[-1]] == 'AK'
+    assert states[0] == table['state'][indices[0]] == pa.scalar('WY')
+    assert states[-1] == table['state'][indices[-1]] == pa.scalar('AK')
     indices = C.argsort(table['state'], length=1).to_pylist()
     states = C.sort(table['state'], length=1)
-    assert list(states) == [table['state'][i] for i in indices] == ['AK']
+    assert states.to_pylist() == table['state'].take(indices).to_pylist() == ['AK']
     indices = C.argsort(table['state'], reverse=True, length=1).to_pylist()
     states = C.sort(table['state'], reverse=True, length=1)
-    assert list(states) == [table['state'][i] for i in indices] == ['WY']
+    assert states.to_pylist() == table['state'].take(indices).to_pylist() == ['WY']

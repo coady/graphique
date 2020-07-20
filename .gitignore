@@ -6,3 +6,4 @@ docs/_build
 *.so
 *.o
 *.html
+.venv/

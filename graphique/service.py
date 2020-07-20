@@ -1,8 +1,6 @@
 import itertools
 from typing import List, Optional
 import graphql
-import numpy as np
-import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
@@ -11,7 +9,9 @@ from .core import Column as C, Table as T, flatten
 from .models import Long, column_map, query_map, resolvers, selections, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
-table = pq.read_table(PARQUET_PATH, COLUMNS, memory_map=MMAP, read_dictionary=DICTIONARIES)
+table = pq.read_table(
+    PARQUET_PATH, COLUMNS, memory_map=MMAP, use_legacy_dataset=True, read_dictionary=DICTIONARIES
+)
 indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
 to_snake_case = {to_camel_case(name): name for name in types}.__getitem__
@@ -69,28 +69,21 @@ class Table:
     def row(self, info, index: Long = 0) -> Row:  # type: ignore
         """Return scalar values at index."""
         names = map(to_snake_case, selections(*info.field_nodes))
-        return Row(**{name: self.table[name][index] for name in names})  # type: ignore
+        return Row(**{name: self.table[name][index].as_py() for name in names})  # type: ignore
 
     @strawberry.field
     def slice(self, offset: Long = 0, length: Long = None) -> 'Table':  # type: ignore
         """Return table slice."""
-        # ARROW-8911: slicing an empty table may crash
-        return Table(self.table and self.table.slice(offset, length))
+        return Table(self.table.slice(offset, length))
 
     @strawberry.field
-    def group(  # type: ignore
-        self, by: List[str], reverse: bool = False, length: Long = None
-    ) -> List['Table']:
+    def group(self, by: List[str], reverse: bool = False, length: Long = None) -> List['Table']:
         """Return tables grouped by specified columns.
         Optimized for a single column.
         Groups are sorted and have stable ordering within a group.
         """
         groups = flatten(T.arggroupby(self.table, *map(to_snake_case, by)), reverse=reverse)
-        columns = [pa.concat_arrays(column.chunks) for column in self.table.columns]
-        for indices in itertools.islice(groups, length):
-            yield Table(
-                T.from_arrays([col.take(indices) for col in columns], self.table.column_names)
-            )
+        return [Table(self.table.take(indices)) for indices in itertools.islice(groups, length)]
 
     @strawberry.field
     def unique(self, by: List[str], reverse: bool = False) -> 'Table':
@@ -98,7 +91,7 @@ class Table:
         Optimized for a single column.
         """
         indices = T.argunique(self.table, *map(to_snake_case, by), reverse=reverse)
-        return Table(T.from_pydict(T.apply(self.table, lambda col: np.take(col, indices))))
+        return Table(self.table.take(indices))
 
     @strawberry.field
     def sort(self, by: List[str], reverse: bool = False, length: Long = None) -> 'Table':
@@ -106,7 +99,7 @@ class Table:
         Optimized for a single column with fixed length.
         """
         indices = T.argsort(self.table, *map(to_snake_case, by), reverse=reverse, length=length)
-        return Table(T.from_pydict(T.apply(self.table, lambda col: np.take(col, indices))))
+        return Table(self.table.take(indices))
 
     @strawberry.field
     def min(self, by: List[str]) -> 'Table':
