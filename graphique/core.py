@@ -7,6 +7,7 @@ from concurrent import futures
 from typing import Callable, Iterable, Iterator
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 from .arrayed import arggroupby, argunique, asiarray  # type: ignore
 
 
@@ -143,9 +144,9 @@ class Column(pa.ChunkedArray):
             offset += len(self.chunk(index))
         return {key: pa.array(np.concatenate(result[key])) for key in result}
 
-    def offset(self, chunks):
-        offsets = itertools.accumulate(map(len, self.iterchunks()))
-        return np.concatenate(chunks[:1] + list(map(np.add, chunks[1:], offsets)))
+    def offset(self, chunks: list) -> pa.Array:
+        offsets = pa.array([0] + list(itertools.accumulate(map(len, self.iterchunks()))))
+        return pa.concat_arrays(map(pc.add, chunks, offsets))
 
     def argunique(self, reverse=False) -> pa.Array:
         """Return index array of first or last occurrences."""
@@ -154,7 +155,7 @@ class Column(pa.ChunkedArray):
         chunks = list(Column.map(rpartial(Chunk.argunique, reverse), self))
         keys = map(pa.Array.take, self.iterchunks(), map(pa.array, chunks))
         indices = Chunk.argunique(pa.concat_arrays(keys), reverse)
-        return pa.array(np.take(Column.offset(self, chunks), indices))
+        return Column.offset(self, chunks).take(indices)
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
@@ -170,7 +171,7 @@ class Column(pa.ChunkedArray):
     def argsort(self, reverse=False, length: int = None) -> pa.Array:
         """Return indices which would sort the values, optimized for fixed length."""
         if length is None:
-            indices = np.argsort(self, kind='stable')
+            indices = pa.array(np.argsort(self, kind='stable'))
         else:
             if reverse:
                 select = lambda ch: np.argpartition(ch, -length)[-length:]
@@ -178,8 +179,8 @@ class Column(pa.ChunkedArray):
                 select = lambda ch: np.argpartition(ch, length)[:length]
             chunks = list(Column.map(select, self))
             values = np.concatenate(list(map(np.take, self.iterchunks(), chunks)))
-            indices = np.take(Column.offset(self, chunks), np.argsort(values))
-        return pa.array((indices[::-1] if reverse else indices)[:length])
+            indices = Column.offset(self, chunks).take(np.argsort(values))
+        return (indices[::-1] if reverse else indices)[:length]
 
     def sum(self, exp: int = 1):
         """Return sum of the values, with optional exponentiation."""

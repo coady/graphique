@@ -5,7 +5,8 @@ python:
   - 3.8
 
 install:
-  - pip install cython pyarrow strawberry-graphql pytz pytest-cov codecov
+  - pip install cython strawberry-graphql pytz pytest-cov codecov
+  - pip install --extra-index-url https://repo.fury.io/arrow-nightlies/ --pre pyarrow
 
 script:
   - cythonize -X linetrace=True graphique/*.pyx
