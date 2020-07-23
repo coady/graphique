@@ -24,6 +24,8 @@ setup(
     project_urls={'Documentation': 'https://graphique.readthedocs.io'},
     license='Apache Software License',
     packages=['graphique'],
+    package_data={'graphique': ['py.typed']},
+    zip_safe=False,
     ext_modules=cythonize([ext_module]) if cythonize else [ext_module],
     install_requires=['pyarrow>=0.18', 'strawberry-graphql>=0.27'],
     extras_require={'docs': ['recommonmark', 'sphinx'], 'timestamp': ['pytz']},
@@ -41,5 +43,6 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Topic :: Software Development :: Libraries :: Python Modules',
+        'Typing :: Typed',
     ],
 )

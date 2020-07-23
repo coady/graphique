@@ -1,1 +1,3 @@
+--extra-index-url https://repo.fury.io/arrow-nightlies/ --pre
+pyarrow
 cython

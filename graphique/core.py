@@ -289,7 +289,7 @@ class Table(pa.Table):
                 yield self.take(group.values)
         else:
             groups = Column.arggroupby(self[name]).values()
-            for indices in reversed(groups) if reverse else groups:
+            for indices in list(groups)[::-1] if reverse else groups:
                 yield Table.take_chunks(self, indices)
 
     def unique(self, name: str, reverse=False) -> pa.Table:
