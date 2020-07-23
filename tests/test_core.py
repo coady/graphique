@@ -30,17 +30,27 @@ def test_chunks():
     with pytest.raises(ValueError):
         C.argmax(array[:0])
     groups = {key: value.to_pylist() for key, value in C.arggroupby(array).items()}
-    assert groups == {'a': [0, 2], 'b': [1, 3, 5], 'c': [4]}
+    assert groups == {'a': [0, 2], 'b': [1, 0, 2], 'c': [1]}
+    table = pa.Table.from_pydict({'col': array})
+    tables = list(T.group(table, 'col'))
+    assert list(map(len, tables)) == [2, 3, 1]
+    assert table['col'].unique() == pa.array('abc')
     chunk = array.chunk(0)
     assert list(C.predicate()(chunk)) == chunk.to_pylist()
     assert list(C.predicate(equal="a", less="c")(chunk)) == [True, False, True]
     assert list(C.predicate(not_equal="a")(chunk)) == [False, True, False]
     assert C.sort(array, length=1).to_pylist() == ["a"]
     assert C.argsort(array, length=1).to_pylist() == [0]
-    assert set(C.argunique(array).to_pylist()) == {0, 1, 4}
-    assert set(C.argunique(array, reverse=True).to_pylist()) == {5, 4, 2}
-    arr = pa.chunked_array([[0.0, 1.0, 0.0]])
-    assert C.argunique(arr, reverse=True).equals(pa.array([2, 1]))
+    groups = [''.join(tbl['col'].to_pylist()) for tbl in T.group(table, 'col')]
+    assert groups == ['aa', 'bbb', 'c']
+    assert ''.join(T.unique(table, 'col')['col'].to_pylist()) == 'abc'
+    table = pa.Table.from_pydict({'col': array.dictionary_encode()})
+    groups = [''.join(tbl['col'].to_pylist()) for tbl in T.group(table, 'col', reverse=True)]
+    assert groups == ['c', 'bbb', 'aa']
+    assert ''.join(T.unique(table, 'col', reverse=True)['col'].to_pylist()) == 'bca'
+    table = pa.Table.from_pydict({'col': array, 'other': range(6)})
+    assert len(list(T.group(table, 'col'))) == 3
+    assert len(T.unique(table, 'col')) == 3
 
 
 def test_reduce():
@@ -75,47 +85,29 @@ def test_functional(table):
     assert len(table.filter(mask)) == 2647
 
 
-def test_groupby(table):
+def test_group(table):
     groups = C.arggroupby(table['zipcode'])
     assert len(groups) == 41700
     assert set(map(len, groups.values())) == {1}
     groups = C.arggroupby(table['state'])
-    for key, group in T.arggroupby(table, 'state').items():
-        assert groups[key].equals(group)
-    assert len(groups) == 52
+    tables = list(T.group(table, 'state'))
+    assert len(groups) == len(tables) == 52
+    assert list(map(len, groups.values())) == list(map(len, tables))
     assert set(table['state'].chunk(0).take(groups['CA'])) == {pa.scalar('CA')}
     groups = C.arggroupby(table['latitude'])
     assert max(map(len, groups.values())) == 6
-    groups = T.arggroupby(table, 'state', 'county')
-    group = groups['CA']['Santa Clara']
-    assert len(group) == 108
-    assert set(table['county'].chunk(0).take(group)) == {pa.scalar('Santa Clara')}
-    groups = T.arggroupby(table, 'state', 'county', 'city')
-    group = groups['CA']['Santa Clara']['Mountain View']
-    assert len(group) == 6
-    assert set(table['city'].chunk(0).take(group)) == {pa.scalar('Mountain View')}
 
 
 def test_unique(table):
-    indices = C.argunique(table['zipcode'])
-    assert len(indices) == 41700
-    indices = C.argunique(table['state'])
-    assert T.argunique(table, 'state').equals(indices)
-    states = table['state'].chunk(0)
-    assert C.argunique(table['state'].dictionary_encode()).equals(indices)
-    assert len(indices) == 52
-    assert set(states.take(indices)) == set(states)
-    first, last = C.argmin(table['zipcode']), C.argmax(table['zipcode'])
-    assert first in indices.to_pylist() and last not in indices.to_pylist()
-    indices = C.argunique(table['state'], reverse=True)
-    assert T.argunique(table, 'state', reverse=True).equals(indices)
-    assert first not in indices.to_pylist() and last in indices.to_pylist()
-    indices = C.argunique(table['latitude'])
-    assert len(indices) < 41700
-    assert not C.argunique(table['latitude'], reverse=True).equals(indices)
-    indices = T.argunique(table, 'state', 'county')
-    keys = zip(states.take(indices), table['county'].chunk(0).take(indices))
-    assert len(indices) == len(set(keys)) == 3216
+    assert len(T.unique(table, 'zipcode')) == 41700
+    zipcodes = T.unique(table, 'state')['zipcode'].to_pylist()
+    assert len(zipcodes) == 52
+    assert zipcodes[0] == 501
+    assert zipcodes[-1] == 99501
+    zipcodes = T.unique(table, 'state', reverse=True)['zipcode'].to_pylist()
+    assert len(zipcodes) == 52
+    assert zipcodes[0] == 99950
+    assert zipcodes[-1] == 988
 
 
 def test_sort(table):

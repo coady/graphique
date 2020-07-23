@@ -4,11 +4,11 @@ import functools
 import itertools
 import json
 from concurrent import futures
-from typing import Callable, Iterable, Iterator
+from typing import Callable, Iterable, Iterator, List, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
-from .arrayed import arggroupby, argunique, asiarray  # type: ignore
+from .arrayed import arggroupby, argunique  # type: ignore
 
 
 class Compare:
@@ -31,53 +31,23 @@ def rpartial(func, *values):
     return lambda arg: func(arg, *values)
 
 
-def argsplit(dictionary: pa.Array, indices: np.ndarray, *arrays: np.ndarray) -> dict:
-    """Return nested groups of indices given an argsort index.
-
-    :param dictionary: an original set of indices to enable working with existing chunks
-    :param indices: indices which would sort the arrays
-    :param arrays: values that will be grouped in order
-    """
-    if not arrays:
-        return dictionary.take(pa.array(indices))
-    values = np.take(arrays[0], np.take(dictionary, indices))
-    steps = np.nonzero(np.not_equal(values[1:], values[:-1]))[0] + 1
-    keys = np.take(values, np.concatenate([[0], steps]))
-    groups = [argsplit(dictionary, idx, *arrays[1:]) for idx in np.split(indices, steps)]
-    return dict(zip(keys.tolist(), groups))
-
-
-def flatten(tree: dict, reverse=False) -> Iterator:
-    """Generate leaf nodes sorted by keys."""
-    if isinstance(tree, dict):
-        for key in sorted(tree, reverse=reverse):
-            yield from flatten(tree[key], reverse=reverse)
-    else:
-        yield tree
-
-
 class Chunk:
-    def arggroupby(self) -> Iterator[tuple]:
-        dictionary = None
-        if isinstance(self, pa.DictionaryArray):
-            self, dictionary = self.indices, self.dictionary  # type: ignore
-        try:
-            keys, sections = arggroupby(self)
-        except TypeError:  # fallback to sorting
-            values, counts = self.value_counts().flatten()  # type: ignore
-            indices = pa.array(np.argsort(values))
-            keys = values.take(indices)
-            sections = np.split(np.argsort(self, kind='stable'), np.cumsum(counts.take(indices)))
-        return zip((dictionary.take(keys) if dictionary else keys).to_pylist(), sections)
+    def encode(self):
+        if not isinstance(self, pa.DictionaryArray):
+            if np.can_cast(self.type.to_pandas_dtype(), np.intp):
+                return None, self
+            self = self.dictionary_encode()
+        return self.dictionary, self.indices
 
-    def argunique(self, reverse=False) -> np.ndarray:
-        if isinstance(self, pa.DictionaryArray):
-            self = self.indices
-        try:
-            indices = argunique(pa.array(asiarray(self)[::-1]) if reverse else self)
-        except TypeError:  # fallback to sorting
-            _, indices = np.unique(np.asarray(self)[::-1] if reverse else self, return_index=True)
-        return (len(self) - 1 - indices) if reverse else indices  # type: ignore
+    def arggroupby(self) -> tuple:
+        dictionary, array = Chunk.encode(self)
+        keys, indices = arggroupby(array)
+        return (dictionary.take(keys) if dictionary else keys), indices
+
+    def argunique(self, reverse=False) -> pa.IntegerArray:
+        _, array = Chunk.encode(self)
+        indices = argunique(array[::-1] if reverse else array)
+        return pc.subtract(pa.scalar(len(array) - 1), indices) if reverse else indices
 
     def equal(self, value) -> np.ndarray:
         if not isinstance(self, pa.DictionaryArray):
@@ -132,30 +102,17 @@ class Column(pa.ChunkedArray):
         return Column.mask(self, rpartial(Chunk.isin, values, invert))
 
     def arggroupby(self) -> dict:
-        """Return mapping of unique keys to corresponding index arrays."""
-        empty = np.full(0, 0)
+        """Return groups of index arrays."""
+        empty = pa.array([], pa.int64())
         result = collections.defaultdict(lambda: [empty] * self.num_chunks)  # type: dict
-        if self.type == pa.string():
-            self = self.dictionary_encode()
-        offset = 0
-        for index, items in enumerate(Column.map(Chunk.arggroupby, self)):
-            for key, values in items:
-                result[key][index] = values + offset
-            offset += len(self.chunk(index))
-        return {key: pa.array(np.concatenate(result[key])) for key in result}
+        for index, (keys, groups) in enumerate(Column.map(Chunk.arggroupby, self)):
+            for key, group in zip(keys.to_pylist(), groups):
+                result[key][index] = group.values
+        return {key: pa.chunked_array(result[key]) for key in result}
 
     def offset(self, chunks: list) -> pa.Array:
         offsets = pa.array([0] + list(itertools.accumulate(map(len, self.iterchunks()))))
         return pa.concat_arrays(map(pc.add, chunks, offsets))
-
-    def argunique(self, reverse=False) -> pa.Array:
-        """Return index array of first or last occurrences."""
-        if self.type == pa.string():
-            self = self.dictionary_encode()
-        chunks = list(Column.map(rpartial(Chunk.argunique, reverse), self))
-        keys = map(pa.Array.take, self.iterchunks(), map(pa.array, chunks))
-        indices = Chunk.argunique(pa.concat_arrays(keys), reverse)
-        return Column.offset(self, chunks).take(indices)
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
@@ -306,28 +263,45 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
-    def arggroupby(self, *names: str) -> dict:
-        """Generate keys and indices from grouping by columns."""
-        groups = Column.arggroupby(self[names[0]])
-        arrays = [np.asarray(self[name]) for name in names[1:]]
-        if arrays:
-            for key, group in groups.items():
-                indices = np.lexsort([np.take(array, group) for array in arrays[::-1]])
-                groups[key] = argsplit(group, indices, *arrays)
-        return groups
+    def num_chunks(self) -> Optional[int]:
+        """Return number of chunks if consistent across columns, else None."""
+        shapes = {tuple(map(len, column.iterchunks())) for column in self.columns}
+        return None if len(shapes) > 1 else sum(map(len, shapes))
 
-    def argunique(self, *names: str, reverse=False) -> pa.Array:
-        """Return index array of first or last occurrences from grouping by columns.
+    def take_chunks(self, indices: pa.ChunkedArray) -> pa.Table:
+        """Return table with selected rows from a non-offset chunked array.
 
-        Optimized for a single column with fixed length.
+        `ChunkedArray.take` concatenates the chunks and as such is not performant for grouping.
+        Assumes the shape of the columns is the same.
         """
-        if len(names) <= 1:
-            return Column.argunique(self[names[0]], reverse)
-        values = pa.concat_arrays(self[names[-1]].iterchunks())
-        return pa.concat_arrays(
-            indices.take(pa.array(Chunk.argunique(values.take(indices), reverse)))
-            for indices in flatten(Table.arggroupby(self, *names[:-1]), reverse)
-        )
+        assert Table.num_chunks(self) is not None
+        func = lambda col: pa.concat_arrays(Column.map(pa.Array.take, col, indices))
+        return pa.Table.from_pydict(Table.apply(self, func))
+
+    def group(self, name: str, reverse=False) -> Iterator[pa.Table]:
+        """Return mapping of unique keys to corresponding index arrays."""
+        num_chunks = Table.num_chunks(self)
+        if num_chunks is None:
+            self, num_chunks = self.combine_chunks(), 1
+        if num_chunks == 1:
+            _, groups = Chunk.arggroupby(self[name].chunk(0))
+            for group in groups[::-1] if reverse else groups:
+                yield self.take(group.values)
+        else:
+            groups = Column.arggroupby(self[name]).values()
+            for indices in reversed(groups) if reverse else groups:
+                yield Table.take_chunks(self, indices)
+
+    def unique(self, name: str, reverse=False) -> pa.Table:
+        """Return index array of first or last occurrences from grouping by columns."""
+        num_chunks = Table.num_chunks(self)
+        if num_chunks is None:
+            self, num_chunks = self.combine_chunks(), 1
+        if num_chunks > 1:
+            chunks = Column.map(rpartial(Chunk.argunique, reverse), self[name])
+            chunks = (chunk[::-1] if reverse else chunk for chunk in chunks)
+            self = Table.take_chunks(self, pa.chunked_array(chunks))
+        return self.take(Chunk.argunique(self[name].chunk(0), reverse) if num_chunks else [])
 
     def argsort(self, *names: str, reverse=False, length: int = None) -> pa.Array:
         """Return indices which would sort the table by given columns.
@@ -342,6 +316,13 @@ class Table(pa.Table):
             return Column.argsort(column, reverse, length)
         select = Column.argmax if reverse else Column.argmin
         return pa.array([select(column)])
+
+    def grouped(self, *names: str, reverse=False, length: int = None) -> List[pa.Table]:
+        tables = [self]
+        for name in names:
+            groups = (Table.group(table, name, reverse) for table in tables)
+            tables = list(itertools.islice(itertools.chain.from_iterable(groups), length))
+        return tables
 
     def matched(self, func: Callable, *names: str):
         for name in names:

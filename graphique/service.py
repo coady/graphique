@@ -1,11 +1,11 @@
-import itertools
 from typing import List, Optional
 import graphql
+import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
 from strawberry.utils.str_converters import to_camel_case
-from .core import Column as C, Table as T, flatten
+from .core import Column as C, Table as T
 from .models import Long, column_map, query_map, resolvers, selections, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
@@ -78,20 +78,16 @@ class Table:
 
     @strawberry.field
     def group(self, by: List[str], reverse: bool = False, length: Long = None) -> List['Table']:
-        """Return tables grouped by specified columns.
-        Optimized for a single column.
-        Groups are sorted and have stable ordering within a group.
-        """
-        groups = flatten(T.arggroupby(self.table, *map(to_snake_case, by)), reverse=reverse)
-        return [Table(self.table.take(indices)) for indices in itertools.islice(groups, length)]
+        """Return tables grouped by columns, with stable ordering."""
+        tables = T.grouped(self.table, *by, reverse=reverse, length=length)
+        return list(map(Table, tables))
 
     @strawberry.field
     def unique(self, by: List[str], reverse: bool = False) -> 'Table':
-        """Return table of first or last occurrences grouped by specified columns.
-        Optimized for a single column.
-        """
-        indices = T.argunique(self.table, *map(to_snake_case, by), reverse=reverse)
-        return Table(self.table.take(indices))
+        """Return table of first or last occurrences grouped by columns, with stable ordering."""
+        by = list(map(to_snake_case, by))
+        tables = [T.unique(table, by[-1], reverse) for table in T.grouped(self.table, *by[:-1])]
+        return Table(pa.concat_tables(tables[::-1] if reverse else tables))
 
     @strawberry.field
     def sort(self, by: List[str], reverse: bool = False, length: Long = None) -> 'Table':
@@ -104,12 +100,12 @@ class Table:
     @strawberry.field
     def min(self, by: List[str]) -> 'Table':
         """Return table with minimum values per column."""
-        return Table(T.matched(self.table, C.min, *by))
+        return Table(T.matched(self.table, C.min, *map(to_snake_case, by)))
 
     @strawberry.field
     def max(self, by: List[str]) -> 'Table':
         """Return table with maximum values per column."""
-        return Table(T.matched(self.table, C.max, *by))
+        return Table(T.matched(self.table, C.max, *map(to_snake_case, by)))
 
     @strawberry.field
     def filter(self, **queries) -> 'Table':

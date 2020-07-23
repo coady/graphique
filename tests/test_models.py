@@ -18,6 +18,10 @@ def test_case(executor):
     assert data == {'exclude': {'length': 1}}
     data = executor('{ index search(snakeId: {equal: 1}) { length } }')
     assert data == {'index': ['snakeId'], 'search': {'length': 1}}
+    data = executor('{ min(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
+    assert data == {'min': {'row': {'snakeId': 1, 'camelId': 1}}}
+    data = executor('{ max(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
+    assert data == {'max': {'row': {'snakeId': 2, 'camelId': 2}}}
 
 
 def test_columns(executor):

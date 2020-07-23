@@ -180,21 +180,20 @@ def test_sort(client):
 def test_group(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ group { length } }')
-    with pytest.raises(ValueError, match="out of range"):
-        client.execute('{ group(by: []) { length } }')
     data = client.execute('{ group(by: ["state"]) { length columns { state { min max } } } }')
     assert len(data['group']) == 52
-    assert data['group'][0]['length'] == 273
+    assert data['group'][0]['length'] == 2205
     states = data['group'][0]['columns']['state']
-    assert states['min'] == states['max'] == 'AK'
+    assert states['min'] == states['max'] == 'NY'
     data = client.execute(
         '''{ group(by: ["state", "county"], reverse: true, length: 3)
         { length row { state county } } }'''
     )
-    assert [group['length'] for group in data['group']] == [4, 2, 7]
+    assert [group['length'] for group in data['group']] == [9, 3, 1]
     rows = [group['row'] for group in data['group']]
-    assert [row['state'] for row in rows] == ['WY'] * 3
-    assert [row['county'] for row in rows] == ['Weston', 'Washakie', 'Uinta']
+    assert [row['state'] for row in rows] == ['AK'] * 3
+    counties = [row['county'] for row in rows]
+    assert counties == ['Prince Wales Ketchikan', 'Ketchikan Gateway', 'Sitka']
 
 
 def test_unique(client):
