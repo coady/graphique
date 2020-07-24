@@ -37,10 +37,10 @@ def test_chunks():
     assert table['col'].unique() == pa.array('abc')
     chunk = array.chunk(0)
     assert list(C.predicate()(chunk)) == chunk.to_pylist()
-    assert list(C.predicate(equal="a", less="c")(chunk)) == [True, False, True]
-    assert list(C.predicate(not_equal="a")(chunk)) == [False, True, False]
-    assert C.sort(array, length=1).to_pylist() == ["a"]
-    assert C.argsort(array, length=1).to_pylist() == [0]
+    assert list(C.predicate(equal='a', less='c')(chunk)) == [True, False, True]
+    assert list(C.predicate(not_equal='a')(chunk)) == [False, True, False]
+    assert C.sort(array, length=1).to_pylist() == ['a']
+    assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
     groups = [''.join(tbl['col'].to_pylist()) for tbl in T.group(table, 'col')]
     assert groups == ['aa', 'bbb', 'c']
     assert ''.join(T.unique(table, 'col')['col'].to_pylist()) == 'abc'
@@ -111,17 +111,17 @@ def test_unique(table):
 
 
 def test_sort(table):
-    indices = C.argsort(table['state']).to_pylist()
-    states = C.sort(table['state'])
-    assert states[0] == table['state'][indices[0]] == pa.scalar('AK')
-    assert states[-1] == table['state'][indices[-1]] == pa.scalar('WY')
-    indices = C.argsort(table['state'], reverse=True).to_pylist()
-    states = C.sort(table['state'], reverse=True)
-    assert states[0] == table['state'][indices[0]] == pa.scalar('WY')
-    assert states[-1] == table['state'][indices[-1]] == pa.scalar('AK')
-    indices = C.argsort(table['state'], length=1).to_pylist()
-    states = C.sort(table['state'], length=1)
-    assert states.to_pylist() == table['state'].take(indices).to_pylist() == ['AK']
-    indices = C.argsort(table['state'], reverse=True, length=1).to_pylist()
-    states = C.sort(table['state'], reverse=True, length=1)
-    assert states.to_pylist() == table['state'].take(indices).to_pylist() == ['WY']
+    states = C.sort(table['state']).to_pylist()
+    assert (states[0], states[-1]) == ('AK', 'WY')
+    states = C.sort(table['state'], reverse=True).to_pylist()
+    assert (states[0], states[-1]) == ('WY', 'AK')
+    assert C.sort(table['state'], length=1).to_pylist() == ['AK']
+    assert C.sort(table['state'], reverse=True, length=1).to_pylist() == ['WY']
+    data = T.sort(table, 'state').to_pydict()
+    assert (data['state'][0], data['county'][0]) == ('AK', 'Anchorage')
+    data = T.sort(table, 'state', 'county', length=1).to_pydict()
+    assert (data['state'], data['county']) == (['AK'], ['Aleutians East'])
+    data = T.sort(table, 'state', 'county', 'city', reverse=True, length=2).to_pydict()
+    assert data['state'] == ['WY', 'WY']
+    assert data['county'] == ['Weston', 'Weston']
+    assert data['city'] == ['Upton', 'Osage']

@@ -154,8 +154,6 @@ def test_filter(client):
 def test_sort(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ sort { columns { state { values } } } }')
-    with pytest.raises(ValueError, match="sequence of keys"):
-        client.execute('{ sort(by: []) { columns { state { values } } } }')
     data = client.execute('{ sort(by: ["state"]) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'][0] == 'AK'
     data = client.execute('{ sort(by: ["state"], reverse: true) { columns { state { values } } } }')

@@ -110,34 +110,17 @@ class Column(pa.ChunkedArray):
                 result[key][index] = group.values
         return {key: pa.chunked_array(result[key]) for key in result}
 
-    def offset(self, chunks: list) -> pa.Array:
-        offsets = pa.array([0] + list(itertools.accumulate(map(len, self.iterchunks()))))
-        return pa.concat_arrays(map(pc.add, chunks, offsets))
-
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
-        if length is None:
-            select = functools.partial(np.sort, kind='stable')  # type: Callable
-        elif reverse:
-            select = lambda ch: np.partition(ch, -length)[-length:]  # type: ignore
-        else:
-            select = lambda ch: np.partition(ch, length)[:length]
-        values = np.sort(np.concatenate(list(Column.map(select, self))), kind='stable')
-        return pa.array((values[::-1] if reverse else values)[:length])
-
-    def argsort(self, reverse=False, length: int = None) -> pa.Array:
-        """Return indices which would sort the values, optimized for fixed length."""
-        if length is None:
-            indices = pa.array(np.argsort(self, kind='stable'))
-        else:
-            if reverse:
-                select = lambda ch: np.argpartition(ch, -length)[-length:]
-            else:
-                select = lambda ch: np.argpartition(ch, length)[:length]
-            chunks = list(Column.map(select, self))
-            values = np.concatenate(list(map(np.take, self.iterchunks(), chunks)))
-            indices = Column.offset(self, chunks).take(np.argsort(values))
-        return (indices[::-1] if reverse else indices)[:length]
+        # arrow may seg fault when `sort_indices` is called on a non-chunked array
+        if length is not None:
+            func = lambda v, i: v.take(i[-length:] if reverse else i[:length])
+            chunks = Column.map(func, self, pc.call_function('sort_indices', [self]))
+            self = pa.chunked_array([pa.concat_arrays(chunks)])
+        elif self.num_chunks > 1:
+            self = pa.chunked_array([pa.concat_arrays(self.iterchunks())])
+        indices = pc.call_function('sort_indices', [self])
+        return self.take((indices[::-1] if reverse else indices)[:length])
 
     def sum(self, exp: int = 1):
         """Return sum of the values, with optional exponentiation."""
@@ -279,7 +262,7 @@ class Table(pa.Table):
         return pa.Table.from_pydict(Table.apply(self, func))
 
     def group(self, name: str, reverse=False) -> Iterator[pa.Table]:
-        """Return mapping of unique keys to corresponding index arrays."""
+        """Generate tables grouped by column."""
         num_chunks = Table.num_chunks(self)
         if num_chunks is None:
             self, num_chunks = self.combine_chunks(), 1
@@ -293,7 +276,7 @@ class Table(pa.Table):
                 yield Table.take_chunks(self, indices)
 
     def unique(self, name: str, reverse=False) -> pa.Table:
-        """Return index array of first or last occurrences from grouping by columns."""
+        """Return table with first or last occurrences from grouping by column."""
         num_chunks = Table.num_chunks(self)
         if num_chunks is None:
             self, num_chunks = self.combine_chunks(), 1
@@ -303,19 +286,13 @@ class Table(pa.Table):
             self = Table.take_chunks(self, pa.chunked_array(chunks))
         return self.take(Chunk.argunique(self[name].chunk(0), reverse) if num_chunks else [])
 
-    def argsort(self, *names: str, reverse=False, length: int = None) -> pa.Array:
-        """Return indices which would sort the table by given columns.
-
-        Optimized for a single column with fixed length.
-        """
-        if length is None or len(names) > 1:
-            indices = np.lexsort([self[name] for name in reversed(names)])
-            return pa.array((indices[::-1] if reverse else indices)[:length])
-        column = self.column(*names)
-        if length > 1:
-            return Column.argsort(column, reverse, length)
-        select = Column.argmax if reverse else Column.argmin
-        return pa.array([select(column)])
+    def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
+        """Return table sorted by columns."""
+        self = self.combine_chunks()
+        indices = pa.array(np.arange(len(self)))
+        for name in reversed(names):
+            indices = indices.take(pc.call_function('sort_indices', [self[name].take(indices)]))
+        return self.take((indices[::-1] if reverse else indices)[:length])
 
     def grouped(self, *names: str, reverse=False, length: int = None) -> List[pa.Table]:
         tables = [self]

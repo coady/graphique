@@ -79,7 +79,7 @@ class Table:
     @strawberry.field
     def group(self, by: List[str], reverse: bool = False, length: Long = None) -> List['Table']:
         """Return tables grouped by columns, with stable ordering."""
-        tables = T.grouped(self.table, *by, reverse=reverse, length=length)
+        tables = T.grouped(self.table, *map(to_snake_case, by), reverse=reverse, length=length)
         return list(map(Table, tables))
 
     @strawberry.field
@@ -94,8 +94,7 @@ class Table:
         """Return table slice sorted by specified columns.
         Optimized for a single column with fixed length.
         """
-        indices = T.argsort(self.table, *map(to_snake_case, by), reverse=reverse, length=length)
-        return Table(self.table.take(indices))
+        return Table(T.sort(self.table, *map(to_snake_case, by), reverse=reverse, length=length))
 
     @strawberry.field
     def min(self, by: List[str]) -> 'Table':
