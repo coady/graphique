@@ -1,7 +1,6 @@
 import os
 import sys
 from pathlib import Path
-import graphql
 import pyarrow as pa
 import strawberry
 import pytest
@@ -42,22 +41,6 @@ def table():
 
 
 @pytest.fixture(scope='module')
-def executor():
-    table = load('alltypes.parquet', INDEX='snake_id')
-    from graphique.service import IndexedTable
-
-    schema = strawberry.Schema(query=IndexedTable)
-
-    def execute(query):
-        result = graphql.graphql_sync(schema, query, root_value=IndexedTable(table))
-        for error in result.errors or ():
-            raise ValueError(error)
-        return result.data
-
-    return execute
-
-
-@pytest.fixture(scope='module')
 def client(table):
     from graphique.service import app
 
@@ -65,5 +48,24 @@ def client(table):
 
 
 @pytest.fixture(scope='module')
-def schema():
-    return open(fixtures / 'schema.graphql').read()
+def service():
+    load('alltypes.parquet', INDEX='snake_id')
+    from graphique import service
+
+    return service
+
+
+@pytest.fixture(scope='module')
+def schema(service):
+    return strawberry.Schema(query=service.IndexedTable)
+
+
+@pytest.fixture(scope='module')
+def executor(service, schema):
+    def execute(query):
+        result = schema.execute_sync(query, root_value=service.IndexedTable(service.table))
+        for error in result.errors or ():
+            raise ValueError(error)
+        return result.data
+
+    return execute

@@ -128,9 +128,6 @@ def test_search(client):
     )
     assert data == {'search': {'columns': {'zipcode': {'values': [501, 601]}}}}
 
-    with pytest.raises(ValueError, match="Unknown argument"):
-        client.execute('{ search(state: "") { length } }')
-
 
 def test_filter(client):
     data = client.execute('{ filter { length } }')

@@ -1,18 +1,39 @@
-"""predicates for booleans"""
-input BooleanQuery {
-  equal: Boolean
-  notEqual: Boolean
+schema {
+  query: IndexedTable
 }
 
-"""unique booleans"""
-type BooleanSet {
-  counts: [Long!]!
+"""base64 encoded bytes"""
+scalar Binary
 
-  """number of rows"""
-  length: Long!
+"""column of binaries"""
+type BinaryColumn {
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  count(equal: Binary, notEqual: Binary, isin: [Binary!]): Long!
+
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  any(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
+
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  all(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
 
   """list of values"""
-  values: [Boolean]!
+  values: [Binary]!
+}
+
+"""predicates for binaries"""
+input BinaryQuery {
+  equal: Binary
+  notEqual: Binary
+  isin: [Binary!]
 }
 
 """column of booleans"""
@@ -42,26 +63,306 @@ type BooleanColumn {
   unique: BooleanSet!
 }
 
-"""predicates for ints"""
-input IntQuery {
-  equal: Int
-  notEqual: Int
-  less: Int
-  lessEqual: Int
-  greater: Int
-  greaterEqual: Int
-  isin: [Int!]
+"""predicates for booleans"""
+input BooleanQuery {
+  equal: Boolean
+  notEqual: Boolean
 }
 
-"""unique ints"""
-type IntSet {
+"""unique booleans"""
+type BooleanSet {
   counts: [Long!]!
 
   """number of rows"""
   length: Long!
 
   """list of values"""
-  values: [Int]!
+  values: [Boolean]!
+}
+
+"""fields for each column"""
+type Columns {
+  bool: BooleanColumn!
+  uint8: IntColumn!
+  int8: IntColumn!
+  uint16: IntColumn!
+  int16: IntColumn!
+  uint32: LongColumn!
+  int32: IntColumn!
+  uint64: LongColumn!
+  int64: LongColumn!
+  float: FloatColumn!
+  double: FloatColumn!
+  decimal: DecimalColumn!
+  date32: DateColumn!
+  date64: DateColumn!
+  timestamp: DateTimeColumn!
+  time32: TimeColumn!
+  time64: TimeColumn!
+  binary: BinaryColumn!
+  string: StringColumn!
+  snakeId: LongColumn!
+  camelId: LongColumn!
+}
+
+"""Date (isoformat)"""
+scalar Date
+
+"""column of dates"""
+type DateColumn {
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Long!
+
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  any(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
+
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  all(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
+
+  """list of values"""
+  values: [Date]!
+
+  """Return sorted values. Optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Date]!
+
+  """minimum value"""
+  min: Date!
+
+  """maximum value"""
+  max: Date!
+
+  """unique values and counts"""
+  unique: DateSet!
+}
+
+"""predicates for dates"""
+input DateQuery {
+  equal: Date
+  notEqual: Date
+  less: Date
+  lessEqual: Date
+  greater: Date
+  greaterEqual: Date
+  isin: [Date!]
+}
+
+"""unique dates"""
+type DateSet {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Date]!
+}
+
+"""Date with time (isoformat)"""
+scalar DateTime
+
+"""column of datetimes"""
+type DateTimeColumn {
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  count(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Long!
+
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  any(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Boolean!
+
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  all(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Boolean!
+
+  """list of values"""
+  values: [DateTime]!
+
+  """Return sorted values. Optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [DateTime]!
+
+  """minimum value"""
+  min: DateTime!
+
+  """maximum value"""
+  max: DateTime!
+}
+
+"""predicates for datetimes"""
+input DateTimeQuery {
+  equal: DateTime
+  notEqual: DateTime
+  less: DateTime
+  lessEqual: DateTime
+  greater: DateTime
+  greaterEqual: DateTime
+  isin: [DateTime!]
+}
+
+"""Decimal (fixed-point)"""
+scalar Decimal
+
+"""column of decimals"""
+type DecimalColumn {
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Long!
+
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  any(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
+
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  all(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
+
+  """list of values"""
+  values: [Decimal]!
+
+  """Return sorted values. Optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Decimal]!
+
+  """minimum value"""
+  min: Decimal!
+
+  """maximum value"""
+  max: Decimal!
+}
+
+"""predicates for decimals"""
+input DecimalQuery {
+  equal: Decimal
+  notEqual: Decimal
+  less: Decimal
+  lessEqual: Decimal
+  greater: Decimal
+  greaterEqual: Decimal
+  isin: [Decimal!]
+}
+
+"""column of floats"""
+type FloatColumn {
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Long!
+
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  any(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
+
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  all(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
+
+  """list of values"""
+  values: [Float]!
+
+  """Return sorted values. Optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Float]!
+
+  """Return sum of the values, with optional exponentiation."""
+  sum(exp: Int! = 1): Float!
+
+  """minimum value"""
+  min: Float!
+
+  """maximum value"""
+  max: Float!
+
+  """Return q-th quantiles for values."""
+  quantile(q: [Float!]!): [Float!]!
+}
+
+"""predicates for floats"""
+input FloatQuery {
+  equal: Float
+  notEqual: Float
+  less: Float
+  lessEqual: Float
+  greater: Float
+  greaterEqual: Float
+  isin: [Float!]
+}
+
+"""a table sorted by a composite index"""
+type IndexedTable {
+  """indexed columns"""
+  index: [String!]!
+
+  """
+  Return table with matching values for compound `index`.
+          Queries must be a prefix of the `index`.
+          Only one non-equal query is allowed, and applied last.
+          
+  """
+  search(snakeId: LongQuery): Table!
+
+  """number of rows"""
+  length: Long!
+
+  """fields for each column"""
+  columns: Columns!
+
+  """Return scalar values at index."""
+  row(index: Long! = 0): Row!
+
+  """Return table slice."""
+  slice(offset: Long! = 0, length: Long): Table!
+
+  """Return tables grouped by columns, with stable ordering."""
+  group(by: [String!]!, reverse: Boolean! = false, length: Long): [Table!]!
+
+  """
+  Return table of first or last occurrences grouped by columns, with stable ordering.
+  """
+  unique(by: [String!]!, reverse: Boolean! = false): Table!
+
+  """
+  Return table slice sorted by specified columns.
+          Optimized for a single column with fixed length.
+          
+  """
+  sort(by: [String!]!, reverse: Boolean! = false, length: Long): Table!
+
+  """Return table with minimum values per column."""
+  min(by: [String!]!): Table!
+
+  """Return table with maximum values per column."""
+  max(by: [String!]!): Table!
+
+  """Return table with rows which match all queries."""
+  filter(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryQuery, string: StringQuery, snakeId: LongQuery, camelId: LongQuery): Table!
+
+  """
+  Return table with rows which don't match all queries; inverse of filter.
+  """
+  exclude(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryQuery, string: StringQuery, snakeId: LongQuery, camelId: LongQuery): Table!
 }
 
 """column of ints"""
@@ -106,27 +407,30 @@ type IntColumn {
   unique: IntSet!
 }
 
-"""predicates for longs"""
-input LongQuery {
-  equal: Long
-  notEqual: Long
-  less: Long
-  lessEqual: Long
-  greater: Long
-  greaterEqual: Long
-  isin: [Long!]
+"""predicates for ints"""
+input IntQuery {
+  equal: Int
+  notEqual: Int
+  less: Int
+  lessEqual: Int
+  greater: Int
+  greaterEqual: Int
+  isin: [Int!]
 }
 
-"""unique longs"""
-type LongSet {
+"""unique ints"""
+type IntSet {
   counts: [Long!]!
 
   """number of rows"""
   length: Long!
 
   """list of values"""
-  values: [Long]!
+  values: [Int]!
 }
+
+"""64-bit int"""
+scalar Long
 
 """column of longs"""
 type LongColumn {
@@ -170,297 +474,51 @@ type LongColumn {
   unique: LongSet!
 }
 
-"""predicates for floats"""
-input FloatQuery {
-  equal: Float
-  notEqual: Float
-  less: Float
-  lessEqual: Float
-  greater: Float
-  greaterEqual: Float
-  isin: [Float!]
+"""predicates for longs"""
+input LongQuery {
+  equal: Long
+  notEqual: Long
+  less: Long
+  lessEqual: Long
+  greater: Long
+  greaterEqual: Long
+  isin: [Long!]
 }
 
-"""column of floats"""
-type FloatColumn {
-  """
-  Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
-
-  """list of values"""
-  values: [Float]!
-
-  """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [Float]!
-
-  """Return sum of the values, with optional exponentiation."""
-  sum(exp: Int! = 1): Float!
-
-  """minimum value"""
-  min: Float!
-
-  """maximum value"""
-  max: Float!
-
-  """Return q-th quantiles for values."""
-  quantile(q: [Float!]!): [Float!]!
-}
-
-"""predicates for decimals"""
-input DecimalQuery {
-  equal: Decimal
-  notEqual: Decimal
-  less: Decimal
-  lessEqual: Decimal
-  greater: Decimal
-  greaterEqual: Decimal
-  isin: [Decimal!]
-}
-
-"""column of decimals"""
-type DecimalColumn {
-  """
-  Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
-
-  """list of values"""
-  values: [Decimal]!
-
-  """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [Decimal]!
-
-  """minimum value"""
-  min: Decimal!
-
-  """maximum value"""
-  max: Decimal!
-}
-
-"""predicates for dates"""
-input DateQuery {
-  equal: Date
-  notEqual: Date
-  less: Date
-  lessEqual: Date
-  greater: Date
-  greaterEqual: Date
-  isin: [Date!]
-}
-
-"""unique dates"""
-type DateSet {
+"""unique longs"""
+type LongSet {
   counts: [Long!]!
 
   """number of rows"""
   length: Long!
 
   """list of values"""
-  values: [Date]!
+  values: [Long]!
 }
 
-"""column of dates"""
-type DateColumn {
-  """
-  Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
-
-  """list of values"""
-  values: [Date]!
-
-  """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [Date]!
-
-  """minimum value"""
-  min: Date!
-
-  """maximum value"""
-  max: Date!
-
-  """unique values and counts"""
-  unique: DateSet!
-}
-
-"""predicates for datetimes"""
-input DateTimeQuery {
-  equal: DateTime
-  notEqual: DateTime
-  less: DateTime
-  lessEqual: DateTime
-  greater: DateTime
-  greaterEqual: DateTime
-  isin: [DateTime!]
-}
-
-"""column of datetimes"""
-type DateTimeColumn {
-  """
-  Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  count(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Boolean!
-
-  """list of values"""
-  values: [DateTime]!
-
-  """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [DateTime]!
-
-  """minimum value"""
-  min: DateTime!
-
-  """maximum value"""
-  max: DateTime!
-}
-
-"""predicates for times"""
-input TimeQuery {
-  equal: Time
-  notEqual: Time
-  less: Time
-  lessEqual: Time
-  greater: Time
-  greaterEqual: Time
-  isin: [Time!]
-}
-
-"""column of times"""
-type TimeColumn {
-  """
-  Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
-
-  """list of values"""
-  values: [Time]!
-
-  """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [Time]!
-
-  """minimum value"""
-  min: Time!
-
-  """maximum value"""
-  max: Time!
-}
-
-"""predicates for binaries"""
-input BinaryQuery {
-  equal: Binary
-  notEqual: Binary
-  isin: [Binary!]
-}
-
-"""column of binaries"""
-type BinaryColumn {
-  """
-  Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  count(equal: Binary, notEqual: Binary, isin: [Binary!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
-
-  """list of values"""
-  values: [Binary]!
-}
-
-"""predicates for strings"""
-input StringQuery {
-  equal: String
-  notEqual: String
-  less: String
-  lessEqual: String
-  greater: String
-  greaterEqual: String
-  isin: [String!]
-}
-
-"""unique strings"""
-type StringSet {
-  counts: [Long!]!
-
-  """number of rows"""
-  length: Long!
-
-  """list of values"""
-  values: [String]!
+"""scalar fields"""
+type Row {
+  bool: Boolean
+  uint8: Int
+  int8: Int
+  uint16: Int
+  int16: Int
+  uint32: Long
+  int32: Int
+  uint64: Long
+  int64: Long
+  float: Float
+  double: Float
+  decimal: Decimal
+  date32: Date
+  date64: Date
+  timestamp: DateTime
+  time32: Time
+  time64: Time
+  binary: Binary
+  string: String
+  snakeId: Long
+  camelId: Long
 }
 
 """column of strings"""
@@ -497,4 +555,117 @@ type StringColumn {
 
   """unique values and counts"""
   unique: StringSet!
+}
+
+"""predicates for string"""
+input StringQuery {
+  equal: String
+  notEqual: String
+  less: String
+  lessEqual: String
+  greater: String
+  greaterEqual: String
+  isin: [String!]
+}
+
+"""unique strings"""
+type StringSet {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [String]!
+}
+
+"""a column-oriented table"""
+type Table {
+  """number of rows"""
+  length: Long!
+
+  """fields for each column"""
+  columns: Columns!
+
+  """Return scalar values at index."""
+  row(index: Long! = 0): Row!
+
+  """Return table slice."""
+  slice(offset: Long! = 0, length: Long): Table!
+
+  """Return tables grouped by columns, with stable ordering."""
+  group(by: [String!]!, reverse: Boolean! = false, length: Long): [Table!]!
+
+  """
+  Return table of first or last occurrences grouped by columns, with stable ordering.
+  """
+  unique(by: [String!]!, reverse: Boolean! = false): Table!
+
+  """
+  Return table slice sorted by specified columns.
+          Optimized for a single column with fixed length.
+          
+  """
+  sort(by: [String!]!, reverse: Boolean! = false, length: Long): Table!
+
+  """Return table with minimum values per column."""
+  min(by: [String!]!): Table!
+
+  """Return table with maximum values per column."""
+  max(by: [String!]!): Table!
+
+  """Return table with rows which match all queries."""
+  filter(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryQuery, string: StringQuery, snakeId: LongQuery, camelId: LongQuery): Table!
+
+  """
+  Return table with rows which don't match all queries; inverse of filter.
+  """
+  exclude(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryQuery, string: StringQuery, snakeId: LongQuery, camelId: LongQuery): Table!
+}
+
+"""Time (isoformat)"""
+scalar Time
+
+"""column of times"""
+type TimeColumn {
+  """
+  Return number of matching values.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Long!
+
+  """
+  Return whether any value evaluates to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  any(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
+
+  """
+  Return whether all values evaluate to `true`.
+  Optimized for `null`, and empty queries are implicitly boolean.
+  """
+  all(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
+
+  """list of values"""
+  values: [Time]!
+
+  """Return sorted values. Optimized for fixed length."""
+  sort(reverse: Boolean! = false, length: Long): [Time]!
+
+  """minimum value"""
+  min: Time!
+
+  """maximum value"""
+  max: Time!
+}
+
+"""predicates for times"""
+input TimeQuery {
+  equal: Time
+  notEqual: Time
+  less: Time
+  lessEqual: Time
+  greater: Time
+  greaterEqual: Time
+  isin: [Time!]
 }

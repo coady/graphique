@@ -1,10 +1,10 @@
-import graphql
-from strawberry.printer import print_type
-from graphique import models
+from strawberry.printer import print_schema
+from .conftest import fixtures
 
 
 def test_schema(schema):
-    assert graphql.parse(schema)
+    with open(fixtures / 'schema.graphql', 'w') as file:
+        file.write(print_schema(schema))
 
 
 def test_case(executor):
@@ -58,58 +58,3 @@ def test_columns(executor):
     assert execute('{ binary { count(equal: "") } }') == {'binary': {'count': 1}}
     assert execute('{ string { values } }') == {'string': {'values': ['', None]}}
     assert execute('{ string { count(equal: "") } }') == {'string': {'count': 1}}
-
-
-def test_boolean(schema):
-    assert print_type(models.BooleanQuery) in schema
-    assert print_type(models.BooleanSet) in schema
-    assert print_type(models.BooleanColumn) in schema
-
-
-def test_int(schema):
-    assert print_type(models.IntQuery) in schema
-    assert print_type(models.IntSet) in schema
-    assert print_type(models.IntColumn) in schema
-
-
-def test_long(schema):
-    assert print_type(models.LongQuery) in schema
-    assert print_type(models.LongSet) in schema
-    assert print_type(models.LongColumn) in schema
-
-
-def test_float(schema):
-    assert print_type(models.FloatQuery) in schema
-    assert print_type(models.FloatColumn) in schema
-
-
-def test_decimal(schema):
-    assert print_type(models.DecimalQuery) in schema
-    assert print_type(models.DecimalColumn) in schema
-
-
-def test_date(schema):
-    assert print_type(models.DateQuery) in schema
-    assert print_type(models.DateSet) in schema
-    assert print_type(models.DateColumn) in schema
-
-
-def test_timestamp(schema):
-    assert print_type(models.DateTimeQuery) in schema
-    assert print_type(models.DateTimeColumn) in schema
-
-
-def test_time(schema):
-    assert print_type(models.TimeQuery) in schema
-    assert print_type(models.TimeColumn) in schema
-
-
-def test_binary(schema):
-    assert print_type(models.BinaryQuery) in schema
-    assert print_type(models.BinaryColumn) in schema
-
-
-def test_string(schema):
-    assert print_type(models.StringQuery) in schema
-    assert print_type(models.StringSet) in schema
-    assert print_type(models.StringColumn) in schema
