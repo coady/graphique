@@ -13,8 +13,8 @@ def test_dictionary(table):
     values, counts = C.value_counts(array).flatten()
     assert len(values) == len(counts) == 52
     assert set(C.unique(array)) == set(values)
-    assert array[C.argmin(array)].as_py() == C.min(array) == 'AK'
-    assert array[C.argmax(array)].as_py() == C.max(array) == 'WY'
+    assert C.min(array) == 'AK'
+    assert C.max(array) == 'WY'
     with pytest.raises(ValueError):
         C.min(array[:0])
     with pytest.raises(ValueError):
@@ -23,12 +23,6 @@ def test_dictionary(table):
 
 def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
-    assert C.argmin(array) == 0
-    assert C.argmax(array) == 4
-    with pytest.raises(ValueError):
-        C.argmin(array[:0])
-    with pytest.raises(ValueError):
-        C.argmax(array[:0])
     groups = {key: value.to_pylist() for key, value in C.arggroupby(array).items()}
     assert groups == {'a': [0, 2], 'b': [1, 0, 2], 'c': [1]}
     table = pa.Table.from_pydict({'col': array})
@@ -68,7 +62,6 @@ def test_membership():
     assert C.any(array) and not C.all(array) and C.count(array, True) == 1
     array = pa.chunked_array([[1, 1]])
     assert C.any(array) and C.all(array) and C.count(array, True) == 2
-    assert C.contains(array, 1) and not C.contains(array, 0)
     assert C.count(array, False) == C.count(array, None) == 0
     assert C.count(array, 0) == 0 and C.count(array, 1) == 2
 

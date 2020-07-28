@@ -125,10 +125,8 @@ class Column(pa.ChunkedArray):
     def sum(self, exp: int = 1):
         """Return sum of the values, with optional exponentiation."""
         if exp == 1:
-            func = lambda ch: ch.sum().as_py()
-        else:
-            func = lambda ch: np.nansum(np.power(ch, exp)).item()
-        return sum(Column.map(func, self))
+            return pc.sum(self).as_py()
+        return sum(Column.map(lambda ch: np.nansum(np.power(ch, exp)).item(), self))
 
     def min(self):
         """Return min of the values."""
@@ -148,10 +146,6 @@ class Column(pa.ChunkedArray):
         """Return whether all values evaluate to True."""
         return all(np.all(predicate(chunk)) for chunk in self.iterchunks())
 
-    def contains(self, value) -> bool:
-        """Return whether value is in array."""
-        return Column.any(self, rpartial(Chunk.equal, value))
-
     def count(self, value) -> int:
         """Return number of occurrences of value.
 
@@ -163,22 +157,6 @@ class Column(pa.ChunkedArray):
             self, value = Column.equal(self, value), True
         count = sum(Column.map(np.count_nonzero, self))
         return count if value else (len(self) - count - self.null_count)
-
-    def where(self, index, value):
-        (indices,) = np.nonzero(Chunk.equal(self.chunk(index), value))
-        return int(indices[0]) + sum(map(len, self.chunks[:index]))
-
-    def argmin(self) -> int:
-        """Return first index of the minimum value."""
-        values = list(Column.map(np.nanmin, self))
-        index = np.argmin(values)
-        return Column.where(self, index, values[index])
-
-    def argmax(self) -> int:
-        """Return first index of the maximum value."""
-        values = list(Column.map(np.nanmax, self))
-        index = np.argmax(values)
-        return Column.where(self, index, values[index])
 
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""

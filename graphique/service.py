@@ -50,7 +50,6 @@ def query_field(func, names=types):
             origin_name=name,
             type=Optional[query_map[types[name]]],
             origin=func,
-            is_optional=True,
         )
         for name in names
     ]
