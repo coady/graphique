@@ -16,7 +16,8 @@ table = pq.read_table(
 )
 indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
-to_snake_case = {to_camel_case(name): name for name in types}.__getitem__
+case_map = {to_camel_case(name): name for name in types}
+to_snake_case = case_map.__getitem__
 
 
 def resolver(name):
@@ -71,10 +72,26 @@ def doc_field(func):
     return strawberry.field(func, description=func.__doc__)
 
 
+def references(node):
+    """Generate every possible column reference."""
+    for arg in node.arguments:
+        yield arg.name.value
+        for value in getattr(arg.value, 'values', []):
+            yield value.value
+    for node in getattr(node.selection_set, 'selections', []):
+        yield node.name.value
+        yield from references(node)
+
+
 @strawberry.type(description="a column-oriented table")
 class Table:
     def __init__(self, table):
         self.table = table
+
+    def select(self, info) -> pa.Table:
+        """Return table with only the columns necessary to proceed."""
+        names = map(case_map.get, references(*info.field_nodes))
+        return self.table.select(set(names) - {None})
 
     @doc_field
     def length(self) -> Long:
@@ -93,53 +110,65 @@ class Table:
         return Row(**{name: self.table[name][index].as_py() for name in names})  # type: ignore
 
     @doc_field
-    def slice(self, offset: Long = 0, length: Optional[Long] = None) -> 'Table':  # type: ignore
+    def slice(
+        self, info, offset: Long = 0, length: Optional[Long] = None  # type: ignore
+    ) -> 'Table':
         """Return table slice."""
-        return Table(self.table.slice(offset, length))
+        table = self.select(info)
+        return Table(table.slice(offset, length))
 
     @doc_field
     def group(
-        self, by: List[str], reverse: bool = False, length: Optional[Long] = None
+        self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
     ) -> List['Table']:
         """Return tables grouped by columns, with stable ordering."""
-        tables = T.grouped(self.table, *map(to_snake_case, by), reverse=reverse, length=length)
+        table = self.select(info)
+        tables = T.grouped(table, *map(to_snake_case, by), reverse=reverse, length=length)
         return list(map(Table, tables))
 
     @doc_field
-    def unique(self, by: List[str], reverse: bool = False) -> 'Table':
+    def unique(self, info, by: List[str], reverse: bool = False) -> 'Table':
         """Return table of first or last occurrences grouped by columns, with stable ordering."""
+        table = self.select(info)
         by = list(map(to_snake_case, by))
-        tables = [T.unique(table, by[-1], reverse) for table in T.grouped(self.table, *by[:-1])]
+        tables = [T.unique(table, by[-1], reverse) for table in T.grouped(table, *by[:-1])]
         return Table(pa.concat_tables(tables[::-1] if reverse else tables))
 
     @doc_field
-    def sort(self, by: List[str], reverse: bool = False, length: Optional[Long] = None) -> 'Table':
+    def sort(
+        self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
+    ) -> 'Table':
         """Return table slice sorted by specified columns.
         Optimized for a single column with fixed length.
         """
-        return Table(T.sort(self.table, *map(to_snake_case, by), reverse=reverse, length=length))
+        table = self.select(info)
+        return Table(T.sort(table, *map(to_snake_case, by), reverse=reverse, length=length))
 
     @doc_field
-    def min(self, by: List[str]) -> 'Table':
+    def min(self, info, by: List[str]) -> 'Table':
         """Return table with minimum values per column."""
-        return Table(T.matched(self.table, C.min, *map(to_snake_case, by)))
+        table = self.select(info)
+        return Table(T.matched(table, C.min, *map(to_snake_case, by)))
 
     @doc_field
-    def max(self, by: List[str]) -> 'Table':
+    def max(self, info, by: List[str]) -> 'Table':
         """Return table with maximum values per column."""
-        return Table(T.matched(self.table, C.max, *map(to_snake_case, by)))
+        table = self.select(info)
+        return Table(T.matched(table, C.max, *map(to_snake_case, by)))
 
     @query_field
-    def filter(self, **queries) -> 'Table':
+    def filter(self, info, **queries) -> 'Table':
         """Return table with rows which match all queries."""
+        table = self.select(info)
         queries = {name: queries[name].asdict() for name in queries}
-        return Table(T.filtered(self.table, queries, invert=False))
+        return Table(T.filtered(table, queries, invert=False))
 
     @query_field
-    def exclude(self, **queries) -> 'Table':
+    def exclude(self, info, **queries) -> 'Table':
         """Return table with rows which don't match all queries; inverse of filter."""
+        table = self.select(info)
         queries = {name: queries[name].asdict() for name in queries}
-        return Table(T.filtered(self.table, queries, invert=True))
+        return Table(T.filtered(table, queries, invert=True))
 
 
 @strawberry.type(description="a table sorted by a composite index")
@@ -153,12 +182,12 @@ class IndexedTable(Table):
         return list(map(to_camel_case, indexed))
 
     @functools.partial(query_field, names=indexed)
-    def search(self, **queries) -> Table:
+    def search(self, info, **queries) -> Table:
         """Return table with matching values for compound `index`.
         Queries must be a prefix of the `index`.
         Only one non-equal query is allowed, and applied last.
         """
-        table = self.table
+        table = self.select(info)
         for name in indexed:
             query = queries.pop(name, None)
             if query is None:
