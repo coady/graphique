@@ -67,8 +67,8 @@ def test_functional(table):
     assert set(C.equal(array, None).to_pylist()) == {False}
     assert set(C.not_equal(array, None).to_pylist()) == {True}
     mask = C.equal(array, 'CA')
-    assert mask == C.isin(array, ['CA']) == C.isin(table['state'], ['CA'])
-    assert C.not_equal(array, 'CA') == C.isin(array, ['CA'], invert=True)
+    assert mask == C.is_in(array, ['CA']) == C.is_in(table['state'], ['CA'])
+    assert C.not_equal(array, 'CA') == C.is_in(array, ['CA'], invert=True)
     assert len(array.filter(mask)) == 2647
     assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
     assert T.apply(table, len) == dict.fromkeys(table.column_names, 41700)

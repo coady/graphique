@@ -63,55 +63,55 @@ class BooleanQuery(Query):
 @strawberry.input(description="predicates for ints")
 class IntQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[int])
-    isin: Optional[List[int]] = undefined
+    is_in: Optional[List[int]] = undefined
 
 
 @strawberry.input(description="predicates for longs")
 class LongQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[Long])
-    isin: Optional[List[Long]] = undefined
+    is_in: Optional[List[Long]] = undefined
 
 
 @strawberry.input(description="predicates for floats")
 class FloatQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[float])
-    isin: Optional[List[float]] = undefined
+    is_in: Optional[List[float]] = undefined
 
 
 @strawberry.input(description="predicates for decimals")
 class DecimalQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[Decimal])
-    isin: Optional[List[Decimal]] = undefined
+    is_in: Optional[List[Decimal]] = undefined
 
 
 @strawberry.input(description="predicates for dates")
 class DateQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[date])
-    isin: Optional[List[date]] = undefined
+    is_in: Optional[List[date]] = undefined
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[datetime])
-    isin: Optional[List[datetime]] = undefined
+    is_in: Optional[List[datetime]] = undefined
 
 
 @strawberry.input(description="predicates for times")
 class TimeQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[time])
-    isin: Optional[List[time]] = undefined
+    is_in: Optional[List[time]] = undefined
 
 
 @strawberry.input(description="predicates for binaries")
 class BinaryQuery(Query):
     __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bytes])
-    isin: Optional[List[bytes]] = undefined
+    is_in: Optional[List[bytes]] = undefined
 
 
 @strawberry.input(description="predicates for string")
 class StringQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[str])
-    isin: Optional[List[str]] = undefined
+    is_in: Optional[List[str]] = undefined
 
 
 query_map = {

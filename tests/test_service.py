@@ -119,12 +119,12 @@ def test_search(client):
     )
     assert data == {'search': {'columns': {'zipcode': {'values': [544, 601]}}}}
 
-    data = client.execute('{ search(zipcode: {isin: []}) { length } }')
+    data = client.execute('{ search(zipcode: {isIn: []}) { length } }')
     assert data == {'search': {'length': 0}}
-    data = client.execute('{ search(zipcode: {isin: [0]}) { length } }')
+    data = client.execute('{ search(zipcode: {isIn: [0]}) { length } }')
     assert data == {'search': {'length': 0}}
     data = client.execute(
-        '{ search(zipcode: {isin: [501, 601]}) { columns { zipcode { values } } } }'
+        '{ search(zipcode: {isIn: [501, 601]}) { columns { zipcode { values } } } }'
     )
     assert data == {'search': {'columns': {'zipcode': {'values': [501, 601]}}}}
 

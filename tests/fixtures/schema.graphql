@@ -11,19 +11,19 @@ type BinaryColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: Binary, notEqual: Binary, isin: [Binary!]): Long!
+  count(equal: Binary, notEqual: Binary, isIn: [Binary!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
+  any(equal: Binary, notEqual: Binary, isIn: [Binary!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: Binary, notEqual: Binary, isin: [Binary!]): Boolean!
+  all(equal: Binary, notEqual: Binary, isIn: [Binary!]): Boolean!
 
   """list of values"""
   values: [Binary]!
@@ -33,7 +33,7 @@ type BinaryColumn {
 input BinaryQuery {
   equal: Binary
   notEqual: Binary
-  isin: [Binary!]
+  isIn: [Binary!]
 }
 
 """column of booleans"""
@@ -114,19 +114,19 @@ type DateColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Long!
+  count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isIn: [Date!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
+  any(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isIn: [Date!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isin: [Date!]): Boolean!
+  all(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isIn: [Date!]): Boolean!
 
   """list of values"""
   values: [Date]!
@@ -152,7 +152,7 @@ input DateQuery {
   lessEqual: Date
   greater: Date
   greaterEqual: Date
-  isin: [Date!]
+  isIn: [Date!]
 }
 
 """unique dates"""
@@ -175,19 +175,19 @@ type DateTimeColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Long!
+  count(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isIn: [DateTime!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Boolean!
+  any(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isIn: [DateTime!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isin: [DateTime!]): Boolean!
+  all(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isIn: [DateTime!]): Boolean!
 
   """list of values"""
   values: [DateTime]!
@@ -210,7 +210,7 @@ input DateTimeQuery {
   lessEqual: DateTime
   greater: DateTime
   greaterEqual: DateTime
-  isin: [DateTime!]
+  isIn: [DateTime!]
 }
 
 """Decimal (fixed-point)"""
@@ -222,19 +222,19 @@ type DecimalColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Long!
+  count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isIn: [Decimal!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
+  any(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isIn: [Decimal!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isin: [Decimal!]): Boolean!
+  all(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isIn: [Decimal!]): Boolean!
 
   """list of values"""
   values: [Decimal]!
@@ -257,7 +257,7 @@ input DecimalQuery {
   lessEqual: Decimal
   greater: Decimal
   greaterEqual: Decimal
-  isin: [Decimal!]
+  isIn: [Decimal!]
 }
 
 """column of floats"""
@@ -266,19 +266,19 @@ type FloatColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Long!
+  count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isIn: [Float!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
+  any(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isIn: [Float!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isin: [Float!]): Boolean!
+  all(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isIn: [Float!]): Boolean!
 
   """list of values"""
   values: [Float]!
@@ -307,7 +307,7 @@ input FloatQuery {
   lessEqual: Float
   greater: Float
   greaterEqual: Float
-  isin: [Float!]
+  isIn: [Float!]
 }
 
 """a table sorted by a composite index"""
@@ -371,19 +371,19 @@ type IntColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Long!
+  count(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isIn: [Int!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Boolean!
+  any(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isIn: [Int!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isin: [Int!]): Boolean!
+  all(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isIn: [Int!]): Boolean!
 
   """list of values"""
   values: [Int]!
@@ -415,7 +415,7 @@ input IntQuery {
   lessEqual: Int
   greater: Int
   greaterEqual: Int
-  isin: [Int!]
+  isIn: [Int!]
 }
 
 """unique ints"""
@@ -438,19 +438,19 @@ type LongColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Long!
+  count(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isIn: [Long!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Boolean!
+  any(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isIn: [Long!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isin: [Long!]): Boolean!
+  all(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isIn: [Long!]): Boolean!
 
   """list of values"""
   values: [Long]!
@@ -482,7 +482,7 @@ input LongQuery {
   lessEqual: Long
   greater: Long
   greaterEqual: Long
-  isin: [Long!]
+  isIn: [Long!]
 }
 
 """unique longs"""
@@ -527,19 +527,19 @@ type StringColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Boolean!
+  any(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isin: [String!]): Boolean!
+  all(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!]): Boolean!
 
   """list of values"""
   values: [String]!
@@ -565,7 +565,7 @@ input StringQuery {
   lessEqual: String
   greater: String
   greaterEqual: String
-  isin: [String!]
+  isIn: [String!]
 }
 
 """unique strings"""
@@ -632,19 +632,19 @@ type TimeColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Long!
+  count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isIn: [Time!]): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
+  any(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isIn: [Time!]): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isin: [Time!]): Boolean!
+  all(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isIn: [Time!]): Boolean!
 
   """list of values"""
   values: [Time]!
@@ -667,5 +667,5 @@ input TimeQuery {
   lessEqual: Time
   greater: Time
   greaterEqual: Time
-  isin: [Time!]
+  isIn: [Time!]
 }

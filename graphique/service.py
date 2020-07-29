@@ -165,13 +165,13 @@ class IndexedTable(Table):
                 break
             query = query.asdict()
             if 'equal' in query:
-                table = T.isin(table, name, query.pop('equal'))
+                table = T.is_in(table, name, query.pop('equal'))
             if query and queries:
                 raise ValueError(f"non-equal query for {name} not last; have {queries} remaining")
             if 'not_equal' in query:
                 table = T.not_equal(table, name, query['not_equal'])
-            if 'isin' in query:
-                table = T.isin(table, name, *query['isin'])
+            if 'is_in' in query:
+                table = T.is_in(table, name, *query['is_in'])
             lower, upper = query.get('greater'), query.get('less')
             includes = {'include_lower': False, 'include_upper': False}
             if 'greater_equal' in query and (lower is None or query['greater_equal'] > lower):

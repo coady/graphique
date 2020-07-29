@@ -55,7 +55,7 @@ class Chunk:
         func = pc.not_equal if invert else pc.equal
         return func(self.indices, *pa.array(indices or [-1], self.indices.type))
 
-    def isin(self, values, invert=False) -> np.ndarray:
+    def is_in(self, values, invert=False) -> np.ndarray:
         if not isinstance(self, pa.DictionaryArray):
             return np.isin(self, values, invert=invert)
         (indices,) = np.nonzero(np.isin(self.dictionary, values))
@@ -99,9 +99,9 @@ class Column(pa.ChunkedArray):
             return pc.is_valid(self)
         return Column.equal(self, value, invert=True)
 
-    def isin(self, values, invert=False) -> pa.ChunkedArray:
+    def is_in(self, values, invert=False) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
-        return pa.chunked_array(Column.map(rpartial(Chunk.isin, values, invert), self))
+        return pa.chunked_array(Column.map(rpartial(Chunk.is_in, values, invert), self))
 
     def arggroupby(self) -> dict:
         """Return groups of index arrays."""
@@ -205,7 +205,7 @@ class Table(pa.Table):
         """
         return self[Column.range(self[name], lower, upper, **includes)]
 
-    def isin(self, name: str, *values) -> pa.Table:
+    def is_in(self, name: str, *values) -> pa.Table:
         """Return rows which matches one of the values.
 
         Assumes the table is sorted by the column name, i.e., indexed.
