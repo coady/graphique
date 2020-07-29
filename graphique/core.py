@@ -1,10 +1,11 @@
 import bisect
 import collections
+import contextlib
 import functools
 import itertools
 import json
 from concurrent import futures
-from typing import Callable, Iterable, Iterator, List, Optional
+from typing import Callable, Iterator, List, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -49,16 +50,10 @@ class Chunk:
         indices = argunique(array[::-1] if reverse else array)
         return pc.subtract(pa.scalar(len(array) - 1), indices) if reverse else indices
 
-    def equal(self, value) -> np.ndarray:
-        if not isinstance(self, pa.DictionaryArray):
-            return np.equal(self, value)
-        (indices,) = np.nonzero(np.equal(self.dictionary, value))
-        return np.equal(self.indices, *indices) if len(indices) else np.full(len(self), False)
-
-    def not_equal(self, value) -> np.ndarray:
-        if not isinstance(self, pa.DictionaryArray):
-            return np.not_equal(self, value)
-        return ~Chunk.equal(self, value)
+    def equal(self: pa.DictionaryArray, value, invert=False) -> pa.Array:
+        (indices,) = np.nonzero(pc.equal(self.dictionary, pa.scalar(value, self.type.value_type)))
+        func = pc.not_equal if invert else pc.equal
+        return func(self.indices, *pa.array(indices or [-1], self.indices.type))
 
     def isin(self, values, invert=False) -> np.ndarray:
         if not isinstance(self, pa.DictionaryArray):
@@ -75,31 +70,38 @@ class Column(pa.ChunkedArray):
     def map(func: Callable, *arrays: pa.ChunkedArray) -> Iterator:
         return Column.threader.map(func, *(arr.iterchunks() for arr in arrays))
 
-    def reduce(func: Callable, arrays: Iterable[pa.ChunkedArray]) -> pa.ChunkedArray:
-        return pa.chunked_array(Column.map(lambda *chs: functools.reduce(func, chs), *arrays))
+    def mask(self, func='and', **query) -> pa.ChunkedArray:
+        """Return boolean mask array which matches query predicates."""
+        ops = {'equal', 'not_equal', 'isin'}.intersection(query)
+        masks = [getattr(Column, op)(self, query.pop(op)) for op in ops]
+        if (not masks or query) and isinstance(self.type, pa.DictionaryType):
+            self = self.cast(self.type.value_type)
+        masks += (getattr(pc, op)(self, pa.scalar(query[op], self.type)) for op in query)
+        if masks:
+            return functools.reduce(lambda *args: pc.call_function(func, args), masks)
+        with contextlib.suppress(NotImplementedError):
+            self = pc.call_function('binary_length', [self])
+        with contextlib.suppress(NotImplementedError):
+            self = self.cast(pa.bool_())
+        return self
 
-    def predicate(func=np.logical_and, **query):
-        """Return predicate ufunc by combining operators, by default intersecting."""
-        ufuncs = [rpartial(getattr(Chunk, op, getattr(np, op)), query[op]) for op in query]
-        if not ufuncs:
-            return np.asarray
-        return lambda ch: functools.reduce(func, (ufunc(ch) for ufunc in ufuncs))
-
-    def mask(self, predicate: Callable = np.asarray) -> pa.ChunkedArray:
-        """Return boolean mask array by applying predicate."""
-        return pa.chunked_array(Column.map(lambda ch: np.asarray(predicate(ch), bool), self))
-
-    def equal(self, value) -> pa.ChunkedArray:
+    def equal(self, value, invert=False) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
-        return Column.mask(self, rpartial(Chunk.equal, value))
+        if value is None:
+            return pc.is_null(self)
+        if isinstance(self.type, pa.DictionaryType):
+            return pa.chunked_array(Column.map(rpartial(Chunk.equal, value, invert), self))
+        return (pc.not_equal if invert else pc.equal)(self, pa.scalar(value, self.type))
 
     def not_equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which doesn't match scalar value."""
-        return Column.mask(self, rpartial(Chunk.not_equal, value))
+        if value is None:
+            return pc.is_valid(self)
+        return Column.equal(self, value, invert=True)
 
     def isin(self, values, invert=False) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
-        return Column.mask(self, rpartial(Chunk.isin, values, invert))
+        return pa.chunked_array(Column.map(rpartial(Chunk.isin, values, invert), self))
 
     def arggroupby(self) -> dict:
         """Return groups of index arrays."""
@@ -138,13 +140,13 @@ class Column(pa.ChunkedArray):
         value = max(Column.map(np.nanmax, self))
         return value.item() if isinstance(value, np.generic) else value
 
-    def any(self, predicate: Callable = np.asarray) -> bool:
+    def any(self) -> bool:
         """Return whether any value evaluates to True."""
-        return any(np.any(predicate(chunk)) for chunk in self.iterchunks())
+        return any(map(np.any, self.iterchunks()))
 
-    def all(self, predicate: Callable = np.asarray) -> bool:
+    def all(self) -> bool:
         """Return whether all values evaluate to True."""
-        return all(np.all(predicate(chunk)) for chunk in self.iterchunks())
+        return all(map(np.all, self.iterchunks()))
 
     def count(self, value) -> int:
         """Return number of occurrences of value.
@@ -185,11 +187,6 @@ class Table(pa.Table):
         if func is not None:
             funcs = dict(dict.fromkeys(self.column_names, func), **funcs)
         return dict(Table.threader.map(lambda name: (name, funcs[name](self[name])), funcs))
-
-    def mask(self, func=np.logical_and, **predicates: Callable) -> pa.ChunkedArray:
-        """Return boolean mask array by applying predicates to columns and reducing."""
-        columns = [self[name] for name in predicates]
-        return Column.reduce(func, Table.threader.map(Column.mask, columns, predicates.values()))
 
     def index(self) -> list:
         """Return index column names from pandas metadata."""
@@ -284,8 +281,9 @@ class Table(pa.Table):
             self = self.filter(Column.equal(self[name], func(self[name])))
         return self
 
-    def filtered(self, predicates: dict, invert=False) -> pa.Table:
-        if not predicates:
+    def filtered(self, queries: dict, invert=False) -> pa.Table:
+        if not queries:
             return self
-        mask = Table.mask(self, **predicates)
-        return self.filter(Column.mask(mask, np.invert) if invert else mask)
+        masks = [Column.mask(self[name], **queries[name]) for name in queries]
+        mask = functools.reduce(lambda *args: pc.call_function('and', args), masks)
+        return self.filter(pc.call_function('invert', [mask]) if invert else mask)

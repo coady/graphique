@@ -132,14 +132,14 @@ class Table:
     @query_field
     def filter(self, **queries) -> 'Table':
         """Return table with rows which match all queries."""
-        predicates = {name: C.predicate(**queries[name].asdict()) for name in queries}
-        return Table(T.filtered(self.table, predicates, invert=False))
+        queries = {name: queries[name].asdict() for name in queries}
+        return Table(T.filtered(self.table, queries, invert=False))
 
     @query_field
     def exclude(self, **queries) -> 'Table':
         """Return table with rows which don't match all queries; inverse of filter."""
-        predicates = {name: C.predicate(**queries[name].asdict()) for name in queries}
-        return Table(T.filtered(self.table, predicates, invert=True))
+        queries = {name: queries[name].asdict() for name in queries}
+        return Table(T.filtered(self.table, queries, invert=True))
 
 
 @strawberry.type(description="a table sorted by a composite index")
@@ -166,7 +166,7 @@ class IndexedTable(Table):
             query = query.asdict()
             if 'equal' in query:
                 table = T.isin(table, name, query.pop('equal'))
-            if query and queries:  # pragma: no cover
+            if query and queries:
                 raise ValueError(f"non-equal query for {name} not last; have {queries} remaining")
             if 'not_equal' in query:
                 table = T.not_equal(table, name, query['not_equal'])
@@ -180,7 +180,7 @@ class IndexedTable(Table):
                 upper, includes['include_upper'] = query['less_equal'], True
             if {lower, upper} != {None}:
                 table = T.range(table, name, lower, upper, **includes)
-        if queries:  # pragma: no cover
+        if queries:
             raise ValueError(f"expected query for {name}; have {queries} remaining")
         return Table(table)
 

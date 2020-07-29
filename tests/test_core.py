@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 import pyarrow as pa
 from graphique.core import Column as C, Table as T
 
@@ -29,10 +28,6 @@ def test_chunks():
     tables = list(T.group(table, 'col'))
     assert list(map(len, tables)) == [2, 3, 1]
     assert table['col'].unique() == pa.array('abc')
-    chunk = array.chunk(0)
-    assert list(C.predicate()(chunk)) == chunk.to_pylist()
-    assert list(C.predicate(equal='a', less='c')(chunk)) == [True, False, True]
-    assert list(C.predicate(not_equal='a')(chunk)) == [False, True, False]
     assert C.sort(array, length=1).to_pylist() == ['a']
     assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
     groups = [''.join(tbl['col'].to_pylist()) for tbl in T.group(table, 'col')]
@@ -68,14 +63,17 @@ def test_membership():
 
 def test_functional(table):
     array = table['state'].dictionary_encode()
+    assert set(C.mask(array).to_pylist()) == {True}
+    assert set(C.equal(array, None).to_pylist()) == {False}
+    assert set(C.not_equal(array, None).to_pylist()) == {True}
     mask = C.equal(array, 'CA')
     assert mask == C.isin(array, ['CA']) == C.isin(table['state'], ['CA'])
     assert C.not_equal(array, 'CA') == C.isin(array, ['CA'], invert=True)
     assert len(array.filter(mask)) == 2647
+    assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
     assert T.apply(table, len) == dict.fromkeys(table.column_names, 41700)
     assert T.apply(table, zipcode=len) == {'zipcode': 41700}
-    mask = T.mask(table, state=lambda ch: np.equal(ch, 'CA'))
-    assert len(table.filter(mask)) == 2647
+    assert len(T.filtered(table, {'state': {'equal': 'CA'}})) == 2647
 
 
 def test_group(table):

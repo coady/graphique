@@ -49,7 +49,7 @@ def client(table):
 
 @pytest.fixture(scope='module')
 def service():
-    load('alltypes.parquet', INDEX='snake_id')
+    load('alltypes.parquet', INDEX='snake_id,camelId')
     from graphique import service
 
     return service

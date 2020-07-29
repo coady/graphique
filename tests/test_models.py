@@ -1,3 +1,4 @@
+import pytest
 from strawberry.printer import print_schema
 from .conftest import fixtures
 
@@ -17,11 +18,15 @@ def test_case(executor):
     data = executor('{ exclude(snakeId: {equal: 1}, camelId: {equal: 1}) { length } }')
     assert data == {'exclude': {'length': 1}}
     data = executor('{ index search(snakeId: {equal: 1}) { length } }')
-    assert data == {'index': ['snakeId'], 'search': {'length': 1}}
+    assert data == {'index': ['snakeId', 'camelId'], 'search': {'length': 1}}
     data = executor('{ min(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
     assert data == {'min': {'row': {'snakeId': 1, 'camelId': 1}}}
     data = executor('{ max(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
     assert data == {'max': {'row': {'snakeId': 2, 'camelId': 2}}}
+    with pytest.raises(ValueError, match="non-equal query for"):
+        executor('{ index search(snakeId: {less: 1}, camelId: {equal: 1}) { length } }')
+    with pytest.raises(ValueError, match="expected query for"):
+        executor('{ index search(camelId: {equal: 1}) { length } }')
 
 
 def test_columns(executor):

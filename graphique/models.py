@@ -160,15 +160,14 @@ Optimized for `null`, and empty queries are implicitly boolean."""
             return self.array.null_count
         if query == {'not_equal': None}:
             return len(self.array) - self.array.null_count
-        mask = C.mask(self.array, C.predicate(**query)) if query else self.array
-        return C.count(mask, True)  # type: ignore
+        return C.count(C.mask(self.array, **query), True)  # type: ignore
 
     def any(self, **query) -> bool:
         """Return whether any value evaluates to `true`.
 Optimized for `null`, and empty queries are implicitly boolean."""
         if query in ({'equal': None}, {'not_equal': None}):
             return bool(resolvers.count(self, **query))
-        return C.any(self.array, C.predicate(**query))
+        return C.any(C.mask(self.array, **query))
 
     def all(self, **query) -> bool:
         """Return whether all values evaluate to `true`.
@@ -176,7 +175,7 @@ Optimized for `null`, and empty queries are implicitly boolean."""
         if query in ({'equal': None}, {'not_equal': None}):
             (op,) = {'equal', 'not_equal'} - set(query)
             return not resolvers.count(self, **{op: None})
-        return C.all(self.array, C.predicate(**query))
+        return C.all(C.mask(self.array, **query))
 
     def values(self):
         """list of values"""

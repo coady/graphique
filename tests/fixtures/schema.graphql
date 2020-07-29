@@ -321,7 +321,7 @@ type IndexedTable {
           Only one non-equal query is allowed, and applied last.
           
   """
-  search(snakeId: LongQuery): Table!
+  search(snakeId: LongQuery, camelId: LongQuery): Table!
 
   """number of rows"""
   length: Long!
