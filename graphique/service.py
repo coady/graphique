@@ -1,9 +1,11 @@
 import functools
+from datetime import datetime
 from typing import List, Optional
 import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
+from starlette.middleware import Middleware, base
 from strawberry.types.type_resolver import resolve_type
 from strawberry.types.types import ArgumentDefinition, FieldDefinition
 from strawberry.utils.str_converters import to_camel_case
@@ -214,7 +216,17 @@ class IndexedTable(Table):
         return Table(table)
 
 
+class TimingMiddleware(base.BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):  # pragma: no cover
+        start = datetime.now()
+        try:
+            return await call_next(request)
+        finally:
+            end = datetime.now()
+            print(f"[{end.replace(microsecond=0)}]: {end - start}")
+
+
 Query = IndexedTable if indexed else Table
 schema = strawberry.Schema(query=Query)
-app = Starlette(debug=DEBUG)
+app = Starlette(debug=DEBUG, middleware=[Middleware(TimingMiddleware)] * DEBUG)
 app.add_route('/graphql', strawberry.asgi.GraphQL(schema, root_value=Query(table), debug=DEBUG))
