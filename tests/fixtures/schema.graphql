@@ -289,6 +289,9 @@ type FloatColumn {
   """Return sum of the values, with optional exponentiation."""
   sum(exp: Int! = 1): Float!
 
+  """mean of the values"""
+  mean: Float!
+
   """minimum value"""
   min: Float!
 
@@ -394,6 +397,9 @@ type IntColumn {
   """Return sum of the values, with optional exponentiation."""
   sum(exp: Int! = 1): Int!
 
+  """mean of the values"""
+  mean: Float!
+
   """minimum value"""
   min: Int!
 
@@ -460,6 +466,9 @@ type LongColumn {
 
   """Return sum of the values, with optional exponentiation."""
   sum(exp: Int! = 1): Long!
+
+  """mean of the values"""
+  mean: Float!
 
   """minimum value"""
   min: Long!

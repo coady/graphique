@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import List, NewType, Optional
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import strawberry
 from strawberry.types.type_resolver import resolve_type
 from strawberry.types.types import ArgumentDefinition, FieldDefinition, undefined
@@ -185,6 +186,10 @@ Optimized for `null`, and empty queries are implicitly boolean."""
         """Return sum of the values, with optional exponentiation."""
         return C.sum(self.array, exp)
 
+    def mean(self) -> float:
+        """mean of the values"""
+        return pc.call_function('mean', [self.array]).as_py()
+
     def min(self):
         """minimum value"""
         return C.min(self.array)
@@ -266,6 +271,7 @@ class IntColumn:
     values = annotate(resolvers.values, List[Optional[int]])
     sort = annotate(resolvers.sort, List[Optional[int]])
     sum = annotate(resolvers.sum, int)
+    mean = strawberry.field(resolvers.mean, description=resolvers.mean.__doc__)
     min = annotate(resolvers.min, int)
     max = annotate(resolvers.max, int)
     quantile = strawberry.field(resolvers.quantile, description=resolvers.quantile.__doc__)
@@ -290,6 +296,7 @@ class LongColumn:
     values = annotate(resolvers.values, List[Optional[Long]])
     sort = annotate(resolvers.sort, List[Optional[Long]])
     sum = annotate(resolvers.sum, Long)
+    mean = strawberry.field(resolvers.mean, description=resolvers.mean.__doc__)
     min = annotate(resolvers.min, Long)
     max = annotate(resolvers.max, Long)
     quantile = strawberry.field(resolvers.quantile, description=resolvers.quantile.__doc__)
@@ -305,6 +312,7 @@ class FloatColumn:
     values = annotate(resolvers.values, List[Optional[float]])
     sort = annotate(resolvers.sort, List[Optional[float]])
     sum = annotate(resolvers.sum, float)
+    mean = strawberry.field(resolvers.mean, description=resolvers.mean.__doc__)
     min = annotate(resolvers.min, float)
     max = annotate(resolvers.max, float)
     quantile = strawberry.field(resolvers.quantile, description=resolvers.quantile.__doc__)

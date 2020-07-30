@@ -17,10 +17,14 @@ def test_slice(client):
 
 
 def test_ints(client):
-    data = client.execute('{ columns { zipcode { values sum min max unique { values counts } } } }')
+    data = client.execute('{ columns { zipcode { values sum mean } } }')
     zipcodes = data['columns']['zipcode']
     assert len(zipcodes['values']) == 41700
     assert zipcodes['sum'] == 2066562337
+    assert zipcodes['mean'] == pytest.approx(49557.849808)
+    data = client.execute('{ columns { zipcode { values min max unique { values counts } } } }')
+    zipcodes = data['columns']['zipcode']
+    assert len(zipcodes['values']) == 41700
     assert zipcodes['min'] == 501
     assert zipcodes['max'] == 99950
     assert len(zipcodes['unique']['values']) == 41700
@@ -45,10 +49,12 @@ def test_ints(client):
 
 
 def test_floats(client):
-    data = client.execute('{ columns { latitude { values sum(exp: 2) } longitude { min max } } }')
+    data = client.execute('{ columns { latitude { values sum(exp: 2) mean } } }')
     latitudes = data['columns']['latitude']
     assert len(latitudes['values']) == 41700
     assert latitudes['sum'] == pytest.approx(63075443.42831)
+    assert latitudes['mean'] == pytest.approx(38.518467)
+    data = client.execute('{ columns { longitude { min max } } }')
     longitudes = data['columns']['longitude']
     assert longitudes['min'] == pytest.approx(-174.21333)
     assert longitudes['max'] == pytest.approx(-65.301389)
