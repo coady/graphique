@@ -47,71 +47,93 @@ type_map = {
 ops = 'equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'
 
 
-class Query:
-    """base class for predicates"""
-
+@strawberry.input(description="predicates projected across columns")
+class Projection:
+    __annotations__ = dict.fromkeys(ops, Optional[str])
     locals().update(dict.fromkeys(ops, undefined))
 
     def asdict(self):
         return {name: value for name, value in self.__dict__.items() if value is not undefined}
 
 
+class Query:
+    """base class for predicates"""
+
+    locals().update(dict.fromkeys(ops, undefined))
+
+    def asdict(self):
+        return {
+            name: (value.asdict() if hasattr(value, 'asdict') else value)
+            for name, value in Projection.asdict(self).items()
+        }
+
+
 @strawberry.input(description="predicates for booleans")
 class BooleanQuery(Query):
     __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bool])
+    project: Optional[Projection] = undefined
 
 
 @strawberry.input(description="predicates for ints")
 class IntQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[int])
+    project: Optional[Projection] = undefined
     is_in: Optional[List[int]] = undefined
 
 
 @strawberry.input(description="predicates for longs")
 class LongQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[Long])
+    project: Optional[Projection] = undefined
     is_in: Optional[List[Long]] = undefined
 
 
 @strawberry.input(description="predicates for floats")
 class FloatQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[float])
+    project: Optional[Projection] = undefined
     is_in: Optional[List[float]] = undefined
 
 
 @strawberry.input(description="predicates for decimals")
 class DecimalQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[Decimal])
+    project: Optional[Projection] = undefined
     is_in: Optional[List[Decimal]] = undefined
 
 
 @strawberry.input(description="predicates for dates")
 class DateQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[date])
+    project: Optional[Projection] = undefined
     is_in: Optional[List[date]] = undefined
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[datetime])
+    project: Optional[Projection] = undefined
     is_in: Optional[List[datetime]] = undefined
 
 
 @strawberry.input(description="predicates for times")
 class TimeQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[time])
+    project: Optional[Projection] = undefined
     is_in: Optional[List[time]] = undefined
 
 
 @strawberry.input(description="predicates for binaries")
 class BinaryQuery(Query):
     __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bytes])
+    project: Optional[Projection] = undefined
     is_in: Optional[List[bytes]] = undefined
 
 
 @strawberry.input(description="predicates for strings")
 class StringQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[str])
+    project: Optional[Projection] = undefined
     is_in: Optional[List[str]] = undefined
     match_substring: Optional[str] = undefined
     utf8_lower: Optional['StringQuery'] = undefined

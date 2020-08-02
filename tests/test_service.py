@@ -164,6 +164,8 @@ def test_filter(client):
     assert data['filter']['length'] == 88
     data = client.execute('{ filter(city: {utf8Upper: {matchSubstring: "MOUNTAIN"}}) { length } }')
     assert data['filter']['length'] == 88
+    data = client.execute('{ filter(county: {project: {equal: "city"}}) { length } }')
+    assert data['filter']['length'] == 2805
 
 
 def test_sort(client):

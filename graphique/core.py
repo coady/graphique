@@ -80,7 +80,7 @@ class Column(pa.ChunkedArray):
             if op == 'match_substring':
                 masks.append(getattr(pc, op)(self, query[op]))
             elif op.startswith('utf8_'):
-                masks.append(Column.mask(getattr(pc, op)(self), func, **query[op].asdict()))
+                masks.append(Column.mask(getattr(pc, op)(self), func, **query[op]))
             else:
                 masks.append(getattr(pc, op)(self, pa.scalar(query[op], self.type)))
         if masks:
@@ -288,8 +288,14 @@ class Table(pa.Table):
         return self
 
     def filtered(self, queries: dict, invert=False) -> pa.Table:
-        if not queries:
+        masks = []
+        for name in queries:
+            proj = queries[name].pop('project', {})
+            if proj:
+                masks += [getattr(pc, op)(self[name], self[proj[op]]) for op in proj]
+            if queries[name]:
+                masks.append(Column.mask(self[name], **queries[name]))
+        if not masks:
             return self
-        masks = [Column.mask(self[name], **queries[name]) for name in queries]
         mask = functools.reduce(lambda *args: pc.call_function('and', args), masks)
         return self.filter(pc.call_function('invert', [mask]) if invert else mask)

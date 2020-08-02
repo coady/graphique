@@ -1,3 +1,4 @@
+import itertools
 import functools
 from datetime import datetime
 from typing import List, Optional
@@ -76,12 +77,17 @@ def doc_field(func):
 
 def references(node):
     """Generate every possible column reference."""
-    for arg in node.arguments:
-        yield arg.name.value
-        for value in getattr(arg.value, 'values', []):
-            yield value.value
-    for node in getattr(node.selection_set, 'selections', []):
-        yield node.name.value
+    yield node.name.value
+    value = getattr(node, 'value', None)
+    yield getattr(value, 'value', None)
+    for val in getattr(value, 'values', []):
+        yield val.value
+    nodes = itertools.chain(
+        getattr(node, 'arguments', []),
+        getattr(value, 'fields', []),
+        getattr(getattr(node, 'selection_set', None), 'selections', []),
+    )
+    for node in nodes:
         yield from references(node)
 
 
