@@ -109,10 +109,13 @@ class BinaryQuery(Query):
     is_in: Optional[List[bytes]] = undefined
 
 
-@strawberry.input(description="predicates for string")
+@strawberry.input(description="predicates for strings")
 class StringQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[str])
     is_in: Optional[List[str]] = undefined
+    match_substring: Optional[str] = undefined
+    utf8_lower: Optional['StringQuery'] = undefined
+    utf8_upper: Optional['StringQuery'] = undefined
 
 
 query_map = {
@@ -142,8 +145,8 @@ class resolvers:
         self.array = array
         self.__dict__.update(attrs)
 
+    @strawberry.field(description="number of rows")
     def length(self) -> Long:
-        """number of rows"""
         return len(self.array)  # type: ignore
 
     def unique(self, info):
@@ -186,8 +189,8 @@ Optimized for `null`, and empty queries are implicitly boolean."""
         """Return sum of the values, with optional exponentiation."""
         return C.sum(self.array, exp)
 
+    @strawberry.field(description="mean of the values")
     def mean(self) -> float:
-        """mean of the values"""
         return pc.call_function('mean', [self.array]).as_py()
 
     def min(self):
@@ -198,13 +201,17 @@ Optimized for `null`, and empty queries are implicitly boolean."""
         """maximum value"""
         return C.max(self.array)
 
+    @strawberry.field(description="Return q-th quantiles for values.")
     def quantile(self, q: List[float]) -> List[float]:
-        """Return q-th quantiles for values."""
         return np.nanquantile(self.array, q).tolist()
 
     def sort(self, reverse: bool = False, length: Optional[Long] = None):
         """Return sorted values. Optimized for fixed length."""
         return C.sort(self.array, reverse, length).to_pylist()
+
+    @strawberry.field(description="length of bytes or strings")
+    def binary_length(self) -> 'IntColumn':
+        return IntColumn(pc.binary_length(self.array))
 
 
 def annotate(func, return_type):
@@ -238,7 +245,7 @@ def query_args(func, query):
 class BooleanSet:
     counts: List[Long]
     __init__ = resolvers.__init__  # type: ignore
-    length = strawberry.field(resolvers.length, description=resolvers.length.__doc__)
+    length = resolvers.length
     values = annotate(resolvers.values, List[Optional[bool]])
 
 
@@ -257,7 +264,7 @@ class BooleanColumn:
 class IntSet:
     counts: List[Long]
     __init__ = resolvers.__init__  # type: ignore
-    length = strawberry.field(resolvers.length, description=resolvers.length.__doc__)
+    length = resolvers.length
     values = annotate(resolvers.values, List[Optional[int]])
 
 
@@ -271,10 +278,10 @@ class IntColumn:
     values = annotate(resolvers.values, List[Optional[int]])
     sort = annotate(resolvers.sort, List[Optional[int]])
     sum = annotate(resolvers.sum, int)
-    mean = strawberry.field(resolvers.mean, description=resolvers.mean.__doc__)
+    mean = resolvers.mean
     min = annotate(resolvers.min, int)
     max = annotate(resolvers.max, int)
-    quantile = strawberry.field(resolvers.quantile, description=resolvers.quantile.__doc__)
+    quantile = resolvers.quantile
     unique = annotate(resolvers.unique, Set)
 
 
@@ -282,7 +289,7 @@ class IntColumn:
 class LongSet:
     counts: List[Long]
     __init__ = resolvers.__init__  # type: ignore
-    length = strawberry.field(resolvers.length, description=resolvers.length.__doc__)
+    length = resolvers.length
     values = annotate(resolvers.values, List[Optional[Long]])
 
 
@@ -296,10 +303,10 @@ class LongColumn:
     values = annotate(resolvers.values, List[Optional[Long]])
     sort = annotate(resolvers.sort, List[Optional[Long]])
     sum = annotate(resolvers.sum, Long)
-    mean = strawberry.field(resolvers.mean, description=resolvers.mean.__doc__)
+    mean = resolvers.mean
     min = annotate(resolvers.min, Long)
     max = annotate(resolvers.max, Long)
-    quantile = strawberry.field(resolvers.quantile, description=resolvers.quantile.__doc__)
+    quantile = resolvers.quantile
     unique = annotate(resolvers.unique, Set)
 
 
@@ -312,10 +319,10 @@ class FloatColumn:
     values = annotate(resolvers.values, List[Optional[float]])
     sort = annotate(resolvers.sort, List[Optional[float]])
     sum = annotate(resolvers.sum, float)
-    mean = strawberry.field(resolvers.mean, description=resolvers.mean.__doc__)
+    mean = resolvers.mean
     min = annotate(resolvers.min, float)
     max = annotate(resolvers.max, float)
-    quantile = strawberry.field(resolvers.quantile, description=resolvers.quantile.__doc__)
+    quantile = resolvers.quantile
 
 
 @strawberry.type(description="column of decimals")
@@ -334,7 +341,7 @@ class DecimalColumn:
 class DateSet:
     counts: List[Long]
     __init__ = resolvers.__init__  # type: ignore
-    length = strawberry.field(resolvers.length, description=resolvers.length.__doc__)
+    length = resolvers.length
     values = annotate(resolvers.values, List[Optional[date]])
 
 
@@ -383,13 +390,14 @@ class BinaryColumn:
     any = query_args(resolvers.any, BinaryQuery)
     all = query_args(resolvers.all, BinaryQuery)
     values = annotate(resolvers.values, List[Optional[bytes]])
+    binary_length = resolvers.binary_length
 
 
 @strawberry.type(description="unique strings")
 class StringSet:
     counts: List[Long]
     __init__ = resolvers.__init__  # type: ignore
-    length = strawberry.field(resolvers.length, description=resolvers.length.__doc__)
+    length = resolvers.length
     values = annotate(resolvers.values, List[Optional[str]])
 
 
@@ -405,6 +413,15 @@ class StringColumn:
     min = annotate(resolvers.min, str)
     max = annotate(resolvers.max, str)
     unique = annotate(resolvers.unique, Set)
+    binary_length = resolvers.binary_length
+
+    @strawberry.field(description="strings converted to lowercase")
+    def utf8_lower(self) -> 'StringColumn':
+        return StringColumn(pc.utf8_lower(self.array))  # type: ignore
+
+    @strawberry.field(description="strings converted to uppercase")
+    def utf8_upper(self) -> 'StringColumn':
+        return StringColumn(pc.utf8_upper(self.array))  # type: ignore
 
 
 column_map = {

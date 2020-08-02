@@ -27,6 +27,9 @@ type BinaryColumn {
 
   """list of values"""
   values: [Binary]!
+
+  """length of bytes or strings"""
+  binaryLength: IntColumn!
 }
 
 """predicates for binaries"""
@@ -536,19 +539,19 @@ type StringColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!]): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, utf8Lower: StringQuery, utf8Upper: StringQuery): Long!
 
   """
   Return whether any value evaluates to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  any(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!]): Boolean!
+  any(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, utf8Lower: StringQuery, utf8Upper: StringQuery): Boolean!
 
   """
   Return whether all values evaluate to `true`.
   Optimized for `null`, and empty queries are implicitly boolean.
   """
-  all(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!]): Boolean!
+  all(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, utf8Lower: StringQuery, utf8Upper: StringQuery): Boolean!
 
   """list of values"""
   values: [String]!
@@ -564,9 +567,18 @@ type StringColumn {
 
   """unique values and counts"""
   unique: StringSet!
+
+  """length of bytes or strings"""
+  binaryLength: IntColumn!
+
+  """strings converted to lowercase"""
+  utf8Lower: StringColumn!
+
+  """strings converted to uppercase"""
+  utf8Upper: StringColumn!
 }
 
-"""predicates for string"""
+"""predicates for strings"""
 input StringQuery {
   equal: String
   notEqual: String
@@ -575,6 +587,9 @@ input StringQuery {
   greater: String
   greaterEqual: String
   isIn: [String!]
+  matchSubstring: String
+  utf8Lower: StringQuery
+  utf8Upper: StringQuery
 }
 
 """unique strings"""

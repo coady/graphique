@@ -103,6 +103,12 @@ def test_strings(client):
     data = client.execute('{ columns { state { any(greater: "CA") all(greater: "CA") } } }')
     states = data['columns']['state']
     assert states['any'] and not states['all']
+    data = client.execute('{ columns { state { binaryLength { unique { values } } } } }')
+    assert data['columns']['state']['binaryLength']['unique']['values'] == [2]
+    data = client.execute('{ columns { state { utf8Lower { values } } } }')
+    assert 'ca' in data['columns']['state']['utf8Lower']['values']
+    data = client.execute('{ columns { city { utf8Upper { values } } } }')
+    assert 'MOUNTAIN VIEW' in data['columns']['city']['utf8Upper']['values']
 
 
 def test_search(client):
@@ -146,12 +152,18 @@ def test_filter(client):
         '{ filter(city: {equal: "Mountain View"}, state: {lessEqual: "CA"}) { length } }'
     )
     assert data['filter']['length'] == 7
-    data = client.execute('{ filter(state: {equal: null}) { columns {state { values } } } }')
+    data = client.execute('{ filter(state: {equal: null}) { columns { state { values } } } }')
     assert data['filter']['columns']['state']['values'] == []
     data = client.execute('{ exclude { length } }')
     assert data['exclude']['length'] == 41700
     data = client.execute('{ exclude(state: {equal: "CA"}) { length } }')
     assert data['exclude']['length'] == 39053
+    data = client.execute('{ filter(city: {matchSubstring: "Mountain"}) { length } }')
+    assert data['filter']['length'] == 88
+    data = client.execute('{ filter(city: {utf8Lower: {matchSubstring: "mountain"}}) { length } }')
+    assert data['filter']['length'] == 88
+    data = client.execute('{ filter(city: {utf8Upper: {matchSubstring: "MOUNTAIN"}}) { length } }')
+    assert data['filter']['length'] == 88
 
 
 def test_sort(client):
