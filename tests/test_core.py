@@ -52,11 +52,11 @@ def test_reduce():
 
 def test_membership():
     array = pa.chunked_array([[0]])
-    assert not C.any(array) and not C.all(array) and C.count(array, True) == 0
+    assert C.count(array, True) == 0
     array = pa.chunked_array([[0, 1]])
-    assert C.any(array) and not C.all(array) and C.count(array, True) == 1
+    assert C.count(array, True) == 1
     array = pa.chunked_array([[1, 1]])
-    assert C.any(array) and C.all(array) and C.count(array, True) == 2
+    assert C.count(array, True) == 2
     assert C.count(array, False) == C.count(array, None) == 0
     assert C.count(array, 0) == 0 and C.count(array, 1) == 2
 

@@ -4,6 +4,7 @@ import contextlib
 import functools
 import itertools
 import json
+import operator
 from concurrent import futures
 from typing import Callable, Iterator, List, Optional
 import numpy as np
@@ -87,9 +88,7 @@ class Column(pa.ChunkedArray):
             return functools.reduce(lambda *args: pc.call_function(func, args), masks)
         with contextlib.suppress(NotImplementedError):
             self = pc.call_function('binary_length', [self])
-        with contextlib.suppress(NotImplementedError):
-            self = self.cast(pa.bool_())
-        return self
+        return self.cast(pa.bool_())
 
     def equal(self, value, invert=False) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
@@ -146,25 +145,14 @@ class Column(pa.ChunkedArray):
         value = max(Column.map(np.nanmax, self))
         return value.item() if isinstance(value, np.generic) else value
 
-    def any(self) -> bool:
-        """Return whether any value evaluates to True."""
-        return any(map(np.any, self.iterchunks()))
-
-    def all(self) -> bool:
-        """Return whether all values evaluate to True."""
-        return all(map(np.all, self.iterchunks()))
-
     def count(self, value) -> int:
-        """Return number of occurrences of value.
-
-        Booleans are optimized and can be used regardless of type.
-        """
+        """Return number of occurrences of value."""
         if value is None:
             return self.null_count
         if not isinstance(value, bool):
             self, value = Column.equal(self, value), True
-        count = sum(Column.map(np.count_nonzero, self))
-        return count if value else (len(self) - count - self.null_count)
+        getter = operator.attrgetter('true_count' if value else 'false_count')
+        return sum(map(getter, Column.mask(self).iterchunks()))
 
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""

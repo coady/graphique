@@ -9,21 +9,9 @@ scalar Binary
 type BinaryColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Binary, notEqual: Binary, project: Projection, isIn: [Binary!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Binary, notEqual: Binary, project: Projection, isIn: [Binary!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Binary, notEqual: Binary, project: Projection, isIn: [Binary!]): Boolean!
 
   """list of values"""
   values: [Binary]!
@@ -44,21 +32,9 @@ input BinaryQuery {
 type BooleanColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Boolean, notEqual: Boolean, project: Projection): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Boolean, notEqual: Boolean, project: Projection): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Boolean, notEqual: Boolean, project: Projection): Boolean!
 
   """list of values"""
   values: [Boolean]!
@@ -117,21 +93,9 @@ scalar Date
 type DateColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, project: Projection, isIn: [Date!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, project: Projection, isIn: [Date!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, project: Projection, isIn: [Date!]): Boolean!
 
   """list of values"""
   values: [Date]!
@@ -179,21 +143,9 @@ scalar DateTime
 type DateTimeColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, project: Projection, isIn: [DateTime!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, project: Projection, isIn: [DateTime!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, project: Projection, isIn: [DateTime!]): Boolean!
 
   """list of values"""
   values: [DateTime]!
@@ -227,21 +179,9 @@ scalar Decimal
 type DecimalColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, project: Projection, isIn: [Decimal!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, project: Projection, isIn: [Decimal!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, project: Projection, isIn: [Decimal!]): Boolean!
 
   """list of values"""
   values: [Decimal]!
@@ -272,21 +212,9 @@ input DecimalQuery {
 type FloatColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, project: Projection, isIn: [Float!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, project: Projection, isIn: [Float!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, project: Projection, isIn: [Float!]): Boolean!
 
   """list of values"""
   values: [Float]!
@@ -381,21 +309,9 @@ type IndexedTable {
 type IntColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, project: Projection, isIn: [Int!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, project: Projection, isIn: [Int!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, project: Projection, isIn: [Int!]): Boolean!
 
   """list of values"""
   values: [Int]!
@@ -452,21 +368,9 @@ scalar Long
 type LongColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, project: Projection, isIn: [Long!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, project: Projection, isIn: [Long!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, project: Projection, isIn: [Long!]): Boolean!
 
   """list of values"""
   values: [Long]!
@@ -516,7 +420,7 @@ type LongSet {
   values: [Long]!
 }
 
-"""predicates projected across columns"""
+"""predicates projected across two columns of a table"""
 input Projection {
   equal: String
   notEqual: String
@@ -555,21 +459,9 @@ type Row {
 type StringColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, project: Projection, isIn: [String!], matchSubstring: String, utf8Lower: StringQuery, utf8Upper: StringQuery): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, project: Projection, isIn: [String!], matchSubstring: String, utf8Lower: StringQuery, utf8Upper: StringQuery): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, project: Projection, isIn: [String!], matchSubstring: String, utf8Lower: StringQuery, utf8Upper: StringQuery): Boolean!
 
   """list of values"""
   values: [String]!
@@ -673,21 +565,9 @@ scalar Time
 type TimeColumn {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries are implicitly boolean.
+  Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, project: Projection, isIn: [Time!]): Long!
-
-  """
-  Return whether any value evaluates to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  any(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, project: Projection, isIn: [Time!]): Boolean!
-
-  """
-  Return whether all values evaluate to `true`.
-  Optimized for `null`, and empty queries are implicitly boolean.
-  """
-  all(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, project: Projection, isIn: [Time!]): Boolean!
 
   """list of values"""
   values: [Time]!

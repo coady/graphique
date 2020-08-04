@@ -8,12 +8,10 @@ def test_slice(client):
     zipcodes = data['slice']['columns']['zipcode']['values']
     assert zipcodes[0] == 544
     assert len(zipcodes) == 41699
-    data = client.execute('{ columns { zipcode { any(equal: null) count(notEqual: null) } } }')
-    zipcodes = data['columns']['zipcode']
-    assert not zipcodes['any'] and zipcodes['count'] == 41700
-    data = client.execute('{ columns { zipcode { all(notEqual: null) count(equal: null) } } }')
-    zipcodes = data['columns']['zipcode']
-    assert zipcodes['all'] and zipcodes['count'] == 0
+    data = client.execute('{ columns { zipcode { count(notEqual: null) } } }')
+    assert data['columns']['zipcode']['count'] == 41700
+    data = client.execute('{ columns { zipcode { count(equal: null) } } }')
+    assert data['columns']['zipcode']['count'] == 0
 
 
 def test_ints(client):
@@ -36,12 +34,6 @@ def test_ints(client):
     data = client.execute('{ columns { zipcode { count(equal: 501) } } }')
     zipcodes = data['columns']['zipcode']
     assert zipcodes['count'] == 1
-    data = client.execute('{ columns { zipcode { any all } } }')
-    zipcodes = data['columns']['zipcode']
-    assert zipcodes['any'] and zipcodes['all']
-    data = client.execute('{ columns { zipcode { any(greater: 1000) all(greater: 1000) } } }')
-    zipcodes = data['columns']['zipcode']
-    assert zipcodes['any'] and not zipcodes['all']
     data = client.execute('{ columns { zipcode { sort desc: sort(reverse: true)} } }')
     zipcodes = data['columns']['zipcode']
     assert zipcodes['sort'][0] == zipcodes['desc'][-1] == 501
@@ -62,12 +54,6 @@ def test_floats(client):
     latitudes = data['columns']['latitude']
     assert latitudes['truthy'] == 41700
     assert latitudes['count'] == 0
-    data = client.execute('{ columns { latitude { any all } } }')
-    latitudes = data['columns']['latitude']
-    assert latitudes['any'] and latitudes['all']
-    data = client.execute('{ columns { latitude { any(greater: 45.0) all(greater: 45.0) } } }')
-    latitudes = data['columns']['latitude']
-    assert latitudes['any'] and not latitudes['all']
     data = client.execute('{ columns { latitude { quantile(q: [0.5]) } } }')
     (quantile,) = data['columns']['latitude']['quantile']
     assert quantile == pytest.approx(39.12054)
@@ -97,12 +83,6 @@ def test_strings(client):
     data = client.execute('{ columns { state { count(equal: "CA") } } }')
     states = data['columns']['state']
     assert states['count'] == 2647
-    data = client.execute('{ columns { state { any all } } }')
-    states = data['columns']['state']
-    assert states['any'] and states['all']
-    data = client.execute('{ columns { state { any(greater: "CA") all(greater: "CA") } } }')
-    states = data['columns']['state']
-    assert states['any'] and not states['all']
     data = client.execute('{ columns { state { binaryLength { unique { values } } } } }')
     assert data['columns']['state']['binaryLength']['unique']['values'] == [2]
     data = client.execute('{ columns { state { utf8Lower { values } } } }')
