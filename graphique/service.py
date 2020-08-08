@@ -1,17 +1,15 @@
 import itertools
-import functools
 from datetime import datetime
-from typing import List, Optional
+from typing import Callable, List, Optional
 import pyarrow as pa
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
 from starlette.middleware import Middleware, base
-from strawberry.types.type_resolver import resolve_type
-from strawberry.types.types import ArgumentDefinition, FieldDefinition
+from strawberry.types.types import ArgumentDefinition
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
-from .models import Long, column_map, query_map, selections, type_map
+from .models import Long, column_map, filter_map, query_map, resolve_arguments, selections, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
 table = pq.read_table(
@@ -47,28 +45,20 @@ class Row:
     locals().update(dict.fromkeys(types))
 
 
-def query_field(func, names=types):
+def query_field(func: Callable) -> Callable:
     arguments = [
-        ArgumentDefinition(
-            name=to_camel_case(name),
-            origin_name=name,
-            type=Optional[query_map[types[name]]],
-            origin=func,
-        )
-        for name in names
+        ArgumentDefinition(origin_name=name, type=Optional[query_map[types[name]]])
+        for name in indexed
     ]
-    for argument in arguments:
-        resolve_type(argument)
-    func._field_definition = FieldDefinition(
-        name=to_camel_case(func.__name__),
-        origin_name=func.__name__,
-        type=func.__annotations__['return'],
-        origin=func,
-        arguments=arguments,
-        description=func.__doc__,
-        base_resolver=func,
-    )
-    return func
+    return resolve_arguments(func, arguments)
+
+
+def filter_field(func: Callable) -> Callable:
+    arguments = [
+        ArgumentDefinition(origin_name=name, type=Optional[filter_map[types[name]]])
+        for name in types
+    ]
+    return resolve_arguments(func, arguments)
 
 
 def doc_field(func):
@@ -164,14 +154,14 @@ class Table:
         table = self.select(info)
         return Table(T.matched(table, C.max, *map(to_snake_case, by)))
 
-    @query_field
+    @filter_field
     def filter(self, info, **queries) -> 'Table':
         """Return table with rows which match all queries."""
         table = self.select(info)
         queries = {name: queries[name].asdict() for name in queries}
         return Table(T.filtered(table, queries, invert=False))
 
-    @query_field
+    @filter_field
     def exclude(self, info, **queries) -> 'Table':
         """Return table with rows which don't match all queries; inverse of filter."""
         table = self.select(info)
@@ -189,7 +179,7 @@ class IndexedTable(Table):
         """indexed columns"""
         return list(map(to_camel_case, indexed))
 
-    @functools.partial(query_field, names=indexed)
+    @query_field
     def search(self, info, **queries) -> Table:
         """Return table with matching values for compound `index`.
         Queries must be a prefix of the `index`.

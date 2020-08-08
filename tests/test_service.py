@@ -146,6 +146,12 @@ def test_filter(client):
     assert data['filter']['length'] == 88
     data = client.execute('{ filter(county: {project: {equal: "city"}}) { length } }')
     assert data['filter']['length'] == 2805
+    data = client.execute('{ filter(city: {utf8IsLower: true}) { length } }')
+    assert data['filter']['length'] == 0
+    data = client.execute('{ filter(city: {utf8IsTitle: true}) { length } }')
+    assert data['filter']['length'] == 41700
+    data = client.execute('{ filter(city: {}) { length } }')
+    assert data['filter']['length'] == 41700
 
 
 def test_sort(client):

@@ -71,9 +71,13 @@ def test_functional(table):
     assert C.not_equal(array, 'CA') == C.is_in(array, ['CA'], invert=True)
     assert len(array.filter(mask)) == 2647
     assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
+    assert sum(C.mask(array, binary_length={'equal': 2}).to_pylist()) == 41700
+    assert sum(C.mask(array, utf8_is_upper=True).to_pylist()) == 41700
+    assert sum(C.mask(array, utf8_is_upper=False).to_pylist()) == 41700
     assert T.apply(table, len) == dict.fromkeys(table.column_names, 41700)
     assert T.apply(table, zipcode=len) == {'zipcode': 41700}
     assert len(T.filtered(table, {'state': {'equal': 'CA'}})) == 2647
+    assert len(T.filtered(table, {'state': {}})) == 41700
 
 
 def test_group(table):

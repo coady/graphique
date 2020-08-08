@@ -11,7 +11,7 @@ type BinaryColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Binary, notEqual: Binary, project: Projection, isIn: [Binary!]): Long!
+  count(equal: Binary, notEqual: Binary, project: Projection, isIn: [Binary!], binaryLength: IntQuery): Long!
 
   """list of values"""
   values: [Binary]!
@@ -21,11 +21,12 @@ type BinaryColumn {
 }
 
 """predicates for binaries"""
-input BinaryQuery {
+input BinaryFilter {
   equal: Binary
   notEqual: Binary
   project: Projection
   isIn: [Binary!]
+  binaryLength: IntQuery
 }
 
 """column of booleans"""
@@ -297,12 +298,12 @@ type IndexedTable {
   max(by: [String!]!): Table!
 
   """Return table with rows which match all queries."""
-  filter(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryQuery, string: StringQuery, snakeId: LongQuery, camelId: LongQuery): Table!
+  filter(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryFilter, string: StringFilter, snakeId: LongQuery, camelId: LongQuery): Table!
 
   """
   Return table with rows which don't match all queries; inverse of filter.
   """
-  exclude(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryQuery, string: StringQuery, snakeId: LongQuery, camelId: LongQuery): Table!
+  exclude(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryFilter, string: StringFilter, snakeId: LongQuery, camelId: LongQuery): Table!
 }
 
 """column of ints"""
@@ -461,7 +462,7 @@ type StringColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, project: Projection, isIn: [String!], matchSubstring: String, utf8Lower: StringQuery, utf8Upper: StringQuery): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, project: Projection, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
 
   """list of values"""
   values: [String]!
@@ -489,7 +490,7 @@ type StringColumn {
 }
 
 """predicates for strings"""
-input StringQuery {
+input StringFilter {
   equal: String
   notEqual: String
   less: String
@@ -499,8 +500,16 @@ input StringQuery {
   project: Projection
   isIn: [String!]
   matchSubstring: String
-  utf8Lower: StringQuery
-  utf8Upper: StringQuery
+  binaryLength: IntQuery
+  utf8Lower: StringFilter
+  utf8Upper: StringFilter
+  stringIsAscii: Boolean! = false
+  utf8IsAlnum: Boolean! = false
+  utf8IsAlpha: Boolean! = false
+  utf8IsDigit: Boolean! = false
+  utf8IsLower: Boolean! = false
+  utf8IsTitle: Boolean! = false
+  utf8IsUpper: Boolean! = false
 }
 
 """unique strings"""
@@ -550,12 +559,12 @@ type Table {
   max(by: [String!]!): Table!
 
   """Return table with rows which match all queries."""
-  filter(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryQuery, string: StringQuery, snakeId: LongQuery, camelId: LongQuery): Table!
+  filter(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryFilter, string: StringFilter, snakeId: LongQuery, camelId: LongQuery): Table!
 
   """
   Return table with rows which don't match all queries; inverse of filter.
   """
-  exclude(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryQuery, string: StringQuery, snakeId: LongQuery, camelId: LongQuery): Table!
+  exclude(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryFilter, string: StringFilter, snakeId: LongQuery, camelId: LongQuery): Table!
 }
 
 """Time (isoformat)"""

@@ -78,12 +78,15 @@ class Column(pa.ChunkedArray):
         if (not masks or query) and isinstance(self.type, pa.DictionaryType):
             self = self.cast(self.type.value_type)
         for op in query:
-            if op == 'match_substring':
-                masks.append(getattr(pc, op)(self, query[op]))
-            elif op.startswith('utf8_'):
-                masks.append(Column.mask(getattr(pc, op)(self), func, **query[op]))
+            predicate = getattr(pc, op)
+            if '_is_' in op:
+                if query[op]:
+                    masks.append(predicate(self))
+            elif op.startswith('utf8_') or op == 'binary_length':
+                masks.append(Column.mask(predicate(self), func, **query[op]))
             else:
-                masks.append(getattr(pc, op)(self, pa.scalar(query[op], self.type)))
+                value = query[op] if op == 'match_substring' else pa.scalar(query[op], self.type)
+                masks.append(predicate(self, value))
         if masks:
             return functools.reduce(lambda *args: pc.call_function(func, args), masks)
         with contextlib.suppress(NotImplementedError):

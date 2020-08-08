@@ -135,9 +135,6 @@ class StringQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[str])
     project: Optional[Projection] = undefined
     is_in: Optional[List[str]] = undefined
-    match_substring: Optional[str] = undefined
-    utf8_lower: Optional['StringQuery'] = undefined
-    utf8_upper: Optional['StringQuery'] = undefined
 
 
 query_map = {
@@ -152,6 +149,32 @@ query_map = {
     bytes: BinaryQuery,
     str: StringQuery,
 }
+
+
+@strawberry.input(description="predicates for binaries")
+class BinaryFilter(BinaryQuery):
+    __annotations__ = dict(BinaryQuery.__annotations__)
+    binary_length: Optional[IntQuery] = undefined
+
+
+@strawberry.input(description="predicates for strings")
+class StringFilter(StringQuery):
+    __annotations__ = dict(StringQuery.__annotations__)
+    match_substring: Optional[str] = undefined
+    binary_length: Optional[IntQuery] = undefined
+    utf8_lower: Optional['StringFilter'] = undefined
+    utf8_upper: Optional['StringFilter'] = undefined
+    string_is_ascii: bool = False
+    utf8_is_alnum: bool = False
+    utf8_is_alpha: bool = False
+    utf8_is_digit: bool = False
+    utf8_is_lower: bool = False
+    utf8_is_title: bool = False
+    utf8_is_upper: bool = False
+
+
+filter_map = dict(query_map)
+filter_map.update({bytes: BinaryFilter, str: StringFilter})
 
 
 def selections(node):
@@ -228,24 +251,33 @@ def annotate(func, return_type):
     return strawberry.field(clone, description=func.__doc__)
 
 
-def query_args(func, query):
-    clone = types.FunctionType(func.__code__, func.__globals__)
-    arguments = [
-        ArgumentDefinition(name=to_camel_case(name), origin_name=name, type=value, origin=clone)
-        for name, value in query.__annotations__.items()
-    ]
+def resolve_arguments(func, arguments):
     for argument in arguments:
+        argument.origin = func
+        argument.name = to_camel_case(argument.origin_name)
         resolve_type(argument)
-    clone._field_definition = FieldDefinition(
+    func._field_definition = FieldDefinition(
         name=to_camel_case(func.__name__),
         origin_name=func.__name__,
         type=func.__annotations__['return'],
-        origin=clone,
+        origin=func,
         arguments=arguments,
         description=func.__doc__,
-        base_resolver=clone,
+        base_resolver=func,
     )
-    return clone
+    return func
+
+
+def query_args(func, query):
+    clone = types.FunctionType(func.__code__, func.__globals__)
+    clone.__annotations__.update(func.__annotations__)
+    arguments = [
+        ArgumentDefinition(
+            origin_name=name, type=value, default_value=getattr(query, name, undefined)
+        )
+        for name, value in query.__annotations__.items()
+    ]
+    return resolve_arguments(clone, arguments)
 
 
 @strawberry.type(description="unique booleans")
@@ -377,7 +409,7 @@ class TimeColumn:
 @strawberry.type(description="column of binaries")
 class BinaryColumn:
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, BinaryQuery)
+    count = query_args(resolvers.count, BinaryFilter)
     values = annotate(resolvers.values, List[Optional[bytes]])
     binary_length = resolvers.binary_length
 
@@ -394,7 +426,7 @@ class StringSet:
 class StringColumn:
     Set = StringSet
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, StringQuery)
+    count = query_args(resolvers.count, StringFilter)
     values = annotate(resolvers.values, List[Optional[str]])
     sort = annotate(resolvers.sort, List[Optional[str]])
     min = annotate(resolvers.min, str)

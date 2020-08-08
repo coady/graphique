@@ -63,3 +63,7 @@ def test_columns(executor):
     assert execute('{ binary { count(equal: "") } }') == {'binary': {'count': 1}}
     assert execute('{ string { values } }') == {'string': {'values': ['', None]}}
     assert execute('{ string { count(equal: "") } }') == {'string': {'count': 1}}
+    assert execute('{ string { count(stringIsAscii: true) } }') == {'string': {'count': 1}}
+    assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
+    assert execute('{ string { count(utf8IsAlpha: true) } }') == {'string': {'count': 0}}
+    assert execute('{ string { count(utf8IsDigit: true) } }') == {'string': {'count': 0}}
