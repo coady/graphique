@@ -67,3 +67,15 @@ def test_columns(executor):
     assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsAlpha: true) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsDigit: true) } }') == {'string': {'count': 0}}
+
+
+def test_numeric(executor):
+    for name in ('int32', 'int64', 'float'):
+        data = executor(f'{{ columns {{ {name} {{ add(value: 1) {{ sum }} }} }} }}')
+        assert data == {'columns': {name: {'add': {'sum': 1}}}}
+
+        data = executor(f'{{ columns {{ {name} {{ subtract(value: 1) {{ sum }} }} }} }}')
+        assert data == {'columns': {name: {'subtract': {'sum': 1}}}}
+
+        data = executor(f'{{ columns {{ {name} {{ multiply(value: 1) {{ sum }} }} }} }}')
+        assert data == {'columns': {name: {'multiply': {'sum': 0}}}}

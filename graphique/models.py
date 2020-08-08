@@ -71,69 +71,59 @@ class Query:
 @strawberry.input(description="predicates for booleans")
 class BooleanQuery(Query):
     __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bool])
-    project: Optional[Projection] = undefined
 
 
 @strawberry.input(description="predicates for ints")
 class IntQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[int])
-    project: Optional[Projection] = undefined
     is_in: Optional[List[int]] = undefined
 
 
 @strawberry.input(description="predicates for longs")
 class LongQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[Long])
-    project: Optional[Projection] = undefined
     is_in: Optional[List[Long]] = undefined
 
 
 @strawberry.input(description="predicates for floats")
 class FloatQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[float])
-    project: Optional[Projection] = undefined
     is_in: Optional[List[float]] = undefined
 
 
 @strawberry.input(description="predicates for decimals")
 class DecimalQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[Decimal])
-    project: Optional[Projection] = undefined
     is_in: Optional[List[Decimal]] = undefined
 
 
 @strawberry.input(description="predicates for dates")
 class DateQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[date])
-    project: Optional[Projection] = undefined
     is_in: Optional[List[date]] = undefined
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[datetime])
-    project: Optional[Projection] = undefined
     is_in: Optional[List[datetime]] = undefined
 
 
 @strawberry.input(description="predicates for times")
 class TimeQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[time])
-    project: Optional[Projection] = undefined
     is_in: Optional[List[time]] = undefined
 
 
 @strawberry.input(description="predicates for binaries")
 class BinaryQuery(Query):
     __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bytes])
-    project: Optional[Projection] = undefined
     is_in: Optional[List[bytes]] = undefined
 
 
 @strawberry.input(description="predicates for strings")
 class StringQuery(Query):
     __annotations__ = dict.fromkeys(ops, Optional[str])
-    project: Optional[Projection] = undefined
     is_in: Optional[List[str]] = undefined
 
 
@@ -151,10 +141,68 @@ query_map = {
 }
 
 
+@strawberry.input(description="predicates for booleans")
+class BooleanFilter(BooleanQuery):
+    __annotations__ = dict(BooleanQuery.__annotations__)
+    project: Optional[Projection] = undefined
+
+
+@strawberry.input(description="predicates for ints")
+class IntFilter(IntQuery):
+    __annotations__ = dict(IntQuery.__annotations__)
+    project: Optional[Projection] = undefined
+    add: Optional[str] = undefined
+    subtract: Optional[str] = undefined
+    multiply: Optional[str] = undefined
+
+
+@strawberry.input(description="predicates for longs")
+class LongFilter(LongQuery):
+    __annotations__ = dict(LongQuery.__annotations__)
+    project: Optional[Projection] = undefined
+    add: Optional[str] = undefined
+    subtract: Optional[str] = undefined
+    multiply: Optional[str] = undefined
+
+
+@strawberry.input(description="predicates for floats")
+class FloatFilter(FloatQuery):
+    __annotations__ = dict(FloatQuery.__annotations__)
+    project: Optional[Projection] = undefined
+    add: Optional[str] = undefined
+    subtract: Optional[str] = undefined
+    multiply: Optional[str] = undefined
+
+
+@strawberry.input(description="predicates for decimals")
+class DecimalFilter(DecimalQuery):
+    __annotations__ = dict(DecimalQuery.__annotations__)
+    project: Optional[Projection] = undefined
+
+
+@strawberry.input(description="predicates for dates")
+class DateFilter(DateQuery):
+    __annotations__ = dict(DateQuery.__annotations__)
+    project: Optional[Projection] = undefined
+
+
+@strawberry.input(description="predicates for datetimes")
+class DateTimeFilter(DateTimeQuery):
+    __annotations__ = dict(DateTimeQuery.__annotations__)
+    project: Optional[Projection] = undefined
+
+
+@strawberry.input(description="predicates for times")
+class TimeFilter(TimeQuery):
+    __annotations__ = dict(TimeQuery.__annotations__)
+    project: Optional[Projection] = undefined
+
+
 @strawberry.input(description="predicates for binaries")
 class BinaryFilter(BinaryQuery):
     __annotations__ = dict(BinaryQuery.__annotations__)
     binary_length: Optional[IntQuery] = undefined
+    project: Optional[Projection] = undefined
 
 
 @strawberry.input(description="predicates for strings")
@@ -171,16 +219,31 @@ class StringFilter(StringQuery):
     utf8_is_lower: bool = False
     utf8_is_title: bool = False
     utf8_is_upper: bool = False
+    project: Optional[Projection] = undefined
 
 
-filter_map = dict(query_map)
-filter_map.update({bytes: BinaryFilter, str: StringFilter})
+filter_map = {
+    bool: BooleanFilter,
+    int: IntFilter,
+    Long: LongFilter,
+    float: FloatFilter,
+    Decimal: DecimalFilter,
+    date: DateFilter,
+    datetime: DateTimeFilter,
+    time: TimeFilter,
+    bytes: BinaryFilter,
+    str: StringFilter,
+}
 
 
 def selections(node):
     """Return tree of field name selections."""
     nodes = getattr(node.selection_set, 'selections', [])
     return {node.name.value: selections(node) for node in nodes}
+
+
+def doc_field(func):
+    return strawberry.field(func, description=func.__doc__)
 
 
 class resolvers:
@@ -190,8 +253,9 @@ class resolvers:
         self.array = array
         self.__dict__.update(attrs)
 
-    @strawberry.field(description="number of rows")
+    @doc_field
     def length(self) -> Long:
+        """number of rows"""
         return len(self.array)  # type: ignore
 
     def unique(self, info):
@@ -219,8 +283,9 @@ Optimized for `null`, and empty queries will attempt boolean conversion."""
         """Return sum of the values, with optional exponentiation."""
         return C.sum(self.array, exp)
 
-    @strawberry.field(description="mean of the values")
+    @doc_field
     def mean(self) -> float:
+        """mean of the values"""
         return pc.call_function('mean', [self.array]).as_py()
 
     def min(self):
@@ -231,16 +296,18 @@ Optimized for `null`, and empty queries will attempt boolean conversion."""
         """maximum value"""
         return C.max(self.array)
 
-    @strawberry.field(description="Return q-th quantiles for values.")
+    @doc_field
     def quantile(self, q: List[float]) -> List[float]:
+        """Return q-th quantiles for values."""
         return np.nanquantile(self.array, q).tolist()
 
     def sort(self, reverse: bool = False, length: Optional[Long] = None):
         """Return sorted values. Optimized for fixed length."""
         return C.sort(self.array, reverse, length).to_pylist()
 
-    @strawberry.field(description="length of bytes or strings")
+    @doc_field
     def binary_length(self) -> 'IntColumn':
+        """length of bytes or strings"""
         return IntColumn(pc.binary_length(self.array))
 
 
@@ -319,6 +386,21 @@ class IntColumn:
     quantile = resolvers.quantile
     unique = annotate(resolvers.unique, Set)
 
+    @doc_field
+    def add(self, value: int) -> 'IntColumn':
+        """Return values added to scalar."""
+        return IntColumn(pc.add(pa.scalar(value, self.array.type), self.array))  # type: ignore
+
+    @doc_field
+    def subtract(self, value: int) -> 'IntColumn':
+        """Return values subtracted *from* scalar."""
+        return IntColumn(pc.subtract(pa.scalar(value, self.array.type), self.array))  # type: ignore
+
+    @doc_field
+    def multiply(self, value: int) -> 'IntColumn':
+        """Return values multiplied by scalar."""
+        return IntColumn(pc.multiply(pa.scalar(value, self.array.type), self.array))  # type: ignore
+
 
 @strawberry.type(description="unique longs")
 class LongSet:
@@ -342,6 +424,21 @@ class LongColumn:
     quantile = resolvers.quantile
     unique = annotate(resolvers.unique, Set)
 
+    @doc_field
+    def add(self, value: Long) -> 'LongColumn':
+        """Return values added to scalar."""
+        return LongColumn(pc.add(pa.scalar(value, self.array.type), self.array))  # type: ignore
+
+    @doc_field
+    def subtract(self, value: Long) -> 'LongColumn':
+        """Return values subtracted *from* scalar."""
+        return LongColumn(pc.subtract(pa.scalar(value, self.array.type), self.array))  # type: ignore
+
+    @doc_field
+    def multiply(self, value: Long) -> 'LongColumn':
+        """Return values multiplied by scalar."""
+        return LongColumn(pc.multiply(pa.scalar(value, self.array.type), self.array))  # type: ignore
+
 
 @strawberry.type(description="column of floats")
 class FloatColumn:
@@ -354,6 +451,21 @@ class FloatColumn:
     min = annotate(resolvers.min, float)
     max = annotate(resolvers.max, float)
     quantile = resolvers.quantile
+
+    @doc_field
+    def add(self, value: float) -> 'FloatColumn':
+        """Return values added to scalar."""
+        return FloatColumn(pc.add(pa.scalar(value, self.array.type), self.array))  # type: ignore
+
+    @doc_field
+    def subtract(self, value: float) -> 'FloatColumn':
+        """Return values subtracted *from* scalar."""
+        return FloatColumn(pc.subtract(pa.scalar(value, self.array.type), self.array))  # type: ignore
+
+    @doc_field
+    def multiply(self, value: float) -> 'FloatColumn':
+        """Return values multiplied by scalar."""
+        return FloatColumn(pc.multiply(pa.scalar(value, self.array.type), self.array))  # type: ignore
 
 
 @strawberry.type(description="column of decimals")
@@ -434,12 +546,14 @@ class StringColumn:
     unique = annotate(resolvers.unique, Set)
     binary_length = resolvers.binary_length
 
-    @strawberry.field(description="strings converted to lowercase")
+    @doc_field
     def utf8_lower(self) -> 'StringColumn':
+        """strings converted to lowercase"""
         return StringColumn(pc.utf8_lower(self.array))  # type: ignore
 
-    @strawberry.field(description="strings converted to uppercase")
+    @doc_field
     def utf8_upper(self) -> 'StringColumn':
+        """strings converted to uppercase"""
         return StringColumn(pc.utf8_upper(self.array))  # type: ignore
 
 

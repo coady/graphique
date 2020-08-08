@@ -38,6 +38,10 @@ def test_ints(client):
     zipcodes = data['columns']['zipcode']
     assert zipcodes['sort'][0] == zipcodes['desc'][-1] == 501
     assert zipcodes['sort'][-1] == zipcodes['desc'][0] == 99950
+    data = client.execute('{ columns { zipcode(add: "zipcode") { min } } }')
+    assert data == {'columns': {'zipcode': {'min': 1002}}}
+    data = client.execute('{ columns { zipcode(subtract: "zipcode") { unique { values } } } }')
+    assert data == {'columns': {'zipcode': {'unique': {'values': [0]}}}}
 
 
 def test_floats(client):
@@ -57,6 +61,8 @@ def test_floats(client):
     data = client.execute('{ columns { latitude { quantile(q: [0.5]) } } }')
     (quantile,) = data['columns']['latitude']['quantile']
     assert quantile == pytest.approx(39.12054)
+    data = client.execute('{ columns { latitude(multiply: "longitude") { min } } }')
+    assert data['columns']['latitude']['min'] == pytest.approx(-11389.408478)
 
 
 def test_strings(client):
@@ -152,6 +158,12 @@ def test_filter(client):
     assert data['filter']['length'] == 41700
     data = client.execute('{ filter(city: {}) { length } }')
     assert data['filter']['length'] == 41700
+    data = client.execute('{ filter(zipcode: {add: "zipcode", equal: 1002}) { length } }')
+    assert data['filter']['length'] == 1
+    data = client.execute('{ filter(zipcode: {subtract: "zipcode", equal: 0}) { length } }')
+    assert data['filter']['length'] == 41700
+    data = client.execute('{ filter(latitude: {multiply: "longitude", greater: 0}) { length } }')
+    assert data['filter']['length'] == 0
 
 
 def test_sort(client):

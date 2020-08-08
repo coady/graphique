@@ -280,12 +280,15 @@ class Table(pa.Table):
 
     def filtered(self, queries: dict, invert=False) -> pa.Table:
         masks = []
-        for name in queries:
-            proj = queries[name].pop('project', {})
+        for name, query in queries.items():
+            column = self[name]
+            for func in {'add', 'subtract', 'multiply'}.intersection(query):
+                column = getattr(pc, func)(column, self[query.pop(func)])
+            proj = query.pop('project', {})
             if proj:
-                masks += [getattr(pc, op)(self[name], self[proj[op]]) for op in proj]
-            if queries[name]:
-                masks.append(Column.mask(self[name], **queries[name]))
+                masks += [getattr(pc, op)(column, self[proj[op]]) for op in proj]
+            if query:
+                masks.append(Column.mask(column, **query))
         if not masks:
             return self
         mask = functools.reduce(lambda *args: pc.call_function('and', args), masks)

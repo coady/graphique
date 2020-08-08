@@ -2,6 +2,7 @@ import itertools
 from datetime import datetime
 from typing import Callable, List, Optional
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
@@ -9,7 +10,16 @@ from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
-from .models import Long, column_map, filter_map, query_map, resolve_arguments, selections, type_map
+from .models import (
+    Long,
+    column_map,
+    doc_field,
+    filter_map,
+    query_map,
+    resolve_arguments,
+    selections,
+    type_map,
+)
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
 table = pq.read_table(
@@ -21,14 +31,32 @@ case_map = {to_camel_case(name): name for name in types}
 to_snake_case = case_map.__getitem__
 
 
-def resolver(name):
-    column = column_map[types[name]]
+def numeric_field(func):
+    arguments = [
+        ArgumentDefinition(origin_name=name, type=Optional[str])
+        for name in ('add', 'subtract', 'multiply')
+    ]
+    return resolve_arguments(func, arguments)
 
-    def method(self) -> column:
-        return column(self.table[name])
+
+def resolver(name):
+    cls = column_map[types[name]]
+    if types[name] not in (int, float, Long):
+
+        def method(self) -> cls:
+            return cls(self.table[name])
+
+        return strawberry.field(method, name=name)
+
+    def method(self, **fields) -> cls:
+        """Return column with optional projection."""
+        column = self.table[name]
+        for func in fields:
+            column = getattr(pc, func)(column, self.table[fields[func]])
+        return cls(column)
 
     method.__name__ = name
-    return strawberry.field(method)
+    return numeric_field(method)
 
 
 @strawberry.type(description="fields for each column")
@@ -59,10 +87,6 @@ def filter_field(func: Callable) -> Callable:
         for name in types
     ]
     return resolve_arguments(func, arguments)
-
-
-def doc_field(func):
-    return strawberry.field(func, description=func.__doc__)
 
 
 def references(node):

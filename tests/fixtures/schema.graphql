@@ -11,7 +11,7 @@ type BinaryColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Binary, notEqual: Binary, project: Projection, isIn: [Binary!], binaryLength: IntQuery): Long!
+  count(equal: Binary, notEqual: Binary, isIn: [Binary!], binaryLength: IntQuery, project: Projection): Long!
 
   """list of values"""
   values: [Binary]!
@@ -24,9 +24,9 @@ type BinaryColumn {
 input BinaryFilter {
   equal: Binary
   notEqual: Binary
-  project: Projection
   isIn: [Binary!]
   binaryLength: IntQuery
+  project: Projection
 }
 
 """column of booleans"""
@@ -35,7 +35,7 @@ type BooleanColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Boolean, notEqual: Boolean, project: Projection): Long!
+  count(equal: Boolean, notEqual: Boolean): Long!
 
   """list of values"""
   values: [Boolean]!
@@ -45,7 +45,7 @@ type BooleanColumn {
 }
 
 """predicates for booleans"""
-input BooleanQuery {
+input BooleanFilter {
   equal: Boolean
   notEqual: Boolean
   project: Projection
@@ -65,16 +65,36 @@ type BooleanSet {
 """fields for each column"""
 type Columns {
   bool: BooleanColumn!
-  uint8: IntColumn!
-  int8: IntColumn!
-  uint16: IntColumn!
-  int16: IntColumn!
-  uint32: LongColumn!
-  int32: IntColumn!
-  uint64: LongColumn!
-  int64: LongColumn!
-  float: FloatColumn!
-  double: FloatColumn!
+
+  """Return column with optional projection."""
+  uint8(add: String, subtract: String, multiply: String): IntColumn!
+
+  """Return column with optional projection."""
+  int8(add: String, subtract: String, multiply: String): IntColumn!
+
+  """Return column with optional projection."""
+  uint16(add: String, subtract: String, multiply: String): IntColumn!
+
+  """Return column with optional projection."""
+  int16(add: String, subtract: String, multiply: String): IntColumn!
+
+  """Return column with optional projection."""
+  uint32(add: String, subtract: String, multiply: String): LongColumn!
+
+  """Return column with optional projection."""
+  int32(add: String, subtract: String, multiply: String): IntColumn!
+
+  """Return column with optional projection."""
+  uint64(add: String, subtract: String, multiply: String): LongColumn!
+
+  """Return column with optional projection."""
+  int64(add: String, subtract: String, multiply: String): LongColumn!
+
+  """Return column with optional projection."""
+  float(add: String, subtract: String, multiply: String): FloatColumn!
+
+  """Return column with optional projection."""
+  double(add: String, subtract: String, multiply: String): FloatColumn!
   decimal: DecimalColumn!
   date32: DateColumn!
   date64: DateColumn!
@@ -83,8 +103,12 @@ type Columns {
   time64: TimeColumn!
   binary: BinaryColumn!
   string: StringColumn!
-  snakeId: LongColumn!
-  camelId: LongColumn!
+
+  """Return column with optional projection."""
+  snakeId(add: String, subtract: String, multiply: String): LongColumn!
+
+  """Return column with optional projection."""
+  camelId(add: String, subtract: String, multiply: String): LongColumn!
 }
 
 """Date (isoformat)"""
@@ -96,7 +120,7 @@ type DateColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, project: Projection, isIn: [Date!]): Long!
+  count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isIn: [Date!]): Long!
 
   """list of values"""
   values: [Date]!
@@ -115,15 +139,15 @@ type DateColumn {
 }
 
 """predicates for dates"""
-input DateQuery {
+input DateFilter {
   equal: Date
   notEqual: Date
   less: Date
   lessEqual: Date
   greater: Date
   greaterEqual: Date
-  project: Projection
   isIn: [Date!]
+  project: Projection
 }
 
 """unique dates"""
@@ -146,7 +170,7 @@ type DateTimeColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, project: Projection, isIn: [DateTime!]): Long!
+  count(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isIn: [DateTime!]): Long!
 
   """list of values"""
   values: [DateTime]!
@@ -162,15 +186,15 @@ type DateTimeColumn {
 }
 
 """predicates for datetimes"""
-input DateTimeQuery {
+input DateTimeFilter {
   equal: DateTime
   notEqual: DateTime
   less: DateTime
   lessEqual: DateTime
   greater: DateTime
   greaterEqual: DateTime
-  project: Projection
   isIn: [DateTime!]
+  project: Projection
 }
 
 """Decimal (fixed-point)"""
@@ -182,7 +206,7 @@ type DecimalColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, project: Projection, isIn: [Decimal!]): Long!
+  count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isIn: [Decimal!]): Long!
 
   """list of values"""
   values: [Decimal]!
@@ -198,15 +222,15 @@ type DecimalColumn {
 }
 
 """predicates for decimals"""
-input DecimalQuery {
+input DecimalFilter {
   equal: Decimal
   notEqual: Decimal
   less: Decimal
   lessEqual: Decimal
   greater: Decimal
   greaterEqual: Decimal
-  project: Projection
   isIn: [Decimal!]
+  project: Projection
 }
 
 """column of floats"""
@@ -215,7 +239,7 @@ type FloatColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, project: Projection, isIn: [Float!]): Long!
+  count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isIn: [Float!]): Long!
 
   """list of values"""
   values: [Float]!
@@ -237,18 +261,30 @@ type FloatColumn {
 
   """Return q-th quantiles for values."""
   quantile(q: [Float!]!): [Float!]!
+
+  """Return values added to scalar."""
+  add(value: Float!): FloatColumn!
+
+  """Return values subtracted *from* scalar."""
+  subtract(value: Float!): FloatColumn!
+
+  """Return values multiplied by scalar."""
+  multiply(value: Float!): FloatColumn!
 }
 
 """predicates for floats"""
-input FloatQuery {
+input FloatFilter {
   equal: Float
   notEqual: Float
   less: Float
   lessEqual: Float
   greater: Float
   greaterEqual: Float
-  project: Projection
   isIn: [Float!]
+  project: Projection
+  add: String
+  subtract: String
+  multiply: String
 }
 
 """a table sorted by a composite index"""
@@ -298,12 +334,12 @@ type IndexedTable {
   max(by: [String!]!): Table!
 
   """Return table with rows which match all queries."""
-  filter(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryFilter, string: StringFilter, snakeId: LongQuery, camelId: LongQuery): Table!
+  filter(bool: BooleanFilter, uint8: IntFilter, int8: IntFilter, uint16: IntFilter, int16: IntFilter, uint32: LongFilter, int32: IntFilter, uint64: LongFilter, int64: LongFilter, float: FloatFilter, double: FloatFilter, decimal: DecimalFilter, date32: DateFilter, date64: DateFilter, timestamp: DateTimeFilter, time32: TimeFilter, time64: TimeFilter, binary: BinaryFilter, string: StringFilter, snakeId: LongFilter, camelId: LongFilter): Table!
 
   """
   Return table with rows which don't match all queries; inverse of filter.
   """
-  exclude(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryFilter, string: StringFilter, snakeId: LongQuery, camelId: LongQuery): Table!
+  exclude(bool: BooleanFilter, uint8: IntFilter, int8: IntFilter, uint16: IntFilter, int16: IntFilter, uint32: LongFilter, int32: IntFilter, uint64: LongFilter, int64: LongFilter, float: FloatFilter, double: FloatFilter, decimal: DecimalFilter, date32: DateFilter, date64: DateFilter, timestamp: DateTimeFilter, time32: TimeFilter, time64: TimeFilter, binary: BinaryFilter, string: StringFilter, snakeId: LongFilter, camelId: LongFilter): Table!
 }
 
 """column of ints"""
@@ -312,7 +348,7 @@ type IntColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, project: Projection, isIn: [Int!]): Long!
+  count(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isIn: [Int!]): Long!
 
   """list of values"""
   values: [Int]!
@@ -337,6 +373,30 @@ type IntColumn {
 
   """unique values and counts"""
   unique: IntSet!
+
+  """Return values added to scalar."""
+  add(value: Int!): IntColumn!
+
+  """Return values subtracted *from* scalar."""
+  subtract(value: Int!): IntColumn!
+
+  """Return values multiplied by scalar."""
+  multiply(value: Int!): IntColumn!
+}
+
+"""predicates for ints"""
+input IntFilter {
+  equal: Int
+  notEqual: Int
+  less: Int
+  lessEqual: Int
+  greater: Int
+  greaterEqual: Int
+  isIn: [Int!]
+  project: Projection
+  add: String
+  subtract: String
+  multiply: String
 }
 
 """predicates for ints"""
@@ -347,7 +407,6 @@ input IntQuery {
   lessEqual: Int
   greater: Int
   greaterEqual: Int
-  project: Projection
   isIn: [Int!]
 }
 
@@ -371,7 +430,7 @@ type LongColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, project: Projection, isIn: [Long!]): Long!
+  count(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isIn: [Long!]): Long!
 
   """list of values"""
   values: [Long]!
@@ -396,6 +455,30 @@ type LongColumn {
 
   """unique values and counts"""
   unique: LongSet!
+
+  """Return values added to scalar."""
+  add(value: Long!): LongColumn!
+
+  """Return values subtracted *from* scalar."""
+  subtract(value: Long!): LongColumn!
+
+  """Return values multiplied by scalar."""
+  multiply(value: Long!): LongColumn!
+}
+
+"""predicates for longs"""
+input LongFilter {
+  equal: Long
+  notEqual: Long
+  less: Long
+  lessEqual: Long
+  greater: Long
+  greaterEqual: Long
+  isIn: [Long!]
+  project: Projection
+  add: String
+  subtract: String
+  multiply: String
 }
 
 """predicates for longs"""
@@ -406,7 +489,6 @@ input LongQuery {
   lessEqual: Long
   greater: Long
   greaterEqual: Long
-  project: Projection
   isIn: [Long!]
 }
 
@@ -462,7 +544,7 @@ type StringColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, project: Projection, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false, project: Projection): Long!
 
   """list of values"""
   values: [String]!
@@ -497,7 +579,6 @@ input StringFilter {
   lessEqual: String
   greater: String
   greaterEqual: String
-  project: Projection
   isIn: [String!]
   matchSubstring: String
   binaryLength: IntQuery
@@ -510,6 +591,7 @@ input StringFilter {
   utf8IsLower: Boolean! = false
   utf8IsTitle: Boolean! = false
   utf8IsUpper: Boolean! = false
+  project: Projection
 }
 
 """unique strings"""
@@ -559,12 +641,12 @@ type Table {
   max(by: [String!]!): Table!
 
   """Return table with rows which match all queries."""
-  filter(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryFilter, string: StringFilter, snakeId: LongQuery, camelId: LongQuery): Table!
+  filter(bool: BooleanFilter, uint8: IntFilter, int8: IntFilter, uint16: IntFilter, int16: IntFilter, uint32: LongFilter, int32: IntFilter, uint64: LongFilter, int64: LongFilter, float: FloatFilter, double: FloatFilter, decimal: DecimalFilter, date32: DateFilter, date64: DateFilter, timestamp: DateTimeFilter, time32: TimeFilter, time64: TimeFilter, binary: BinaryFilter, string: StringFilter, snakeId: LongFilter, camelId: LongFilter): Table!
 
   """
   Return table with rows which don't match all queries; inverse of filter.
   """
-  exclude(bool: BooleanQuery, uint8: IntQuery, int8: IntQuery, uint16: IntQuery, int16: IntQuery, uint32: LongQuery, int32: IntQuery, uint64: LongQuery, int64: LongQuery, float: FloatQuery, double: FloatQuery, decimal: DecimalQuery, date32: DateQuery, date64: DateQuery, timestamp: DateTimeQuery, time32: TimeQuery, time64: TimeQuery, binary: BinaryFilter, string: StringFilter, snakeId: LongQuery, camelId: LongQuery): Table!
+  exclude(bool: BooleanFilter, uint8: IntFilter, int8: IntFilter, uint16: IntFilter, int16: IntFilter, uint32: LongFilter, int32: IntFilter, uint64: LongFilter, int64: LongFilter, float: FloatFilter, double: FloatFilter, decimal: DecimalFilter, date32: DateFilter, date64: DateFilter, timestamp: DateTimeFilter, time32: TimeFilter, time64: TimeFilter, binary: BinaryFilter, string: StringFilter, snakeId: LongFilter, camelId: LongFilter): Table!
 }
 
 """Time (isoformat)"""
@@ -576,7 +658,7 @@ type TimeColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, project: Projection, isIn: [Time!]): Long!
+  count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isIn: [Time!]): Long!
 
   """list of values"""
   values: [Time]!
@@ -592,13 +674,13 @@ type TimeColumn {
 }
 
 """predicates for times"""
-input TimeQuery {
+input TimeFilter {
   equal: Time
   notEqual: Time
   less: Time
   lessEqual: Time
   greater: Time
   greaterEqual: Time
-  project: Projection
   isIn: [Time!]
+  project: Projection
 }
