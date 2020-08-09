@@ -343,6 +343,7 @@ def query_args(func, query):
             origin_name=name, type=value, default_value=getattr(query, name, undefined)
         )
         for name, value in query.__annotations__.items()
+        if name != 'project'
     ]
     return resolve_arguments(clone, arguments)
 

@@ -13,10 +13,12 @@ def test_case(executor):
     assert data == {'columns': {'snakeId': {'values': [1, 2]}, 'camelId': {'values': [1, 2]}}}
     data = executor('{ row { snakeId camelId } }')
     assert data == {'row': {'snakeId': 1, 'camelId': 1}}
-    data = executor('{ filter(snakeId: {equal: 1}, camelId: {equal: 1}) { length } }')
+    data = executor('{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}) { length } }')
     assert data == {'filter': {'length': 1}}
-    data = executor('{ exclude(snakeId: {equal: 1}, camelId: {equal: 1}) { length } }')
-    assert data == {'exclude': {'length': 1}}
+    data = executor(
+        '{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}, invert: true) { length } }'
+    )
+    assert data == {'filter': {'length': 1}}
     data = executor('{ index search(snakeId: {equal: 1}) { length } }')
     assert data == {'index': ['snakeId', 'camelId'], 'search': {'length': 1}}
     data = executor('{ min(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')

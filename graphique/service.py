@@ -1,3 +1,4 @@
+import enum
 import itertools
 from datetime import datetime
 from typing import Callable, List, Optional
@@ -7,7 +8,7 @@ import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
 from starlette.middleware import Middleware, base
-from strawberry.types.types import ArgumentDefinition
+from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
 from .models import (
@@ -81,12 +82,18 @@ def query_field(func: Callable) -> Callable:
     return resolve_arguments(func, arguments)
 
 
-def filter_field(func: Callable) -> Callable:
-    arguments = [
-        ArgumentDefinition(origin_name=name, type=Optional[filter_map[types[name]]])
-        for name in types
-    ]
-    return resolve_arguments(func, arguments)
+@strawberry.input(description="predicates for each column")
+class Filters:
+    __annotations__ = {name: Optional[filter_map[types[name]]] for name in types}
+    locals().update(dict.fromkeys(types, undefined))
+    asdict = next(iter(query_map.values())).asdict
+
+
+@strawberry.enum
+class Operator(enum.Enum):
+    AND = 'and'
+    OR = 'or'
+    XOR = 'xor'
 
 
 def references(node):
@@ -178,19 +185,13 @@ class Table:
         table = self.select(info)
         return Table(T.matched(table, C.max, *map(to_snake_case, by)))
 
-    @filter_field
-    def filter(self, info, **queries) -> 'Table':
-        """Return table with rows which match all queries."""
+    @doc_field
+    def filter(
+        self, info, query: Filters, invert: bool = False, reduce: Operator = 'and'  # type: ignore
+    ) -> 'Table':
+        """Return table with rows which match all (by default) queries."""
         table = self.select(info)
-        queries = {name: queries[name].asdict() for name in queries}
-        return Table(T.filtered(table, queries, invert=False))
-
-    @filter_field
-    def exclude(self, info, **queries) -> 'Table':
-        """Return table with rows which don't match all queries; inverse of filter."""
-        table = self.select(info)
-        queries = {name: queries[name].asdict() for name in queries}
-        return Table(T.filtered(table, queries, invert=True))
+        return Table(T.filtered(table, query.asdict(), invert=invert, reduce=reduce.value))  # type: ignore
 
 
 @strawberry.type(description="a table sorted by a composite index")

@@ -11,7 +11,7 @@ type BinaryColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Binary, notEqual: Binary, isIn: [Binary!], binaryLength: IntQuery, project: Projection): Long!
+  count(equal: Binary, notEqual: Binary, isIn: [Binary!], binaryLength: IntQuery): Long!
 
   """list of values"""
   values: [Binary]!
@@ -233,6 +233,31 @@ input DecimalFilter {
   project: Projection
 }
 
+"""predicates for each column"""
+input Filters {
+  bool: BooleanFilter
+  uint8: IntFilter
+  int8: IntFilter
+  uint16: IntFilter
+  int16: IntFilter
+  uint32: LongFilter
+  int32: IntFilter
+  uint64: LongFilter
+  int64: LongFilter
+  float: FloatFilter
+  double: FloatFilter
+  decimal: DecimalFilter
+  date32: DateFilter
+  date64: DateFilter
+  timestamp: DateTimeFilter
+  time32: TimeFilter
+  time64: TimeFilter
+  binary: BinaryFilter
+  string: StringFilter
+  snakeId: LongFilter
+  camelId: LongFilter
+}
+
 """column of floats"""
 type FloatColumn {
   """
@@ -333,13 +358,8 @@ type IndexedTable {
   """Return table with maximum values per column."""
   max(by: [String!]!): Table!
 
-  """Return table with rows which match all queries."""
-  filter(bool: BooleanFilter, uint8: IntFilter, int8: IntFilter, uint16: IntFilter, int16: IntFilter, uint32: LongFilter, int32: IntFilter, uint64: LongFilter, int64: LongFilter, float: FloatFilter, double: FloatFilter, decimal: DecimalFilter, date32: DateFilter, date64: DateFilter, timestamp: DateTimeFilter, time32: TimeFilter, time64: TimeFilter, binary: BinaryFilter, string: StringFilter, snakeId: LongFilter, camelId: LongFilter): Table!
-
-  """
-  Return table with rows which don't match all queries; inverse of filter.
-  """
-  exclude(bool: BooleanFilter, uint8: IntFilter, int8: IntFilter, uint16: IntFilter, int16: IntFilter, uint32: LongFilter, int32: IntFilter, uint64: LongFilter, int64: LongFilter, float: FloatFilter, double: FloatFilter, decimal: DecimalFilter, date32: DateFilter, date64: DateFilter, timestamp: DateTimeFilter, time32: TimeFilter, time64: TimeFilter, binary: BinaryFilter, string: StringFilter, snakeId: LongFilter, camelId: LongFilter): Table!
+  """Return table with rows which match all (by default) queries."""
+  filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
 }
 
 """column of ints"""
@@ -503,6 +523,12 @@ type LongSet {
   values: [Long]!
 }
 
+enum Operator {
+  AND
+  OR
+  XOR
+}
+
 """predicates projected across two columns of a table"""
 input Projection {
   equal: String
@@ -544,7 +570,7 @@ type StringColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false, project: Projection): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
 
   """list of values"""
   values: [String]!
@@ -640,13 +666,8 @@ type Table {
   """Return table with maximum values per column."""
   max(by: [String!]!): Table!
 
-  """Return table with rows which match all queries."""
-  filter(bool: BooleanFilter, uint8: IntFilter, int8: IntFilter, uint16: IntFilter, int16: IntFilter, uint32: LongFilter, int32: IntFilter, uint64: LongFilter, int64: LongFilter, float: FloatFilter, double: FloatFilter, decimal: DecimalFilter, date32: DateFilter, date64: DateFilter, timestamp: DateTimeFilter, time32: TimeFilter, time64: TimeFilter, binary: BinaryFilter, string: StringFilter, snakeId: LongFilter, camelId: LongFilter): Table!
-
-  """
-  Return table with rows which don't match all queries; inverse of filter.
-  """
-  exclude(bool: BooleanFilter, uint8: IntFilter, int8: IntFilter, uint16: IntFilter, int16: IntFilter, uint32: LongFilter, int32: IntFilter, uint64: LongFilter, int64: LongFilter, float: FloatFilter, double: FloatFilter, decimal: DecimalFilter, date32: DateFilter, date64: DateFilter, timestamp: DateTimeFilter, time32: TimeFilter, time64: TimeFilter, binary: BinaryFilter, string: StringFilter, snakeId: LongFilter, camelId: LongFilter): Table!
+  """Return table with rows which match all (by default) queries."""
+  filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
 }
 
 """Time (isoformat)"""

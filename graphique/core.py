@@ -278,7 +278,7 @@ class Table(pa.Table):
             self = self.filter(Column.equal(self[name], func(self[name])))
         return self
 
-    def filtered(self, queries: dict, invert=False) -> pa.Table:
+    def filtered(self, queries: dict, invert=False, reduce='and') -> pa.Table:
         masks = []
         for name, query in queries.items():
             column = self[name]
@@ -291,5 +291,5 @@ class Table(pa.Table):
                 masks.append(Column.mask(column, **query))
         if not masks:
             return self
-        mask = functools.reduce(lambda *args: pc.call_function('and', args), masks)
+        mask = functools.reduce(lambda *args: pc.call_function(reduce, args), masks)
         return self.filter(pc.call_function('invert', [mask]) if invert else mask)
