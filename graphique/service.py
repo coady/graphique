@@ -1,4 +1,5 @@
 import enum
+import functools
 import itertools
 from datetime import datetime
 from typing import Callable, List, Optional
@@ -47,7 +48,8 @@ def resolver(name):
         def method(self) -> cls:
             return cls(self.table[name])
 
-        return strawberry.field(method, name=name)
+        method.__name__ = name
+        return strawberry.field(method)
 
     def method(self, **fields) -> cls:
         """Return column with optional projection."""
@@ -151,16 +153,18 @@ class Table:
         self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
     ) -> List['Table']:
         """Return tables grouped by columns, with stable ordering."""
-        table = self.select(info)
-        tables = T.grouped(table, *map(to_snake_case, by), reverse=reverse, length=length)
+        tables = [self.select(info)]
+        for name in map(to_snake_case, by):
+            groups = (T.group(table, name, reverse) for table in tables)
+            tables = list(itertools.islice(itertools.chain.from_iterable(groups), length))
         return list(map(Table, tables))
 
     @doc_field
     def unique(self, info, by: List[str], reverse: bool = False) -> 'Table':
         """Return table of first or last occurrences grouped by columns, with stable ordering."""
-        table = self.select(info)
-        by = list(map(to_snake_case, by))
-        tables = [T.unique(table, by[-1], reverse) for table in T.grouped(table, *by[:-1])]
+        name = to_snake_case(by[-1])
+        groups = self.group(info, by[:-1], reverse=reverse)
+        tables = [T.unique(group.table, name, reverse) for group in groups]
         return Table(pa.concat_tables(tables[::-1] if reverse else tables))
 
     @doc_field
@@ -191,7 +195,11 @@ class Table:
     ) -> 'Table':
         """Return table with rows which match all (by default) queries."""
         table = self.select(info)
-        return Table(T.filtered(table, query.asdict(), invert=invert, reduce=reduce.value))  # type: ignore
+        masks = list(T.masks(table, **query.asdict()))  # type: ignore
+        if not masks:
+            return self
+        mask = functools.reduce(lambda *args: pc.call_function(reduce.value, args), masks)
+        return Table(table.filter(pc.call_function('invert', [mask]) if invert else mask))
 
 
 @strawberry.type(description="a table sorted by a composite index")

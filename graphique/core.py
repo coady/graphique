@@ -2,11 +2,10 @@ import bisect
 import collections
 import contextlib
 import functools
-import itertools
 import json
 import operator
 from concurrent import futures
-from typing import Callable, Iterator, List, Optional
+from typing import Callable, Iterator, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -51,16 +50,14 @@ class Chunk:
         indices = argunique(array[::-1] if reverse else array)
         return pc.subtract(pa.scalar(len(array) - 1), indices) if reverse else indices
 
-    def equal(self: pa.DictionaryArray, value, invert=False) -> pa.Array:
-        (indices,) = np.nonzero(pc.equal(self.dictionary, pa.scalar(value, self.type.value_type)))
-        func = pc.not_equal if invert else pc.equal
-        return func(self.indices, *pa.array(indices or [-1], self.indices.type))
+    def call(self: pa.DictionaryArray, func: Callable, *args, **kwargs) -> pa.Array:
+        dictionary = func(self.dictionary, *args, **kwargs)
+        return pa.DictionaryArray.from_arrays(self.indices, dictionary)
 
-    def is_in(self, values, invert=False) -> np.ndarray:
+    def is_in(self, values, invert=False) -> pa.Array:
         if not isinstance(self, pa.DictionaryArray):
-            return np.isin(self, values, invert=invert)
-        (indices,) = np.nonzero(np.isin(self.dictionary, values))
-        return np.isin(self.indices, indices, invert=invert)
+            return pa.array(np.isin(self, values, invert=invert))
+        return Chunk.call(self, np.isin, values, invert=invert).cast(pa.bool_())
 
 
 class Column(pa.ChunkedArray):
@@ -73,39 +70,52 @@ class Column(pa.ChunkedArray):
 
     def mask(self, func='and', **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
-        ops = {'equal', 'not_equal', 'isin'}.intersection(query)
+        ops = {'equal', 'not_equal', 'is_in'}.intersection(query)
         masks = [getattr(Column, op)(self, query.pop(op)) for op in ops]
-        if (not masks or query) and isinstance(self.type, pa.DictionaryType):
-            self = self.cast(self.type.value_type)
         for op in query:
             predicate = getattr(pc, op)
             if '_is_' in op:
                 if query[op]:
-                    masks.append(predicate(self))
+                    masks.append(Column.call(self, predicate))
             elif op.startswith('utf8_') or op == 'binary_length':
-                masks.append(Column.mask(predicate(self), func, **query[op]))
+                masks.append(Column.mask(Column.call(self, predicate), func, **query[op]))
             else:
-                value = query[op] if op == 'match_substring' else pa.scalar(query[op], self.type)
-                masks.append(predicate(self, value))
+                masks.append(Column.call(self, predicate, query[op]))
         if masks:
             return functools.reduce(lambda *args: pc.call_function(func, args), masks)
         with contextlib.suppress(NotImplementedError):
-            self = pc.call_function('binary_length', [self])
+            self = Column.call(self, pc.binary_length)
         return self.cast(pa.bool_())
 
-    def equal(self, value, invert=False) -> pa.ChunkedArray:
+    def call(self, func: Callable, *args) -> pa.ChunkedArray:
+        """Call compute function on array with support for dictionaries."""
+        if args:
+            if isinstance(args[0], pa.ChunkedArray):
+                if isinstance(self.type, pa.DictionaryType):
+                    self = self.cast(self.type.value_type)
+                if isinstance(args[0].type, pa.DictionaryType):
+                    args = (args[0].cast(args[0].type.value_type),)
+            elif func is not pc.match_substring:
+                args = (pa.scalar(args[0], getattr(self.type, 'value_type', self.type)),)
+        if not isinstance(self.type, pa.DictionaryType):
+            return func(self, *args)
+        array = pa.chunked_array(Column.map(rpartial(Chunk.call, func, *args), self))
+        with contextlib.suppress(ValueError):
+            if array.type.value_type.bit_width <= array.type.index_type.bit_width:
+                return array.cast(array.type.value_type)
+        return array
+
+    def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
         if value is None:
             return pc.is_null(self)
-        if isinstance(self.type, pa.DictionaryType):
-            return pa.chunked_array(Column.map(rpartial(Chunk.equal, value, invert), self))
-        return (pc.not_equal if invert else pc.equal)(self, pa.scalar(value, self.type))
+        return Column.call(self, pc.equal, value)
 
     def not_equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which doesn't match scalar value."""
         if value is None:
             return pc.is_valid(self)
-        return Column.equal(self, value, invert=True)
+        return Column.call(self, pc.not_equal, value)
 
     def is_in(self, values, invert=False) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
@@ -266,30 +276,18 @@ class Table(pa.Table):
             indices = indices.take(pc.call_function('sort_indices', [self[name].take(indices)]))
         return self.take((indices[::-1] if reverse else indices)[:length])
 
-    def grouped(self, *names: str, reverse=False, length: int = None) -> List[pa.Table]:
-        tables = [self]
-        for name in names:
-            groups = (Table.group(table, name, reverse) for table in tables)
-            tables = list(itertools.islice(itertools.chain.from_iterable(groups), length))
-        return tables
+    def masks(self, **queries: dict) -> Iterator[pa.Array]:
+        """Generate mask arrays which match queries."""
+        for name, query in queries.items():
+            column = self[name]
+            for func in {'add', 'subtract', 'multiply'}.intersection(query):
+                column = getattr(pc, func)(column, self[query.pop(func)])
+            for op, field in query.pop('project', {}).items():
+                yield getattr(pc, op)(column, self[field])
+            if query:
+                yield Column.mask(column, **query)
 
     def matched(self, func: Callable, *names: str):
         for name in names:
             self = self.filter(Column.equal(self[name], func(self[name])))
         return self
-
-    def filtered(self, queries: dict, invert=False, reduce='and') -> pa.Table:
-        masks = []
-        for name, query in queries.items():
-            column = self[name]
-            for func in {'add', 'subtract', 'multiply'}.intersection(query):
-                column = getattr(pc, func)(column, self[query.pop(func)])
-            proj = query.pop('project', {})
-            if proj:
-                masks += [getattr(pc, op)(column, self[proj[op]]) for op in proj]
-            if query:
-                masks.append(Column.mask(column, **query))
-        if not masks:
-            return self
-        mask = functools.reduce(lambda *args: pc.call_function(reduce, args), masks)
-        return self.filter(pc.call_function('invert', [mask]) if invert else mask)

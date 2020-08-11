@@ -1,5 +1,6 @@
 import pytest
 import pyarrow as pa
+import pyarrow.compute as pc
 from graphique.core import Column as C, Table as T
 
 
@@ -18,6 +19,11 @@ def test_dictionary(table):
         C.min(array[:0])
     with pytest.raises(ValueError):
         C.max(array[:0])
+    assert sum(C.mask(array, equal=array.cast(pa.string())).to_pylist()) == 41700
+    assert sum(C.mask(array.cast(pa.string()), equal=array).to_pylist()) == 41700
+    assert sum(C.mask(array, match_substring="CA").to_pylist()) == 2647
+    assert sum(C.mask(array, is_in=["CA"]).to_pylist()) == 2647
+    assert "ca" in C.call(array, pc.utf8_lower).unique().dictionary.to_pylist()
 
 
 def test_chunks():
@@ -76,8 +82,9 @@ def test_functional(table):
     assert sum(C.mask(array, utf8_is_upper=False).to_pylist()) == 41700
     assert T.apply(table, len) == dict.fromkeys(table.column_names, 41700)
     assert T.apply(table, zipcode=len) == {'zipcode': 41700}
-    assert len(T.filtered(table, {'state': {'equal': 'CA'}})) == 2647
-    assert len(T.filtered(table, {'state': {}})) == 41700
+    (mask,) = T.masks(table, state={'equal': 'CA'})
+    assert sum(mask.to_pylist()) == 2647
+    assert not list(T.masks(table, state={}))
 
 
 def test_group(table):
