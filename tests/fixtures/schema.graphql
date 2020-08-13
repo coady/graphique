@@ -136,6 +136,9 @@ type DateColumn {
 
   """unique values and counts"""
   unique: DateSet!
+
+  """Return values with null elements replaced."""
+  fillNull(value: Date!): DateColumn!
 }
 
 """predicates for dates"""
@@ -183,6 +186,9 @@ type DateTimeColumn {
 
   """maximum value"""
   max: DateTime!
+
+  """Return values with null elements replaced."""
+  fillNull(value: DateTime!): DateTimeColumn!
 }
 
 """predicates for datetimes"""
@@ -286,6 +292,9 @@ type FloatColumn {
 
   """Return q-th quantiles for values."""
   quantile(q: [Float!]!): [Float!]!
+
+  """Return values with null elements replaced."""
+  fillNull(value: Float!): FloatColumn!
 
   """Return values added to scalar."""
   add(value: Float!): FloatColumn!
@@ -394,6 +403,9 @@ type IntColumn {
   """unique values and counts"""
   unique: IntSet!
 
+  """Return values with null elements replaced."""
+  fillNull(value: Int!): IntColumn!
+
   """Return values added to scalar."""
   add(value: Int!): IntColumn!
 
@@ -475,6 +487,9 @@ type LongColumn {
 
   """unique values and counts"""
   unique: LongSet!
+
+  """Return values with null elements replaced."""
+  fillNull(value: Long!): LongColumn!
 
   """Return values added to scalar."""
   add(value: Long!): LongColumn!
@@ -692,6 +707,9 @@ type TimeColumn {
 
   """maximum value"""
   max: Time!
+
+  """Return values with null elements replaced."""
+  fillNull(value: Time!): TimeColumn!
 }
 
 """predicates for times"""

@@ -41,25 +41,40 @@ def test_columns(executor):
     for name in ('uint8', 'int8', 'uint16', 'int16', 'int32'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
+        data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
+        assert data == {name: {'fillNull': {'values': [0, 1]}}}
     for name in ('uint32', 'uint64', 'int64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
+        data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
+        assert data == {name: {'fillNull': {'values': [0, 1]}}}
 
     for name in ('float', 'double'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0.0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0.0) }} }}') == {name: {'count': 1}}
+        data = execute(f'{{ {name} {{ fillNull(value: 1.0) {{ values }} }} }}')
+        assert data == {name: {'fillNull': {'values': [0.0, 1.0]}}}
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
 
     for name in ('date32', 'date64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['1970-01-01', None]}}
         assert execute(f'{{ {name} {{ count(equal: "1970-01-01") }} }}') == {name: {'count': 1}}
-    assert execute('{ timestamp { values } }') == {
-        'timestamp': {'values': ['1970-01-01T00:00:00', None]}
+        data = execute(f'{{ {name} {{ fillNull(value: "1970-01-02") {{ values }} }} }}')
+        assert data == {name: {'fillNull': {'values': ['1970-01-01', '1970-01-02']}}}
+
+    data = execute('{ timestamp { values } }')
+    assert data == {'timestamp': {'values': ['1970-01-01T00:00:00', None]}}
+    data = execute('{ timestamp { fillNull(value: "1970-01-02T00:00:00") { values } } }')
+    assert data == {
+        'timestamp': {'fillNull': {'values': ['1970-01-01T00:00:00', '1970-01-02T00:00:00']}}
     }
     assert execute('{ timestamp { count(equal: "1970-01-01") } }') == {'timestamp': {'count': 1}}
+
     for name in ('time32', 'time64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['00:00:00', None]}}
         assert execute(f'{{ {name} {{ count(equal: "00:00:00") }} }}') == {name: {'count': 1}}
+        data = execute(f'{{ {name} {{ fillNull(value: "00:00:01") {{ values }} }} }}')
+        assert data == {name: {'fillNull': {'values': ['00:00:00', '00:00:01']}}}
 
     assert execute('{ binary { values } }') == {'binary': {'values': ['', None]}}
     assert execute('{ binary { count(equal: "") } }') == {'binary': {'count': 1}}

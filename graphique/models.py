@@ -273,6 +273,10 @@ Optimized for `null`, and empty queries will attempt boolean conversion."""
             return self.array.null_count
         if query == {'not_equal': None}:
             return len(self.array) - self.array.null_count
+        query = {
+            key: (value.asdict() if hasattr(value, 'asdict') else value)
+            for key, value in query.items()
+        }
         return C.count(C.mask(self.array, **query), True)  # type: ignore
 
     def values(self):
@@ -388,6 +392,11 @@ class IntColumn:
     unique = annotate(resolvers.unique, Set)
 
     @doc_field
+    def fill_null(self, value: int) -> 'IntColumn':
+        """Return values with null elements replaced."""
+        return IntColumn(self.array.fill_null(value))  # type: ignore
+
+    @doc_field
     def add(self, value: int) -> 'IntColumn':
         """Return values added to scalar."""
         return IntColumn(pc.add(pa.scalar(value, self.array.type), self.array))  # type: ignore
@@ -426,6 +435,11 @@ class LongColumn:
     unique = annotate(resolvers.unique, Set)
 
     @doc_field
+    def fill_null(self, value: Long) -> 'LongColumn':
+        """Return values with null elements replaced."""
+        return LongColumn(self.array.fill_null(value))  # type: ignore
+
+    @doc_field
     def add(self, value: Long) -> 'LongColumn':
         """Return values added to scalar."""
         return LongColumn(pc.add(pa.scalar(value, self.array.type), self.array))  # type: ignore
@@ -452,6 +466,11 @@ class FloatColumn:
     min = annotate(resolvers.min, float)
     max = annotate(resolvers.max, float)
     quantile = resolvers.quantile
+
+    @doc_field
+    def fill_null(self, value: float) -> 'FloatColumn':
+        """Return values with null elements replaced."""
+        return FloatColumn(self.array.fill_null(value))  # type: ignore
 
     @doc_field
     def add(self, value: float) -> 'FloatColumn':
@@ -498,6 +517,11 @@ class DateColumn:
     max = annotate(resolvers.max, date)
     unique = annotate(resolvers.unique, Set)
 
+    @doc_field
+    def fill_null(self, value: date) -> 'DateColumn':
+        """Return values with null elements replaced."""
+        return DateColumn(self.array.fill_null(value))  # type: ignore
+
 
 @strawberry.type(description="column of datetimes")
 class DateTimeColumn:
@@ -508,6 +532,11 @@ class DateTimeColumn:
     min = annotate(resolvers.min, datetime)
     max = annotate(resolvers.max, datetime)
 
+    @doc_field
+    def fill_null(self, value: datetime) -> 'DateTimeColumn':
+        """Return values with null elements replaced."""
+        return DateTimeColumn(self.array.fill_null(value))  # type: ignore
+
 
 @strawberry.type(description="column of times")
 class TimeColumn:
@@ -517,6 +546,11 @@ class TimeColumn:
     sort = annotate(resolvers.sort, List[Optional[time]])
     min = annotate(resolvers.min, time)
     max = annotate(resolvers.max, time)
+
+    @doc_field
+    def fill_null(self, value: time) -> 'TimeColumn':
+        """Return values with null elements replaced."""
+        return TimeColumn(self.array.fill_null(value))  # type: ignore
 
 
 @strawberry.type(description="column of binaries")

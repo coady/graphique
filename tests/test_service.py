@@ -87,8 +87,9 @@ def test_strings(client):
     assert states['truthy'] == 41700
     assert states['count'] == 0
     data = client.execute('{ columns { state { count(equal: "CA") } } }')
-    states = data['columns']['state']
-    assert states['count'] == 2647
+    assert data == {'columns': {'state': {'count': 2647}}}
+    data = client.execute('{ columns { state { count(utf8Lower: {equal: "ca"}) } } }')
+    assert data == {'columns': {'state': {'count': 2647}}}
     data = client.execute('{ columns { state { binaryLength { unique { values } } } } }')
     assert data['columns']['state']['binaryLength']['unique']['values'] == [2]
     data = client.execute('{ columns { state { utf8Lower { values } } } }')
