@@ -95,7 +95,8 @@ def test_group(table):
     tables = list(T.group(table, 'state'))
     assert len(groups) == len(tables) == 52
     assert list(map(len, groups.values())) == list(map(len, tables))
-    assert set(table['state'].chunk(0).take(groups['CA'])) == {pa.scalar('CA')}
+    for chunk, indices in zip(table['state'].chunks, groups['CA'].chunks):
+        assert set(chunk.take(indices)) <= {pa.scalar('CA')}
     groups = C.arggroupby(table['latitude'])
     assert max(map(len, groups.values())) == 6
 
@@ -115,7 +116,7 @@ def test_unique(table):
 def test_sort(table):
     states = C.sort(table['state']).to_pylist()
     assert (states[0], states[-1]) == ('AK', 'WY')
-    states = C.sort(table['state'], reverse=True).to_pylist()
+    states = C.sort(table.combine_chunks()['state'], reverse=True).to_pylist()
     assert (states[0], states[-1]) == ('WY', 'AK')
     assert C.sort(table['state'], length=1).to_pylist() == ['AK']
     assert C.sort(table['state'], reverse=True, length=1).to_pylist() == ['WY']

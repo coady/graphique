@@ -2,6 +2,7 @@ import enum
 import functools
 import itertools
 from datetime import datetime
+from pathlib import Path
 from typing import Callable, List, Optional
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -25,7 +26,7 @@ from .models import (
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
 table = pq.read_table(
-    PARQUET_PATH, COLUMNS, memory_map=MMAP, use_legacy_dataset=True, read_dictionary=DICTIONARIES
+    Path(PARQUET_PATH).resolve(), COLUMNS, memory_map=MMAP, read_dictionary=DICTIONARIES
 )
 indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
