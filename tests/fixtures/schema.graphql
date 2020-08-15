@@ -11,7 +11,7 @@ type BinaryColumn {
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: Binary, notEqual: Binary, isIn: [Binary!], binaryLength: IntQuery): Long!
+  count(equal: Binary, notEqual: Binary, isIn: [Binary!]): Long!
 
   """list of values"""
   values: [Binary]!
@@ -25,8 +25,7 @@ input BinaryFilter {
   equal: Binary
   notEqual: Binary
   isIn: [Binary!]
-  binaryLength: IntQuery
-  project: Projection
+  project: Nominal
 }
 
 """column of booleans"""
@@ -48,7 +47,7 @@ type BooleanColumn {
 input BooleanFilter {
   equal: Boolean
   notEqual: Boolean
-  project: Projection
+  project: Nominal
 }
 
 """unique booleans"""
@@ -67,48 +66,62 @@ type Columns {
   bool: BooleanColumn!
 
   """Return column with optional projection."""
-  uint8(add: String, subtract: String, multiply: String): IntColumn!
+  uint8(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  int8(add: String, subtract: String, multiply: String): IntColumn!
+  int8(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  uint16(add: String, subtract: String, multiply: String): IntColumn!
+  uint16(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  int16(add: String, subtract: String, multiply: String): IntColumn!
+  int16(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  uint32(add: String, subtract: String, multiply: String): LongColumn!
+  uint32(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
 
   """Return column with optional projection."""
-  int32(add: String, subtract: String, multiply: String): IntColumn!
+  int32(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  uint64(add: String, subtract: String, multiply: String): LongColumn!
+  uint64(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
 
   """Return column with optional projection."""
-  int64(add: String, subtract: String, multiply: String): LongColumn!
+  int64(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
 
   """Return column with optional projection."""
-  float(add: String, subtract: String, multiply: String): FloatColumn!
+  float(add: String, subtract: String, multiply: String, minimum: String, maximum: String): FloatColumn!
 
   """Return column with optional projection."""
-  double(add: String, subtract: String, multiply: String): FloatColumn!
-  decimal: DecimalColumn!
-  date32: DateColumn!
-  date64: DateColumn!
-  timestamp: DateTimeColumn!
-  time32: TimeColumn!
-  time64: TimeColumn!
+  double(add: String, subtract: String, multiply: String, minimum: String, maximum: String): FloatColumn!
+
+  """Return column with optional projection."""
+  decimal(minimum: String, maximum: String): DecimalColumn!
+
+  """Return column with optional projection."""
+  date32(minimum: String, maximum: String): DateColumn!
+
+  """Return column with optional projection."""
+  date64(minimum: String, maximum: String): DateColumn!
+
+  """Return column with optional projection."""
+  timestamp(minimum: String, maximum: String): DateTimeColumn!
+
+  """Return column with optional projection."""
+  time32(minimum: String, maximum: String): TimeColumn!
+
+  """Return column with optional projection."""
+  time64(minimum: String, maximum: String): TimeColumn!
   binary: BinaryColumn!
-  string: StringColumn!
 
   """Return column with optional projection."""
-  snakeId(add: String, subtract: String, multiply: String): LongColumn!
+  string(minimum: String, maximum: String): StringColumn!
 
   """Return column with optional projection."""
-  camelId(add: String, subtract: String, multiply: String): LongColumn!
+  snakeId(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
+
+  """Return column with optional projection."""
+  camelId(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
 }
 
 """Date (isoformat)"""
@@ -139,6 +152,12 @@ type DateColumn {
 
   """Return values with null elements replaced."""
   fillNull(value: Date!): DateColumn!
+
+  """Return element-wise minimum compared to scalar."""
+  minimum(value: Date!): DateColumn!
+
+  """Return element-wise maximum compared to scalar."""
+  maximum(value: Date!): DateColumn!
 }
 
 """predicates for dates"""
@@ -150,7 +169,7 @@ input DateFilter {
   greater: Date
   greaterEqual: Date
   isIn: [Date!]
-  project: Projection
+  project: Ordinal
 }
 
 """unique dates"""
@@ -189,6 +208,12 @@ type DateTimeColumn {
 
   """Return values with null elements replaced."""
   fillNull(value: DateTime!): DateTimeColumn!
+
+  """Return element-wise minimum compared to scalar."""
+  minimum(value: DateTime!): DateTimeColumn!
+
+  """Return element-wise maximum compared to scalar."""
+  maximum(value: DateTime!): DateTimeColumn!
 }
 
 """predicates for datetimes"""
@@ -200,7 +225,7 @@ input DateTimeFilter {
   greater: DateTime
   greaterEqual: DateTime
   isIn: [DateTime!]
-  project: Projection
+  project: Ordinal
 }
 
 """Decimal (fixed-point)"""
@@ -225,6 +250,12 @@ type DecimalColumn {
 
   """maximum value"""
   max: Decimal
+
+  """Return element-wise minimum compared to scalar."""
+  minimum(value: Decimal!): DecimalColumn!
+
+  """Return element-wise maximum compared to scalar."""
+  maximum(value: Decimal!): DecimalColumn!
 }
 
 """predicates for decimals"""
@@ -236,7 +267,7 @@ input DecimalFilter {
   greater: Decimal
   greaterEqual: Decimal
   isIn: [Decimal!]
-  project: Projection
+  project: Ordinal
 }
 
 """predicates for each column"""
@@ -304,6 +335,12 @@ type FloatColumn {
 
   """Return values multiplied by scalar."""
   multiply(value: Float!): FloatColumn!
+
+  """Return element-wise minimum compared to scalar."""
+  minimum(value: Float!): FloatColumn!
+
+  """Return element-wise maximum compared to scalar."""
+  maximum(value: Float!): FloatColumn!
 }
 
 """predicates for floats"""
@@ -315,10 +352,7 @@ input FloatFilter {
   greater: Float
   greaterEqual: Float
   isIn: [Float!]
-  project: Projection
-  add: String
-  subtract: String
-  multiply: String
+  project: Ratio
 }
 
 """a table sorted by a composite index"""
@@ -414,6 +448,12 @@ type IntColumn {
 
   """Return values multiplied by scalar."""
   multiply(value: Int!): IntColumn!
+
+  """Return element-wise minimum compared to scalar."""
+  minimum(value: Int!): IntColumn!
+
+  """Return element-wise maximum compared to scalar."""
+  maximum(value: Int!): IntColumn!
 }
 
 """predicates for ints"""
@@ -425,10 +465,7 @@ input IntFilter {
   greater: Int
   greaterEqual: Int
   isIn: [Int!]
-  project: Projection
-  add: String
-  subtract: String
-  multiply: String
+  project: Ratio
 }
 
 """predicates for ints"""
@@ -499,6 +536,12 @@ type LongColumn {
 
   """Return values multiplied by scalar."""
   multiply(value: Long!): LongColumn!
+
+  """Return element-wise minimum compared to scalar."""
+  minimum(value: Long!): LongColumn!
+
+  """Return element-wise maximum compared to scalar."""
+  maximum(value: Long!): LongColumn!
 }
 
 """predicates for longs"""
@@ -510,10 +553,7 @@ input LongFilter {
   greater: Long
   greaterEqual: Long
   isIn: [Long!]
-  project: Projection
-  add: String
-  subtract: String
-  multiply: String
+  project: Ratio
 }
 
 """predicates for longs"""
@@ -538,20 +578,43 @@ type LongSet {
   values: [Long]!
 }
 
+"""nominal predicates projected across two columns"""
+input Nominal {
+  equal: String
+  notEqual: String
+}
+
 enum Operator {
   AND
   OR
   XOR
 }
 
-"""predicates projected across two columns of a table"""
-input Projection {
+"""ordinal predicates projected across two columns"""
+input Ordinal {
   equal: String
   notEqual: String
   less: String
   lessEqual: String
   greater: String
   greaterEqual: String
+  minimum: String
+  maximum: String
+}
+
+"""ratio predicates projected across two columns"""
+input Ratio {
+  equal: String
+  notEqual: String
+  less: String
+  lessEqual: String
+  greater: String
+  greaterEqual: String
+  minimum: String
+  maximum: String
+  add: String
+  subtract: String
+  multiply: String
 }
 
 """scalar fields"""
@@ -605,6 +668,12 @@ type StringColumn {
   """length of bytes or strings"""
   binaryLength: IntColumn!
 
+  """Return element-wise minimum compared to scalar."""
+  minimum(value: String!): StringColumn!
+
+  """Return element-wise maximum compared to scalar."""
+  maximum(value: String!): StringColumn!
+
   """strings converted to lowercase"""
   utf8Lower: StringColumn!
 
@@ -632,7 +701,7 @@ input StringFilter {
   utf8IsLower: Boolean! = false
   utf8IsTitle: Boolean! = false
   utf8IsUpper: Boolean! = false
-  project: Projection
+  project: Ordinal
 }
 
 """unique strings"""
@@ -710,6 +779,12 @@ type TimeColumn {
 
   """Return values with null elements replaced."""
   fillNull(value: Time!): TimeColumn!
+
+  """Return element-wise minimum compared to scalar."""
+  minimum(value: Time!): TimeColumn!
+
+  """Return element-wise maximum compared to scalar."""
+  maximum(value: Time!): TimeColumn!
 }
 
 """predicates for times"""
@@ -721,5 +796,5 @@ input TimeFilter {
   greater: Time
   greaterEqual: Time
   isIn: [Time!]
-  project: Projection
+  project: Ordinal
 }

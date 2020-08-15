@@ -34,33 +34,24 @@ case_map = {to_camel_case(name): name for name in types}
 to_snake_case = case_map.__getitem__
 
 
-def numeric_field(func):
-    arguments = [
-        ArgumentDefinition(origin_name=name, type=Optional[str])
-        for name in ('add', 'subtract', 'multiply')
-    ]
-    return resolve_arguments(func, arguments)
-
-
 def resolver(name):
     cls = column_map[types[name]]
-    if types[name] not in (int, float, Long):
-
-        def method(self) -> cls:
-            return cls(self.table[name])
-
-        method.__name__ = name
-        return strawberry.field(method)
+    arguments = [
+        ArgumentDefinition(origin_name=field, type=Optional[str])
+        for field in T.projected
+        if hasattr(cls, field)
+    ]
 
     def method(self, **fields) -> cls:
-        """Return column with optional projection."""
         column = self.table[name]
         for func in fields:
-            column = getattr(pc, func)(column, self.table[fields[func]])
+            column = T.projected[func](column, self.table[fields[func]])
         return cls(column)
 
     method.__name__ = name
-    return numeric_field(method)
+    if arguments:
+        method.__doc__ = "Return column with optional projection."
+    return resolve_arguments(method, arguments)
 
 
 @strawberry.type(description="fields for each column")

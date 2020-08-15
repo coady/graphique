@@ -90,9 +90,12 @@ def test_numeric(executor):
     for name in ('int32', 'int64', 'float'):
         data = executor(f'{{ columns {{ {name} {{ add(value: 1) {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'add': {'sum': 1}}}}
-
         data = executor(f'{{ columns {{ {name} {{ subtract(value: 1) {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'subtract': {'sum': 1}}}}
-
         data = executor(f'{{ columns {{ {name} {{ multiply(value: 1) {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'multiply': {'sum': 0}}}}
+
+        data = executor(f'{{ columns {{ {name} {{ minimum(value: -1) {{ sum }} }} }} }}')
+        assert data == {'columns': {name: {'minimum': {'sum': -1}}}}
+        data = executor(f'{{ columns {{ {name} {{ maximum(value: 1) {{ sum }} }} }} }}')
+        assert data == {'columns': {name: {'maximum': {'sum': 1}}}}

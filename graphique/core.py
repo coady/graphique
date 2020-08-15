@@ -59,6 +59,10 @@ class Chunk:
             return pa.array(np.isin(self, values, invert=invert))
         return Chunk.call(self, np.isin, values, invert=invert).cast(pa.bool_())
 
+    def to_null(array: np.ndarray) -> pa.Array:
+        func = np.isnat if array.dtype.type is np.datetime64 else np.isnan
+        return pa.array(array, mask=func(array))
+
 
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
@@ -165,6 +169,23 @@ class Column(pa.ChunkedArray):
         """Return max of the values."""
         return Column.mapreduce(self, np.max, max)
 
+    def compare(self, func, value):
+        if isinstance(value, pa.ChunkedArray):
+            chunks = Column.map(func, self, value)
+        else:
+            chunks = Column.map(rpartial(func, value), self)
+        if self.null_count:
+            chunks = Column.threader.map(Chunk.to_null, chunks)
+        return pa.chunked_array(chunks)
+
+    def minimum(self, value) -> pa.ChunkedArray:
+        """Return element-wise minimum of values."""
+        return Column.compare(self, np.minimum, value)
+
+    def maximum(self, value) -> pa.ChunkedArray:
+        """Return element-wise maximum of values."""
+        return Column.compare(self, np.maximum, value)
+
     def count(self, value) -> int:
         """Return number of occurrences of value."""
         if value is None:
@@ -195,6 +216,13 @@ class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
     threader = futures.ThreadPoolExecutor(pa.cpu_count())
+    projected = {
+        'add': pc.add,
+        'subtract': pc.subtract,
+        'multiply': pc.multiply,
+        'minimum': Column.minimum,
+        'maximum': Column.maximum,
+    }
 
     def apply(self, func: Callable = None, **funcs: Callable) -> dict:
         """Apply a function to all, or selected, columns."""
@@ -287,9 +315,10 @@ class Table(pa.Table):
         """Generate mask arrays which match queries."""
         for name, query in queries.items():
             column = self[name]
-            for func in {'add', 'subtract', 'multiply'}.intersection(query):
-                column = getattr(pc, func)(column, self[query.pop(func)])
-            for op, field in query.pop('project', {}).items():
+            project = query.pop('project', {})
+            for func in set(Table.projected).intersection(project):
+                column = Table.projected[func](column, self[project.pop(func)])
+            for op, field in project.items():
                 yield getattr(pc, op)(column, self[field])
             if query:
                 yield Column.mask(column, **query)

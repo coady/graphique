@@ -27,6 +27,8 @@ def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
     groups = {key: value.to_pylist() for key, value in C.arggroupby(array).items()}
     assert groups == {'a': [0, 2], 'b': [1, 0, 2], 'c': [1]}
+    assert C.minimum(array, array).equals(array)
+    assert C.maximum(array, array).equals(array)
     table = pa.Table.from_pydict({'col': array})
     tables = list(T.group(table, 'col'))
     assert list(map(len, tables)) == [2, 3, 1]

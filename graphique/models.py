@@ -47,13 +47,30 @@ type_map = {
 ops = 'equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'
 
 
-@strawberry.input(description="predicates projected across two columns of a table")
-class Projection:
-    __annotations__ = dict.fromkeys(ops, Optional[str])
-    locals().update(dict.fromkeys(ops, undefined))
+@strawberry.input(description="nominal predicates projected across two columns")
+class Nominal:
+    equal: Optional[str] = undefined
+    not_equal: Optional[str] = undefined
 
     def asdict(self):
         return {name: value for name, value in self.__dict__.items() if value is not undefined}
+
+
+@strawberry.input(description="ordinal predicates projected across two columns")
+class Ordinal(Nominal):
+    less: Optional[str] = undefined
+    less_equal: Optional[str] = undefined
+    greater: Optional[str] = undefined
+    greater_equal: Optional[str] = undefined
+    minimum: Optional[str] = undefined
+    maximum: Optional[str] = undefined
+
+
+@strawberry.input(description="ratio predicates projected across two columns")
+class Ratio(Ordinal):
+    add: Optional[str] = undefined
+    subtract: Optional[str] = undefined
+    multiply: Optional[str] = undefined
 
 
 class Query:
@@ -64,7 +81,7 @@ class Query:
     def asdict(self):
         return {
             name: (value.asdict() if hasattr(value, 'asdict') else value)
-            for name, value in Projection.asdict(self).items()
+            for name, value in Nominal.asdict(self).items()
         }
 
 
@@ -143,71 +160,52 @@ query_map = {
 
 @strawberry.input(description="predicates for booleans")
 class BooleanFilter(BooleanQuery):
-    __annotations__ = dict(BooleanQuery.__annotations__)
-    project: Optional[Projection] = undefined
+    project: Optional[Nominal] = undefined
 
 
 @strawberry.input(description="predicates for ints")
 class IntFilter(IntQuery):
-    __annotations__ = dict(IntQuery.__annotations__)
-    project: Optional[Projection] = undefined
-    add: Optional[str] = undefined
-    subtract: Optional[str] = undefined
-    multiply: Optional[str] = undefined
+    project: Optional[Ratio] = undefined
 
 
 @strawberry.input(description="predicates for longs")
 class LongFilter(LongQuery):
-    __annotations__ = dict(LongQuery.__annotations__)
-    project: Optional[Projection] = undefined
-    add: Optional[str] = undefined
-    subtract: Optional[str] = undefined
-    multiply: Optional[str] = undefined
+    project: Optional[Ratio] = undefined
 
 
 @strawberry.input(description="predicates for floats")
 class FloatFilter(FloatQuery):
-    __annotations__ = dict(FloatQuery.__annotations__)
-    project: Optional[Projection] = undefined
-    add: Optional[str] = undefined
-    subtract: Optional[str] = undefined
-    multiply: Optional[str] = undefined
+    project: Optional[Ratio] = undefined
 
 
 @strawberry.input(description="predicates for decimals")
 class DecimalFilter(DecimalQuery):
-    __annotations__ = dict(DecimalQuery.__annotations__)
-    project: Optional[Projection] = undefined
+    project: Optional[Ordinal] = undefined
 
 
 @strawberry.input(description="predicates for dates")
 class DateFilter(DateQuery):
-    __annotations__ = dict(DateQuery.__annotations__)
-    project: Optional[Projection] = undefined
+    project: Optional[Ordinal] = undefined
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeFilter(DateTimeQuery):
-    __annotations__ = dict(DateTimeQuery.__annotations__)
-    project: Optional[Projection] = undefined
+    project: Optional[Ordinal] = undefined
 
 
 @strawberry.input(description="predicates for times")
 class TimeFilter(TimeQuery):
-    __annotations__ = dict(TimeQuery.__annotations__)
-    project: Optional[Projection] = undefined
+    project: Optional[Ordinal] = undefined
 
 
 @strawberry.input(description="predicates for binaries")
 class BinaryFilter(BinaryQuery):
-    __annotations__ = dict(BinaryQuery.__annotations__)
-    binary_length: Optional[IntQuery] = undefined
-    project: Optional[Projection] = undefined
+    project: Optional[Nominal] = undefined
 
 
 @strawberry.input(description="predicates for strings")
 class StringFilter(StringQuery):
-    __annotations__ = dict(StringQuery.__annotations__)
+    __annotations__ = dict(StringQuery.__annotations__)  # used for `count` interface
     match_substring: Optional[str] = undefined
     binary_length: Optional[IntQuery] = undefined
     utf8_lower: Optional['StringFilter'] = undefined
@@ -219,7 +217,7 @@ class StringFilter(StringQuery):
     utf8_is_lower: bool = False
     utf8_is_title: bool = False
     utf8_is_upper: bool = False
-    project: Optional[Projection] = undefined
+    project: Optional[Ordinal] = undefined
 
 
 filter_map = {
@@ -314,10 +312,35 @@ Optimized for `null`, and empty queries will attempt boolean conversion."""
         """length of bytes or strings"""
         return IntColumn(pc.binary_length(self.array))
 
+    def fill_null(self, value):
+        """Return values with null elements replaced."""
+        return type(self)(self.array.fill_null(value))
 
-def annotate(func, return_type):
+    def add(self, value):
+        """Return values added to scalar."""
+        return type(self)(pc.add(pa.scalar(value, self.array.type), self.array))
+
+    def subtract(self, value):
+        """Return values subtracted *from* scalar."""
+        return type(self)(pc.subtract(pa.scalar(value, self.array.type), self.array))
+
+    def multiply(self, value):
+        """Return values multiplied by scalar."""
+        return type(self)(pc.multiply(pa.scalar(value, self.array.type), self.array))
+
+    def minimum(self, value):
+        """Return element-wise minimum compared to scalar."""
+        return type(self)(C.minimum(self.array, value))
+
+    def maximum(self, value):
+        """Return element-wise maximum compared to scalar."""
+        return type(self)(C.maximum(self.array, value))
+
+
+def annotate(func, return_type, **annotations):
     clone = types.FunctionType(func.__code__, func.__globals__)
-    clone.__annotations__.update(func.__annotations__, **{'return': return_type})
+    annotations['return'] = return_type
+    clone.__annotations__.update(func.__annotations__, **annotations)
     clone.__defaults__ = func.__defaults__
     return strawberry.field(clone, description=func.__doc__)
 
@@ -390,26 +413,12 @@ class IntColumn:
     max = annotate(resolvers.max, Optional[int])
     quantile = resolvers.quantile
     unique = annotate(resolvers.unique, Set)
-
-    @doc_field
-    def fill_null(self, value: int) -> 'IntColumn':
-        """Return values with null elements replaced."""
-        return IntColumn(self.array.fill_null(value))  # type: ignore
-
-    @doc_field
-    def add(self, value: int) -> 'IntColumn':
-        """Return values added to scalar."""
-        return IntColumn(pc.add(pa.scalar(value, self.array.type), self.array))  # type: ignore
-
-    @doc_field
-    def subtract(self, value: int) -> 'IntColumn':
-        """Return values subtracted *from* scalar."""
-        return IntColumn(pc.subtract(pa.scalar(value, self.array.type), self.array))  # type: ignore
-
-    @doc_field
-    def multiply(self, value: int) -> 'IntColumn':
-        """Return values multiplied by scalar."""
-        return IntColumn(pc.multiply(pa.scalar(value, self.array.type), self.array))  # type: ignore
+    fill_null = annotate(resolvers.fill_null, 'IntColumn', value=int)
+    add = annotate(resolvers.add, 'IntColumn', value=int)
+    subtract = annotate(resolvers.subtract, 'IntColumn', value=int)
+    multiply = annotate(resolvers.multiply, 'IntColumn', value=int)
+    minimum = annotate(resolvers.minimum, 'IntColumn', value=int)
+    maximum = annotate(resolvers.maximum, 'IntColumn', value=int)
 
 
 @strawberry.type(description="unique longs")
@@ -433,26 +442,12 @@ class LongColumn:
     max = annotate(resolvers.max, Optional[Long])
     quantile = resolvers.quantile
     unique = annotate(resolvers.unique, Set)
-
-    @doc_field
-    def fill_null(self, value: Long) -> 'LongColumn':
-        """Return values with null elements replaced."""
-        return LongColumn(self.array.fill_null(value))  # type: ignore
-
-    @doc_field
-    def add(self, value: Long) -> 'LongColumn':
-        """Return values added to scalar."""
-        return LongColumn(pc.add(pa.scalar(value, self.array.type), self.array))  # type: ignore
-
-    @doc_field
-    def subtract(self, value: Long) -> 'LongColumn':
-        """Return values subtracted *from* scalar."""
-        return LongColumn(pc.subtract(pa.scalar(value, self.array.type), self.array))  # type: ignore
-
-    @doc_field
-    def multiply(self, value: Long) -> 'LongColumn':
-        """Return values multiplied by scalar."""
-        return LongColumn(pc.multiply(pa.scalar(value, self.array.type), self.array))  # type: ignore
+    fill_null = annotate(resolvers.fill_null, 'LongColumn', value=Long)
+    add = annotate(resolvers.add, 'LongColumn', value=Long)
+    subtract = annotate(resolvers.subtract, 'LongColumn', value=Long)
+    multiply = annotate(resolvers.multiply, 'LongColumn', value=Long)
+    minimum = annotate(resolvers.minimum, 'LongColumn', value=Long)
+    maximum = annotate(resolvers.maximum, 'LongColumn', value=Long)
 
 
 @strawberry.type(description="column of floats")
@@ -466,26 +461,12 @@ class FloatColumn:
     min = annotate(resolvers.min, Optional[float])
     max = annotate(resolvers.max, Optional[float])
     quantile = resolvers.quantile
-
-    @doc_field
-    def fill_null(self, value: float) -> 'FloatColumn':
-        """Return values with null elements replaced."""
-        return FloatColumn(self.array.fill_null(value))  # type: ignore
-
-    @doc_field
-    def add(self, value: float) -> 'FloatColumn':
-        """Return values added to scalar."""
-        return FloatColumn(pc.add(pa.scalar(value, self.array.type), self.array))  # type: ignore
-
-    @doc_field
-    def subtract(self, value: float) -> 'FloatColumn':
-        """Return values subtracted *from* scalar."""
-        return FloatColumn(pc.subtract(pa.scalar(value, self.array.type), self.array))  # type: ignore
-
-    @doc_field
-    def multiply(self, value: float) -> 'FloatColumn':
-        """Return values multiplied by scalar."""
-        return FloatColumn(pc.multiply(pa.scalar(value, self.array.type), self.array))  # type: ignore
+    fill_null = annotate(resolvers.fill_null, 'FloatColumn', value=float)
+    add = annotate(resolvers.add, 'FloatColumn', value=float)
+    subtract = annotate(resolvers.subtract, 'FloatColumn', value=float)
+    multiply = annotate(resolvers.multiply, 'FloatColumn', value=float)
+    minimum = annotate(resolvers.minimum, 'FloatColumn', value=float)
+    maximum = annotate(resolvers.maximum, 'FloatColumn', value=float)
 
 
 @strawberry.type(description="column of decimals")
@@ -496,6 +477,8 @@ class DecimalColumn:
     sort = annotate(resolvers.sort, List[Optional[Decimal]])
     min = annotate(resolvers.min, Optional[Decimal])
     max = annotate(resolvers.max, Optional[Decimal])
+    minimum = annotate(resolvers.minimum, 'DecimalColumn', value=Decimal)
+    maximum = annotate(resolvers.maximum, 'DecimalColumn', value=Decimal)
 
 
 @strawberry.type(description="unique dates")
@@ -516,11 +499,9 @@ class DateColumn:
     min = annotate(resolvers.min, Optional[date])
     max = annotate(resolvers.max, Optional[date])
     unique = annotate(resolvers.unique, Set)
-
-    @doc_field
-    def fill_null(self, value: date) -> 'DateColumn':
-        """Return values with null elements replaced."""
-        return DateColumn(self.array.fill_null(value))  # type: ignore
+    fill_null = annotate(resolvers.fill_null, 'DateColumn', value=date)
+    minimum = annotate(resolvers.minimum, 'DateColumn', value=date)
+    maximum = annotate(resolvers.maximum, 'DateColumn', value=date)
 
 
 @strawberry.type(description="column of datetimes")
@@ -531,11 +512,9 @@ class DateTimeColumn:
     sort = annotate(resolvers.sort, List[Optional[datetime]])
     min = annotate(resolvers.min, Optional[datetime])
     max = annotate(resolvers.max, Optional[datetime])
-
-    @doc_field
-    def fill_null(self, value: datetime) -> 'DateTimeColumn':
-        """Return values with null elements replaced."""
-        return DateTimeColumn(self.array.fill_null(value))  # type: ignore
+    fill_null = annotate(resolvers.fill_null, 'DateTimeColumn', value=datetime)
+    minimum = annotate(resolvers.minimum, 'DateTimeColumn', value=datetime)
+    maximum = annotate(resolvers.maximum, 'DateTimeColumn', value=datetime)
 
 
 @strawberry.type(description="column of times")
@@ -546,17 +525,15 @@ class TimeColumn:
     sort = annotate(resolvers.sort, List[Optional[time]])
     min = annotate(resolvers.min, Optional[time])
     max = annotate(resolvers.max, Optional[time])
-
-    @doc_field
-    def fill_null(self, value: time) -> 'TimeColumn':
-        """Return values with null elements replaced."""
-        return TimeColumn(self.array.fill_null(value))  # type: ignore
+    fill_null = annotate(resolvers.fill_null, 'TimeColumn', value=time)
+    minimum = annotate(resolvers.minimum, 'TimeColumn', value=time)
+    maximum = annotate(resolvers.maximum, 'TimeColumn', value=time)
 
 
 @strawberry.type(description="column of binaries")
 class BinaryColumn:
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, BinaryFilter)
+    count = query_args(resolvers.count, BinaryQuery)
     values = annotate(resolvers.values, List[Optional[bytes]])
     binary_length = resolvers.binary_length
 
@@ -580,6 +557,8 @@ class StringColumn:
     max = annotate(resolvers.max, Optional[str])
     unique = annotate(resolvers.unique, Set)
     binary_length = resolvers.binary_length
+    minimum = annotate(resolvers.minimum, 'StringColumn', value=str)
+    maximum = annotate(resolvers.maximum, 'StringColumn', value=str)
 
     @doc_field
     def utf8_lower(self) -> 'StringColumn':

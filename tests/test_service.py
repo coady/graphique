@@ -63,6 +63,10 @@ def test_floats(client):
     assert quantile == pytest.approx(39.12054)
     data = client.execute('{ columns { latitude(multiply: "longitude") { min } } }')
     assert data['columns']['latitude']['min'] == pytest.approx(-11389.408478)
+    data = client.execute('{ columns { latitude(minimum: "longitude") { min } } }')
+    assert data['columns']['latitude']['min'] == pytest.approx(-174.213333)
+    data = client.execute('{ columns { latitude(maximum: "longitude") { max } } }')
+    assert data['columns']['latitude']['max'] == pytest.approx(71.290556)
 
 
 def test_strings(client):
@@ -165,14 +169,16 @@ def test_filter(client):
     assert data['filter']['length'] == 41700
     data = client.execute('{ filter(query: {city: {}}) { length } }')
     assert data['filter']['length'] == 41700
-    data = client.execute('{ filter(query: {zipcode: {add: "zipcode", equal: 1002}}) { length } }')
+    data = client.execute(
+        '{ filter(query: {zipcode: {project: {add: "zipcode"}, equal: 1002}}) { length } }'
+    )
     assert data['filter']['length'] == 1
     data = client.execute(
-        '{ filter(query: {zipcode: {subtract: "zipcode", equal: 0}}) { length } }'
+        '{ filter(query: {zipcode: {project: {subtract: "zipcode"}, equal: 0}}) { length } }'
     )
     assert data['filter']['length'] == 41700
     data = client.execute(
-        '{ filter(query: {latitude: {multiply: "longitude", greater: 0}}) { length } }'
+        '{ filter(query: {latitude: {project: {multiply: "longitude"}, greater: 0}}) { length } }'
     )
     assert data['filter']['length'] == 0
 
