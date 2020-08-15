@@ -129,10 +129,10 @@ type DateColumn {
   sort(reverse: Boolean! = false, length: Long): [Date]!
 
   """minimum value"""
-  min: Date!
+  min: Date
 
   """maximum value"""
-  max: Date!
+  max: Date
 
   """unique values and counts"""
   unique: DateSet!
@@ -182,10 +182,10 @@ type DateTimeColumn {
   sort(reverse: Boolean! = false, length: Long): [DateTime]!
 
   """minimum value"""
-  min: DateTime!
+  min: DateTime
 
   """maximum value"""
-  max: DateTime!
+  max: DateTime
 
   """Return values with null elements replaced."""
   fillNull(value: DateTime!): DateTimeColumn!
@@ -221,10 +221,10 @@ type DecimalColumn {
   sort(reverse: Boolean! = false, length: Long): [Decimal]!
 
   """minimum value"""
-  min: Decimal!
+  min: Decimal
 
   """maximum value"""
-  max: Decimal!
+  max: Decimal
 }
 
 """predicates for decimals"""
@@ -279,16 +279,16 @@ type FloatColumn {
   sort(reverse: Boolean! = false, length: Long): [Float]!
 
   """Return sum of the values, with optional exponentiation."""
-  sum(exp: Int! = 1): Float!
+  sum(exp: Int! = 1): Float
 
   """mean of the values"""
-  mean: Float!
+  mean: Float
 
   """minimum value"""
-  min: Float!
+  min: Float
 
   """maximum value"""
-  max: Float!
+  max: Float
 
   """Return q-th quantiles for values."""
   quantile(q: [Float!]!): [Float!]!
@@ -386,16 +386,16 @@ type IntColumn {
   sort(reverse: Boolean! = false, length: Long): [Int]!
 
   """Return sum of the values, with optional exponentiation."""
-  sum(exp: Int! = 1): Int!
+  sum(exp: Int! = 1): Int
 
   """mean of the values"""
-  mean: Float!
+  mean: Float
 
   """minimum value"""
-  min: Int!
+  min: Int
 
   """maximum value"""
-  max: Int!
+  max: Int
 
   """Return q-th quantiles for values."""
   quantile(q: [Float!]!): [Float!]!
@@ -471,16 +471,16 @@ type LongColumn {
   sort(reverse: Boolean! = false, length: Long): [Long]!
 
   """Return sum of the values, with optional exponentiation."""
-  sum(exp: Int! = 1): Long!
+  sum(exp: Int! = 1): Long
 
   """mean of the values"""
-  mean: Float!
+  mean: Float
 
   """minimum value"""
-  min: Long!
+  min: Long
 
   """maximum value"""
-  max: Long!
+  max: Long
 
   """Return q-th quantiles for values."""
   quantile(q: [Float!]!): [Float!]!
@@ -594,10 +594,10 @@ type StringColumn {
   sort(reverse: Boolean! = false, length: Long): [String]!
 
   """minimum value"""
-  min: String!
+  min: String
 
   """maximum value"""
-  max: String!
+  max: String
 
   """unique values and counts"""
   unique: StringSet!
@@ -703,10 +703,10 @@ type TimeColumn {
   sort(reverse: Boolean! = false, length: Long): [Time]!
 
   """minimum value"""
-  min: Time!
+  min: Time
 
   """maximum value"""
-  max: Time!
+  max: Time
 
   """Return values with null elements replaced."""
   fillNull(value: Time!): TimeColumn!

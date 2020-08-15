@@ -1,4 +1,3 @@
-import pytest
 import pyarrow as pa
 import pyarrow.compute as pc
 from graphique.core import Column as C, Table as T
@@ -15,10 +14,8 @@ def test_dictionary(table):
     assert set(C.unique(array)) == set(values)
     assert C.min(array) == 'AK'
     assert C.max(array) == 'WY'
-    with pytest.raises(ValueError):
-        C.min(array[:0])
-    with pytest.raises(ValueError):
-        C.max(array[:0])
+    assert C.min(array[:0]) is None
+    assert C.max(array[:0]) is None
     assert sum(C.mask(array, equal=array.cast(pa.string())).to_pylist()) == 41700
     assert sum(C.mask(array.cast(pa.string()), equal=array).to_pylist()) == 41700
     assert sum(C.mask(array, match_substring="CA").to_pylist()) == 2647
@@ -54,6 +51,9 @@ def test_reduce():
     assert eq(C.max(array), 3)
     assert eq(C.sum(array), 6)
     assert eq(C.sum(array, exp=2), 14)
+    array = pa.chunked_array([[None, 1]])
+    assert eq(C.min(array), 1)
+    assert eq(C.max(array), 1)
 
 
 def test_membership():

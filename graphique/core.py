@@ -142,21 +142,28 @@ class Column(pa.ChunkedArray):
         indices = pc.call_function('sort_indices', [self])
         return self.take((indices[::-1] if reverse else indices)[:length])
 
+    def mapreduce(self, mapper, reducer, default=None):
+        if self.null_count:
+            self = self.filter(self.is_valid())
+        try:
+            value = reducer(Column.map(mapper, self))
+        except ValueError:
+            return default
+        return value.item() if hasattr(value, 'item') else value
+
     def sum(self, exp: int = 1):
         """Return sum of the values, with optional exponentiation."""
         if exp == 1:
             return pc.sum(self).as_py()
-        return sum(Column.map(lambda ch: np.nansum(np.power(ch, exp)).item(), self))
+        return Column.mapreduce(self, lambda ch: np.sum(np.power(ch, exp)), sum)
 
     def min(self):
         """Return min of the values."""
-        value = min(Column.map(np.nanmin, self))
-        return value.item() if isinstance(value, np.generic) else value
+        return Column.mapreduce(self, np.min, min)
 
     def max(self):
         """Return max of the values."""
-        value = max(Column.map(np.nanmax, self))
-        return value.item() if isinstance(value, np.generic) else value
+        return Column.mapreduce(self, np.max, max)
 
     def count(self, value) -> int:
         """Return number of occurrences of value."""

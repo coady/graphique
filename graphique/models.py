@@ -288,7 +288,7 @@ Optimized for `null`, and empty queries will attempt boolean conversion."""
         return C.sum(self.array, exp)
 
     @doc_field
-    def mean(self) -> float:
+    def mean(self) -> Optional[float]:
         """mean of the values"""
         return pc.call_function('mean', [self.array]).as_py()
 
@@ -384,10 +384,10 @@ class IntColumn:
     count = query_args(resolvers.count, IntQuery)
     values = annotate(resolvers.values, List[Optional[int]])
     sort = annotate(resolvers.sort, List[Optional[int]])
-    sum = annotate(resolvers.sum, int)
+    sum = annotate(resolvers.sum, Optional[int])
     mean = resolvers.mean
-    min = annotate(resolvers.min, int)
-    max = annotate(resolvers.max, int)
+    min = annotate(resolvers.min, Optional[int])
+    max = annotate(resolvers.max, Optional[int])
     quantile = resolvers.quantile
     unique = annotate(resolvers.unique, Set)
 
@@ -427,10 +427,10 @@ class LongColumn:
     count = query_args(resolvers.count, LongQuery)
     values = annotate(resolvers.values, List[Optional[Long]])
     sort = annotate(resolvers.sort, List[Optional[Long]])
-    sum = annotate(resolvers.sum, Long)
+    sum = annotate(resolvers.sum, Optional[Long])
     mean = resolvers.mean
-    min = annotate(resolvers.min, Long)
-    max = annotate(resolvers.max, Long)
+    min = annotate(resolvers.min, Optional[Long])
+    max = annotate(resolvers.max, Optional[Long])
     quantile = resolvers.quantile
     unique = annotate(resolvers.unique, Set)
 
@@ -461,10 +461,10 @@ class FloatColumn:
     count = query_args(resolvers.count, FloatQuery)
     values = annotate(resolvers.values, List[Optional[float]])
     sort = annotate(resolvers.sort, List[Optional[float]])
-    sum = annotate(resolvers.sum, float)
+    sum = annotate(resolvers.sum, Optional[float])
     mean = resolvers.mean
-    min = annotate(resolvers.min, float)
-    max = annotate(resolvers.max, float)
+    min = annotate(resolvers.min, Optional[float])
+    max = annotate(resolvers.max, Optional[float])
     quantile = resolvers.quantile
 
     @doc_field
@@ -494,8 +494,8 @@ class DecimalColumn:
     count = query_args(resolvers.count, DecimalQuery)
     values = annotate(resolvers.values, List[Optional[Decimal]])
     sort = annotate(resolvers.sort, List[Optional[Decimal]])
-    min = annotate(resolvers.min, Decimal)
-    max = annotate(resolvers.max, Decimal)
+    min = annotate(resolvers.min, Optional[Decimal])
+    max = annotate(resolvers.max, Optional[Decimal])
 
 
 @strawberry.type(description="unique dates")
@@ -513,8 +513,8 @@ class DateColumn:
     count = query_args(resolvers.count, DateQuery)
     values = annotate(resolvers.values, List[Optional[date]])
     sort = annotate(resolvers.sort, List[Optional[date]])
-    min = annotate(resolvers.min, date)
-    max = annotate(resolvers.max, date)
+    min = annotate(resolvers.min, Optional[date])
+    max = annotate(resolvers.max, Optional[date])
     unique = annotate(resolvers.unique, Set)
 
     @doc_field
@@ -529,8 +529,8 @@ class DateTimeColumn:
     count = query_args(resolvers.count, DateTimeQuery)
     values = annotate(resolvers.values, List[Optional[datetime]])
     sort = annotate(resolvers.sort, List[Optional[datetime]])
-    min = annotate(resolvers.min, datetime)
-    max = annotate(resolvers.max, datetime)
+    min = annotate(resolvers.min, Optional[datetime])
+    max = annotate(resolvers.max, Optional[datetime])
 
     @doc_field
     def fill_null(self, value: datetime) -> 'DateTimeColumn':
@@ -544,8 +544,8 @@ class TimeColumn:
     count = query_args(resolvers.count, TimeQuery)
     values = annotate(resolvers.values, List[Optional[time]])
     sort = annotate(resolvers.sort, List[Optional[time]])
-    min = annotate(resolvers.min, time)
-    max = annotate(resolvers.max, time)
+    min = annotate(resolvers.min, Optional[time])
+    max = annotate(resolvers.max, Optional[time])
 
     @doc_field
     def fill_null(self, value: time) -> 'TimeColumn':
@@ -576,8 +576,8 @@ class StringColumn:
     count = query_args(resolvers.count, StringFilter)
     values = annotate(resolvers.values, List[Optional[str]])
     sort = annotate(resolvers.sort, List[Optional[str]])
-    min = annotate(resolvers.min, str)
-    max = annotate(resolvers.max, str)
+    min = annotate(resolvers.min, Optional[str])
+    max = annotate(resolvers.max, Optional[str])
     unique = annotate(resolvers.unique, Set)
     binary_length = resolvers.binary_length
 
