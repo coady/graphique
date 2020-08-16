@@ -341,6 +341,9 @@ type FloatColumn {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Float!): FloatColumn!
+
+  """Return absolute values."""
+  absolute: FloatColumn!
 }
 
 """predicates for floats"""
@@ -352,7 +355,19 @@ input FloatFilter {
   greater: Float
   greaterEqual: Float
   isIn: [Float!]
+  absolute: FloatQuery
   project: Ratio
+}
+
+"""predicates for floats"""
+input FloatQuery {
+  equal: Float
+  notEqual: Float
+  less: Float
+  lessEqual: Float
+  greater: Float
+  greaterEqual: Float
+  isIn: [Float!]
 }
 
 """a table sorted by a composite index"""
@@ -454,6 +469,9 @@ type IntColumn {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Int!): IntColumn!
+
+  """Return absolute values."""
+  absolute: IntColumn!
 }
 
 """predicates for ints"""
@@ -465,6 +483,7 @@ input IntFilter {
   greater: Int
   greaterEqual: Int
   isIn: [Int!]
+  absolute: IntQuery
   project: Ratio
 }
 
@@ -542,6 +561,9 @@ type LongColumn {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Long!): LongColumn!
+
+  """Return absolute values."""
+  absolute: LongColumn!
 }
 
 """predicates for longs"""
@@ -553,6 +575,7 @@ input LongFilter {
   greater: Long
   greaterEqual: Long
   isIn: [Long!]
+  absolute: LongQuery
   project: Ratio
 }
 

@@ -165,16 +165,19 @@ class BooleanFilter(BooleanQuery):
 
 @strawberry.input(description="predicates for ints")
 class IntFilter(IntQuery):
+    absolute: Optional[IntQuery] = undefined
     project: Optional[Ratio] = undefined
 
 
 @strawberry.input(description="predicates for longs")
 class LongFilter(LongQuery):
+    absolute: Optional[LongQuery] = undefined
     project: Optional[Ratio] = undefined
 
 
 @strawberry.input(description="predicates for floats")
 class FloatFilter(FloatQuery):
+    absolute: Optional[FloatQuery] = undefined
     project: Optional[Ratio] = undefined
 
 
@@ -336,6 +339,10 @@ Optimized for `null`, and empty queries will attempt boolean conversion."""
         """Return element-wise maximum compared to scalar."""
         return type(self)(C.maximum(self.array, value))
 
+    def absolute(self):
+        """Return absolute values."""
+        return type(self)(C.absolute(self.array))
+
 
 def annotate(func, return_type, **annotations):
     clone = types.FunctionType(func.__code__, func.__globals__)
@@ -419,6 +426,7 @@ class IntColumn:
     multiply = annotate(resolvers.multiply, 'IntColumn', value=int)
     minimum = annotate(resolvers.minimum, 'IntColumn', value=int)
     maximum = annotate(resolvers.maximum, 'IntColumn', value=int)
+    absolute = annotate(resolvers.absolute, 'IntColumn')
 
 
 @strawberry.type(description="unique longs")
@@ -448,6 +456,7 @@ class LongColumn:
     multiply = annotate(resolvers.multiply, 'LongColumn', value=Long)
     minimum = annotate(resolvers.minimum, 'LongColumn', value=Long)
     maximum = annotate(resolvers.maximum, 'LongColumn', value=Long)
+    absolute = annotate(resolvers.absolute, 'LongColumn')
 
 
 @strawberry.type(description="column of floats")
@@ -467,6 +476,7 @@ class FloatColumn:
     multiply = annotate(resolvers.multiply, 'FloatColumn', value=float)
     minimum = annotate(resolvers.minimum, 'FloatColumn', value=float)
     maximum = annotate(resolvers.maximum, 'FloatColumn', value=float)
+    absolute = annotate(resolvers.absolute, 'FloatColumn')
 
 
 @strawberry.type(description="column of decimals")

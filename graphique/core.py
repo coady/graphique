@@ -74,17 +74,18 @@ class Column(pa.ChunkedArray):
 
     def mask(self, func='and', **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
-        ops = {'equal', 'not_equal', 'is_in'}.intersection(query)
-        masks = [getattr(Column, op)(self, query.pop(op)) for op in ops]
-        for op in query:
-            predicate = getattr(pc, op)
-            if '_is_' in op:
-                if query[op]:
-                    masks.append(Column.call(self, predicate))
-            elif op.startswith('utf8_') or op == 'binary_length':
-                masks.append(Column.mask(Column.call(self, predicate), func, **query[op]))
-            else:
-                masks.append(Column.call(self, predicate, query[op]))
+        masks = []
+        for op, value in query.items():
+            if op in ('equal', 'not_equal', 'is_in'):
+                masks.append(getattr(Column, op)(self, value))
+            elif op == 'absolute':
+                masks.append(Column.mask(getattr(Column, op)(self), func, **value))
+            elif op in ('utf8_lower', 'utf8_upper', 'binary_length'):
+                masks.append(Column.mask(Column.call(self, getattr(pc, op)), func, **value))
+            elif '_is_' not in op:
+                masks.append(Column.call(self, getattr(pc, op), value))
+            elif query[op]:
+                masks.append(Column.call(self, getattr(pc, op)))
         if masks:
             return functools.reduce(lambda *args: pc.call_function(func, args), masks)
         with contextlib.suppress(NotImplementedError):
@@ -93,14 +94,8 @@ class Column(pa.ChunkedArray):
 
     def call(self, func: Callable, *args) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
-        if args:
-            if isinstance(args[0], pa.ChunkedArray):
-                if isinstance(self.type, pa.DictionaryType):
-                    self = self.cast(self.type.value_type)
-                if isinstance(args[0].type, pa.DictionaryType):
-                    args = (args[0].cast(args[0].type.value_type),)
-            elif func is not pc.match_substring:
-                args = (pa.scalar(args[0], getattr(self.type, 'value_type', self.type)),)
+        if args and not isinstance(args[0], pa.ChunkedArray) and func is not pc.match_substring:
+            args = (pa.scalar(args[0], getattr(self.type, 'value_type', self.type)),)
         if not isinstance(self.type, pa.DictionaryType):
             return func(self, *args)
         array = pa.chunked_array(Column.map(rpartial(Chunk.call, func, *args), self))
@@ -185,6 +180,13 @@ class Column(pa.ChunkedArray):
     def maximum(self, value) -> pa.ChunkedArray:
         """Return element-wise maximum of values."""
         return Column.compare(self, np.maximum, value)
+
+    def absolute(self) -> pa.ChunkedArray:
+        """Return absolute values."""
+        chunks = Column.map(np.absolute, self)
+        if self.null_count:
+            chunks = Column.threader.map(Chunk.to_null, chunks)
+        return pa.chunked_array(chunks)
 
     def count(self, value) -> int:
         """Return number of occurrences of value."""

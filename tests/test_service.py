@@ -67,6 +67,8 @@ def test_floats(client):
     assert data['columns']['latitude']['min'] == pytest.approx(-174.213333)
     data = client.execute('{ columns { latitude(maximum: "longitude") { max } } }')
     assert data['columns']['latitude']['max'] == pytest.approx(71.290556)
+    data = client.execute('{ columns { longitude { absolute { min } } } }')
+    assert data['columns']['longitude']['absolute']['min'] > 65
 
 
 def test_strings(client):
@@ -181,6 +183,8 @@ def test_filter(client):
         '{ filter(query: {latitude: {project: {multiply: "longitude"}, greater: 0}}) { length } }'
     )
     assert data['filter']['length'] == 0
+    data = client.execute('{ filter(query: {longitude: {absolute: {less: 66}}}) { length } }')
+    assert data['filter']['length'] == 30
 
 
 def test_sort(client):
