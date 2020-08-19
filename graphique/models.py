@@ -47,7 +47,7 @@ type_map = {
 ops = 'equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'
 
 
-@strawberry.input(description="nominal predicates projected across two columns")
+@strawberry.input(description="nominal functions projected across two columns")
 class Nominal:
     equal: Optional[str] = undefined
     not_equal: Optional[str] = undefined
@@ -56,7 +56,7 @@ class Nominal:
         return {name: value for name, value in self.__dict__.items() if value is not undefined}
 
 
-@strawberry.input(description="ordinal predicates projected across two columns")
+@strawberry.input(description="ordinal functions projected across two columns")
 class Ordinal(Nominal):
     less: Optional[str] = undefined
     less_equal: Optional[str] = undefined
@@ -66,7 +66,7 @@ class Ordinal(Nominal):
     maximum: Optional[str] = undefined
 
 
-@strawberry.input(description="ratio predicates projected across two columns")
+@strawberry.input(description="ratio functions projected across two columns")
 class Ratio(Ordinal):
     add: Optional[str] = undefined
     subtract: Optional[str] = undefined
@@ -203,6 +203,7 @@ class TimeFilter(TimeQuery):
 
 @strawberry.input(description="predicates for binaries")
 class BinaryFilter(BinaryQuery):
+    binary_length: Optional[IntQuery] = undefined
     project: Optional[Nominal] = undefined
 
 
@@ -340,7 +341,7 @@ Optimized for `null`, and empty queries will attempt boolean conversion."""
         return type(self)(C.maximum(self.array, value))
 
     def absolute(self):
-        """Return absolute values."""
+        """absolute values"""
         return type(self)(C.absolute(self.array))
 
 
@@ -382,21 +383,11 @@ def query_args(func, query):
     return resolve_arguments(clone, arguments)
 
 
-@strawberry.type(description="unique booleans")
-class BooleanSet:
-    counts: List[Long]
-    __init__ = resolvers.__init__  # type: ignore
-    length = resolvers.length
-    values = annotate(resolvers.values, List[Optional[bool]])
-
-
 @strawberry.type(description="column of booleans")
 class BooleanColumn:
-    Set = BooleanSet
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, BooleanQuery)
     values = annotate(resolvers.values, List[Optional[bool]])
-    unique = annotate(resolvers.unique, Set)
 
 
 @strawberry.type(description="unique ints")

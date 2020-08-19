@@ -247,7 +247,15 @@ class TimingMiddleware(base.BaseHTTPMiddleware):
             print(f"[{end.replace(microsecond=0)}]: {end - start}")
 
 
+class GraphQL(strawberry.asgi.GraphQL):
+    def __init__(self, root_value, **kwargs):
+        super().__init__(strawberry.Schema(type(root_value)), **kwargs)
+        self.root_value = root_value
+
+    async def get_root_value(self, request):
+        return self.root_value
+
+
 Query = IndexedTable if indexed else Table
-schema = strawberry.Schema(query=Query)
 app = Starlette(debug=DEBUG, middleware=[Middleware(TimingMiddleware)] * DEBUG)
-app.add_route('/graphql', strawberry.asgi.GraphQL(schema, root_value=Query(table), debug=DEBUG))
+app.add_route('/graphql', GraphQL(Query(table), debug=DEBUG))

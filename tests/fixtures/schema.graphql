@@ -25,6 +25,7 @@ input BinaryFilter {
   equal: Binary
   notEqual: Binary
   isIn: [Binary!]
+  binaryLength: IntQuery
   project: Nominal
 }
 
@@ -38,9 +39,6 @@ type BooleanColumn {
 
   """list of values"""
   values: [Boolean]!
-
-  """unique values and counts"""
-  unique: BooleanSet!
 }
 
 """predicates for booleans"""
@@ -48,17 +46,6 @@ input BooleanFilter {
   equal: Boolean
   notEqual: Boolean
   project: Nominal
-}
-
-"""unique booleans"""
-type BooleanSet {
-  counts: [Long!]!
-
-  """number of rows"""
-  length: Long!
-
-  """list of values"""
-  values: [Boolean]!
 }
 
 """fields for each column"""
@@ -342,7 +329,7 @@ type FloatColumn {
   """Return element-wise maximum compared to scalar."""
   maximum(value: Float!): FloatColumn!
 
-  """Return absolute values."""
+  """absolute values"""
   absolute: FloatColumn!
 }
 
@@ -470,7 +457,7 @@ type IntColumn {
   """Return element-wise maximum compared to scalar."""
   maximum(value: Int!): IntColumn!
 
-  """Return absolute values."""
+  """absolute values"""
   absolute: IntColumn!
 }
 
@@ -562,7 +549,7 @@ type LongColumn {
   """Return element-wise maximum compared to scalar."""
   maximum(value: Long!): LongColumn!
 
-  """Return absolute values."""
+  """absolute values"""
   absolute: LongColumn!
 }
 
@@ -601,7 +588,7 @@ type LongSet {
   values: [Long]!
 }
 
-"""nominal predicates projected across two columns"""
+"""nominal functions projected across two columns"""
 input Nominal {
   equal: String
   notEqual: String
@@ -613,7 +600,7 @@ enum Operator {
   XOR
 }
 
-"""ordinal predicates projected across two columns"""
+"""ordinal functions projected across two columns"""
 input Ordinal {
   equal: String
   notEqual: String
@@ -625,7 +612,7 @@ input Ordinal {
   maximum: String
 }
 
-"""ratio predicates projected across two columns"""
+"""ratio functions projected across two columns"""
 input Ratio {
   equal: String
   notEqual: String
