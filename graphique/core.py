@@ -217,7 +217,6 @@ class Column(pa.ChunkedArray):
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
-    threader = futures.ThreadPoolExecutor(pa.cpu_count())
     projected = {
         'add': pc.add,
         'subtract': pc.subtract,
@@ -225,12 +224,6 @@ class Table(pa.Table):
         'minimum': Column.minimum,
         'maximum': Column.maximum,
     }
-
-    def apply(self, func: Callable = None, **funcs: Callable) -> dict:
-        """Apply a function to all, or selected, columns."""
-        if func is not None:
-            funcs = dict(dict.fromkeys(self.column_names, func), **funcs)
-        return dict(Table.threader.map(lambda name: (name, funcs[name](self[name])), funcs))
 
     def index(self) -> list:
         """Return index column names from pandas metadata."""
@@ -277,8 +270,8 @@ class Table(pa.Table):
         Assumes the shape of the columns is the same.
         """
         assert Table.num_chunks(self) is not None
-        func = lambda col: pa.concat_arrays(Column.map(pa.Array.take, col, indices))
-        return pa.Table.from_pydict(Table.apply(self, func))
+        columns = [Column.map(pa.Array.take, column, indices) for column in self.columns]
+        return pa.Table.from_arrays(list(map(pa.concat_arrays, columns)), self.column_names)
 
     def group(self, name: str, reverse=False) -> Iterator[pa.Table]:
         """Generate tables grouped by column."""

@@ -81,8 +81,6 @@ def test_functional(table):
     assert sum(C.mask(array, utf8_is_upper=True).to_pylist()) == 41700
     assert sum(C.mask(array, utf8_is_upper=False).to_pylist()) == 41700
     assert sum(C.mask(table['longitude'], absolute={'less': 0}).to_pylist()) == 0
-    assert T.apply(table, len) == dict.fromkeys(table.column_names, 41700)
-    assert T.apply(table, zipcode=len) == {'zipcode': 41700}
     (mask,) = T.masks(table, state={'equal': 'CA'})
     assert sum(mask.to_pylist()) == 2647
     assert not list(T.masks(table, state={}))

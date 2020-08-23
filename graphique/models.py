@@ -1,6 +1,6 @@
 import base64
 import types
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import List, NewType, Optional
 import numpy as np
@@ -22,6 +22,13 @@ strawberry.scalar(
     serialize=lambda b: base64.b64encode(b).decode('utf8'),
     parse_value=base64.b64decode,
 )
+strawberry.scalar(  # pragma: no branch
+    timedelta,
+    name='Duration',
+    description="duration float (in seconds)",
+    serialize=timedelta.total_seconds,
+    parse_value=lambda s: timedelta(seconds=s),
+)
 
 type_map = {
     pa.lib.Type_BOOL: bool,
@@ -41,6 +48,7 @@ type_map = {
     pa.lib.Type_TIMESTAMP: datetime,
     pa.lib.Type_TIME32: time,
     pa.lib.Type_TIME64: time,
+    pa.lib.Type_DURATION: timedelta,
     pa.lib.Type_BINARY: bytes,
     pa.lib.Type_STRING: str,
 }
@@ -132,6 +140,12 @@ class TimeQuery(Query):
     is_in: Optional[List[time]] = undefined
 
 
+@strawberry.input(description="predicates for durations")
+class DurationQuery(Query):
+    __annotations__ = dict.fromkeys(ops, Optional[timedelta])
+    is_in: Optional[List[timedelta]] = undefined
+
+
 @strawberry.input(description="predicates for binaries")
 class BinaryQuery(Query):
     __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bytes])
@@ -153,6 +167,7 @@ query_map = {
     date: DateQuery,
     datetime: DateTimeQuery,
     time: TimeQuery,
+    timedelta: DurationQuery,
     bytes: BinaryQuery,
     str: StringQuery,
 }
@@ -475,7 +490,6 @@ class DecimalColumn:
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DecimalQuery)
     values = annotate(resolvers.values, List[Optional[Decimal]])
-    sort = annotate(resolvers.sort, List[Optional[Decimal]])
     min = annotate(resolvers.min, Optional[Decimal])
     max = annotate(resolvers.max, Optional[Decimal])
     minimum = annotate(resolvers.minimum, 'DecimalColumn', value=Decimal)
@@ -496,7 +510,6 @@ class DateColumn:
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DateQuery)
     values = annotate(resolvers.values, List[Optional[date]])
-    sort = annotate(resolvers.sort, List[Optional[date]])
     min = annotate(resolvers.min, Optional[date])
     max = annotate(resolvers.max, Optional[date])
     unique = annotate(resolvers.unique, Set)
@@ -510,10 +523,10 @@ class DateTimeColumn:
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DateTimeQuery)
     values = annotate(resolvers.values, List[Optional[datetime]])
-    sort = annotate(resolvers.sort, List[Optional[datetime]])
     min = annotate(resolvers.min, Optional[datetime])
     max = annotate(resolvers.max, Optional[datetime])
     fill_null = annotate(resolvers.fill_null, 'DateTimeColumn', value=datetime)
+    subtract = annotate(resolvers.subtract, 'DurationColumn', value=timedelta)
     minimum = annotate(resolvers.minimum, 'DateTimeColumn', value=datetime)
     maximum = annotate(resolvers.maximum, 'DateTimeColumn', value=datetime)
 
@@ -523,12 +536,22 @@ class TimeColumn:
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, TimeQuery)
     values = annotate(resolvers.values, List[Optional[time]])
-    sort = annotate(resolvers.sort, List[Optional[time]])
     min = annotate(resolvers.min, Optional[time])
     max = annotate(resolvers.max, Optional[time])
     fill_null = annotate(resolvers.fill_null, 'TimeColumn', value=time)
     minimum = annotate(resolvers.minimum, 'TimeColumn', value=time)
     maximum = annotate(resolvers.maximum, 'TimeColumn', value=time)
+
+
+@strawberry.type(description="column of durations")
+class DurationColumn:
+    __init__ = resolvers.__init__  # type: ignore
+    count = query_args(resolvers.count, DurationQuery)
+    values = annotate(resolvers.values, List[Optional[timedelta]])
+    min = annotate(resolvers.min, Optional[timedelta])
+    max = annotate(resolvers.max, Optional[timedelta])
+    minimum = annotate(resolvers.minimum, 'DurationColumn', value=timedelta)
+    maximum = annotate(resolvers.maximum, 'DurationColumn', value=timedelta)
 
 
 @strawberry.type(description="column of binaries")
@@ -581,6 +604,7 @@ column_map = {
     date: DateColumn,
     datetime: DateTimeColumn,
     time: TimeColumn,
+    timedelta: DurationColumn,
     bytes: BinaryColumn,
     str: StringColumn,
 }

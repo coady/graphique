@@ -1,6 +1,9 @@
+from datetime import timedelta
+import pyarrow as pa
 import pytest
 from strawberry.printer import print_schema
 from .conftest import fixtures
+from graphique.models import DurationColumn
 
 
 def test_schema(schema):
@@ -101,3 +104,11 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'maximum': {'sum': 1}}}}
         data = executor(f'{{ columns {{ {name} {{ absolute {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'absolute': {'sum': 0}}}}
+
+
+def test_duration():
+    td = timedelta()
+    column = DurationColumn(pa.chunked_array([[td]]))
+    assert column.values() == [td]
+    assert column.min() == column.max() == td
+    assert column.count(equal=td) == 1

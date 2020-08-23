@@ -25,9 +25,8 @@ from .models import (
 )
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
-table = pq.read_table(
-    Path(PARQUET_PATH).resolve(), COLUMNS, memory_map=MMAP, read_dictionary=DICTIONARIES
-)
+path = Path(PARQUET_PATH).resolve()
+table = pq.ParquetDataset(path, memory_map=MMAP, read_dictionary=DICTIONARIES).read(COLUMNS)
 indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
 case_map = {to_camel_case(name): name for name in types}
@@ -163,9 +162,7 @@ class Table:
     def sort(
         self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
     ) -> 'Table':
-        """Return table slice sorted by specified columns.
-        Optimized for a single column with fixed length.
-        """
+        """Return table slice sorted by specified columns."""
         table = self.select(info)
         return Table(T.sort(table, *map(to_snake_case, by), reverse=reverse, length=length))
 
@@ -191,6 +188,8 @@ class Table:
         if not masks:
             return self
         mask = functools.reduce(lambda *args: pc.call_function(reduce.value, args), masks)
+        if set(selections(*info.field_nodes)) == {'length'}:
+            return Table(range(C.count(mask, not invert)))  # optimized for count
         return Table(table.filter(pc.call_function('invert', [mask]) if invert else mask))
 
 
