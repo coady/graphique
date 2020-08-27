@@ -241,7 +241,8 @@ input DateTimeFilter {
   greater: DateTime
   greaterEqual: DateTime
   isIn: [DateTime!]
-  apply: Ordinal
+  duration: DurationQuery
+  apply: Interval
 }
 
 """functions for datetimes"""
@@ -330,6 +331,17 @@ type DurationColumn implements Column {
 
   """array type"""
   type: String!
+}
+
+"""predicates for durations"""
+input DurationQuery {
+  equal: Duration
+  notEqual: Duration
+  less: Duration
+  lessEqual: Duration
+  greater: Duration
+  greaterEqual: Duration
+  isIn: [Duration!]
 }
 
 """predicates for each column"""
@@ -609,6 +621,19 @@ type IntSet implements Set {
   length: Long!
 }
 
+"""interval functions projected across two columns"""
+input Interval {
+  equal: String
+  notEqual: String
+  less: String
+  lessEqual: String
+  greater: String
+  greaterEqual: String
+  minimum: String
+  maximum: String
+  subtract: String
+}
+
 """64-bit int"""
 scalar Long
 
@@ -750,8 +775,8 @@ input Ratio {
   greaterEqual: String
   minimum: String
   maximum: String
-  add: String
   subtract: String
+  add: String
   multiply: String
 }
 

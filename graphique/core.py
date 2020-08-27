@@ -313,17 +313,16 @@ class Table(pa.Table):
             indices = indices.take(pc.call_function('sort_indices', [self[name].take(indices)]))
         return self.take((indices[::-1] if reverse else indices)[:length])
 
-    def masks(self, **queries: dict) -> Iterator[pa.Array]:
-        """Generate mask arrays which match queries."""
-        for name, query in queries.items():
-            column = self[name]
-            project = query.pop('apply', {})
-            for func in set(Table.projected).intersection(project):
-                column = Table.projected[func](column, self[project.pop(func)])
-            for op, field in project.items():
-                yield getattr(pc, op)(column, self[field])
-            if query:
-                yield Column.mask(column, **query)
+    def mask(self, name: str, **query: dict) -> Iterator[pa.Array]:
+        """Return mask array which matches query."""
+        masks, column = [], self[name]
+        partials = dict(query.pop('apply', {}))
+        for func in set(Table.projected) & set(partials):
+            column = Table.projected[func](column, self[partials.pop(func)])
+        masks += [getattr(pc, op)(column, self[partials[op]]) for op in partials]
+        if query:
+            masks.append(Column.mask(column, **query))
+        return functools.reduce(lambda *args: pc.call_function('and', args), masks)
 
     def apply(self, name: str, alias: str = '', **partials) -> pa.Table:
         """Return view of table with functions applied across columns."""

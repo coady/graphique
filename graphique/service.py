@@ -190,12 +190,12 @@ class Table:
     ) -> 'Table':
         """Return table with rows which match all (by default) queries."""
         table = self.select(info)
-        masks = list(T.masks(table, **query.asdict()))  # type: ignore
+        masks = [T.mask(table, name, **value) for name, value in query.asdict().items()]  # type: ignore
         if not masks:
             return self
         mask = functools.reduce(lambda *args: pc.call_function(reduce.value, args), masks)
-        if set(selections(*info.field_nodes)) == {'length'}:
-            return Table(range(C.count(mask, not invert)))  # optimized for count
+        if set(selections(*info.field_nodes)) == {'length'}:  # optimized for count
+            return Table(range(C.count(mask, not invert)))  # type: ignore
         return Table(table.filter(pc.call_function('invert', [mask]) if invert else mask))
 
     @function_field

@@ -128,3 +128,8 @@ def test_duration(executor):
     assert column['values'] == [0.0, None]
     assert column['min'] == column['max'] == 0.0
     assert column['count'] == 1
+    data = executor(
+        '''{ filter(query: {timestamp: {duration: {equal: 0.0}, apply: {subtract: "timestamp"}}})
+        { length } }'''
+    )
+    assert data == {'filter': {'length': 1}}

@@ -30,10 +30,14 @@ class Ordinal(Nominal):
     maximum: Optional[str] = undefined
 
 
-@strawberry.input(description="ratio functions projected across two columns")
-class Ratio(Ordinal):
-    add: Optional[str] = undefined
+@strawberry.input(description="interval functions projected across two columns")
+class Interval(Ordinal):
     subtract: Optional[str] = undefined
+
+
+@strawberry.input(description="ratio functions projected across two columns")
+class Ratio(Interval):
+    add: Optional[str] = undefined
     multiply: Optional[str] = undefined
 
 
@@ -164,7 +168,12 @@ class DateFilter(DateQuery):
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeFilter(DateTimeQuery):
-    apply: Optional[Ordinal] = undefined
+    duration: Optional[DurationQuery] = undefined
+    apply: Optional[Interval] = undefined
+
+    def asdict(self):
+        query = super().asdict()
+        return dict(query, **query.pop('duration', {}))
 
 
 @strawberry.input(description="predicates for times")

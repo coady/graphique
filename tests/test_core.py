@@ -81,9 +81,10 @@ def test_functional(table):
     assert sum(C.mask(array, utf8_is_upper=True).to_pylist()) == 41700
     assert sum(C.mask(array, utf8_is_upper=False).to_pylist()) == 41700
     assert sum(C.mask(table['longitude'], absolute={'less': 0}).to_pylist()) == 0
-    (mask,) = T.masks(table, state={'equal': 'CA'})
+    mask = T.mask(table, 'state', equal='CA', apply={'minimum': 'state'})
     assert sum(mask.to_pylist()) == 2647
-    assert not list(T.masks(table, state={}))
+    mask = T.mask(table, 'city', apply={'equal': 'county'})
+    assert sum(mask.to_pylist()) == 2805
     table = T.apply(table, 'latitude', alias='diff', subtract='longitude')
     assert table['latitude'][0].as_py() - table['longitude'][0].as_py() == table['diff'][0].as_py()
     table = T.apply(table, 'zipcode', fill_null=0)
