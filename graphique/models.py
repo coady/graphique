@@ -1,8 +1,10 @@
-import base64
+"""
+GraphQL output types and resolvers.
+"""
 import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import List, NewType, Optional
+from typing import List, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -11,246 +13,20 @@ from strawberry.types.type_resolver import resolve_type
 from strawberry.types.types import ArgumentDefinition, FieldDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C
-
-
-Long = NewType('Long', int)
-strawberry.scalar(Long, description="64-bit int")
-strawberry.scalar(
-    bytes,
-    name='Binary',
-    description="base64 encoded bytes",
-    serialize=lambda b: base64.b64encode(b).decode('utf8'),
-    parse_value=base64.b64decode,
+from .inputs import (
+    BooleanQuery,
+    IntQuery,
+    LongQuery,
+    FloatQuery,
+    DecimalQuery,
+    DateQuery,
+    DateTimeQuery,
+    TimeQuery,
+    DurationQuery,
+    BinaryQuery,
+    StringFilter,
 )
-strawberry.scalar(  # pragma: no branch
-    timedelta,
-    name='Duration',
-    description="duration float (in seconds)",
-    serialize=timedelta.total_seconds,
-    parse_value=lambda s: timedelta(seconds=s),
-)
-
-type_map = {
-    pa.lib.Type_BOOL: bool,
-    pa.lib.Type_UINT8: int,
-    pa.lib.Type_INT8: int,
-    pa.lib.Type_UINT16: int,
-    pa.lib.Type_INT16: int,
-    pa.lib.Type_UINT32: Long,
-    pa.lib.Type_INT32: int,
-    pa.lib.Type_UINT64: Long,
-    pa.lib.Type_INT64: Long,
-    pa.lib.Type_FLOAT: float,
-    pa.lib.Type_DOUBLE: float,
-    pa.lib.Type_DECIMAL: Decimal,
-    pa.lib.Type_DATE32: date,
-    pa.lib.Type_DATE64: date,
-    pa.lib.Type_TIMESTAMP: datetime,
-    pa.lib.Type_TIME32: time,
-    pa.lib.Type_TIME64: time,
-    pa.lib.Type_DURATION: timedelta,
-    pa.lib.Type_BINARY: bytes,
-    pa.lib.Type_STRING: str,
-}
-ops = 'equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'
-
-
-@strawberry.input(description="nominal functions projected across two columns")
-class Nominal:
-    equal: Optional[str] = undefined
-    not_equal: Optional[str] = undefined
-
-    def asdict(self):
-        return {name: value for name, value in self.__dict__.items() if value is not undefined}
-
-
-@strawberry.input(description="ordinal functions projected across two columns")
-class Ordinal(Nominal):
-    less: Optional[str] = undefined
-    less_equal: Optional[str] = undefined
-    greater: Optional[str] = undefined
-    greater_equal: Optional[str] = undefined
-    minimum: Optional[str] = undefined
-    maximum: Optional[str] = undefined
-
-
-@strawberry.input(description="ratio functions projected across two columns")
-class Ratio(Ordinal):
-    add: Optional[str] = undefined
-    subtract: Optional[str] = undefined
-    multiply: Optional[str] = undefined
-
-
-class Query:
-    """base class for predicates"""
-
-    locals().update(dict.fromkeys(ops, undefined))
-
-    def asdict(self):
-        return {
-            name: (value.asdict() if hasattr(value, 'asdict') else value)
-            for name, value in Nominal.asdict(self).items()
-        }
-
-
-@strawberry.input(description="predicates for booleans")
-class BooleanQuery(Query):
-    __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bool])
-
-
-@strawberry.input(description="predicates for ints")
-class IntQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[int])
-    is_in: Optional[List[int]] = undefined
-
-
-@strawberry.input(description="predicates for longs")
-class LongQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[Long])
-    is_in: Optional[List[Long]] = undefined
-
-
-@strawberry.input(description="predicates for floats")
-class FloatQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[float])
-    is_in: Optional[List[float]] = undefined
-
-
-@strawberry.input(description="predicates for decimals")
-class DecimalQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[Decimal])
-    is_in: Optional[List[Decimal]] = undefined
-
-
-@strawberry.input(description="predicates for dates")
-class DateQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[date])
-    is_in: Optional[List[date]] = undefined
-
-
-@strawberry.input(description="predicates for datetimes")
-class DateTimeQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[datetime])
-    is_in: Optional[List[datetime]] = undefined
-
-
-@strawberry.input(description="predicates for times")
-class TimeQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[time])
-    is_in: Optional[List[time]] = undefined
-
-
-@strawberry.input(description="predicates for durations")
-class DurationQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[timedelta])
-    is_in: Optional[List[timedelta]] = undefined
-
-
-@strawberry.input(description="predicates for binaries")
-class BinaryQuery(Query):
-    __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bytes])
-    is_in: Optional[List[bytes]] = undefined
-
-
-@strawberry.input(description="predicates for strings")
-class StringQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[str])
-    is_in: Optional[List[str]] = undefined
-
-
-query_map = {
-    bool: BooleanQuery,
-    int: IntQuery,
-    Long: LongQuery,
-    float: FloatQuery,
-    Decimal: DecimalQuery,
-    date: DateQuery,
-    datetime: DateTimeQuery,
-    time: TimeQuery,
-    timedelta: DurationQuery,
-    bytes: BinaryQuery,
-    str: StringQuery,
-}
-
-
-@strawberry.input(description="predicates for booleans")
-class BooleanFilter(BooleanQuery):
-    project: Optional[Nominal] = undefined
-
-
-@strawberry.input(description="predicates for ints")
-class IntFilter(IntQuery):
-    absolute: Optional[IntQuery] = undefined
-    project: Optional[Ratio] = undefined
-
-
-@strawberry.input(description="predicates for longs")
-class LongFilter(LongQuery):
-    absolute: Optional[LongQuery] = undefined
-    project: Optional[Ratio] = undefined
-
-
-@strawberry.input(description="predicates for floats")
-class FloatFilter(FloatQuery):
-    absolute: Optional[FloatQuery] = undefined
-    project: Optional[Ratio] = undefined
-
-
-@strawberry.input(description="predicates for decimals")
-class DecimalFilter(DecimalQuery):
-    project: Optional[Ordinal] = undefined
-
-
-@strawberry.input(description="predicates for dates")
-class DateFilter(DateQuery):
-    project: Optional[Ordinal] = undefined
-
-
-@strawberry.input(description="predicates for datetimes")
-class DateTimeFilter(DateTimeQuery):
-    project: Optional[Ordinal] = undefined
-
-
-@strawberry.input(description="predicates for times")
-class TimeFilter(TimeQuery):
-    project: Optional[Ordinal] = undefined
-
-
-@strawberry.input(description="predicates for binaries")
-class BinaryFilter(BinaryQuery):
-    binary_length: Optional[IntQuery] = undefined
-    project: Optional[Nominal] = undefined
-
-
-@strawberry.input(description="predicates for strings")
-class StringFilter(StringQuery):
-    __annotations__ = dict(StringQuery.__annotations__)  # used for `count` interface
-    match_substring: Optional[str] = undefined
-    binary_length: Optional[IntQuery] = undefined
-    utf8_lower: Optional['StringFilter'] = undefined
-    utf8_upper: Optional['StringFilter'] = undefined
-    string_is_ascii: bool = False
-    utf8_is_alnum: bool = False
-    utf8_is_alpha: bool = False
-    utf8_is_digit: bool = False
-    utf8_is_lower: bool = False
-    utf8_is_title: bool = False
-    utf8_is_upper: bool = False
-    project: Optional[Ordinal] = undefined
-
-
-filter_map = {
-    bool: BooleanFilter,
-    int: IntFilter,
-    Long: LongFilter,
-    float: FloatFilter,
-    Decimal: DecimalFilter,
-    date: DateFilter,
-    datetime: DateTimeFilter,
-    time: TimeFilter,
-    bytes: BinaryFilter,
-    str: StringFilter,
-}
+from .scalars import Long
 
 
 def selections(node):
@@ -263,17 +39,28 @@ def doc_field(func):
     return strawberry.field(func, description=func.__doc__)
 
 
-class resolvers:
-    array: pa.ChunkedArray
+@strawberry.interface(description="column interface")
+class Column:
+    @doc_field
+    def type(self) -> str:
+        """array type"""
+        return str(self.array.type)  # type: ignore
 
-    def __init__(self, array, **attrs):
-        self.array = array
-        self.__dict__.update(attrs)
+
+@strawberry.interface(description="unique values")
+class Set:
+    counts: List[Long]
 
     @doc_field
     def length(self) -> Long:
         """number of rows"""
         return len(self.array)  # type: ignore
+
+
+class resolvers:
+    def __init__(self, array, **attrs):
+        self.array = array
+        self.__dict__.update(attrs)
 
     def unique(self, info):
         """unique values and counts"""
@@ -399,22 +186,20 @@ def query_args(func, query):
 
 
 @strawberry.type(description="column of booleans")
-class BooleanColumn:
+class BooleanColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, BooleanQuery)
     values = annotate(resolvers.values, List[Optional[bool]])
 
 
 @strawberry.type(description="unique ints")
-class IntSet:
-    counts: List[Long]
+class IntSet(Set):
     __init__ = resolvers.__init__  # type: ignore
-    length = resolvers.length
     values = annotate(resolvers.values, List[Optional[int]])
 
 
 @strawberry.type(description="column of ints")
-class IntColumn:
+class IntColumn(Column):
     Set = IntSet
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, IntQuery)
@@ -436,15 +221,13 @@ class IntColumn:
 
 
 @strawberry.type(description="unique longs")
-class LongSet:
-    counts: List[Long]
+class LongSet(Set):
     __init__ = resolvers.__init__  # type: ignore
-    length = resolvers.length
     values = annotate(resolvers.values, List[Optional[Long]])
 
 
 @strawberry.type(description="column of longs")
-class LongColumn:
+class LongColumn(Column):
     Set = LongSet
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, LongQuery)
@@ -466,7 +249,7 @@ class LongColumn:
 
 
 @strawberry.type(description="column of floats")
-class FloatColumn:
+class FloatColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, FloatQuery)
     values = annotate(resolvers.values, List[Optional[float]])
@@ -486,7 +269,7 @@ class FloatColumn:
 
 
 @strawberry.type(description="column of decimals")
-class DecimalColumn:
+class DecimalColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DecimalQuery)
     values = annotate(resolvers.values, List[Optional[Decimal]])
@@ -497,15 +280,13 @@ class DecimalColumn:
 
 
 @strawberry.type(description="unique dates")
-class DateSet:
-    counts: List[Long]
+class DateSet(Set):
     __init__ = resolvers.__init__  # type: ignore
-    length = resolvers.length
     values = annotate(resolvers.values, List[Optional[date]])
 
 
 @strawberry.type(description="column of dates")
-class DateColumn:
+class DateColumn(Column):
     Set = DateSet
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DateQuery)
@@ -519,20 +300,24 @@ class DateColumn:
 
 
 @strawberry.type(description="column of datetimes")
-class DateTimeColumn:
+class DateTimeColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DateTimeQuery)
     values = annotate(resolvers.values, List[Optional[datetime]])
     min = annotate(resolvers.min, Optional[datetime])
     max = annotate(resolvers.max, Optional[datetime])
     fill_null = annotate(resolvers.fill_null, 'DateTimeColumn', value=datetime)
-    subtract = annotate(resolvers.subtract, 'DurationColumn', value=timedelta)
     minimum = annotate(resolvers.minimum, 'DateTimeColumn', value=datetime)
     maximum = annotate(resolvers.maximum, 'DateTimeColumn', value=datetime)
 
+    @doc_field
+    def subtract(self, value: datetime) -> 'DurationColumn':
+        """Return values subtracted *from* scalar."""
+        return DurationColumn(pc.subtract(pa.scalar(value, self.array.type), self.array))  # type: ignore
+
 
 @strawberry.type(description="column of times")
-class TimeColumn:
+class TimeColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, TimeQuery)
     values = annotate(resolvers.values, List[Optional[time]])
@@ -544,7 +329,7 @@ class TimeColumn:
 
 
 @strawberry.type(description="column of durations")
-class DurationColumn:
+class DurationColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DurationQuery)
     values = annotate(resolvers.values, List[Optional[timedelta]])
@@ -555,7 +340,7 @@ class DurationColumn:
 
 
 @strawberry.type(description="column of binaries")
-class BinaryColumn:
+class BinaryColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, BinaryQuery)
     values = annotate(resolvers.values, List[Optional[bytes]])
@@ -563,15 +348,13 @@ class BinaryColumn:
 
 
 @strawberry.type(description="unique strings")
-class StringSet:
-    counts: List[Long]
+class StringSet(Set):
     __init__ = resolvers.__init__  # type: ignore
-    length = resolvers.length
     values = annotate(resolvers.values, List[Optional[str]])
 
 
 @strawberry.type(description="column of strings")
-class StringColumn:
+class StringColumn(Column):
     Set = StringSet
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, StringFilter)

@@ -6,7 +6,7 @@ schema {
 scalar Binary
 
 """column of binaries"""
-type BinaryColumn {
+type BinaryColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -18,6 +18,9 @@ type BinaryColumn {
 
   """length of bytes or strings"""
   binaryLength: IntColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for binaries"""
@@ -26,11 +29,17 @@ input BinaryFilter {
   notEqual: Binary
   isIn: [Binary!]
   binaryLength: IntQuery
-  project: Nominal
+  apply: Nominal
+}
+
+"""functions for binaries"""
+input BinaryFunction {
+  alias: String
+  binaryLength: Boolean! = false
 }
 
 """column of booleans"""
-type BooleanColumn {
+type BooleanColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -39,13 +48,22 @@ type BooleanColumn {
 
   """list of values"""
   values: [Boolean]!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for booleans"""
 input BooleanFilter {
   equal: Boolean
   notEqual: Boolean
-  project: Nominal
+  apply: Nominal
+}
+
+"""column interface"""
+interface Column {
+  """array type"""
+  type: String!
 }
 
 """fields for each column"""
@@ -115,7 +133,7 @@ type Columns {
 scalar Date
 
 """column of dates"""
-type DateColumn {
+type DateColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -142,6 +160,9 @@ type DateColumn {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Date!): DateColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for dates"""
@@ -153,25 +174,33 @@ input DateFilter {
   greater: Date
   greaterEqual: Date
   isIn: [Date!]
-  project: Ordinal
+  apply: Ordinal
+}
+
+"""functions for dates"""
+input DateFunction {
+  alias: String
+  minimum: String
+  maximum: String
+  fillNull: Date
 }
 
 """unique dates"""
-type DateSet {
+type DateSet implements Set {
   counts: [Long!]!
-
-  """number of rows"""
-  length: Long!
 
   """list of values"""
   values: [Date]!
+
+  """number of rows"""
+  length: Long!
 }
 
 """Date with time (isoformat)"""
 scalar DateTime
 
 """column of datetimes"""
-type DateTimeColumn {
+type DateTimeColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -190,14 +219,17 @@ type DateTimeColumn {
   """Return values with null elements replaced."""
   fillNull(value: DateTime!): DateTimeColumn!
 
-  """Return values subtracted *from* scalar."""
-  subtract(value: Duration!): DurationColumn!
-
   """Return element-wise minimum compared to scalar."""
   minimum(value: DateTime!): DateTimeColumn!
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: DateTime!): DateTimeColumn!
+
+  """Return values subtracted *from* scalar."""
+  subtract(value: DateTime!): DurationColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for datetimes"""
@@ -209,14 +241,23 @@ input DateTimeFilter {
   greater: DateTime
   greaterEqual: DateTime
   isIn: [DateTime!]
-  project: Ordinal
+  apply: Ordinal
+}
+
+"""functions for datetimes"""
+input DateTimeFunction {
+  alias: String
+  minimum: String
+  maximum: String
+  subtract: String
+  fillNull: DateTime
 }
 
 """Decimal (fixed-point)"""
 scalar Decimal
 
 """column of decimals"""
-type DecimalColumn {
+type DecimalColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -237,6 +278,9 @@ type DecimalColumn {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Decimal!): DecimalColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for decimals"""
@@ -248,14 +292,21 @@ input DecimalFilter {
   greater: Decimal
   greaterEqual: Decimal
   isIn: [Decimal!]
-  project: Ordinal
+  apply: Ordinal
+}
+
+"""functions for decimals"""
+input DecimalFunction {
+  alias: String
+  minimum: String
+  maximum: String
 }
 
 """duration float (in seconds)"""
 scalar Duration
 
 """column of durations"""
-type DurationColumn {
+type DurationColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -276,6 +327,9 @@ type DurationColumn {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Duration!): DurationColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for each column"""
@@ -304,7 +358,7 @@ input Filters {
 }
 
 """column of floats"""
-type FloatColumn {
+type FloatColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -352,6 +406,9 @@ type FloatColumn {
 
   """absolute values"""
   absolute: FloatColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for floats"""
@@ -364,7 +421,19 @@ input FloatFilter {
   greaterEqual: Float
   isIn: [Float!]
   absolute: FloatQuery
-  project: Ratio
+  apply: Ratio
+}
+
+"""functions for floats"""
+input FloatFunction {
+  alias: String
+  minimum: String
+  maximum: String
+  add: String
+  subtract: String
+  multiply: String
+  absolute: Boolean! = false
+  fillNull: Float
 }
 
 """predicates for floats"""
@@ -397,6 +466,9 @@ type IndexedTable {
   """fields for each column"""
   columns: Columns!
 
+  """Return column by alias."""
+  column(alias: String!): Column!
+
   """Return scalar values at index."""
   row(index: Long! = 0): Row!
 
@@ -422,10 +494,19 @@ type IndexedTable {
 
   """Return table with rows which match all (by default) queries."""
   filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
+
+  """
+  Return view of table with functions applied across columns.
+          If no alias is provided, the column is replaced and must be of the same type.
+          If an alias is provided, a column is added and may be referenced in the `column` interface,
+          and in the `by` arguments of grouping and sorting.
+          
+  """
+  apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction): Table!
 }
 
 """column of ints"""
-type IntColumn {
+type IntColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -476,6 +557,9 @@ type IntColumn {
 
   """absolute values"""
   absolute: IntColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for ints"""
@@ -488,7 +572,19 @@ input IntFilter {
   greaterEqual: Int
   isIn: [Int!]
   absolute: IntQuery
-  project: Ratio
+  apply: Ratio
+}
+
+"""functions for ints"""
+input IntFunction {
+  alias: String
+  minimum: String
+  maximum: String
+  add: String
+  subtract: String
+  multiply: String
+  absolute: Boolean! = false
+  fillNull: Int
 }
 
 """predicates for ints"""
@@ -503,21 +599,21 @@ input IntQuery {
 }
 
 """unique ints"""
-type IntSet {
+type IntSet implements Set {
   counts: [Long!]!
-
-  """number of rows"""
-  length: Long!
 
   """list of values"""
   values: [Int]!
+
+  """number of rows"""
+  length: Long!
 }
 
 """64-bit int"""
 scalar Long
 
 """column of longs"""
-type LongColumn {
+type LongColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -568,6 +664,9 @@ type LongColumn {
 
   """absolute values"""
   absolute: LongColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for longs"""
@@ -580,7 +679,19 @@ input LongFilter {
   greaterEqual: Long
   isIn: [Long!]
   absolute: LongQuery
-  project: Ratio
+  apply: Ratio
+}
+
+"""functions for longs"""
+input LongFunction {
+  alias: String
+  minimum: String
+  maximum: String
+  add: String
+  subtract: String
+  multiply: String
+  absolute: Boolean! = false
+  fillNull: Long
 }
 
 """predicates for longs"""
@@ -595,14 +706,14 @@ input LongQuery {
 }
 
 """unique longs"""
-type LongSet {
+type LongSet implements Set {
   counts: [Long!]!
-
-  """number of rows"""
-  length: Long!
 
   """list of values"""
   values: [Long]!
+
+  """number of rows"""
+  length: Long!
 }
 
 """nominal functions projected across two columns"""
@@ -669,13 +780,21 @@ type Row {
   camelId: Long
 }
 
+"""unique values"""
+interface Set {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+}
+
 """column of strings"""
-type StringColumn {
+type StringColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false, apply: Ordinal): Long!
 
   """list of values"""
   values: [String]!
@@ -706,6 +825,9 @@ type StringColumn {
 
   """strings converted to uppercase"""
   utf8Upper: StringColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for strings"""
@@ -728,18 +850,28 @@ input StringFilter {
   utf8IsLower: Boolean! = false
   utf8IsTitle: Boolean! = false
   utf8IsUpper: Boolean! = false
-  project: Ordinal
+  apply: Ordinal
+}
+
+"""functions for strings"""
+input StringFunction {
+  alias: String
+  minimum: String
+  maximum: String
+  binaryLength: Boolean! = false
+  utf8Lower: Boolean! = false
+  utf8Upper: Boolean! = false
 }
 
 """unique strings"""
-type StringSet {
+type StringSet implements Set {
   counts: [Long!]!
-
-  """number of rows"""
-  length: Long!
 
   """list of values"""
   values: [String]!
+
+  """number of rows"""
+  length: Long!
 }
 
 """a column-oriented table"""
@@ -749,6 +881,9 @@ type Table {
 
   """fields for each column"""
   columns: Columns!
+
+  """Return column by alias."""
+  column(alias: String!): Column!
 
   """Return scalar values at index."""
   row(index: Long! = 0): Row!
@@ -775,13 +910,22 @@ type Table {
 
   """Return table with rows which match all (by default) queries."""
   filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
+
+  """
+  Return view of table with functions applied across columns.
+          If no alias is provided, the column is replaced and must be of the same type.
+          If an alias is provided, a column is added and may be referenced in the `column` interface,
+          and in the `by` arguments of grouping and sorting.
+          
+  """
+  apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction): Table!
 }
 
 """Time (isoformat)"""
 scalar Time
 
 """column of times"""
-type TimeColumn {
+type TimeColumn implements Column {
   """
   Return number of matching values.
   Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -805,6 +949,9 @@ type TimeColumn {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Time!): TimeColumn!
+
+  """array type"""
+  type: String!
 }
 
 """predicates for times"""
@@ -816,5 +963,13 @@ input TimeFilter {
   greater: Time
   greaterEqual: Time
   isIn: [Time!]
-  project: Ordinal
+  apply: Ordinal
+}
+
+"""functions for times"""
+input TimeFunction {
+  alias: String
+  minimum: String
+  maximum: String
+  fillNull: Time
 }

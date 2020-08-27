@@ -1,4 +1,6 @@
-import enum
+"""
+GraphQL service and top-level resolvers.
+"""
 import functools
 import itertools
 from datetime import datetime
@@ -13,16 +15,9 @@ from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
-from .models import (
-    Long,
-    column_map,
-    doc_field,
-    filter_map,
-    query_map,
-    resolve_arguments,
-    selections,
-    type_map,
-)
+from .inputs import filter_map, query_map, function_map
+from .models import Column, column_map, doc_field, resolve_arguments, selections
+from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
 path = Path(PARQUET_PATH).resolve()
@@ -30,7 +25,10 @@ table = pq.ParquetDataset(path, memory_map=MMAP, read_dictionary=DICTIONARIES).r
 indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
 case_map = {to_camel_case(name): name for name in types}
-to_snake_case = case_map.__getitem__
+
+
+def to_snake_case(name):
+    return case_map.get(name, name)
 
 
 def resolver(name):
@@ -75,18 +73,20 @@ def query_field(func: Callable) -> Callable:
     return resolve_arguments(func, arguments)
 
 
+def function_field(func: Callable) -> Callable:
+    arguments = [
+        ArgumentDefinition(origin_name=name, type=Optional[function_map[types[name]]])
+        for name in types
+        if types[name] in function_map
+    ]
+    return resolve_arguments(func, arguments)
+
+
 @strawberry.input(description="predicates for each column")
 class Filters:
     __annotations__ = {name: Optional[filter_map[types[name]]] for name in types}
     locals().update(dict.fromkeys(types, undefined))
     asdict = next(iter(query_map.values())).asdict
-
-
-@strawberry.enum
-class Operator(enum.Enum):
-    AND = 'and'
-    OR = 'or'
-    XOR = 'xor'
 
 
 def references(node):
@@ -112,8 +112,8 @@ class Table:
 
     def select(self, info) -> pa.Table:
         """Return table with only the columns necessary to proceed."""
-        names = map(case_map.get, references(*info.field_nodes))
-        return self.table.select(set(names) - {None})
+        names = set(map(to_snake_case, references(*info.field_nodes)))
+        return self.table.select(names & set(self.table.column_names))
 
     @doc_field
     def length(self) -> Long:
@@ -124,6 +124,12 @@ class Table:
     def columns(self) -> Columns:
         """fields for each column"""
         return Columns(self.table)
+
+    @doc_field
+    def column(self, alias: str) -> Column:
+        """Return column by alias."""
+        column = self.table[alias]
+        return column_map[type_map[column.type.id]](column)
 
     @doc_field
     def row(self, info, index: Long = 0) -> Row:  # type: ignore
@@ -191,6 +197,18 @@ class Table:
         if set(selections(*info.field_nodes)) == {'length'}:
             return Table(range(C.count(mask, not invert)))  # optimized for count
         return Table(table.filter(pc.call_function('invert', [mask]) if invert else mask))
+
+    @function_field
+    def apply(self, **functions) -> 'Table':
+        """Return view of table with functions applied across columns.
+        If no alias is provided, the column is replaced and must be of the same type.
+        If an alias is provided, a column is added and may be referenced in the `column` interface,
+        and in the `by` arguments of grouping and sorting.
+        """
+        table = self.table
+        for name in functions:
+            table = T.apply(table, name, **functions[name].asdict())
+        return Table(table)
 
 
 @strawberry.type(description="a table sorted by a composite index")

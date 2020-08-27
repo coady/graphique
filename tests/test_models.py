@@ -1,9 +1,6 @@
-from datetime import timedelta
-import pyarrow as pa
 import pytest
 from strawberry.printer import print_schema
 from .conftest import fixtures
-from graphique.models import DurationColumn
 
 
 def test_schema(schema):
@@ -40,12 +37,14 @@ def test_columns(executor):
 
     assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
     assert execute('{ bool { count(equal: false) } }') == {'bool': {'count': 1}}
+    assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
 
     for name in ('uint8', 'int8', 'uint16', 'int16', 'int32'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
         data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0, 1]}}}
+        assert execute(f'{{ {name} {{ type }} }}') == {name: {'type': name}}
     for name in ('uint32', 'uint64', 'int64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
@@ -87,6 +86,7 @@ def test_columns(executor):
     assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsAlpha: true) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsDigit: true) } }') == {'string': {'count': 0}}
+    assert execute('{ string { type } }') == {'string': {'type': 'string'}}
 
 
 def test_numeric(executor):
@@ -105,10 +105,26 @@ def test_numeric(executor):
         data = executor(f'{{ columns {{ {name} {{ absolute {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'absolute': {'sum': 0}}}}
 
+    data = executor(
+        '''{ apply(int32: {fillNull: -1, alias: "i"})
+        { column(alias: "i") { type ... on IntColumn { values } } } }'''
+    )
+    assert data == {'apply': {'column': {'type': 'int32', 'values': [0, -1]}}}
 
-def test_duration():
-    td = timedelta()
-    column = DurationColumn(pa.chunked_array([[td]]))
-    assert column.values() == [td]
-    assert column.min() == column.max() == td
-    assert column.count(equal=td) == 1
+
+def test_duration(executor):
+    data = executor(
+        '''{ apply(timestamp: {fillNull: "0001-01-01"})
+        { columns { timestamp { values subtract(value: "0001-01-01") { values } } } } }'''
+    )
+    column = data['apply']['columns']['timestamp']
+    assert column['values'] == ['1970-01-01T00:00:00', '0001-01-01T00:00:00']
+    assert column['subtract'] == {'values': [-62135596800.0, 0.0]}
+    data = executor(
+        '''{ apply(timestamp: {alias: "diff", subtract: "timestamp"}) { column(alias: "diff")
+        { ... on DurationColumn { values min max count(equal: 0.0) } } } }'''
+    )
+    column = data['apply']['column']
+    assert column['values'] == [0.0, None]
+    assert column['min'] == column['max'] == 0.0
+    assert column['count'] == 1

@@ -84,6 +84,12 @@ def test_functional(table):
     (mask,) = T.masks(table, state={'equal': 'CA'})
     assert sum(mask.to_pylist()) == 2647
     assert not list(T.masks(table, state={}))
+    table = T.apply(table, 'latitude', alias='diff', subtract='longitude')
+    assert table['latitude'][0].as_py() - table['longitude'][0].as_py() == table['diff'][0].as_py()
+    table = T.apply(table, 'zipcode', fill_null=0)
+    assert not table['zipcode'].null_count
+    table = T.apply(table, 'state', utf8_lower=True, utf8_upper=False)
+    assert table['state'][0].as_py() == 'ny'
 
 
 def test_group(table):

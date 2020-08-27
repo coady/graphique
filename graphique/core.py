@@ -224,6 +224,13 @@ class Table(pa.Table):
         'minimum': Column.minimum,
         'maximum': Column.maximum,
     }
+    applied = {
+        'fill_null': pc.fill_null,
+        'binary_length': pc.binary_length,
+        'utf8_lower': pc.utf8_lower,
+        'utf8_upper': pc.utf8_upper,
+        'absolute': Column.absolute,
+    }
 
     def index(self) -> list:
         """Return index column names from pandas metadata."""
@@ -310,7 +317,7 @@ class Table(pa.Table):
         """Generate mask arrays which match queries."""
         for name, query in queries.items():
             column = self[name]
-            project = query.pop('project', {})
+            project = query.pop('apply', {})
             for func in set(Table.projected).intersection(project):
                 column = Table.projected[func](column, self[project.pop(func)])
             for op, field in project.items():
@@ -318,7 +325,21 @@ class Table(pa.Table):
             if query:
                 yield Column.mask(column, **query)
 
-    def matched(self, func: Callable, *names: str):
+    def apply(self, name: str, alias: str = '', **partials) -> pa.Table:
+        """Return view of table with functions applied across columns."""
+        column = self[name]
+        for func, arg in partials.items():
+            if func in Table.projected:
+                column = Table.projected[func](column, self[arg])
+            elif not isinstance(arg, bool):
+                column = Table.applied[func](column, arg)
+            elif arg:
+                column = Table.applied[func](column)
+        if alias:
+            return self.add_column(len(self.column_names), alias, column)
+        return self.set_column(self.column_names.index(name), name, column)
+
+    def matched(self, func: Callable, *names: str) -> pa.Table:
         for name in names:
             self = self.filter(Column.equal(self[name], func(self[name])))
         return self

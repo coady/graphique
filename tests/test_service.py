@@ -163,7 +163,7 @@ def test_filter(client):
         '{ filter(query: {city: {utf8Upper: {matchSubstring: "MOUNTAIN"}}}) { length } }'
     )
     assert data['filter']['length'] == 88
-    data = client.execute('{ filter(query: {county: {project: {equal: "city"}}}) { length } }')
+    data = client.execute('{ filter(query: {county: {apply: {equal: "city"}}}) { length } }')
     assert data['filter']['length'] == 2805
     data = client.execute('{ filter(query: {city: {utf8IsLower: true}}) { length } }')
     assert data['filter']['length'] == 0
@@ -172,15 +172,15 @@ def test_filter(client):
     data = client.execute('{ filter(query: {city: {}}) { length } }')
     assert data['filter']['length'] == 41700
     data = client.execute(
-        '{ filter(query: {zipcode: {project: {add: "zipcode"}, equal: 1002}}) { length } }'
+        '{ filter(query: {zipcode: {apply: {add: "zipcode"}, equal: 1002}}) { length } }'
     )
     assert data['filter']['length'] == 1
     data = client.execute(
-        '{ filter(query: {zipcode: {project: {subtract: "zipcode"}, equal: 0}}) { length } }'
+        '{ filter(query: {zipcode: {apply: {subtract: "zipcode"}, equal: 0}}) { length } }'
     )
     assert data['filter']['length'] == 41700
     data = client.execute(
-        '{ filter(query: {latitude: {project: {multiply: "longitude"}, greater: 0}}) { length } }'
+        '{ filter(query: {latitude: {apply: {multiply: "longitude"}, greater: 0}}) { length } }'
     )
     assert data['filter']['length'] == 0
     data = client.execute('{ filter(query: {longitude: {absolute: {less: 66}}}) { length } }')
