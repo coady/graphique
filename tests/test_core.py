@@ -1,6 +1,6 @@
 import pyarrow as pa
 import pyarrow.compute as pc
-from graphique.core import Column as C, Table as T
+from graphique.core import Chunk, Column as C, Table as T
 
 
 def eq(left, right):
@@ -105,6 +105,9 @@ def test_group(table):
         assert set(chunk.take(indices)) <= {pa.scalar('CA')}
     groups = C.arggroupby(table['latitude'])
     assert max(map(len, groups.values())) == 6
+    keys, indices = Chunk.arggroupby(pa.array([1, None, 1]))
+    assert keys.to_pylist() == [1, None]
+    assert indices.to_pylist() == [[0, 2], [1]]
 
 
 def test_unique(table):
@@ -117,6 +120,8 @@ def test_unique(table):
     assert len(zipcodes) == 52
     assert zipcodes[0] == 99950
     assert zipcodes[-1] == 988
+    indices = Chunk.argunique(pa.array([1, None, 1]))
+    assert indices.to_pylist() == [0, 1]
 
 
 def test_sort(table):

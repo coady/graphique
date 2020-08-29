@@ -1,3 +1,9 @@
+"""
+Core utilities that add pandas-esque features to arrow arrays and table.
+
+Arrow forbids subclassing, so the classes are for logical grouping.
+Their methods are called as functions.
+"""
 import bisect
 import collections
 import contextlib
@@ -35,10 +41,13 @@ def rpartial(func, *values):
 class Chunk:
     def encode(self):
         if not isinstance(self, pa.DictionaryArray):
-            if np.can_cast(self.type.to_pandas_dtype(), np.intp):
+            if not self.null_count and np.can_cast(self.type.to_pandas_dtype(), np.intp):
                 return None, self
             self = self.dictionary_encode()
-        return self.dictionary, self.indices
+        if not self.indices.null_count:
+            return self.dictionary, self.indices
+        dictionary = pa.concat_arrays([self.dictionary, pa.array([None], self.dictionary.type)])
+        return dictionary, self.indices.fill_null(len(self.dictionary))
 
     def arggroupby(self) -> tuple:
         dictionary, array = Chunk.encode(self)
