@@ -19,6 +19,10 @@ def test_case(executor):
         '{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}, invert: true) { length } }'
     )
     assert data == {'filter': {'length': 1}}
+    data = executor('{ filter(query: {camelId: {apply: {equal: "snakeId"}}}) { length } }')
+    assert data == {'filter': {'length': 2}}
+    data = executor('{ apply(camelId: {add: "snakeId"}) { columns { camelId { values } } } }')
+    assert data == {'apply': {'columns': {'camelId': {'values': [2, 4]}}}}
     data = executor('{ index search(snakeId: {equal: 1}) { length } }')
     assert data == {'index': ['snakeId', 'camelId'], 'search': {'length': 1}}
     data = executor('{ min(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')

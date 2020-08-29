@@ -478,7 +478,11 @@ type IndexedTable {
   """fields for each column"""
   columns: Columns!
 
-  """Return column by alias."""
+  """
+  Return column by alias.
+          This is only needed for aliased columns added by `apply`; otherwise see `columns`.
+          
+  """
   column(alias: String!): Column!
 
   """Return scalar values at index."""
@@ -504,7 +508,12 @@ type IndexedTable {
   """Return table with maximum values per column."""
   max(by: [String!]!): Table!
 
-  """Return table with rows which match all (by default) queries."""
+  """
+  Return table with rows which match all (by default) queries.
+          `invert` optionally excludes matching rows.
+          `reduce` is the binary operator to combine filters; within a column all predicates must match.
+          
+  """
   filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
 
   """
@@ -907,7 +916,11 @@ type Table {
   """fields for each column"""
   columns: Columns!
 
-  """Return column by alias."""
+  """
+  Return column by alias.
+          This is only needed for aliased columns added by `apply`; otherwise see `columns`.
+          
+  """
   column(alias: String!): Column!
 
   """Return scalar values at index."""
@@ -933,7 +946,12 @@ type Table {
   """Return table with maximum values per column."""
   max(by: [String!]!): Table!
 
-  """Return table with rows which match all (by default) queries."""
+  """
+  Return table with rows which match all (by default) queries.
+          `invert` optionally excludes matching rows.
+          `reduce` is the binary operator to combine filters; within a column all predicates must match.
+          
+  """
   filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
 
   """

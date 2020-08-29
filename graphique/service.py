@@ -25,6 +25,8 @@ table = pq.ParquetDataset(path, memory_map=MMAP, read_dictionary=DICTIONARIES).r
 indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
 case_map = {to_camel_case(name): name for name in types}
+for name in indexed:
+    assert not table[name].null_count  # binary search requires non-null columns
 
 
 def to_snake_case(name):
@@ -127,7 +129,9 @@ class Table:
 
     @doc_field
     def column(self, alias: str) -> Column:
-        """Return column by alias."""
+        """Return column by alias.
+        This is only needed for aliased columns added by `apply`; otherwise see `columns`.
+        """
         column = self.table[alias]
         return column_map[type_map[column.type.id]](column)
 
@@ -188,9 +192,16 @@ class Table:
     def filter(
         self, info, query: Filters, invert: bool = False, reduce: Operator = 'and'  # type: ignore
     ) -> 'Table':
-        """Return table with rows which match all (by default) queries."""
+        """Return table with rows which match all (by default) queries.
+        `invert` optionally excludes matching rows.
+        `reduce` is the binary operator to combine filters; within a column all predicates must match.
+        """
         table = self.select(info)
-        masks = [T.mask(table, name, **value) for name, value in query.asdict().items()]  # type: ignore
+        masks = []
+        for name, value in query.asdict().items():  # type: ignore
+            apply = value.get('apply', {})
+            apply.update({key: to_snake_case(apply[key]) for key in apply})
+            masks.append(T.mask(table, name, **value))
         if not masks:
             return self
         mask = functools.reduce(lambda *args: pc.call_function(reduce.value, args), masks)
@@ -207,7 +218,9 @@ class Table:
         """
         table = self.table
         for name in functions:
-            table = T.apply(table, name, **functions[name].asdict())
+            value = functions[name].asdict()
+            value.update({key: to_snake_case(value[key]) for key in value if key in T.projected})
+            table = T.apply(table, name, **value)
         return Table(table)
 
 
