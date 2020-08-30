@@ -18,7 +18,76 @@ The schema is derived automatically.
 % env PARQUET_PATH=... uvicorn graphique.service:app [--reload]
 ```
 
-Open http://localhost:8000/graphql.
+Open http://localhost:8000/graphql to try out the API in [GraphiQL](https://github.com/graphql/graphiql/tree/main/packages/graphiql#readme).
+There is a test fixture at `./tests/fixtures/zipcodes.parquet`.
+
+## Configuration
+Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file.
+Config variables are used as input to [ParquetDataset](https://arrow.apache.org/docs/python/parquet.html#reading-from-partitioned-datasets).
+* COLUMNS = None
+* DEBUG = False
+* DICTIONARIES = None
+* INDEX = None
+* MMAP = True
+* PARQUET_PATH
+
+## Queries
+A `Table` is the primary interface.  It has fields for filtering, sorting, and grouping.
+
+```typescript
+"""a column-oriented table"""
+type Table {
+  """number of rows"""
+  length: Long!
+
+  """fields for each column"""
+  columns: Columns!
+
+  """Return scalar values at index."""
+  row(index: Long! = 0): Row!
+
+  """Return table slice."""
+  slice(offset: Long! = 0, length: Long): Table!
+
+  """Return tables grouped by columns, with stable ordering."""
+  group(by: [String!]!, reverse: Boolean! = false, length: Long): [Table!]!
+
+  """
+  Return table of first or last occurrences grouped by columns, with stable ordering.
+  """
+  unique(by: [String!]!, reverse: Boolean! = false): Table!
+
+  """Return table slice sorted by specified columns."""
+  sort(by: [String!]!, reverse: Boolean! = false, length: Long): Table!
+
+  """Return table with minimum values per column."""
+  min(by: [String!]!): Table!
+
+  """Return table with maximum values per column."""
+  max(by: [String!]!): Table!
+
+  """
+  Return table with rows which match all (by default) queries.
+          `invert` optionally excludes matching rows.
+          `reduce` is the binary operator to combine filters; within a column all predicates must match.
+  """
+  filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
+```
+
+## Performance
+Graphqiue relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible.
+Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views.
+Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
+
+Specifying an `INDEX` of columns indicates the table is sorted, and enables a binary search interface.
+```typescript
+  """
+  Return table with matching values for compound `index`.
+          Queries must be a prefix of the `index`.
+          Only one non-equal query is allowed, and applied last.
+  """
+  search(...): Table!
+```
 
 # Installation
 ```console

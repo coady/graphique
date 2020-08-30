@@ -32,7 +32,7 @@ from .scalars import Long
 def selections(node):
     """Return tree of field name selections."""
     nodes = getattr(node.selection_set, 'selections', [])
-    return {node.name.value: selections(node) for node in nodes}
+    return {node.name.value for node in nodes if hasattr(node, 'name')}
 
 
 def doc_field(func):
@@ -72,7 +72,7 @@ class resolvers:
 
     def count(self, **query) -> Long:
         """Return number of matching values.
-Optimized for `null`, and empty queries will attempt boolean conversion."""
+        Optimized for `null`, and empty queries will attempt boolean conversion."""
         if query == {'equal': None}:
             return self.array.null_count
         if query == {'not_equal': None}:
@@ -180,7 +180,7 @@ def query_args(func, query):
             origin_name=name, type=value, default_value=getattr(query, name, undefined)
         )
         for name, value in query.__annotations__.items()
-        if name != 'project'
+        if name != 'apply'
     ]
     return resolve_arguments(clone, arguments)
 

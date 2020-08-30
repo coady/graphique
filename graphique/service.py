@@ -93,7 +93,8 @@ class Filters:
 
 def references(node):
     """Generate every possible column reference."""
-    yield node.name.value
+    if hasattr(node, 'name'):
+        yield node.name.value
     value = getattr(node, 'value', None)
     yield getattr(value, 'value', None)
     for val in getattr(value, 'values', []):
@@ -130,8 +131,7 @@ class Table:
     @doc_field
     def column(self, alias: str) -> Column:
         """Return column by alias.
-        This is only needed for aliased columns added by `apply`; otherwise see `columns`.
-        """
+        This is only needed for aliased columns added by `apply`; otherwise see `columns`."""
         column = self.table[alias]
         return column_map[type_map[column.type.id]](column)
 
@@ -194,8 +194,7 @@ class Table:
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
         `invert` optionally excludes matching rows.
-        `reduce` is the binary operator to combine filters; within a column all predicates must match.
-        """
+        `reduce` is the binary operator to combine filters; within a column all predicates must match."""
         table = self.select(info)
         masks = []
         for name, value in query.asdict().items():  # type: ignore
@@ -205,7 +204,7 @@ class Table:
         if not masks:
             return self
         mask = functools.reduce(lambda *args: pc.call_function(reduce.value, args), masks)
-        if set(selections(*info.field_nodes)) == {'length'}:  # optimized for count
+        if selections(*info.field_nodes) == {'length'}:  # optimized for count
             return Table(range(C.count(mask, not invert)))  # type: ignore
         return Table(table.filter(pc.call_function('invert', [mask]) if invert else mask))
 
@@ -214,8 +213,7 @@ class Table:
         """Return view of table with functions applied across columns.
         If no alias is provided, the column is replaced and must be of the same type.
         If an alias is provided, a column is added and may be referenced in the `column` interface,
-        and in the `by` arguments of grouping and sorting.
-        """
+        and in the `by` arguments of grouping and sorting."""
         table = self.table
         for name in functions:
             value = functions[name].asdict()
@@ -238,8 +236,7 @@ class IndexedTable(Table):
     def search(self, info, **queries) -> Table:
         """Return table with matching values for compound `index`.
         Queries must be a prefix of the `index`.
-        Only one non-equal query is allowed, and applied last.
-        """
+        Only one non-equal query is allowed, and applied last."""
         table = self.select(info)
         for name in indexed:
             query = queries.pop(name, None)

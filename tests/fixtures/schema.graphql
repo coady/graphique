@@ -9,7 +9,7 @@ scalar Binary
 type BinaryColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Binary, notEqual: Binary, isIn: [Binary!]): Long!
 
@@ -42,7 +42,7 @@ input BinaryFunction {
 type BooleanColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Boolean, notEqual: Boolean): Long!
 
@@ -136,7 +136,7 @@ scalar Date
 type DateColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Date, notEqual: Date, less: Date, lessEqual: Date, greater: Date, greaterEqual: Date, isIn: [Date!]): Long!
 
@@ -203,7 +203,7 @@ scalar DateTime
 type DateTimeColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: DateTime, notEqual: DateTime, less: DateTime, lessEqual: DateTime, greater: DateTime, greaterEqual: DateTime, isIn: [DateTime!]): Long!
 
@@ -261,7 +261,7 @@ scalar Decimal
 type DecimalColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Decimal, notEqual: Decimal, less: Decimal, lessEqual: Decimal, greater: Decimal, greaterEqual: Decimal, isIn: [Decimal!]): Long!
 
@@ -310,7 +310,7 @@ scalar Duration
 type DurationColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Duration, notEqual: Duration, less: Duration, lessEqual: Duration, greater: Duration, greaterEqual: Duration, isIn: [Duration!]): Long!
 
@@ -373,7 +373,7 @@ input Filters {
 type FloatColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isIn: [Float!]): Long!
 
@@ -468,7 +468,6 @@ type IndexedTable {
   Return table with matching values for compound `index`.
           Queries must be a prefix of the `index`.
           Only one non-equal query is allowed, and applied last.
-          
   """
   search(snakeId: LongQuery, camelId: LongQuery): Table!
 
@@ -481,7 +480,6 @@ type IndexedTable {
   """
   Return column by alias.
           This is only needed for aliased columns added by `apply`; otherwise see `columns`.
-          
   """
   column(alias: String!): Column!
 
@@ -512,7 +510,6 @@ type IndexedTable {
   Return table with rows which match all (by default) queries.
           `invert` optionally excludes matching rows.
           `reduce` is the binary operator to combine filters; within a column all predicates must match.
-          
   """
   filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
 
@@ -521,7 +518,6 @@ type IndexedTable {
           If no alias is provided, the column is replaced and must be of the same type.
           If an alias is provided, a column is added and may be referenced in the `column` interface,
           and in the `by` arguments of grouping and sorting.
-          
   """
   apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction): Table!
 }
@@ -530,7 +526,7 @@ type IndexedTable {
 type IntColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isIn: [Int!]): Long!
 
@@ -650,7 +646,7 @@ scalar Long
 type LongColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isIn: [Long!]): Long!
 
@@ -826,9 +822,9 @@ interface Set {
 type StringColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false, apply: Ordinal): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
 
   """list of values"""
   values: [String]!
@@ -919,7 +915,6 @@ type Table {
   """
   Return column by alias.
           This is only needed for aliased columns added by `apply`; otherwise see `columns`.
-          
   """
   column(alias: String!): Column!
 
@@ -950,7 +945,6 @@ type Table {
   Return table with rows which match all (by default) queries.
           `invert` optionally excludes matching rows.
           `reduce` is the binary operator to combine filters; within a column all predicates must match.
-          
   """
   filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
 
@@ -959,7 +953,6 @@ type Table {
           If no alias is provided, the column is replaced and must be of the same type.
           If an alias is provided, a column is added and may be referenced in the `column` interface,
           and in the `by` arguments of grouping and sorting.
-          
   """
   apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction): Table!
 }
@@ -971,7 +964,7 @@ scalar Time
 type TimeColumn implements Column {
   """
   Return number of matching values.
-  Optimized for `null`, and empty queries will attempt boolean conversion.
+          Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Time, notEqual: Time, less: Time, lessEqual: Time, greater: Time, greaterEqual: Time, isIn: [Time!]): Long!
 

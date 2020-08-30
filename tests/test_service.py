@@ -102,6 +102,12 @@ def test_strings(client):
     assert 'ca' in data['columns']['state']['utf8Lower']['values']
     data = client.execute('{ columns { city { utf8Upper { values } } } }')
     assert 'MOUNTAIN VIEW' in data['columns']['city']['utf8Upper']['values']
+    data = client.execute(
+        '''{ filter(query: {state: {equal: "CA"}}) {
+        apply(city: {binaryLength: true, alias: "size"}) {
+        column(alias: "size") { ... on IntColumn { max } } } } }'''
+    )
+    assert data == {'filter': {'apply': {'column': {'max': 24}}}}
 
 
 def test_search(client):
