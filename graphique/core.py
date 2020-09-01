@@ -289,19 +289,26 @@ class Table(pa.Table):
         columns = [Column.map(pa.Array.take, column, indices) for column in self.columns]
         return pa.Table.from_arrays(list(map(pa.concat_arrays, columns)), self.column_names)
 
-    def group(self, name: str, reverse=False) -> Iterator[pa.Table]:
-        """Generate tables grouped by column."""
+    def group(
+        self, name: str, reverse=False, greater_equal=0, less_equal=None, sort=False
+    ) -> Iterator[pa.Table]:
+        """Generate tables grouped by column, with filtering and slicing on table length."""
         num_chunks = Table.num_chunks(self)
         if num_chunks is None:
             self, num_chunks = self.combine_chunks(), 1
         if num_chunks == 1:
             _, groups = Chunk.arggroupby(self[name].chunk(0))
-            for group in groups[::-1] if reverse else groups:
-                yield self.take(group.values)
+            groups = map(operator.attrgetter('values'), groups)
+            take = self.take
         else:
             groups = Column.arggroupby(self[name]).values()
-            for indices in list(groups)[::-1] if reverse else groups:
-                yield Table.take_chunks(self, indices)
+            take = Table.take_chunks.__get__(self)  # type: ignore
+        if less_equal is None:
+            less_equal = len(self)
+        groups = [indices for indices in groups if greater_equal <= len(indices) <= less_equal]
+        if sort:
+            groups.sort(key=len)
+        return map(take, reversed(groups) if reverse else groups)
 
     def unique(self, name: str, reverse=False) -> pa.Table:
         """Return table with first or last occurrences from grouping by column."""

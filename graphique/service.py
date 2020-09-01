@@ -5,7 +5,7 @@ import functools
 import itertools
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, get_type_hints
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
@@ -15,7 +15,7 @@ from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
-from .inputs import filter_map, query_map, function_map
+from .inputs import LongReduce, filter_map, query_map, function_map
 from .models import Column, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -38,13 +38,13 @@ def resolver(name):
     arguments = [
         ArgumentDefinition(origin_name=field, type=Optional[str])
         for field in T.projected
-        if hasattr(cls, field)
+        if hasattr(cls, field) and get_type_hints(getattr(cls, field))['return'] is cls
     ]
 
     def method(self, **fields) -> cls:
         column = self.table[name]
         for func in fields:
-            column = T.projected[func](column, self.table[fields[func]])
+            column = T.projected[func](column, self.table[to_snake_case(fields[func])])
         return cls(column)
 
     method.__name__ = name
@@ -151,14 +151,36 @@ class Table:
 
     @doc_field
     def group(
-        self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
+        self,
+        info,
+        by: List[str],
+        reverse: bool = False,
+        length: Optional[Long] = None,
+        count: Optional[LongReduce] = None,
     ) -> List['Table']:
-        """Return tables grouped by columns, with stable ordering."""
+        """Return tables grouped by columns, with stable ordering.
+        `length` is the maximum number of tables to return.
+        `count` filters and sorts tables based on the number of rows within each table."""
+        chain = itertools.chain.from_iterable
         tables = [self.select(info)]
-        for name in map(to_snake_case, by):
-            groups = (T.group(table, name, reverse) for table in tables)
-            tables = list(itertools.islice(itertools.chain.from_iterable(groups), length))
-        return list(map(Table, tables))
+        names = list(map(to_snake_case, by))
+        if count is None:
+            for name in names:
+                tables = chain(T.group(table, name, reverse) for table in tables)  # type: ignore
+        else:
+            for name in names[:-1]:
+                tables = chain(  # type: ignore
+                    T.group(table, name, greater_equal=count.greater_equal) for table in tables
+                )
+            groups = [
+                itertools.islice(T.group(table, names[-1], reverse, **count.__dict__), length)
+                for table in tables
+            ]
+            if count.sort:
+                tables = sorted(chain(groups), key=len, reverse=reverse)
+            else:
+                tables = chain(reversed(groups) if reverse else groups)  # type: ignore
+        return list(map(Table, itertools.islice(tables, length)))
 
     @doc_field
     def unique(self, info, by: List[str], reverse: bool = False) -> 'Table':

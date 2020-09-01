@@ -11,6 +11,8 @@ def test_schema(schema):
 def test_case(executor):
     data = executor('{ columns { snakeId { values } camelId { values } } }')
     assert data == {'columns': {'snakeId': {'values': [1, 2]}, 'camelId': {'values': [1, 2]}}}
+    data = executor('{ columns { camelId(minimum: "snakeId") { values } } }')
+    assert data == {'columns': {'camelId': {'values': [1, 2]}}}
     data = executor('{ row { snakeId camelId } }')
     assert data == {'row': {'snakeId': 1, 'camelId': 1}}
     data = executor('{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}) { length } }')

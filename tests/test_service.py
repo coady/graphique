@@ -234,6 +234,16 @@ def test_group(client):
     assert [row['state'] for row in rows] == ['AK'] * 3
     counties = [row['county'] for row in rows]
     assert counties == ['Prince Wales Ketchikan', 'Ketchikan Gateway', 'Sitka']
+    data = client.execute(
+        '''{ group(by: ["state", "county"], reverse: true, count: {greaterEqual: 200})
+        { length } }'''
+    )
+    assert [row['length'] for row in data['group']] == [525, 242, 219, 284]
+    data = client.execute(
+        '''{ group(by: ["state", "county"], reverse: true, count: {greaterEqual: 200, sort: true})
+        { length } }'''
+    )
+    assert [row['length'] for row in data['group']] == [525, 284, 242, 219]
 
 
 def test_unique(client):

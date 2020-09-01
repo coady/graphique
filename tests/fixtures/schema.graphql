@@ -110,7 +110,7 @@ type Columns {
   date64(minimum: String, maximum: String): DateColumn!
 
   """Return column with optional projection."""
-  timestamp(subtract: String, minimum: String, maximum: String): DateTimeColumn!
+  timestamp(minimum: String, maximum: String): DateTimeColumn!
 
   """Return column with optional projection."""
   time32(minimum: String, maximum: String): TimeColumn!
@@ -323,11 +323,17 @@ type DurationColumn implements Column {
   """maximum value"""
   max: Duration
 
+  """Return q-th quantiles for values."""
+  quantile(q: [Float!]!): DurationColumn!
+
   """Return element-wise minimum compared to scalar."""
   minimum(value: Duration!): DurationColumn!
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Duration!): DurationColumn!
+
+  """absolute values"""
+  absolute: DurationColumn!
 
   """array type"""
   type: String!
@@ -489,8 +495,12 @@ type IndexedTable {
   """Return table slice."""
   slice(offset: Long! = 0, length: Long): Table!
 
-  """Return tables grouped by columns, with stable ordering."""
-  group(by: [String!]!, reverse: Boolean! = false, length: Long): [Table!]!
+  """
+  Return tables grouped by columns, with stable ordering.
+          `length` is the maximum number of tables to return.
+          `count` filters and sorts tables based on the number of rows within each table.
+  """
+  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: LongReduce): [Table!]!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -735,6 +745,13 @@ input LongQuery {
   isIn: [Long!]
 }
 
+"""group reduce options for longs"""
+input LongReduce {
+  greaterEqual: Long! = 0
+  lessEqual: Long = null
+  sort: Boolean! = false
+}
+
 """unique longs"""
 type LongSet implements Set {
   counts: [Long!]!
@@ -924,8 +941,12 @@ type Table {
   """Return table slice."""
   slice(offset: Long! = 0, length: Long): Table!
 
-  """Return tables grouped by columns, with stable ordering."""
-  group(by: [String!]!, reverse: Boolean! = false, length: Long): [Table!]!
+  """
+  Return tables grouped by columns, with stable ordering.
+          `length` is the maximum number of tables to return.
+          `count` filters and sorts tables based on the number of rows within each table.
+  """
+  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: LongReduce): [Table!]!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.

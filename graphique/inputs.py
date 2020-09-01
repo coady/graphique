@@ -297,3 +297,10 @@ function_map = {
     bytes: BinaryFunction,
     str: StringFunction,
 }
+
+
+@strawberry.input(description="group reduce options for longs")
+class LongReduce:
+    greater_equal: Long = 0  # type: ignore
+    less_equal: Optional[Long] = None
+    sort: bool = False

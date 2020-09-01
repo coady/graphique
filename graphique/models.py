@@ -335,8 +335,10 @@ class DurationColumn(Column):
     values = annotate(resolvers.values, List[Optional[timedelta]])
     min = annotate(resolvers.min, Optional[timedelta])
     max = annotate(resolvers.max, Optional[timedelta])
+    quantile = annotate(resolvers.quantile, 'DurationColumn')
     minimum = annotate(resolvers.minimum, 'DurationColumn', value=timedelta)
     maximum = annotate(resolvers.maximum, 'DurationColumn', value=timedelta)
+    absolute = annotate(resolvers.absolute, 'DurationColumn')
 
 
 @strawberry.type(description="column of binaries")
