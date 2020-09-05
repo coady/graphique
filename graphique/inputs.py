@@ -3,7 +3,7 @@ GraphQL input types.
 """
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import List, Optional
+from typing import Callable, List, Optional
 import strawberry
 from strawberry.types.types import undefined
 from .scalars import Long
@@ -300,7 +300,23 @@ function_map = {
 
 
 @strawberry.input(description="group reduce options for longs")
-class LongReduce:
-    greater_equal: Long = 0  # type: ignore
-    less_equal: Optional[Long] = None
+class LongReduce(LongQuery):
     sort: bool = False
+    methods = {
+        'equal': '__eq__',
+        'not_equal': '__ne__',
+        'less': '__gt__',
+        'less_equal': '__ge__',
+        'greater': '__lt__',
+        'greater_equal': '__le__',
+        'is_in': '__contains__',
+    }
+
+    def predicate(self, lower=False) -> Callable:
+        """Return predicate function corresponding to query, optionally only the lower bound."""
+        query = self.asdict()
+        if lower:
+            values = [query.get(key, 0) for key in ('equal', 'greater', 'greater_equal')]
+            return max(values + [min(query.get('is_in', [0]))]).__le__
+        funcs = [getattr(query[key], self.methods[key]) for key in set(query) - {'sort'}]
+        return lambda value: all(func(value) for func in funcs)

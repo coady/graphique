@@ -289,9 +289,7 @@ class Table(pa.Table):
         columns = [Column.map(pa.Array.take, column, indices) for column in self.columns]
         return pa.Table.from_arrays(list(map(pa.concat_arrays, columns)), self.column_names)
 
-    def group(
-        self, name: str, reverse=False, greater_equal=0, less_equal=None, sort=False
-    ) -> Iterator[pa.Table]:
+    def group(self, name: str, reverse=False, predicate=int, sort=False) -> Iterator[pa.Table]:
         """Generate tables grouped by column, with filtering and slicing on table length."""
         num_chunks = Table.num_chunks(self)
         if num_chunks is None:
@@ -303,9 +301,7 @@ class Table(pa.Table):
         else:
             groups = Column.arggroupby(self[name]).values()
             take = Table.take_chunks.__get__(self)  # type: ignore
-        if less_equal is None:
-            less_equal = len(self)
-        groups = [indices for indices in groups if greater_equal <= len(indices) <= less_equal]
+        groups = [indices for indices in groups if predicate(len(indices))]
         if sort:
             groups.sort(key=len)
         return map(take, reversed(groups) if reverse else groups)

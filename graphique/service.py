@@ -168,12 +168,12 @@ class Table:
             for name in names:
                 tables = chain(T.group(table, name, reverse) for table in tables)  # type: ignore
         else:
+            predicate = count.predicate(lower=True)
             for name in names[:-1]:
-                tables = chain(  # type: ignore
-                    T.group(table, name, greater_equal=count.greater_equal) for table in tables
-                )
+                tables = chain(T.group(table, name, predicate=predicate) for table in tables)  # type: ignore
+            kwargs = {'predicate': count.predicate(), 'sort': count.sort}
             groups = [
-                itertools.islice(T.group(table, names[-1], reverse, **count.__dict__), length)
+                itertools.islice(T.group(table, names[-1], reverse, **kwargs), length)
                 for table in tables
             ]
             if count.sort:

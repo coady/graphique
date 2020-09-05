@@ -49,8 +49,12 @@ type Table {
   """Return table slice."""
   slice(offset: Long! = 0, length: Long): Table!
 
-  """Return tables grouped by columns, with stable ordering."""
-  group(by: [String!]!, reverse: Boolean! = false, length: Long): [Table!]!
+  """
+  Return tables grouped by columns, with stable ordering.
+          `length` is the maximum number of tables to return.
+          `count` filters and sorts tables based on the number of rows within each table.
+  """
+  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: LongReduce): [Table!]!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -75,7 +79,7 @@ type Table {
 ```
 
 ## Performance
-Graphqiue relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible.
+Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible.
 Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views.
 Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
 

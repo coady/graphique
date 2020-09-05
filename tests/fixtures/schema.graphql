@@ -747,8 +747,13 @@ input LongQuery {
 
 """group reduce options for longs"""
 input LongReduce {
-  greaterEqual: Long! = 0
-  lessEqual: Long = null
+  equal: Long
+  notEqual: Long
+  less: Long
+  lessEqual: Long
+  greater: Long
+  greaterEqual: Long
+  isIn: [Long!]
   sort: Boolean! = false
 }
 

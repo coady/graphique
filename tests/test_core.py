@@ -108,7 +108,7 @@ def test_group(table):
     keys, indices = Chunk.arggroupby(pa.array([1, None, 1]))
     assert keys.to_pylist() == [1, None]
     assert indices.to_pylist() == [[0, 2], [1]]
-    tables = list(T.group(table, 'state', less_equal=100, sort=True))
+    tables = list(T.group(table, 'state', predicate=(100).__ge__, sort=True))
     assert [table['state'][0].as_py() for table in tables] == ['RI', 'DE']
 
 
