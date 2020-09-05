@@ -14,7 +14,7 @@ ext_module = Extension(
 
 setup(
     name='graphique',
-    version='0.0',
+    version='0.1',
     description='GraphQL service for arrow tables and parquet files.',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
@@ -33,7 +33,7 @@ setup(
     tests_require=['pytest-cov', 'requests'],
     keywords='graphql arrow parquet',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
@@ -42,6 +42,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Typing :: Typed',
     ],
