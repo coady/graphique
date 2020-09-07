@@ -44,6 +44,7 @@ def test_columns(executor):
     assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
     assert execute('{ bool { count(equal: false) } }') == {'bool': {'count': 1}}
     assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
+    assert execute('{ bool { unique { length } } }') == {'bool': {'unique': {'length': 2}}}
 
     for name in ('uint8', 'int8', 'uint16', 'int16', 'int32'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}

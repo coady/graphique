@@ -56,6 +56,14 @@ class Set:
         """number of rows"""
         return len(self.array)  # type: ignore
 
+    @classmethod
+    def subclass(base, cls, name, description):
+        namespace = {
+            '__init__': resolvers.__init__,
+            'values': annotate(resolvers.values, List[Optional[cls]]),
+        }
+        return strawberry.type(description=description)(type(name, (base,), namespace))
+
 
 class resolvers:
     def __init__(self, array, **attrs):
@@ -190,20 +198,17 @@ class BooleanColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, BooleanQuery)
     values = annotate(resolvers.values, List[Optional[bool]])
-
-
-@strawberry.type(description="unique ints")
-class IntSet(Set):
-    __init__ = resolvers.__init__  # type: ignore
-    values = annotate(resolvers.values, List[Optional[int]])
+    Set = Set.subclass(bool, "BooleanSet", "unique booleans")
+    unique = annotate(resolvers.unique, Set)
 
 
 @strawberry.type(description="column of ints")
 class IntColumn(Column):
-    Set = IntSet
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, IntQuery)
     values = annotate(resolvers.values, List[Optional[int]])
+    Set = Set.subclass(int, "IntSet", "unique ints")
+    unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[int]])
     sum = annotate(resolvers.sum, Optional[int])
     mean = resolvers.mean
@@ -220,18 +225,13 @@ class IntColumn(Column):
     absolute = annotate(resolvers.absolute, 'IntColumn')
 
 
-@strawberry.type(description="unique longs")
-class LongSet(Set):
-    __init__ = resolvers.__init__  # type: ignore
-    values = annotate(resolvers.values, List[Optional[Long]])
-
-
 @strawberry.type(description="column of longs")
 class LongColumn(Column):
-    Set = LongSet
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, LongQuery)
     values = annotate(resolvers.values, List[Optional[Long]])
+    Set = Set.subclass(Long, "LongSet", "unique longs")
+    unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[Long]])
     sum = annotate(resolvers.sum, Optional[Long])
     mean = resolvers.mean
@@ -253,6 +253,8 @@ class FloatColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, FloatQuery)
     values = annotate(resolvers.values, List[Optional[float]])
+    Set = Set.subclass(float, "FloatSet", "unique floats")
+    unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[float]])
     sum = annotate(resolvers.sum, Optional[float])
     mean = resolvers.mean
@@ -273,24 +275,21 @@ class DecimalColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DecimalQuery)
     values = annotate(resolvers.values, List[Optional[Decimal]])
+    Set = Set.subclass(Decimal, "DecimalSet", "unique decimals")
+    unique = annotate(resolvers.unique, Set)
     min = annotate(resolvers.min, Optional[Decimal])
     max = annotate(resolvers.max, Optional[Decimal])
     minimum = annotate(resolvers.minimum, 'DecimalColumn', value=Decimal)
     maximum = annotate(resolvers.maximum, 'DecimalColumn', value=Decimal)
 
 
-@strawberry.type(description="unique dates")
-class DateSet(Set):
-    __init__ = resolvers.__init__  # type: ignore
-    values = annotate(resolvers.values, List[Optional[date]])
-
-
 @strawberry.type(description="column of dates")
 class DateColumn(Column):
-    Set = DateSet
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DateQuery)
     values = annotate(resolvers.values, List[Optional[date]])
+    Set = Set.subclass(date, "DateSet", "unique dates")
+    unique = annotate(resolvers.unique, Set)
     min = annotate(resolvers.min, Optional[date])
     max = annotate(resolvers.max, Optional[date])
     unique = annotate(resolvers.unique, Set)
@@ -304,6 +303,8 @@ class DateTimeColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DateTimeQuery)
     values = annotate(resolvers.values, List[Optional[datetime]])
+    Set = Set.subclass(datetime, "DatetimeSet", "unique datetimes")
+    unique = annotate(resolvers.unique, Set)
     min = annotate(resolvers.min, Optional[datetime])
     max = annotate(resolvers.max, Optional[datetime])
     fill_null = annotate(resolvers.fill_null, 'DateTimeColumn', value=datetime)
@@ -321,6 +322,8 @@ class TimeColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, TimeQuery)
     values = annotate(resolvers.values, List[Optional[time]])
+    Set = Set.subclass(time, "TimeSet", "unique times")
+    unique = annotate(resolvers.unique, Set)
     min = annotate(resolvers.min, Optional[time])
     max = annotate(resolvers.max, Optional[time])
     fill_null = annotate(resolvers.fill_null, 'TimeColumn', value=time)
@@ -346,25 +349,21 @@ class BinaryColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, BinaryQuery)
     values = annotate(resolvers.values, List[Optional[bytes]])
+    Set = Set.subclass(bytes, "BinarySet", "unique binaries")
+    unique = annotate(resolvers.unique, Set)
     binary_length = resolvers.binary_length
-
-
-@strawberry.type(description="unique strings")
-class StringSet(Set):
-    __init__ = resolvers.__init__  # type: ignore
-    values = annotate(resolvers.values, List[Optional[str]])
 
 
 @strawberry.type(description="column of strings")
 class StringColumn(Column):
-    Set = StringSet
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, StringFilter)
     values = annotate(resolvers.values, List[Optional[str]])
+    Set = Set.subclass(str, "StringSet", "unique strings")
+    unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[str]])
     min = annotate(resolvers.min, Optional[str])
     max = annotate(resolvers.max, Optional[str])
-    unique = annotate(resolvers.unique, Set)
     binary_length = resolvers.binary_length
     minimum = annotate(resolvers.minimum, 'StringColumn', value=str)
     maximum = annotate(resolvers.maximum, 'StringColumn', value=str)

@@ -7,6 +7,9 @@ scalar Binary
 
 """column of binaries"""
 type BinaryColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -16,11 +19,11 @@ type BinaryColumn implements Column {
   """list of values"""
   values: [Binary]!
 
+  """unique values and counts"""
+  unique: BinarySet!
+
   """length of bytes or strings"""
   binaryLength: IntColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for binaries"""
@@ -38,8 +41,22 @@ input BinaryFunction {
   binaryLength: Boolean! = false
 }
 
+"""unique binaries"""
+type BinarySet implements Set {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Binary]!
+}
+
 """column of booleans"""
 type BooleanColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -49,8 +66,8 @@ type BooleanColumn implements Column {
   """list of values"""
   values: [Boolean]!
 
-  """array type"""
-  type: String!
+  """unique values and counts"""
+  unique: BooleanSet!
 }
 
 """predicates for booleans"""
@@ -58,6 +75,17 @@ input BooleanFilter {
   equal: Boolean
   notEqual: Boolean
   apply: Nominal
+}
+
+"""unique booleans"""
+type BooleanSet implements Set {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Boolean]!
 }
 
 """column interface"""
@@ -134,6 +162,9 @@ scalar Date
 
 """column of dates"""
 type DateColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -143,14 +174,14 @@ type DateColumn implements Column {
   """list of values"""
   values: [Date]!
 
+  """unique values and counts"""
+  unique: DateSet!
+
   """minimum value"""
   min: Date
 
   """maximum value"""
   max: Date
-
-  """unique values and counts"""
-  unique: DateSet!
 
   """Return values with null elements replaced."""
   fillNull(value: Date!): DateColumn!
@@ -160,9 +191,6 @@ type DateColumn implements Column {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Date!): DateColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for dates"""
@@ -189,11 +217,11 @@ input DateFunction {
 type DateSet implements Set {
   counts: [Long!]!
 
-  """list of values"""
-  values: [Date]!
-
   """number of rows"""
   length: Long!
+
+  """list of values"""
+  values: [Date]!
 }
 
 """Date with time (isoformat)"""
@@ -201,6 +229,9 @@ scalar DateTime
 
 """column of datetimes"""
 type DateTimeColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -209,6 +240,9 @@ type DateTimeColumn implements Column {
 
   """list of values"""
   values: [DateTime]!
+
+  """unique values and counts"""
+  unique: DatetimeSet!
 
   """minimum value"""
   min: DateTime
@@ -227,9 +261,6 @@ type DateTimeColumn implements Column {
 
   """Return values subtracted *from* scalar."""
   subtract(value: DateTime!): DurationColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for datetimes"""
@@ -254,11 +285,25 @@ input DateTimeFunction {
   fillNull: DateTime
 }
 
+"""unique datetimes"""
+type DatetimeSet implements Set {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [DateTime]!
+}
+
 """Decimal (fixed-point)"""
 scalar Decimal
 
 """column of decimals"""
 type DecimalColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -267,6 +312,9 @@ type DecimalColumn implements Column {
 
   """list of values"""
   values: [Decimal]!
+
+  """unique values and counts"""
+  unique: DecimalSet!
 
   """minimum value"""
   min: Decimal
@@ -279,9 +327,6 @@ type DecimalColumn implements Column {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Decimal!): DecimalColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for decimals"""
@@ -303,11 +348,25 @@ input DecimalFunction {
   maximum: String
 }
 
+"""unique decimals"""
+type DecimalSet implements Set {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Decimal]!
+}
+
 """duration float (in seconds)"""
 scalar Duration
 
 """column of durations"""
 type DurationColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -334,9 +393,6 @@ type DurationColumn implements Column {
 
   """absolute values"""
   absolute: DurationColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for durations"""
@@ -377,6 +433,9 @@ input Filters {
 
 """column of floats"""
 type FloatColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -385,6 +444,9 @@ type FloatColumn implements Column {
 
   """list of values"""
   values: [Float]!
+
+  """unique values and counts"""
+  unique: FloatSet!
 
   """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Float]!
@@ -424,9 +486,6 @@ type FloatColumn implements Column {
 
   """absolute values"""
   absolute: FloatColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for floats"""
@@ -465,18 +524,19 @@ input FloatQuery {
   isIn: [Float!]
 }
 
+"""unique floats"""
+type FloatSet implements Set {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Float]!
+}
+
 """a table sorted by a composite index"""
 type IndexedTable {
-  """indexed columns"""
-  index: [String!]!
-
-  """
-  Return table with matching values for compound `index`.
-          Queries must be a prefix of the `index`.
-          Only one non-equal query is allowed, and applied last.
-  """
-  search(snakeId: LongQuery, camelId: LongQuery): Table!
-
   """number of rows"""
   length: Long!
 
@@ -530,10 +590,23 @@ type IndexedTable {
           and in the `by` arguments of grouping and sorting.
   """
   apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction): Table!
+
+  """indexed columns"""
+  index: [String!]!
+
+  """
+  Return table with matching values for compound `index`.
+          Queries must be a prefix of the `index`.
+          Only one non-equal query is allowed, and applied last.
+  """
+  search(snakeId: LongQuery, camelId: LongQuery): Table!
 }
 
 """column of ints"""
 type IntColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -542,6 +615,9 @@ type IntColumn implements Column {
 
   """list of values"""
   values: [Int]!
+
+  """unique values and counts"""
+  unique: IntSet!
 
   """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Int]!
@@ -560,9 +636,6 @@ type IntColumn implements Column {
 
   """Return q-th quantiles for values."""
   quantile(q: [Float!]!): [Float!]!
-
-  """unique values and counts"""
-  unique: IntSet!
 
   """Return values with null elements replaced."""
   fillNull(value: Int!): IntColumn!
@@ -584,9 +657,6 @@ type IntColumn implements Column {
 
   """absolute values"""
   absolute: IntColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for ints"""
@@ -629,11 +699,11 @@ input IntQuery {
 type IntSet implements Set {
   counts: [Long!]!
 
-  """list of values"""
-  values: [Int]!
-
   """number of rows"""
   length: Long!
+
+  """list of values"""
+  values: [Int]!
 }
 
 """interval functions projected across two columns"""
@@ -654,6 +724,9 @@ scalar Long
 
 """column of longs"""
 type LongColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -662,6 +735,9 @@ type LongColumn implements Column {
 
   """list of values"""
   values: [Long]!
+
+  """unique values and counts"""
+  unique: LongSet!
 
   """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [Long]!
@@ -680,9 +756,6 @@ type LongColumn implements Column {
 
   """Return q-th quantiles for values."""
   quantile(q: [Float!]!): [Float!]!
-
-  """unique values and counts"""
-  unique: LongSet!
 
   """Return values with null elements replaced."""
   fillNull(value: Long!): LongColumn!
@@ -704,9 +777,6 @@ type LongColumn implements Column {
 
   """absolute values"""
   absolute: LongColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for longs"""
@@ -761,11 +831,11 @@ input LongReduce {
 type LongSet implements Set {
   counts: [Long!]!
 
-  """list of values"""
-  values: [Long]!
-
   """number of rows"""
   length: Long!
+
+  """list of values"""
+  values: [Long]!
 }
 
 """nominal functions projected across two columns"""
@@ -842,6 +912,9 @@ interface Set {
 
 """column of strings"""
 type StringColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -851,6 +924,9 @@ type StringColumn implements Column {
   """list of values"""
   values: [String]!
 
+  """unique values and counts"""
+  unique: StringSet!
+
   """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long): [String]!
 
@@ -859,9 +935,6 @@ type StringColumn implements Column {
 
   """maximum value"""
   max: String
-
-  """unique values and counts"""
-  unique: StringSet!
 
   """length of bytes or strings"""
   binaryLength: IntColumn!
@@ -877,9 +950,6 @@ type StringColumn implements Column {
 
   """strings converted to uppercase"""
   utf8Upper: StringColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for strings"""
@@ -919,11 +989,11 @@ input StringFunction {
 type StringSet implements Set {
   counts: [Long!]!
 
-  """list of values"""
-  values: [String]!
-
   """number of rows"""
   length: Long!
+
+  """list of values"""
+  values: [String]!
 }
 
 """a column-oriented table"""
@@ -988,6 +1058,9 @@ scalar Time
 
 """column of times"""
 type TimeColumn implements Column {
+  """array type"""
+  type: String!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -996,6 +1069,9 @@ type TimeColumn implements Column {
 
   """list of values"""
   values: [Time]!
+
+  """unique values and counts"""
+  unique: TimeSet!
 
   """minimum value"""
   min: Time
@@ -1011,9 +1087,6 @@ type TimeColumn implements Column {
 
   """Return element-wise maximum compared to scalar."""
   maximum(value: Time!): TimeColumn!
-
-  """array type"""
-  type: String!
 }
 
 """predicates for times"""
@@ -1034,4 +1107,15 @@ input TimeFunction {
   minimum: String
   maximum: String
   fillNull: Time
+}
+
+"""unique times"""
+type TimeSet implements Set {
+  counts: [Long!]!
+
+  """number of rows"""
+  length: Long!
+
+  """list of values"""
+  values: [Time]!
 }
