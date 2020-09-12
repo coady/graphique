@@ -10,6 +10,9 @@ type BinaryColumn implements Column {
   """array type"""
   type: String!
 
+  """number of rows"""
+  length: Long!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -57,6 +60,9 @@ type BooleanColumn implements Column {
   """array type"""
   type: String!
 
+  """number of rows"""
+  length: Long!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -92,6 +98,9 @@ type BooleanSet implements Set {
 interface Column {
   """array type"""
   type: String!
+
+  """number of rows"""
+  length: Long!
 }
 
 """fields for each column"""
@@ -155,6 +164,7 @@ type Columns {
 
   """Return column with optional projection."""
   camelId(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
+  list: ListColumn!
 }
 
 """Date (isoformat)"""
@@ -164,6 +174,9 @@ scalar Date
 type DateColumn implements Column {
   """array type"""
   type: String!
+
+  """number of rows"""
+  length: Long!
 
   """
   Return number of matching values.
@@ -231,6 +244,9 @@ scalar DateTime
 type DateTimeColumn implements Column {
   """array type"""
   type: String!
+
+  """number of rows"""
+  length: Long!
 
   """
   Return number of matching values.
@@ -304,6 +320,9 @@ type DecimalColumn implements Column {
   """array type"""
   type: String!
 
+  """number of rows"""
+  length: Long!
+
   """
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
@@ -366,6 +385,9 @@ scalar Duration
 type DurationColumn implements Column {
   """array type"""
   type: String!
+
+  """number of rows"""
+  length: Long!
 
   """
   Return number of matching values.
@@ -435,6 +457,9 @@ input Filters {
 type FloatColumn implements Column {
   """array type"""
   type: String!
+
+  """number of rows"""
+  length: Long!
 
   """
   Return number of matching values.
@@ -585,7 +610,7 @@ type IndexedTable {
 
   """
   Return view of table with functions applied across columns.
-          If no alias is provided, the column is replaced and must be of the same type.
+          If no alias is provided, the column is replaced and should be of the same type.
           If an alias is provided, a column is added and may be referenced in the `column` interface,
           and in the `by` arguments of grouping and sorting.
   """
@@ -606,6 +631,9 @@ type IndexedTable {
 type IntColumn implements Column {
   """array type"""
   type: String!
+
+  """number of rows"""
+  length: Long!
 
   """
   Return number of matching values.
@@ -719,6 +747,18 @@ input Interval {
   subtract: String
 }
 
+"""column of list"""
+type ListColumn implements Column {
+  """array type"""
+  type: String!
+
+  """number of rows"""
+  length: Long!
+
+  """list of columns"""
+  values: [Column]!
+}
+
 """64-bit int"""
 scalar Long
 
@@ -726,6 +766,9 @@ scalar Long
 type LongColumn implements Column {
   """array type"""
   type: String!
+
+  """number of rows"""
+  length: Long!
 
   """
   Return number of matching values.
@@ -900,6 +943,7 @@ type Row {
   string: String
   snakeId: Long
   camelId: Long
+  list: Column
 }
 
 """unique values"""
@@ -914,6 +958,9 @@ interface Set {
 type StringColumn implements Column {
   """array type"""
   type: String!
+
+  """number of rows"""
+  length: Long!
 
   """
   Return number of matching values.
@@ -1046,7 +1093,7 @@ type Table {
 
   """
   Return view of table with functions applied across columns.
-          If no alias is provided, the column is replaced and must be of the same type.
+          If no alias is provided, the column is replaced and should be of the same type.
           If an alias is provided, a column is added and may be referenced in the `column` interface,
           and in the `by` arguments of grouping and sorting.
   """
@@ -1060,6 +1107,9 @@ scalar Time
 type TimeColumn implements Column {
   """array type"""
   type: String!
+
+  """number of rows"""
+  length: Long!
 
   """
   Return number of matching values.

@@ -26,7 +26,7 @@ from .inputs import (
     BinaryQuery,
     StringFilter,
 )
-from .scalars import Long
+from .scalars import Long, type_map
 
 
 def selections(node):
@@ -46,15 +46,23 @@ class Column:
         """array type"""
         return str(self.array.type)  # type: ignore
 
-
-@strawberry.interface(description="unique values")
-class Set:
-    counts: List[Long]
-
     @doc_field
     def length(self) -> Long:
         """number of rows"""
         return len(self.array)  # type: ignore
+
+    @classmethod
+    def fromlist(cls, scalar: pa.ListScalar):
+        array = scalar.values
+        if array is None:
+            return None
+        return column_map[type_map[array.type.id]](pa.chunked_array([array]))
+
+
+@strawberry.interface(description="unique values")
+class Set:
+    counts: List[Long]
+    length = Column.length
 
     @classmethod
     def subclass(base, cls, name, description):
@@ -379,6 +387,16 @@ class StringColumn(Column):
         return StringColumn(pc.utf8_upper(self.array))  # type: ignore
 
 
+@strawberry.type(description="column of list")
+class ListColumn(Column):
+    __init__ = resolvers.__init__  # type: ignore
+
+    @doc_field
+    def values(self) -> List[Optional[Column]]:
+        """list of columns"""
+        return list(map(self.fromlist, self.array))  # type: ignore
+
+
 column_map = {
     bool: BooleanColumn,
     int: IntColumn,
@@ -391,4 +409,5 @@ column_map = {
     timedelta: DurationColumn,
     bytes: BinaryColumn,
     str: StringColumn,
+    list: ListColumn,
 }

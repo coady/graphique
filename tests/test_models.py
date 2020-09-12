@@ -140,3 +140,14 @@ def test_duration(executor):
         { length } }'''
     )
     assert data == {'filter': {'length': 1}}
+
+
+def test_list(executor):
+    data = executor('{ columns { list { length type } } }')
+    assert data == {'columns': {'list': {'length': 2, 'type': 'list<item: int32>'}}}
+    data = executor('{ columns { list { values { length } } } }')
+    assert data == {'columns': {'list': {'values': [{'length': 3}, None]}}}
+    data = executor('{ row { list { ... on IntColumn { values } } } }')
+    assert data == {'row': {'list': {'values': [0, 1, 2]}}}
+    data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
+    assert data == {'row': {'list': None}}

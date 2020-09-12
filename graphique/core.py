@@ -248,8 +248,11 @@ class Table(pa.Table):
 
     def types(self) -> dict:
         """Return mapping of column types."""
-        types = [getattr(col.type, 'value_type', col.type) for col in self.columns]
-        return dict(zip(self.column_names, types))
+        types = {}
+        for name, column in zip(self.column_names, self.columns):
+            tp = column.type
+            types[name] = tp.value_type if isinstance(tp, pa.DictionaryType) else tp
+        return types
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.

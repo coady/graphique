@@ -63,7 +63,9 @@ class Columns:
 
 @strawberry.type(description="scalar fields")
 class Row:
-    __annotations__ = {name: Optional[types[name]] for name in types}
+    __annotations__ = {
+        name: Optional[Column if types[name] is list else types[name]] for name in types
+    }
     locals().update(dict.fromkeys(types))
 
 
@@ -86,7 +88,9 @@ def function_field(func: Callable) -> Callable:
 
 @strawberry.input(description="predicates for each column")
 class Filters:
-    __annotations__ = {name: Optional[filter_map[types[name]]] for name in types}
+    __annotations__ = {
+        name: Optional[filter_map[types[name]]] for name in types if types[name] in filter_map
+    }
     locals().update(dict.fromkeys(types, undefined))
     asdict = next(iter(query_map.values())).asdict
 
@@ -138,8 +142,13 @@ class Table:
     @doc_field
     def row(self, info, index: Long = 0) -> Row:  # type: ignore
         """Return scalar values at index."""
-        names = map(to_snake_case, selections(*info.field_nodes))
-        return Row(**{name: self.table[name][index].as_py() for name in names})  # type: ignore
+        row = {}
+        for name in map(to_snake_case, selections(*info.field_nodes)):
+            scalar = self.table[name][index]
+            row[name] = (
+                Column.fromlist(scalar) if isinstance(scalar, pa.ListScalar) else scalar.as_py()
+            )
+        return Row(**row)  # type: ignore
 
     @doc_field
     def slice(
@@ -233,7 +242,7 @@ class Table:
     @function_field
     def apply(self, **functions) -> 'Table':
         """Return view of table with functions applied across columns.
-        If no alias is provided, the column is replaced and must be of the same type.
+        If no alias is provided, the column is replaced and should be of the same type.
         If an alias is provided, a column is added and may be referenced in the `column` interface,
         and in the `by` arguments of grouping and sorting."""
         table = self.table
