@@ -405,7 +405,7 @@ type DurationColumn implements Column {
   max: Duration
 
   """Return q-th quantiles for values."""
-  quantile(q: [Float!]!): DurationColumn!
+  quantile(q: [Float!]!): [Duration]!
 
   """Return element-wise minimum compared to scalar."""
   minimum(value: Duration!): DurationColumn!
@@ -489,7 +489,7 @@ type FloatColumn implements Column {
   max: Float
 
   """Return q-th quantiles for values."""
-  quantile(q: [Float!]!): [Float!]!
+  quantile(q: [Float!]!): [Float]!
 
   """Return values with null elements replaced."""
   fillNull(value: Float!): FloatColumn!
@@ -663,7 +663,7 @@ type IntColumn implements Column {
   max: Int
 
   """Return q-th quantiles for values."""
-  quantile(q: [Float!]!): [Float!]!
+  quantile(q: [Float!]!): [Float]!
 
   """Return values with null elements replaced."""
   fillNull(value: Int!): IntColumn!
@@ -798,7 +798,7 @@ type LongColumn implements Column {
   max: Long
 
   """Return q-th quantiles for values."""
-  quantile(q: [Float!]!): [Float!]!
+  quantile(q: [Float!]!): [Float]!
 
   """Return values with null elements replaced."""
   fillNull(value: Long!): LongColumn!

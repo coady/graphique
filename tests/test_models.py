@@ -122,11 +122,12 @@ def test_numeric(executor):
 def test_duration(executor):
     data = executor(
         '''{ apply(timestamp: {fillNull: "0001-01-01"})
-        { columns { timestamp { values subtract(value: "0001-01-01") { values } } } } }'''
+        { columns { timestamp { values subtract(value: "0001-01-01")
+        { values quantile(q: [0.5]) } } } } }'''
     )
     column = data['apply']['columns']['timestamp']
     assert column['values'] == ['1970-01-01T00:00:00', '0001-01-01T00:00:00']
-    assert column['subtract'] == {'values': [-62135596800.0, 0.0]}
+    assert column['subtract'] == {'values': [-62135596800.0, 0.0], 'quantile': [-31067798400.0]}
     data = executor(
         '''{ apply(timestamp: {alias: "diff", subtract: "timestamp"}) { column(alias: "diff")
         { ... on DurationColumn { values min max count(equal: 0.0) } } } }'''

@@ -51,9 +51,13 @@ def test_reduce():
     assert eq(C.max(array), 3)
     assert eq(C.sum(array), 6)
     assert eq(C.sum(array, exp=2), 14)
+    assert eq(C.mean(array), 1.5)
+    assert C.quantile(array, 0.5) == [1.5]
     array = pa.chunked_array([[None, 1]])
     assert eq(C.min(array), 1)
     assert eq(C.max(array), 1)
+    assert C.quantile(array, 0.5) == [1.0]
+    assert C.quantile(array[:1], 0.5) == [None]
 
 
 def test_membership():

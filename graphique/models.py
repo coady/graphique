@@ -5,7 +5,6 @@ import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import List, Optional
-import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
@@ -110,7 +109,7 @@ class resolvers:
     @doc_field
     def mean(self) -> Optional[float]:
         """mean of the values"""
-        return pc.call_function('mean', [self.array]).as_py()
+        return C.mean(self.array)
 
     def min(self):
         """minimum value"""
@@ -121,9 +120,9 @@ class resolvers:
         return C.max(self.array)
 
     @doc_field
-    def quantile(self, q: List[float]) -> List[float]:
+    def quantile(self, q: List[float]) -> List[Optional[float]]:
         """Return q-th quantiles for values."""
-        return np.nanquantile(self.array, q).tolist()
+        return C.quantile(self.array, *q)
 
     def sort(self, reverse: bool = False, length: Optional[Long] = None):
         """Return sorted values. Optimized for fixed length."""
@@ -346,7 +345,7 @@ class DurationColumn(Column):
     values = annotate(resolvers.values, List[Optional[timedelta]])
     min = annotate(resolvers.min, Optional[timedelta])
     max = annotate(resolvers.max, Optional[timedelta])
-    quantile = annotate(resolvers.quantile, 'DurationColumn')
+    quantile = annotate(resolvers.quantile, List[Optional[timedelta]])
     minimum = annotate(resolvers.minimum, 'DurationColumn', value=timedelta)
     maximum = annotate(resolvers.maximum, 'DurationColumn', value=timedelta)
     absolute = annotate(resolvers.absolute, 'DurationColumn')

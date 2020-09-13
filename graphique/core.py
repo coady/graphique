@@ -69,7 +69,7 @@ class Chunk:
         return Chunk.call(self, np.isin, values, invert=invert).cast(pa.bool_())
 
     def to_null(array: np.ndarray) -> pa.Array:
-        func = np.isnat if array.dtype.type is np.datetime64 else np.isnan
+        func = np.isnat if array.dtype.type in (np.datetime64, np.timedelta64) else np.isnan
         return pa.array(array, mask=func(array))
 
 
@@ -164,6 +164,18 @@ class Column(pa.ChunkedArray):
         if exp == 1:
             return pc.sum(self).as_py()
         return Column.mapreduce(self, lambda ch: np.sum(np.power(ch, exp)), sum)
+
+    def mean(self) -> Optional[float]:
+        """Return mean of the values."""
+        return pc.call_function('mean', [self]).as_py()
+
+    def quantile(self, *q: float) -> list:
+        """Return q-th quantiles for values."""
+        if self.null_count:
+            self = self.filter(self.is_valid())
+        if not self:
+            return [None] * len(q)
+        return np.nanquantile(self, q).tolist()
 
     def min(self):
         """Return min of the values."""
