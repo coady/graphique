@@ -4,14 +4,14 @@ GraphQL output types and resolvers.
 import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import List, Optional
+from typing import Callable, List, Optional
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
 from strawberry.types.type_resolver import resolve_type
 from strawberry.types.types import ArgumentDefinition, FieldDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
-from .core import Column as C
+from .core import Column as C, ListChunk
 from .inputs import (
     BooleanQuery,
     IntQuery,
@@ -51,7 +51,7 @@ class Column:
         return len(self.array)  # type: ignore
 
     @classmethod
-    def fromlist(cls, scalar: pa.ListScalar):
+    def fromlist(cls, scalar: pa.ListScalar) -> Optional['Column']:
         array = scalar.values
         if array is None:
             return None
@@ -386,7 +386,7 @@ class StringColumn(Column):
         return StringColumn(pc.utf8_upper(self.array))  # type: ignore
 
 
-@strawberry.type(description="column of list")
+@strawberry.type(description="column of lists")
 class ListColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
 
@@ -394,6 +394,40 @@ class ListColumn(Column):
     def values(self) -> List[Optional[Column]]:
         """list of columns"""
         return list(map(self.fromlist, self.array))  # type: ignore
+
+    def map(self, func: Callable) -> Column:
+        array = pa.chunked_array(C.map(func, self.array))  # type: ignore
+        return column_map[type_map[array.type.id]](array)
+
+    @doc_field
+    def first(self) -> Column:
+        """first value of each list scalar"""
+        return self.map(ListChunk.first)
+
+    @doc_field
+    def last(self) -> Column:
+        """last value of each list scalar"""
+        return self.map(ListChunk.last)
+
+    @doc_field
+    def min(self) -> Column:
+        """min value of each list scalar"""
+        return self.map(ListChunk.min)
+
+    @doc_field
+    def max(self) -> Column:
+        """max value of each list scalar"""
+        return self.map(ListChunk.max)
+
+    @doc_field
+    def sum(self) -> Column:
+        """sum each list scalar"""
+        return self.map(ListChunk.sum)
+
+    @doc_field
+    def mean(self) -> FloatColumn:
+        """mean of each list scalar"""
+        return self.map(ListChunk.mean)  # type: ignore
 
 
 column_map = {

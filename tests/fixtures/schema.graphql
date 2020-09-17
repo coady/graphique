@@ -747,7 +747,7 @@ input Interval {
   subtract: String
 }
 
-"""column of list"""
+"""column of lists"""
 type ListColumn implements Column {
   """array type"""
   type: String!
@@ -757,6 +757,24 @@ type ListColumn implements Column {
 
   """list of columns"""
   values: [Column]!
+
+  """first value of each list scalar"""
+  first: Column!
+
+  """last value of each list scalar"""
+  last: Column!
+
+  """min value of each list scalar"""
+  min: Column!
+
+  """max value of each list scalar"""
+  max: Column!
+
+  """sum each list scalar"""
+  sum: Column!
+
+  """mean of each list scalar"""
+  mean: FloatColumn!
 }
 
 """64-bit int"""

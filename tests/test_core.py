@@ -1,6 +1,6 @@
 import pyarrow as pa
 import pyarrow.compute as pc
-from graphique.core import Chunk, Column as C, Table as T
+from graphique.core import Chunk, ListChunk, Column as C, Table as T
 
 
 def eq(left, right):
@@ -43,6 +43,16 @@ def test_chunks():
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(list(T.group(table, 'col'))) == 3
     assert len(T.unique(table, 'col')) == 3
+
+
+def test_lists():
+    array = pa.array([[2, 1], [0], [None], [], None])
+    assert ListChunk.first(array).to_pylist() == [2, 0, None, None, None]
+    assert ListChunk.last(array).to_pylist() == [1, 0, None, None, None]
+    assert ListChunk.min(array).to_pylist() == [1, 0, None, None, None]
+    assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
+    assert ListChunk.sum(array).to_pylist() == [3, 0, None, None, None]
+    assert ListChunk.mean(array).to_pylist() == [1.5, 0.0, None, None, None]
 
 
 def test_reduce():

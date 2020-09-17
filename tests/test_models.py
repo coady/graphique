@@ -152,3 +152,18 @@ def test_list(executor):
     assert data == {'row': {'list': {'values': [0, 1, 2]}}}
     data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
     assert data == {'row': {'list': None}}
+
+    data = executor(
+        '''{ columns { list {
+        first { ... on IntColumn { values } } last { ... on IntColumn { values } }
+        min { ... on IntColumn { values } } max { ... on IntColumn { values } }
+        sum { ... on IntColumn { values } } mean { values } } } }'''
+    )
+    assert data['columns']['list'] == {
+        'first': {'values': [0, None]},
+        'last': {'values': [2, None]},
+        'min': {'values': [0, None]},
+        'max': {'values': [2, None]},
+        'sum': {'values': [3, None]},
+        'mean': {'values': [1.0, None]},
+    }

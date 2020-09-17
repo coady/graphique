@@ -73,6 +73,52 @@ class Chunk:
         return pa.array(array, mask=func(array))
 
 
+class ListChunk(pa.ListArray):
+    def first(self) -> pa.Array:
+        """first value of each list scalar"""
+        mask = np.asarray(self.value_lengths().fill_null(0)) == 0
+        indices = np.asarray(self.offsets[:-1])
+        return self.values.take(pa.array(indices, mask=mask))
+
+    def last(self) -> pa.Array:
+        """last value of each list scalar"""
+        mask = np.asarray(self.value_lengths().fill_null(0)) == 0
+        indices = np.asarray(self.offsets[1:]) - 1
+        return self.values.take(pa.array(indices, mask=mask))
+
+    def reduce(self, func: Callable, tp=None) -> pa.Array:
+        values = (func(scalar.values) if scalar.values else None for scalar in self)
+        return pa.array(values, tp or self.type.value_type)
+
+    def min(self) -> pa.Array:
+        """min value of each list scalar"""
+
+        def func(array):
+            if array.null_count:
+                array = array.filter(array.is_valid())
+            return np.min(array) if len(array) else None
+
+        return ListChunk.reduce(self, func)
+
+    def max(self) -> pa.Array:
+        """max value of each list scalar"""
+
+        def func(array):
+            if array.null_count:
+                array = array.filter(array.is_valid())
+            return np.max(array) if len(array) else None
+
+        return ListChunk.reduce(self, func)
+
+    def sum(self) -> pa.Array:
+        """sum each list scalar"""
+        return ListChunk.reduce(self, Column.sum)
+
+    def mean(self) -> pa.Array:
+        """mean of each list scalar"""
+        return ListChunk.reduce(self, Column.mean, pa.float64())
+
+
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 
@@ -175,7 +221,7 @@ class Column(pa.ChunkedArray):
             self = self.filter(self.is_valid())
         if not self:
             return [None] * len(q)
-        return np.nanquantile(self, q).tolist()
+        return np.quantile(self, q).tolist()
 
     def min(self):
         """Return min of the values."""
