@@ -74,6 +74,8 @@ class Chunk:
 
 
 class ListChunk(pa.ListArray):
+    count = pa.ListArray.value_lengths
+
     def first(self) -> pa.Array:
         """first value of each list scalar"""
         mask = np.asarray(self.value_lengths().fill_null(0)) == 0
@@ -405,8 +407,10 @@ class Table(pa.Table):
                 column = Table.projected[func](column, self[arg])
             elif not isinstance(arg, bool):
                 column = Table.applied[func](column, arg)
-            elif arg:
+            elif arg and func in Table.applied:
                 column = Table.applied[func](column)
+            elif arg:
+                column = pa.chunked_array(Column.map(getattr(ListChunk, func), column))
         if alias:
             return self.add_column(len(self.column_names), alias, column)
         return self.set_column(self.column_names.index(name), name, column)

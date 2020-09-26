@@ -168,6 +168,18 @@ type Columns {
   struct: StructColumn!
 }
 
+"""predicates and sorting for counts"""
+input CountQuery {
+  equal: Long
+  notEqual: Long
+  less: Long
+  lessEqual: Long
+  greater: Long
+  greaterEqual: Long
+  isIn: [Long!]
+  sort: Boolean! = false
+}
+
 """Date (isoformat)"""
 scalar Date
 
@@ -590,7 +602,7 @@ type IndexedTable {
           `length` is the maximum number of tables to return.
           `count` filters and sorts tables based on the number of rows within each table.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: LongReduce): [Table!]!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): [Table!]!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -619,7 +631,7 @@ type IndexedTable {
           If an alias is provided, a column is added and may be referenced in the `column` interface,
           and in the `by` arguments of grouping and sorting.
   """
-  apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction): Table!
+  apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction, list: ListFunction): Table!
 
   """indexed columns"""
   index: [String!]!
@@ -785,6 +797,18 @@ type ListColumn implements Column {
   mean: FloatColumn!
 }
 
+"""aggregate functions for lists"""
+input ListFunction {
+  alias: String
+  count: Boolean! = false
+  first: Boolean! = false
+  last: Boolean! = false
+  min: Boolean! = false
+  max: Boolean! = false
+  sum: Boolean! = false
+  mean: Boolean! = false
+}
+
 """64-bit int"""
 scalar Long
 
@@ -882,18 +906,6 @@ input LongQuery {
   greater: Long
   greaterEqual: Long
   isIn: [Long!]
-}
-
-"""group reduce options for longs"""
-input LongReduce {
-  equal: Long
-  notEqual: Long
-  less: Long
-  lessEqual: Long
-  greater: Long
-  greaterEqual: Long
-  isIn: [Long!]
-  sort: Boolean! = false
 }
 
 """unique longs"""
@@ -1113,7 +1125,7 @@ type Table {
           `length` is the maximum number of tables to return.
           `count` filters and sorts tables based on the number of rows within each table.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: LongReduce): [Table!]!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): [Table!]!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -1142,7 +1154,7 @@ type Table {
           If an alias is provided, a column is added and may be referenced in the `column` interface,
           and in the `by` arguments of grouping and sorting.
   """
-  apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction): Table!
+  apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction, list: ListFunction): Table!
 }
 
 """Time (isoformat)"""

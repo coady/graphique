@@ -286,6 +286,17 @@ class StringFunction(OrdinalFunction):
     utf8_upper: bool = False
 
 
+@strawberry.input(description="aggregate functions for lists")
+class ListFunction(Function):
+    count: bool = False
+    first: bool = False
+    last: bool = False
+    min: bool = False
+    max: bool = False
+    sum: bool = False
+    mean: bool = False
+
+
 function_map = {
     int: IntFunction,
     Long: LongFunction,
@@ -296,11 +307,12 @@ function_map = {
     time: TimeFunction,
     bytes: BinaryFunction,
     str: StringFunction,
+    list: ListFunction,
 }
 
 
-@strawberry.input(description="group reduce options for longs")
-class LongReduce(LongQuery):
+@strawberry.input(description="predicates and sorting for counts")
+class CountQuery(LongQuery):
     sort: bool = False
     methods = {
         'equal': '__eq__',

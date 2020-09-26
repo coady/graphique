@@ -15,7 +15,7 @@ from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
-from .inputs import LongReduce, filter_map, query_map, function_map
+from .inputs import CountQuery, filter_map, query_map, function_map
 from .models import Column, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -173,7 +173,7 @@ class Table:
         by: List[str],
         reverse: bool = False,
         length: Optional[Long] = None,
-        count: Optional[LongReduce] = None,
+        count: Optional[CountQuery] = None,
     ) -> List['Table']:
         """Return tables grouped by columns, with stable ordering.
         `length` is the maximum number of tables to return.
@@ -315,7 +315,8 @@ class TimingMiddleware(base.BaseHTTPMiddleware):
 
 class GraphQL(strawberry.asgi.GraphQL):
     def __init__(self, root_value, **kwargs):
-        super().__init__(strawberry.Schema(type(root_value)), **kwargs)
+        schema = strawberry.Schema(type(root_value), types=Column.__subclasses__())
+        super().__init__(schema, **kwargs)
         self.root_value = root_value
 
     async def get_root_value(self, request):

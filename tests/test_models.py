@@ -168,6 +168,16 @@ def test_list(executor):
         'sum': {'values': [3, None]},
         'mean': {'values': [1.0, None]},
     }
+    data = executor(
+        '''{ apply(list: {count: true}) {
+        column(name: "list") { ... on IntColumn { values } }} }'''
+    )
+    assert data == {'apply': {'column': {'values': [3, None]}}}
+    data = executor(
+        '''{ apply(list: {first: true, alias: "first"}) {
+        column(name: "first") { ... on IntColumn { values } }} }'''
+    )
+    assert data == {'apply': {'column': {'values': [0, None]}}}
 
 
 def test_struct(executor):
