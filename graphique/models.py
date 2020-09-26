@@ -1,6 +1,7 @@
 """
 GraphQL output types and resolvers.
 """
+import operator
 import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
@@ -400,6 +401,11 @@ class ListColumn(Column):
         return column_map[type_map[array.type.id]](array)
 
     @doc_field
+    def count(self) -> IntColumn:
+        """number of values of each list scalar"""
+        return self.map(pa.ListArray.value_lengths)  # type: ignore
+
+    @doc_field
     def first(self) -> Column:
         """first value of each list scalar"""
         return self.map(ListChunk.first)
@@ -430,6 +436,21 @@ class ListColumn(Column):
         return self.map(ListChunk.mean)  # type: ignore
 
 
+@strawberry.type(description="column of structs")
+class StructColumn(Column):
+    __init__ = resolvers.__init__  # type: ignore
+
+    @doc_field
+    def names(self) -> List[str]:
+        """field names"""
+        return [field.name for field in self.array.type]  # type: ignore
+
+    @doc_field
+    def column(self, name: str) -> Column:
+        """Return struct field as a column."""
+        return ListColumn.map(self, operator.methodcaller('field', name))
+
+
 column_map = {
     bool: BooleanColumn,
     int: IntColumn,
@@ -443,4 +464,5 @@ column_map = {
     bytes: BinaryColumn,
     str: StringColumn,
     list: ListColumn,
+    dict: StructColumn,
 }

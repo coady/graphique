@@ -50,6 +50,7 @@ type_map = {
     pa.lib.Type_BINARY: bytes,
     pa.lib.Type_STRING: str,
     pa.lib.Type_LIST: list,
+    pa.lib.Type_STRUCT: dict,
 }
 
 

@@ -64,7 +64,9 @@ class Columns:
 @strawberry.type(description="scalar fields")
 class Row:
     __annotations__ = {
-        name: Optional[Column if types[name] is list else types[name]] for name in types
+        name: Optional[Column if types[name] is list else types[name]]
+        for name in types
+        if types[name] is not dict
     }
     locals().update(dict.fromkeys(types))
 
@@ -128,15 +130,21 @@ class Table:
         return len(self.table)  # type: ignore
 
     @doc_field
+    def names(self) -> List[str]:
+        """column names"""
+        return list(map(to_camel_case, self.table.column_names))
+
+    @doc_field
     def columns(self) -> Columns:
         """fields for each column"""
         return Columns(self.table)
 
     @doc_field
-    def column(self, alias: str) -> Column:
-        """Return column by alias.
-        This is only needed for aliased columns added by `apply`; otherwise see `columns`."""
-        column = self.table[alias]
+    def column(self, name: str) -> Column:
+        """Return column of any type by name.
+        This is typically only needed for aliased columns added by `apply`.
+        If the column is in the schema, `columns` can be used instead."""
+        column = self.table[name]
         return column_map[type_map[column.type.id]](column)
 
     @doc_field

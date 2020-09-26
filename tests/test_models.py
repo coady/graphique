@@ -114,7 +114,7 @@ def test_numeric(executor):
 
     data = executor(
         '''{ apply(int32: {fillNull: -1, alias: "i"})
-        { column(alias: "i") { type ... on IntColumn { values } } } }'''
+        { column(name: "i") { type ... on IntColumn { values } } } }'''
     )
     assert data == {'apply': {'column': {'type': 'int32', 'values': [0, -1]}}}
 
@@ -129,7 +129,7 @@ def test_duration(executor):
     assert column['values'] == ['1970-01-01T00:00:00', '0001-01-01T00:00:00']
     assert column['subtract'] == {'values': [-62135596800.0, 0.0], 'quantile': [-31067798400.0]}
     data = executor(
-        '''{ apply(timestamp: {alias: "diff", subtract: "timestamp"}) { column(alias: "diff")
+        '''{ apply(timestamp: {alias: "diff", subtract: "timestamp"}) { column(name: "diff")
         { ... on DurationColumn { values min max count(equal: 0.0) } } } }'''
     )
     column = data['apply']['column']
@@ -154,12 +154,13 @@ def test_list(executor):
     assert data == {'row': {'list': None}}
 
     data = executor(
-        '''{ columns { list {
+        '''{ columns { list { count { values }
         first { ... on IntColumn { values } } last { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
         sum { ... on IntColumn { values } } mean { values } } } }'''
     )
     assert data['columns']['list'] == {
+        'count': {'values': [3, None]},
         'first': {'values': [0, None]},
         'last': {'values': [2, None]},
         'min': {'values': [0, None]},
@@ -167,3 +168,8 @@ def test_list(executor):
         'sum': {'values': [3, None]},
         'mean': {'values': [1.0, None]},
     }
+
+
+def test_struct(executor):
+    data = executor('{ columns { struct { names column(name: "x") { length } } } }')
+    assert data == {'columns': {'struct': {'names': ['x', 'y'], 'column': {'length': 2}}}}

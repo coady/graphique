@@ -165,6 +165,7 @@ type Columns {
   """Return column with optional projection."""
   camelId(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
   list: ListColumn!
+  struct: StructColumn!
 }
 
 """Date (isoformat)"""
@@ -565,14 +566,18 @@ type IndexedTable {
   """number of rows"""
   length: Long!
 
+  """column names"""
+  names: [String!]!
+
   """fields for each column"""
   columns: Columns!
 
   """
-  Return column by alias.
-          This is only needed for aliased columns added by `apply`; otherwise see `columns`.
+  Return column of any type by name.
+          This is typically only needed for aliased columns added by `apply`.
+          If the column is in the schema, `columns` can be used instead.
   """
-  column(alias: String!): Column!
+  column(name: String!): Column!
 
   """Return scalar values at index."""
   row(index: Long! = 0): Row!
@@ -757,6 +762,9 @@ type ListColumn implements Column {
 
   """list of columns"""
   values: [Column]!
+
+  """number of values of each list scalar"""
+  count: IntColumn!
 
   """first value of each list scalar"""
   first: Column!
@@ -1061,19 +1069,38 @@ type StringSet implements Set {
   values: [String]!
 }
 
+"""column of structs"""
+type StructColumn implements Column {
+  """array type"""
+  type: String!
+
+  """number of rows"""
+  length: Long!
+
+  """field names"""
+  names: [String!]!
+
+  """Return struct field as a column."""
+  column(name: String!): Column!
+}
+
 """a column-oriented table"""
 type Table {
   """number of rows"""
   length: Long!
 
+  """column names"""
+  names: [String!]!
+
   """fields for each column"""
   columns: Columns!
 
   """
-  Return column by alias.
-          This is only needed for aliased columns added by `apply`; otherwise see `columns`.
+  Return column of any type by name.
+          This is typically only needed for aliased columns added by `apply`.
+          If the column is in the schema, `columns` can be used instead.
   """
-  column(alias: String!): Column!
+  column(name: String!): Column!
 
   """Return scalar values at index."""
   row(index: Long! = 0): Row!
