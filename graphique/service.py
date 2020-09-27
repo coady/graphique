@@ -5,7 +5,8 @@ import functools
 import itertools
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, List, Optional, get_type_hints
+from typing import Callable, Iterable, List, Optional, get_type_hints
+import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
@@ -15,7 +16,7 @@ from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
-from .inputs import CountQuery, filter_map, query_map, function_map
+from .inputs import CountQuery, Field, filter_map, function_map, query_map
 from .models import Column, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -102,12 +103,12 @@ def references(node):
     if hasattr(node, 'name'):
         yield node.name.value
     value = getattr(node, 'value', None)
-    yield getattr(value, 'value', None)
-    for val in getattr(value, 'values', []):
-        yield val.value
+    yield value.value if hasattr(value, 'value') else value
     nodes = itertools.chain(
         getattr(node, 'arguments', []),
+        getattr(node, 'fields', []),
         getattr(value, 'fields', []),
+        getattr(value, 'values', []),
         getattr(getattr(node, 'selection_set', None), 'selections', []),
     )
     for node in nodes:
@@ -142,7 +143,7 @@ class Table:
     @doc_field
     def column(self, name: str) -> Column:
         """Return column of any type by name.
-        This is typically only needed for aliased columns added by `apply`.
+        This is typically only needed for aliased columns added by `apply` or `Groups.aggregate`.
         If the column is in the schema, `columns` can be used instead."""
         column = self.table[name]
         return column_map[type_map[column.type.id]](column)
@@ -174,7 +175,7 @@ class Table:
         reverse: bool = False,
         length: Optional[Long] = None,
         count: Optional[CountQuery] = None,
-    ) -> List['Table']:
+    ) -> 'Groups':
         """Return tables grouped by columns, with stable ordering.
         `length` is the maximum number of tables to return.
         `count` filters and sorts tables based on the number of rows within each table."""
@@ -197,13 +198,13 @@ class Table:
                 tables = sorted(chain(groups), key=len, reverse=reverse)
             else:
                 tables = chain(reversed(groups) if reverse else groups)  # type: ignore
-        return list(map(Table, itertools.islice(tables, length)))
+        return Groups(map(Table, itertools.islice(tables, length)), names)
 
     @doc_field
     def unique(self, info, by: List[str], reverse: bool = False) -> 'Table':
         """Return table of first or last occurrences grouped by columns, with stable ordering."""
         name = to_snake_case(by[-1])
-        groups = self.group(info, by[:-1], reverse=reverse)
+        groups = self.group(info, by[:-1], reverse=reverse).tables
         tables = [T.unique(group.table, name, reverse) for group in groups]
         return Table(pa.concat_tables(tables[::-1] if reverse else tables))
 
@@ -259,6 +260,63 @@ class Table:
             value.update({key: to_snake_case(value[key]) for key in value if key in T.projected})
             table = T.apply(table, name, **value)
         return Table(table)
+
+
+@strawberry.type(description="a list of tables")
+class Groups:
+    tables: List[Table]
+    aggregates = {
+        'first': lambda array: array[0].as_py(),
+        'last': lambda array: array[-1].as_py(),
+        'min': C.min,
+        'max': C.max,
+        'sum': C.sum,
+        'mean': C.mean,
+    }
+
+    def __init__(self, tables: Iterable[Table], names: Iterable[str]):
+        self.tables = list(tables)
+        self.names = set(names)
+
+    @doc_field
+    def length(self) -> int:
+        """number of tables"""
+        return len(self.tables)
+
+    def columns(self, name):
+        return [tbl.table[name] for tbl in self.tables]
+
+    @doc_field
+    def aggregate(
+        self,
+        count: str = '',
+        first: List[Field] = [],
+        last: List[Field] = [],
+        min: List[Field] = [],
+        max: List[Field] = [],
+        sum: List[Field] = [],
+        mean: List[Field] = [],
+    ) -> Table:
+        """Return single table with aggregate functions applied to columns.
+        The grouping keys are automatically included.
+        Any remaining columns are transformed into list columns.
+        Columns which are aliased or change type can be accessed by the `column` field."""
+        arrays = {}
+        if count:
+            arrays[count] = pa.array(map(Table.length, self.tables), pa.int32())
+        for key, func in self.aggregates.items():
+            for field in locals()[key]:
+                name = to_snake_case(field.name)
+                columns = self.columns(name)
+                arrays[field.alias or name] = pa.array(map(func, columns), columns[0].type)  # type: ignore
+        for name in self.names - set(arrays):
+            columns = self.columns(name)
+            arrays[name] = pa.array(map(self.aggregates['first'], columns), columns[0].type)  # type: ignore
+        for name in set(self.tables[0].table.column_names) - set(arrays):
+            columns = [column.chunk(0) for column in self.columns(name)]
+            offsets = np.concatenate([[0], np.cumsum(list(map(len, columns)))])
+            arrays[name] = pa.ListArray.from_arrays(offsets, pa.concat_arrays(columns))
+        return Table(pa.Table.from_pydict(arrays))
 
 
 @strawberry.type(description="a table sorted by a composite index")

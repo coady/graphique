@@ -441,6 +441,12 @@ input DurationQuery {
   isIn: [Duration!]
 }
 
+"""names and aliases for aggregation"""
+input Field {
+  name: String!
+  alias: String! = ""
+}
+
 """predicates for each column"""
 input Filters {
   bool: BooleanFilter
@@ -573,6 +579,22 @@ type FloatSet implements Set {
   values: [Float]!
 }
 
+"""a list of tables"""
+type Groups {
+  tables: [Table!]!
+
+  """number of tables"""
+  length: Int!
+
+  """
+  Return single table with aggregate functions applied to columns.
+          The grouping keys are automatically included.
+          Any remaining columns are transformed into list columns.
+          Columns which are aliased or change type can be accessed by the `column` field.
+  """
+  aggregate(count: String! = "", first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = []): Table!
+}
+
 """a table sorted by a composite index"""
 type IndexedTable {
   """number of rows"""
@@ -586,7 +608,7 @@ type IndexedTable {
 
   """
   Return column of any type by name.
-          This is typically only needed for aliased columns added by `apply`.
+          This is typically only needed for aliased columns added by `apply` or `Groups.aggregate`.
           If the column is in the schema, `columns` can be used instead.
   """
   column(name: String!): Column!
@@ -602,7 +624,7 @@ type IndexedTable {
           `length` is the maximum number of tables to return.
           `count` filters and sorts tables based on the number of rows within each table.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): [Table!]!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -1109,7 +1131,7 @@ type Table {
 
   """
   Return column of any type by name.
-          This is typically only needed for aliased columns added by `apply`.
+          This is typically only needed for aliased columns added by `apply` or `Groups.aggregate`.
           If the column is in the schema, `columns` can be used instead.
   """
   column(name: String!): Column!
@@ -1125,7 +1147,7 @@ type Table {
           `length` is the maximum number of tables to return.
           `count` filters and sorts tables based on the number of rows within each table.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): [Table!]!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.

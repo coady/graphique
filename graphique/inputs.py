@@ -332,3 +332,9 @@ class CountQuery(LongQuery):
             return max(values + [min(query.get('is_in', [0]))]).__le__
         funcs = [getattr(query[key], self.methods[key]) for key in set(query) - {'sort'}]
         return lambda value: all(func(value) for func in funcs)
+
+
+@strawberry.input(description="names and aliases for aggregation")
+class Field:
+    name: str
+    alias: str = ''

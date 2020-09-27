@@ -221,30 +221,55 @@ def test_sort(client):
 def test_group(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ group { length } }')
-    data = client.execute('{ group(by: ["state"]) { length columns { state { min max } } } }')
-    assert len(data['group']) == 52
-    assert data['group'][0]['length'] == 2205
-    states = data['group'][0]['columns']['state']
+    data = client.execute('{ slice(length: 0) { group(by: []) { aggregate { length } } } }')
+    assert data['slice']['group']['aggregate']['length'] == 0
+    data = client.execute(
+        '''{ group(by: ["state"]) { length tables { length columns { state { min max } } }
+        aggregate(count: "c") { column(name: "c") { ... on IntColumn { values } } } } }'''
+    )
+    assert len(data['group']['tables']) == data['group']['length'] == 52
+    table = data['group']['tables'][0]
+    assert table['length'] == data['group']['aggregate']['column']['values'][0] == 2205
+    states = table['columns']['state']
     assert states['min'] == states['max'] == 'NY'
     data = client.execute(
         '''{ group(by: ["state", "county"], reverse: true, length: 3)
-        { length row { state county } } }'''
+        { tables { length row { state county } }
+        aggregate(first: [{name: "city", alias: "f"}], last: [{name: "city", alias: "l"}]) {
+        f: column(name: "f") { ... on StringColumn { values } }
+        l: column(name: "l") { ... on StringColumn { values } } } } }'''
     )
-    assert [group['length'] for group in data['group']] == [9, 3, 1]
-    rows = [group['row'] for group in data['group']]
+    tables = data['group']['tables']
+    assert [group['length'] for group in tables] == [9, 3, 1]
+    rows = [group['row'] for group in tables]
     assert [row['state'] for row in rows] == ['AK'] * 3
     counties = [row['county'] for row in rows]
     assert counties == ['Prince Wales Ketchikan', 'Ketchikan Gateway', 'Sitka']
+    assert data['group']['aggregate']['f']['values'] == ['Meyers Chuck', 'Ketchikan', 'Sitka']
+    assert data['group']['aggregate']['l']['values'] == ['Point Baker', 'Ketchikan', 'Sitka']
     data = client.execute(
         '''{ group(by: ["state", "county"], reverse: true, count: {greaterEqual: 200})
-        { length } }'''
+        { tables { length }
+        aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
+        min: column(name: "min") { ... on StringColumn { values } }
+        max: column(name: "max") { ... on StringColumn { values } } } } }'''
     )
-    assert [row['length'] for row in data['group']] == [525, 242, 219, 284]
+    assert [row['length'] for row in data['group']['tables']] == [525, 242, 219, 284]
+    agg = data['group']['aggregate']
+    assert agg['min']['values'] == ['Acton', 'Alief', 'Alsip', 'Naval Anacost Annex']
+    assert agg['max']['values'] == ['Woodland Hills', 'Webster', 'Worth', 'Washington Navy Yard']
     data = client.execute(
         '''{ group(by: ["state", "county"], reverse: true, count: {greaterEqual: 200, sort: true})
-        { length } }'''
+        { tables { length }
+        aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
+        columns { latitude { values } longitude { values } }
+        column(name: "zipcode") { ... on ListColumn { count { values } } } } } }'''
     )
-    assert [row['length'] for row in data['group']] == [525, 284, 242, 219]
+    counts = [row['length'] for row in data['group']['tables']]
+    agg = data['group']['aggregate']
+    assert counts == agg['column']['count']['values'] == [525, 284, 242, 219]
+    assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
+    assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
 
 
 def test_unique(client):
