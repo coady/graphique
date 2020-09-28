@@ -287,6 +287,11 @@ def test_unique(client):
         '{ unique(by: ["state", "county"]) { length columns { zipcode { min max } } } }'
     )
     assert data == {'unique': {'length': 3216, 'columns': {'zipcode': {'min': 501, 'max': 99903}}}}
+    data = client.execute(
+        '''{ unique(by: ["state"], count: "counts")
+        { column(name: "counts") { ... on LongColumn { mean } } } }'''
+    )
+    assert data['unique']['column']['mean'] == pytest.approx(801.923076)
 
 
 def test_rows(client):

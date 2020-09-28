@@ -43,6 +43,7 @@ def test_chunks():
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(list(T.group(table, 'col'))) == 3
     assert len(T.unique(table, 'col')) == 3
+    assert T.unique(table, 'col', count='counts')['counts'].to_pylist() == [2, 3, 1]
 
 
 def test_lists():

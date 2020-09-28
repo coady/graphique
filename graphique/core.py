@@ -369,8 +369,12 @@ class Table(pa.Table):
             groups.sort(key=len)
         return map(take, reversed(groups) if reverse else groups)
 
-    def unique(self, name: str, reverse=False) -> pa.Table:
-        """Return table with first or last occurrences from grouping by column."""
+    def unique(self, name: str, reverse=False, count='') -> pa.Table:
+        """Return table with first or last occurrences from grouping by column.
+
+        Optionally include counts in an additional column.
+        Faster than :meth:`group` when only scalars are needed.
+        """
         num_chunks = Table.num_chunks(self)
         if num_chunks is None:
             self, num_chunks = self.combine_chunks(), 1
@@ -378,7 +382,11 @@ class Table(pa.Table):
             chunks = Column.map(rpartial(Chunk.argunique, reverse), self[name])
             chunks = (chunk[::-1] if reverse else chunk for chunk in chunks)
             self = Table.take_chunks(self, pa.chunked_array(chunks))
-        return self.take(Chunk.argunique(self[name].chunk(0), reverse) if num_chunks else [])
+        table = self.take(Chunk.argunique(self[name].chunk(0), reverse) if num_chunks else [])
+        if not count:
+            return table
+        _, counts = (self[name][::-1] if reverse else self[name]).value_counts().flatten()
+        return table.add_column(len(table.column_names), count, counts)
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns."""

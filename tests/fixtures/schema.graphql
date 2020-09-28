@@ -628,8 +628,10 @@ type IndexedTable {
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
+          Optionally include counts in an aliased column.
+          Faster than `group` when only scalars are needed.
   """
-  unique(by: [String!]!, reverse: Boolean! = false): Table!
+  unique(by: [String!]!, reverse: Boolean! = false, count: String! = ""): Table!
 
   """Return table slice sorted by specified columns."""
   sort(by: [String!]!, reverse: Boolean! = false, length: Long): Table!
@@ -1151,8 +1153,10 @@ type Table {
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
+          Optionally include counts in an aliased column.
+          Faster than `group` when only scalars are needed.
   """
-  unique(by: [String!]!, reverse: Boolean! = false): Table!
+  unique(by: [String!]!, reverse: Boolean! = false, count: String! = ""): Table!
 
   """Return table slice sorted by specified columns."""
   sort(by: [String!]!, reverse: Boolean! = false, length: Long): Table!

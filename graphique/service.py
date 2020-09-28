@@ -201,11 +201,13 @@ class Table:
         return Groups(map(Table, itertools.islice(tables, length)), names)
 
     @doc_field
-    def unique(self, info, by: List[str], reverse: bool = False) -> 'Table':
-        """Return table of first or last occurrences grouped by columns, with stable ordering."""
+    def unique(self, info, by: List[str], reverse: bool = False, count: str = '') -> 'Table':
+        """Return table of first or last occurrences grouped by columns, with stable ordering.
+        Optionally include counts in an aliased column.
+        Faster than `group` when only scalars are needed."""
         name = to_snake_case(by[-1])
         groups = self.group(info, by[:-1], reverse=reverse).tables
-        tables = [T.unique(group.table, name, reverse) for group in groups]
+        tables = [T.unique(group.table, name, reverse, count) for group in groups]
         return Table(pa.concat_tables(tables[::-1] if reverse else tables))
 
     @doc_field
