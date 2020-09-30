@@ -28,6 +28,7 @@ def test_chunks():
     assert C.minimum(array, array).equals(array)
     assert C.maximum(array, array).equals(array)
     table = pa.Table.from_pydict({'col': array})
+    assert T.unique(table, 'col', count='counts')['counts'].to_pylist() == [2, 3, 1]
     tables = list(T.group(table, 'col'))
     assert list(map(len, tables)) == [2, 3, 1]
     assert table['col'].unique() == pa.array('abc')
@@ -43,7 +44,6 @@ def test_chunks():
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(list(T.group(table, 'col'))) == 3
     assert len(T.unique(table, 'col')) == 3
-    assert T.unique(table, 'col', count='counts')['counts'].to_pylist() == [2, 3, 1]
 
 
 def test_lists():

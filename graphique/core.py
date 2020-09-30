@@ -129,6 +129,9 @@ class Column(pa.ChunkedArray):
     def map(func: Callable, *arrays: pa.ChunkedArray) -> Iterator:
         return Column.threader.map(func, *(arr.iterchunks() for arr in arrays))
 
+    def scalar_type(self):
+        return self.type.value_type if isinstance(self.type, pa.DictionaryType) else self.type
+
     def mask(self, func='and', **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
         masks = []
@@ -152,7 +155,7 @@ class Column(pa.ChunkedArray):
     def call(self, func: Callable, *args) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
         if args and not isinstance(args[0], pa.ChunkedArray) and func is not pc.match_substring:
-            args = (pa.scalar(args[0], getattr(self.type, 'value_type', self.type)),)
+            args = (pa.scalar(args[0], Column.scalar_type(self)),)
         if not isinstance(self.type, pa.DictionaryType):
             return func(self, *args)
         array = pa.chunked_array(Column.map(rpartial(Chunk.call, func, *args), self))
@@ -308,11 +311,7 @@ class Table(pa.Table):
 
     def types(self) -> dict:
         """Return mapping of column types."""
-        types = {}
-        for name, column in zip(self.column_names, self.columns):
-            tp = column.type
-            types[name] = tp.value_type if isinstance(tp, pa.DictionaryType) else tp
-        return types
+        return {name: Column.scalar_type(self[name]) for name in self.column_names}
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.
@@ -378,15 +377,14 @@ class Table(pa.Table):
         num_chunks = Table.num_chunks(self)
         if num_chunks is None:
             self, num_chunks = self.combine_chunks(), 1
+        if count:
+            _, counts = (self[name][::-1] if reverse else self[name]).value_counts().flatten()
         if num_chunks > 1:
             chunks = Column.map(rpartial(Chunk.argunique, reverse), self[name])
             chunks = (chunk[::-1] if reverse else chunk for chunk in chunks)
             self = Table.take_chunks(self, pa.chunked_array(chunks))
         table = self.take(Chunk.argunique(self[name].chunk(0), reverse) if num_chunks else [])
-        if not count:
-            return table
-        _, counts = (self[name][::-1] if reverse else self[name]).value_counts().flatten()
-        return table.add_column(len(table.column_names), count, counts)
+        return table.add_column(len(table.column_names), count, counts) if count else table
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns."""

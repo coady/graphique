@@ -291,6 +291,7 @@ class Groups:
     @doc_field
     def aggregate(
         self,
+        info,
         count: str = '',
         first: List[Field] = [],
         last: List[Field] = [],
@@ -304,19 +305,22 @@ class Groups:
         Any remaining columns are transformed into list columns.
         Columns which are aliased or change type can be accessed by the `column` field."""
         arrays = {}
-        if count:
-            arrays[count] = pa.array(map(Table.length, self.tables), pa.int32())
         for key, func in self.aggregates.items():
             for field in locals()[key]:
                 name = to_snake_case(field.name)
                 columns = self.columns(name)
-                arrays[field.alias or name] = pa.array(map(func, columns), columns[0].type)  # type: ignore
+                tp = pa.float64() if key == 'mean' else C.scalar_type(columns[0])
+                arrays[field.alias or name] = pa.array(map(func, columns), tp)  # type: ignore
         for name in self.names - set(arrays):
             columns = self.columns(name)
-            arrays[name] = pa.array(map(self.aggregates['first'], columns), columns[0].type)  # type: ignore
-        for name in set(self.tables[0].table.column_names) - set(arrays):
+            tp = C.scalar_type(columns[0])
+            arrays[name] = pa.array(map(self.aggregates['first'], columns), tp)  # type: ignore
+        counts = pa.array(map(Table.length, self.tables), pa.int32())
+        if count:
+            arrays[count] = counts
+        offsets = np.concatenate([[0], np.cumsum(counts)])
+        for name in set(self.tables[0].select(info).column_names) - set(arrays):
             columns = [column.chunk(0) for column in self.columns(name)]
-            offsets = np.concatenate([[0], np.cumsum(list(map(len, columns)))])
             arrays[name] = pa.ListArray.from_arrays(offsets, pa.concat_arrays(columns))
         return Table(pa.Table.from_pydict(arrays))
 
