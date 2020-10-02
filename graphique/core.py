@@ -4,6 +4,7 @@ Core utilities that add pandas-esque features to arrow arrays and table.
 Arrow forbids subclassing, so the classes are for logical grouping.
 Their methods are called as functions.
 """
+import abc
 import bisect
 import collections
 import contextlib
@@ -11,7 +12,7 @@ import functools
 import json
 import operator
 from concurrent import futures
-from typing import Callable, Iterator, Optional
+from typing import Callable, Iterable, Iterator, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -31,6 +32,18 @@ class Compare:
 
     def __gt__(self, other):
         return self.value > other.as_py()
+
+
+class Scalar(metaclass=abc.ABCMeta):
+    """Abstract base class to distinguish scalar values from other iterables."""
+
+    @classmethod
+    def __subclasshook__(cls, other):
+        return not issubclass(other, Iterable) or NotImplemented
+
+
+Scalar.register(str)
+Scalar.register(bytes)
 
 
 def rpartial(func, *values):
@@ -62,11 +75,6 @@ class Chunk:
     def call(self: pa.DictionaryArray, func: Callable, *args, **kwargs) -> pa.Array:
         dictionary = func(self.dictionary, *args, **kwargs)
         return pa.DictionaryArray.from_arrays(self.indices, dictionary)
-
-    def is_in(self, values, invert=False) -> pa.Array:
-        if not isinstance(self, pa.DictionaryArray):
-            return pa.array(np.isin(self, values, invert=invert))
-        return Chunk.call(self, np.isin, values, invert=invert).cast(pa.bool_())
 
     def to_null(array: np.ndarray) -> pa.Array:
         func = np.isnat if array.dtype.type in (np.datetime64, np.timedelta64) else np.isnan
@@ -154,7 +162,7 @@ class Column(pa.ChunkedArray):
 
     def call(self, func: Callable, *args) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
-        if args and not isinstance(args[0], pa.ChunkedArray) and func is not pc.match_substring:
+        if args and isinstance(args[0], Scalar) and func is not pc.match_substring:
             args = (pa.scalar(args[0], Column.scalar_type(self)),)
         if not isinstance(self.type, pa.DictionaryType):
             return func(self, *args)
@@ -176,9 +184,9 @@ class Column(pa.ChunkedArray):
             return pc.is_valid(self)
         return Column.call(self, pc.not_equal, value)
 
-    def is_in(self, values, invert=False) -> pa.ChunkedArray:
+    def is_in(self, values) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
-        return pa.chunked_array(Column.map(rpartial(Chunk.is_in, values, invert), self))
+        return Column.call(self, lambda *args: pc.call_function('is_in_meta_binary', args), values)
 
     def arggroupby(self) -> dict:
         """Return groups of index arrays."""

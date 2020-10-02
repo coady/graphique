@@ -92,7 +92,7 @@ def test_functional(table):
     assert set(C.not_equal(array, None).to_pylist()) == {True}
     mask = C.equal(array, 'CA')
     assert mask == C.is_in(array, ['CA']) == C.is_in(table['state'], ['CA'])
-    assert C.not_equal(array, 'CA') == C.is_in(array, ['CA'], invert=True)
+    assert C.not_equal(array, 'CA') == pc.call_function('invert', [mask])
     assert len(array.filter(mask)) == 2647
     assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
     assert sum(C.mask(array, binary_length={'equal': 2}).to_pylist()) == 41700
