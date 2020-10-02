@@ -192,6 +192,8 @@ class Column(pa.ChunkedArray):
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
         # arrow may seg fault when `sort_indices` is called on a non-chunked array
+        if isinstance(self.type, pa.DictionaryType):
+            self = self.cast(self.type.value_type)
         if length is not None:
             func = lambda v, i: v.take(i[-length:] if reverse else i[:length])
             chunks = Column.map(func, self, pc.call_function('sort_indices', [self]))
@@ -391,7 +393,10 @@ class Table(pa.Table):
         self = self.combine_chunks()
         indices = pa.array(np.arange(len(self)))
         for name in reversed(names):
-            indices = indices.take(pc.call_function('sort_indices', [self[name].take(indices)]))
+            column = self[name]
+            if isinstance(column.type, pa.DictionaryType):
+                column = column.cast(column.type.value_type)
+            indices = indices.take(pc.call_function('sort_indices', [column.take(indices)]))
         return self.take((indices[::-1] if reverse else indices)[:length])
 
     def mask(self, name: str, **query: dict) -> Iterator[pa.Array]:

@@ -19,6 +19,9 @@ def test_dictionary(table):
     assert sum(C.mask(array, match_substring="CA").to_pylist()) == 2647
     assert sum(C.mask(array, is_in=["CA"]).to_pylist()) == 2647
     assert "ca" in C.call(array, pc.utf8_lower).unique().dictionary.to_pylist()
+    assert C.sort(array)[0].as_py() == "AK"
+    table = pa.Table.from_pydict({'state': array})
+    assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
 
 
 def test_chunks():
