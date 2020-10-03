@@ -6,7 +6,6 @@ Their methods are called as functions.
 """
 import abc
 import bisect
-import collections
 import contextlib
 import functools
 import json
@@ -16,7 +15,7 @@ from typing import Callable, Iterable, Iterator, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
-from .arrayed import arggroupby, argunique  # type: ignore
+from .arrayed import group_indices, unique_indices  # type: ignore
 
 
 class Compare:
@@ -55,22 +54,21 @@ class Chunk:
     def encode(self):
         if not isinstance(self, pa.DictionaryArray):
             if not self.null_count and np.can_cast(self.type.to_pandas_dtype(), np.intp):
-                return None, self
+                return self
             self = self.dictionary_encode()
         if not self.indices.null_count:
-            return self.dictionary, self.indices
-        dictionary = pa.concat_arrays([self.dictionary, pa.array([None], self.dictionary.type)])
-        return dictionary, self.indices.fill_null(len(self.dictionary))
+            return self.indices
+        return self.indices.fill_null(len(self.dictionary))
 
-    def arggroupby(self) -> tuple:
-        dictionary, array = Chunk.encode(self)
-        keys, indices = arggroupby(array)
-        return (dictionary.take(keys) if dictionary else keys), indices
+    def group_indices(self) -> Iterable[pa.Array]:
+        _, indices = group_indices(Chunk.encode(self))
+        return map(operator.attrgetter('values'), indices)
 
-    def argunique(self, reverse=False) -> pa.IntegerArray:
-        _, array = Chunk.encode(self)
-        indices = argunique(array[::-1] if reverse else array)
-        return pc.subtract(pa.scalar(len(array) - 1), indices) if reverse else indices
+    def unique_indices(self, reverse=False) -> pa.IntegerArray:
+        array = Chunk.encode(self)
+        if not reverse:
+            return unique_indices(array)
+        return pc.subtract(pa.scalar(len(array) - 1), unique_indices(array[::-1]))
 
     def call(self: pa.DictionaryArray, func: Callable, *args, **kwargs) -> pa.Array:
         dictionary = func(self.dictionary, *args, **kwargs)
@@ -187,15 +185,6 @@ class Column(pa.ChunkedArray):
     def is_in(self, values) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
         return Column.call(self, lambda *args: pc.call_function('is_in_meta_binary', args), values)
-
-    def arggroupby(self) -> dict:
-        """Return groups of index arrays."""
-        empty = pa.array([], pa.int64())
-        result = collections.defaultdict(lambda: [empty] * self.num_chunks)  # type: dict
-        for index, (keys, groups) in enumerate(Column.map(Chunk.arggroupby, self)):
-            for key, group in zip(keys.to_pylist(), groups):
-                result[key][index] = group.values
-        return {key: pa.chunked_array(result[key]) for key in result}
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
@@ -346,37 +335,14 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
-    def num_chunks(self) -> Optional[int]:
-        """Return number of chunks if consistent across columns, else None."""
-        shapes = {tuple(map(len, column.iterchunks())) for column in self.columns}
-        return None if len(shapes) > 1 else sum(map(len, shapes))
-
-    def take_chunks(self, indices: pa.ChunkedArray) -> pa.Table:
-        """Return table with selected rows from a non-offset chunked array.
-
-        `ChunkedArray.take` concatenates the chunks and as such is not performant for grouping.
-        Assumes the shape of the columns is the same.
-        """
-        assert Table.num_chunks(self) is not None
-        columns = [Column.map(pa.Array.take, column, indices) for column in self.columns]
-        return pa.Table.from_arrays(list(map(pa.concat_arrays, columns)), self.column_names)
-
     def group(self, name: str, reverse=False, predicate=int, sort=False) -> Iterator[pa.Table]:
         """Generate tables grouped by column, with filtering and slicing on table length."""
-        num_chunks = Table.num_chunks(self)
-        if num_chunks is None:
-            self, num_chunks = self.combine_chunks(), 1
-        if num_chunks == 1:
-            _, groups = Chunk.arggroupby(self[name].chunk(0))
-            groups = map(operator.attrgetter('values'), groups)
-            take = self.take
-        else:
-            groups = Column.arggroupby(self[name]).values()
-            take = Table.take_chunks.__get__(self)  # type: ignore
+        self = self.combine_chunks()
+        groups = Chunk.group_indices(self[name].chunk(0))
         groups = [indices for indices in groups if predicate(len(indices))]
         if sort:
             groups.sort(key=len)
-        return map(take, reversed(groups) if reverse else groups)
+        return map(self.take, reversed(groups) if reverse else groups)
 
     def unique(self, name: str, reverse=False, count='') -> pa.Table:
         """Return table with first or last occurrences from grouping by column.
@@ -384,17 +350,12 @@ class Table(pa.Table):
         Optionally include counts in an additional column.
         Faster than :meth:`group` when only scalars are needed.
         """
-        num_chunks = Table.num_chunks(self)
-        if num_chunks is None:
-            self, num_chunks = self.combine_chunks(), 1
-        if count:
-            _, counts = (self[name][::-1] if reverse else self[name]).value_counts().flatten()
-        if num_chunks > 1:
-            chunks = Column.map(rpartial(Chunk.argunique, reverse), self[name])
-            chunks = (chunk[::-1] if reverse else chunk for chunk in chunks)
-            self = Table.take_chunks(self, pa.chunked_array(chunks))
-        table = self.take(Chunk.argunique(self[name].chunk(0), reverse) if num_chunks else [])
-        return table.add_column(len(table.column_names), count, counts) if count else table
+        self = self.combine_chunks()
+        table = self.take(Chunk.unique_indices(self[name].chunk(0), reverse))
+        if not count:
+            return table
+        _, counts = (self[name][::-1] if reverse else self[name]).value_counts().flatten()
+        return table.add_column(len(table.column_names), count, counts)
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns."""

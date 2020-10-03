@@ -10,7 +10,7 @@ def asiarray(array):
     return np.asarray(array).astype(np.intp, casting='safe', copy=False)
 
 
-def arggroupby(array: pa.IntegerArray) -> tuple:
+def group_indices(array: pa.IntegerArray) -> tuple:
     """Return unique keys with corresponding index arrays."""
     cdef const Py_ssize_t [:] array_view = asiarray(array)
     indices = np.empty(len(array), np.intp)
@@ -31,7 +31,7 @@ def arggroupby(array: pa.IntegerArray) -> tuple:
     return values, pa.ListArray.from_arrays(slices, indices)
 
 
-def argunique(array: pa.IntegerArray) -> pa.IntegerArray:
+def unique_indices(array: pa.IntegerArray) -> pa.IntegerArray:
     """Return index array of first occurrences.
 
     Relies on `Array.unique` having stable ordering.

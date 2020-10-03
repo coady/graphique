@@ -26,8 +26,6 @@ def test_dictionary(table):
 
 def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
-    groups = {key: value.to_pylist() for key, value in C.arggroupby(array).items()}
-    assert groups == {'a': [0, 2], 'b': [1, 0, 2], 'c': [1]}
     assert C.minimum(array, array).equals(array)
     assert C.maximum(array, array).equals(array)
     table = pa.Table.from_pydict({'col': array})
@@ -112,20 +110,9 @@ def test_functional(table):
 
 
 def test_group(table):
-    groups = C.arggroupby(table['zipcode'])
-    assert len(groups) == 41700
-    assert set(map(len, groups.values())) == {1}
-    groups = C.arggroupby(table['state'])
     tables = list(T.group(table, 'state'))
-    assert len(groups) == len(tables) == 52
-    assert list(map(len, groups.values())) == list(map(len, tables))
-    for chunk, indices in zip(table['state'].chunks, groups['CA'].chunks):
-        assert set(chunk.take(indices)) <= {pa.scalar('CA')}
-    groups = C.arggroupby(table['latitude'])
-    assert max(map(len, groups.values())) == 6
-    keys, indices = Chunk.arggroupby(pa.array([1, None, 1]))
-    assert keys.to_pylist() == [1, None]
-    assert indices.to_pylist() == [[0, 2], [1]]
+    assert len(tables) == 52
+    assert set(tables[0]['state'].to_pylist()) == {'NY'}
     tables = list(T.group(table, 'state', predicate=(100).__ge__, sort=True))
     assert [table['state'][0].as_py() for table in tables] == ['RI', 'DE']
 
@@ -140,7 +127,7 @@ def test_unique(table):
     assert len(zipcodes) == 52
     assert zipcodes[0] == 99950
     assert zipcodes[-1] == 988
-    indices = Chunk.argunique(pa.array([1, None, 1]))
+    indices = Chunk.unique_indices(pa.array([1, None, 1]))
     assert indices.to_pylist() == [0, 1]
 
 

@@ -184,11 +184,13 @@ class Table:
         names = list(map(to_snake_case, by))
         if count is None:
             for name in names:
-                tables = chain(T.group(table, name, reverse) for table in tables)  # type: ignore
+                func = functools.partial(T.group, name=name, reverse=reverse)
+                tables = chain(map(func, tables))  # type: ignore
         else:
             predicate = count.predicate(lower=True)
             for name in names[:-1]:
-                tables = chain(T.group(table, name, predicate=predicate) for table in tables)  # type: ignore
+                func = functools.partial(T.group, name=name, predicate=predicate)
+                tables = chain(map(func, tables))  # type: ignore
             kwargs = {'predicate': count.predicate(), 'sort': count.sort}
             groups = [
                 itertools.islice(T.group(table, names[-1], reverse, **kwargs), length)
@@ -205,9 +207,11 @@ class Table:
         """Return table of first or last occurrences grouped by columns, with stable ordering.
         Optionally include counts in an aliased column.
         Faster than `group` when only scalars are needed."""
+        tables = [self.select(info)]
+        if len(by) > 1:
+            tables = [group.table for group in self.group(info, by[:-1], reverse=reverse).tables]
         name = to_snake_case(by[-1])
-        groups = self.group(info, by[:-1], reverse=reverse).tables
-        tables = [T.unique(group.table, name, reverse, count) for group in groups]
+        tables = [T.unique(table, name, reverse, count) for table in tables]
         return Table(pa.concat_tables(tables[::-1] if reverse else tables))
 
     @doc_field

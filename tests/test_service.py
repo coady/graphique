@@ -270,6 +270,16 @@ def test_group(client):
     assert counts == agg['column']['count']['values'] == [525, 284, 242, 219]
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
+    data = client.execute(
+        '''{ sc: group(by: ["state", "county"]) { length }
+        cs: group(by: ["county", "state"]) { length } }'''
+    )
+    assert data['sc']['length'] == data['cs']['length'] == 3216
+    data = client.execute(
+        '''{ sc: group(by: ["state", "county"], count: {sort: true}) { length }
+        cs: group(by: ["county", "state"], count: {sort: true}) { length } }'''
+    )
+    assert data['sc']['length'] == data['cs']['length'] == 3216
 
 
 def test_unique(client):
