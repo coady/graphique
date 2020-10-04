@@ -13,6 +13,8 @@ def test_case(executor):
     assert data == {'columns': {'snakeId': {'values': [1, 2]}, 'camelId': {'values': [1, 2]}}}
     data = executor('{ columns { camelId(minimum: "snakeId") { values } } }')
     assert data == {'columns': {'camelId': {'values': [1, 2]}}}
+    data = executor('{ column(name: "snakeId") { length } }')
+    assert data == {'column': {'length': 2}}
     data = executor('{ row { snakeId camelId } }')
     assert data == {'row': {'snakeId': 1, 'camelId': 1}}
     data = executor('{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}) { length } }')
@@ -152,6 +154,8 @@ def test_list(executor):
     assert data == {'row': {'list': {'values': [0, 1, 2]}}}
     data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
     assert data == {'row': {'list': None}}
+    data = executor('{ columns { list { unique { flatten { ... on IntColumn { values } } } } } }')
+    assert data == {'columns': {'list': {'unique': {'flatten': {'values': [0, 1, 2]}}}}}
 
     data = executor(
         '''{ columns { list { count { values }
@@ -170,14 +174,16 @@ def test_list(executor):
     }
     data = executor(
         '''{ apply(list: {count: true}) {
-        column(name: "list") { ... on IntColumn { values } }} }'''
+        column(name: "list") { ... on IntColumn { values } } } }'''
     )
     assert data == {'apply': {'column': {'values': [3, None]}}}
     data = executor(
         '''{ apply(list: {first: true, alias: "first"}) {
-        column(name: "first") { ... on IntColumn { values } }} }'''
+        column(name: "first") { ... on IntColumn { values } } } }'''
     )
     assert data == {'apply': {'column': {'values': [0, None]}}}
+    data = executor('{ apply(list: {unique: true}) { columns { list { count { values } } } } }')
+    assert data == {'apply': {'columns': {'list': {'count': {'values': [3, 0]}}}}}
 
 
 def test_struct(executor):

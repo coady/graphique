@@ -48,9 +48,10 @@ def test_chunks():
 
 
 def test_lists():
-    array = pa.array([[2, 1], [0], [None], [], None])
+    array = pa.array([[2, 1], [0, 0], [None], [], None])
     assert ListChunk.first(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.last(array).to_pylist() == [1, 0, None, None, None]
+    assert ListChunk.unique(array).to_pylist() == [[2, 1], [0], [None], [], []]
     assert ListChunk.min(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.sum(array).to_pylist() == [3, 0, None, None, None]

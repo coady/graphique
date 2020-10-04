@@ -802,6 +802,12 @@ type ListColumn implements Column {
   """number of values of each list scalar"""
   count: IntColumn!
 
+  """concatenation of all sub-lists"""
+  flatten: Column!
+
+  """unique values within each scalar"""
+  unique: ListColumn!
+
   """first value of each list scalar"""
   first: Column!
 
@@ -827,6 +833,7 @@ input ListFunction {
   count: Boolean! = false
   first: Boolean! = false
   last: Boolean! = false
+  unique: Boolean! = false
   min: Boolean! = false
   max: Boolean! = false
   sum: Boolean! = false

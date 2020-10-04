@@ -406,6 +406,16 @@ class ListColumn(Column):
         return self.map(pa.ListArray.value_lengths)  # type: ignore
 
     @doc_field
+    def flatten(self) -> Column:
+        """concatenation of all sub-lists"""
+        return self.map(pa.ListArray.flatten)
+
+    @doc_field
+    def unique(self) -> 'ListColumn':
+        """unique values within each scalar"""
+        return self.map(ListChunk.unique)  # type: ignore
+
+    @doc_field
     def first(self) -> Column:
         """first value of each list scalar"""
         return self.map(ListChunk.first)

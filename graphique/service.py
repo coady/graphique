@@ -145,7 +145,7 @@ class Table:
         """Return column of any type by name.
         This is typically only needed for aliased columns added by `apply` or `Groups.aggregate`.
         If the column is in the schema, `columns` can be used instead."""
-        column = self.table[name]
+        column = self.table[to_snake_case(name)]
         return column_map[type_map[column.type.id]](column)
 
     @doc_field

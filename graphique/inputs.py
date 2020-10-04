@@ -291,6 +291,7 @@ class ListFunction(Function):
     count: bool = False
     first: bool = False
     last: bool = False
+    unique: bool = False
     min: bool = False
     max: bool = False
     sum: bool = False

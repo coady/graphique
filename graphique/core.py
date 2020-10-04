@@ -94,6 +94,13 @@ class ListChunk(pa.ListArray):
         indices = np.asarray(self.offsets[1:]) - 1
         return self.values.take(pa.array(indices, mask=mask))
 
+    def unique(self) -> pa.ListArray:
+        """unique values within each scalar"""
+        empty = pa.array([], self.type.value_type)
+        values = [empty if scalar.values is None else scalar.values.unique() for scalar in self]
+        offsets = np.concatenate([[0], np.cumsum(list(map(len, values)))])
+        return pa.ListArray.from_arrays(offsets, pa.concat_arrays(values))
+
     def reduce(self, func: Callable, tp=None) -> pa.Array:
         values = (func(scalar.values) if scalar.values else None for scalar in self)
         return pa.array(values, tp or self.type.value_type)
