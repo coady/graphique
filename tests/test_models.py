@@ -95,7 +95,9 @@ def test_columns(executor):
     assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsAlpha: true) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsDigit: true) } }') == {'string': {'count': 0}}
-    assert execute('{ string { type } }') == {'string': {'type': 'string'}}
+    assert execute('{ string { type } }') == {
+        'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
+    }
 
 
 def test_numeric(executor):
@@ -189,3 +191,11 @@ def test_list(executor):
 def test_struct(executor):
     data = executor('{ columns { struct { names column(name: "x") { length } } } }')
     assert data == {'columns': {'struct': {'names': ['x', 'y'], 'column': {'length': 2}}}}
+
+
+def test_dictionary(executor):
+    data = executor(
+        '''{ group(by: ["camelId"]) { aggregate { column(name: "string") {
+        ... on ListColumn { unique { count { values } } } } } } }'''
+    )
+    assert data == {'group': {'aggregate': {'column': {'unique': {'count': {'values': [1, 1]}}}}}}

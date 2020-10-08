@@ -324,8 +324,10 @@ class Groups:
             arrays[count] = counts
         offsets = np.concatenate([[0], np.cumsum(counts)])
         for name in set(self.tables[0].select(info).column_names) - set(arrays):
-            columns = [column.chunk(0) for column in self.columns(name)]
-            arrays[name] = pa.ListArray.from_arrays(offsets, pa.concat_arrays(columns))
+            values = pa.concat_arrays(column.chunk(0) for column in self.columns(name))
+            if isinstance(values, pa.DictionaryArray):
+                values = values.cast(values.type.value_type)
+            arrays[name] = pa.ListArray.from_arrays(offsets, values)
         return Table(pa.Table.from_pydict(arrays))
 
 
