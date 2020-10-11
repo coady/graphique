@@ -16,7 +16,7 @@ from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
-from .inputs import CountQuery, Field, filter_map, function_map, query_map
+from .inputs import CountQuery, Field, UniqueField, filter_map, function_map, query_map
 from .models import Column, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -303,6 +303,7 @@ class Groups:
         max: List[Field] = [],
         sum: List[Field] = [],
         mean: List[Field] = [],
+        unique: List[UniqueField] = [],
     ) -> Table:
         """Return single table with aggregate functions applied to columns.
         The grouping keys are automatically included.
@@ -315,6 +316,17 @@ class Groups:
                 columns = self.columns(name)
                 tp = pa.float64() if key == 'mean' else C.scalar_type(columns[0])
                 arrays[field.alias or name] = pa.array(map(func, columns), tp)  # type: ignore
+        for field in unique:
+            name = to_snake_case(field.name)
+            chunks = [column.chunk(0).unique() for column in self.columns(name)]
+            if field.count:
+                arrays[field.alias or name] = pa.array(map(len, chunks), pa.int32())
+            else:
+                values = pa.concat_arrays(chunks)
+                if isinstance(values, pa.DictionaryArray):
+                    values = values.cast(values.type.value_type)
+                offsets = np.concatenate([[0], np.cumsum(list(map(len, chunks)))])
+                arrays[field.alias or name] = pa.ListArray.from_arrays(offsets, values)
         for name in self.names - set(arrays):
             columns = self.columns(name)
             tp = C.scalar_type(columns[0])

@@ -339,3 +339,8 @@ class CountQuery(LongQuery):
 class Field:
     name: str
     alias: str = ''
+
+
+@strawberry.input(description="names and aliases for aggregation of unique values")
+class UniqueField(Field):
+    count: bool = False

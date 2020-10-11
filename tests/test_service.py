@@ -302,6 +302,17 @@ def test_unique(client):
         { column(name: "counts") { ... on LongColumn { mean } } } }'''
     )
     assert data['unique']['column']['mean'] == pytest.approx(801.923076)
+    data = client.execute(
+        '''{ group(by: ["state"]) { aggregate(unique: {name: "city"}) {
+        column(name: "city") { ... on ListColumn { count { values } } } } } }'''
+    )
+    counts = data['group']['aggregate']['column']['count']['values']
+    assert sum(counts) == 29734
+    data = client.execute(
+        '''{ group(by: ["state"]) { aggregate(unique: {name: "city", count: true}) {
+        column(name: "city") { ... on IntColumn { values } } } } }'''
+    )
+    assert data['group']['aggregate']['column']['values'] == counts
 
 
 def test_rows(client):

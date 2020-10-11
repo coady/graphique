@@ -592,7 +592,7 @@ type Groups {
           Any remaining columns are transformed into list columns.
           Columns which are aliased or change type can be accessed by the `column` field.
   """
-  aggregate(count: String! = "", first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = []): Table!
+  aggregate(count: String! = "", first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = [], unique: [UniqueField!]! = []): Table!
 }
 
 """a table sorted by a composite index"""
@@ -1258,4 +1258,11 @@ type TimeSet implements Set {
 
   """list of values"""
   values: [Time]!
+}
+
+"""names and aliases for aggregation of unique values"""
+input UniqueField {
+  name: String!
+  alias: String! = ""
+  count: Boolean! = false
 }

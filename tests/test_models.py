@@ -199,3 +199,13 @@ def test_dictionary(executor):
         ... on ListColumn { unique { count { values } } } } } } }'''
     )
     assert data == {'group': {'aggregate': {'column': {'unique': {'count': {'values': [1, 1]}}}}}}
+    data = executor(
+        '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string"}) { column(name: "string") {
+        ... on ListColumn { count { values } } } } } }'''
+    )
+    assert data == {'group': {'aggregate': {'column': {'count': {'values': [1, 1]}}}}}
+    data = executor(
+        '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string", count: true})
+        { column(name: "string") { ... on IntColumn { values } } } } }'''
+    )
+    assert data == {'group': {'aggregate': {'column': {'values': [1, 1]}}}}
