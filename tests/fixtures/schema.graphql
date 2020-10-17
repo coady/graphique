@@ -589,7 +589,7 @@ type Groups {
   """
   Return single table with aggregate functions applied to columns.
           The grouping keys are automatically included.
-          Any remaining columns are transformed into list columns.
+          Any remaining columns referenced in fields are transformed into list columns.
           Columns which are aliased or change type can be accessed by the `column` field.
   """
   aggregate(count: String! = "", first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = [], unique: [UniqueField!]! = []): Table!

@@ -10,12 +10,12 @@
 [![image](http://mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 
 [GraphQL](https://graphql.org) service for [arrow](https://arrow.apache.org) tables
-and [parquet](https://parquet.apache.org) files.
+and [parquet](https://parquet.apache.org) data sets.
 The schema is derived automatically.
 
 # Usage
 ```console
-% env PARQUET_PATH=... uvicorn graphique.service:app [--reload]
+% env PARQUET_PATH=... uvicorn graphique.service:app
 ```
 
 Open http://localhost:8000/graphql to try out the API in [GraphiQL](https://github.com/graphql/graphiql/tree/main/packages/graphiql#readme).
@@ -109,3 +109,9 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables a bi
 ```console
 % pytest [--cov]
 ```
+
+# Changes
+dev
+* `ListColumn` and `StructColumn` types
+* `Groups` type with `aggregate` field
+* `group` and `unique` optimized

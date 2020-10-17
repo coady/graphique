@@ -211,6 +211,8 @@ class Table:
         if len(by) > 1:
             tables = [group.table for group in self.group(info, by[:-1], reverse=reverse).tables]
         name = to_snake_case(by[-1])
+        if selections(*info.field_nodes) == {'length'}:  # optimized for count
+            return Table(range(sum(len(table[name].unique()) for table in tables)))  # type: ignore
         tables = [T.unique(table, name, reverse, count) for table in tables]
         return Table(pa.concat_tables(tables[::-1] if reverse else tables))
 
@@ -307,7 +309,7 @@ class Groups:
     ) -> Table:
         """Return single table with aggregate functions applied to columns.
         The grouping keys are automatically included.
-        Any remaining columns are transformed into list columns.
+        Any remaining columns referenced in fields are transformed into list columns.
         Columns which are aliased or change type can be accessed by the `column` field."""
         arrays = {}
         for key, func in self.aggregates.items():

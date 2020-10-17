@@ -140,7 +140,8 @@ class Column(pa.ChunkedArray):
     threader = futures.ThreadPoolExecutor(pa.cpu_count())
 
     def map(func: Callable, *arrays: pa.ChunkedArray) -> Iterator:
-        return Column.threader.map(func, *(arr.iterchunks() for arr in arrays))
+        map_ = Column.threader.map if arrays[0].num_chunks > 1 else map
+        return map_(func, *(arr.iterchunks() for arr in arrays))  # type: ignore
 
     def scalar_type(self):
         return self.type.value_type if isinstance(self.type, pa.DictionaryType) else self.type
@@ -247,9 +248,7 @@ class Column(pa.ChunkedArray):
             chunks = Column.map(func, self, value)
         else:
             chunks = Column.map(rpartial(func, value), self)
-        if self.null_count:
-            chunks = Column.threader.map(Chunk.to_null, chunks)
-        return pa.chunked_array(chunks)
+        return pa.chunked_array(map(Chunk.to_null, chunks) if self.null_count else chunks)
 
     def minimum(self, value) -> pa.ChunkedArray:
         """Return element-wise minimum of values."""
@@ -262,9 +261,7 @@ class Column(pa.ChunkedArray):
     def absolute(self) -> pa.ChunkedArray:
         """Return absolute values."""
         chunks = Column.map(np.absolute, self)
-        if self.null_count:
-            chunks = Column.threader.map(Chunk.to_null, chunks)
-        return pa.chunked_array(chunks)
+        return pa.chunked_array(map(Chunk.to_null, chunks) if self.null_count else chunks)
 
     def count(self, value) -> int:
         """Return number of occurrences of value."""
@@ -375,7 +372,7 @@ class Table(pa.Table):
             indices = indices.take(pc.call_function('sort_indices', [column.take(indices)]))
         return self.take((indices[::-1] if reverse else indices)[:length])
 
-    def mask(self, name: str, **query: dict) -> Iterator[pa.Array]:
+    def mask(self, name: str, **query: dict) -> pa.Array:
         """Return mask array which matches query."""
         masks, column = [], self[name]
         partials = dict(query.pop('apply', {}))
