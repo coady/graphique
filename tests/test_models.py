@@ -121,6 +121,8 @@ def test_numeric(executor):
         { column(name: "i") { type ... on IntColumn { values } } } }'''
     )
     assert data == {'apply': {'column': {'type': 'int32', 'values': [0, -1]}}}
+    data = executor('{ columns { float { add(value: 2.0) { divide(value: 1.0) { sum } } } } }')
+    assert data == {'columns': {'float': {'add': {'divide': {'sum': 0.5}}}}}
 
 
 def test_duration(executor):

@@ -251,10 +251,10 @@ class Table:
             masks.append(T.mask(table, name, **value))
         if not masks:
             return self
-        mask = functools.reduce(lambda *args: pc.call_function(reduce.value, args), masks)
+        mask = functools.reduce(getattr(pc, reduce.value), masks)
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
             return Table(range(C.count(mask, not invert)))  # type: ignore
-        return Table(table.filter(pc.call_function('invert', [mask]) if invert else mask))
+        return Table(table.filter(pc.invert(mask) if invert else mask))
 
     @function_field
     def apply(self, **functions) -> 'Table':

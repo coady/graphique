@@ -108,34 +108,34 @@ type Columns {
   bool: BooleanColumn!
 
   """Return column with optional projection."""
-  uint8(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
+  uint8(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  int8(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
+  int8(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  uint16(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
+  uint16(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  int16(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
+  int16(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  uint32(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
+  uint32(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): LongColumn!
 
   """Return column with optional projection."""
-  int32(add: String, subtract: String, multiply: String, minimum: String, maximum: String): IntColumn!
+  int32(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): IntColumn!
 
   """Return column with optional projection."""
-  uint64(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
+  uint64(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): LongColumn!
 
   """Return column with optional projection."""
-  int64(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
+  int64(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): LongColumn!
 
   """Return column with optional projection."""
-  float(add: String, subtract: String, multiply: String, minimum: String, maximum: String): FloatColumn!
+  float(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): FloatColumn!
 
   """Return column with optional projection."""
-  double(add: String, subtract: String, multiply: String, minimum: String, maximum: String): FloatColumn!
+  double(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): FloatColumn!
 
   """Return column with optional projection."""
   decimal(minimum: String, maximum: String): DecimalColumn!
@@ -160,10 +160,10 @@ type Columns {
   string(minimum: String, maximum: String): StringColumn!
 
   """Return column with optional projection."""
-  snakeId(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
+  snakeId(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): LongColumn!
 
   """Return column with optional projection."""
-  camelId(add: String, subtract: String, multiply: String, minimum: String, maximum: String): LongColumn!
+  camelId(add: String, subtract: String, multiply: String, divide: String, minimum: String, maximum: String): LongColumn!
   list: ListColumn!
   struct: StructColumn!
 }
@@ -522,6 +522,9 @@ type FloatColumn implements Column {
   """Return values multiplied by scalar."""
   multiply(value: Float!): FloatColumn!
 
+  """Return values divided *into* scalar."""
+  divide(value: Float!): FloatColumn!
+
   """Return element-wise minimum compared to scalar."""
   minimum(value: Float!): FloatColumn!
 
@@ -553,6 +556,7 @@ input FloatFunction {
   add: String
   subtract: String
   multiply: String
+  divide: String
   absolute: Boolean! = false
   fillNull: Float
 }
@@ -718,6 +722,9 @@ type IntColumn implements Column {
   """Return values multiplied by scalar."""
   multiply(value: Int!): IntColumn!
 
+  """Return values divided *into* scalar."""
+  divide(value: Int!): IntColumn!
+
   """Return element-wise minimum compared to scalar."""
   minimum(value: Int!): IntColumn!
 
@@ -749,6 +756,7 @@ input IntFunction {
   add: String
   subtract: String
   multiply: String
+  divide: String
   absolute: Boolean! = false
   fillNull: Int
 }
@@ -893,6 +901,9 @@ type LongColumn implements Column {
   """Return values multiplied by scalar."""
   multiply(value: Long!): LongColumn!
 
+  """Return values divided *into* scalar."""
+  divide(value: Long!): LongColumn!
+
   """Return element-wise minimum compared to scalar."""
   minimum(value: Long!): LongColumn!
 
@@ -924,6 +935,7 @@ input LongFunction {
   add: String
   subtract: String
   multiply: String
+  divide: String
   absolute: Boolean! = false
   fillNull: Long
 }
@@ -987,6 +999,7 @@ input Ratio {
   subtract: String
   add: String
   multiply: String
+  divide: String
 }
 
 """scalar fields"""

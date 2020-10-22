@@ -39,6 +39,7 @@ class Interval(Ordinal):
 class Ratio(Interval):
     add: Optional[str] = undefined
     multiply: Optional[str] = undefined
+    divide: Optional[str] = undefined
 
 
 class Query:
@@ -235,6 +236,7 @@ class RatioFunction(OrdinalFunction):
     add: Optional[str] = undefined
     subtract: Optional[str] = undefined
     multiply: Optional[str] = undefined
+    divide: Optional[str] = undefined
     absolute: bool = False
 
 

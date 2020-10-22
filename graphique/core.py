@@ -113,7 +113,10 @@ class ListChunk(pa.ListArray):
                 array = array.filter(array.is_valid())
             return np.min(array) if len(array) else None
 
-        return ListChunk.reduce(self, func)
+        try:
+            return ListChunk.reduce(self, lambda arr: pc.min_max(arr).as_py()['min'])
+        except NotImplementedError:
+            return ListChunk.reduce(self, func)
 
     def max(self) -> pa.Array:
         """max value of each list scalar"""
@@ -123,7 +126,10 @@ class ListChunk(pa.ListArray):
                 array = array.filter(array.is_valid())
             return np.max(array) if len(array) else None
 
-        return ListChunk.reduce(self, func)
+        try:
+            return ListChunk.reduce(self, lambda arr: pc.min_max(arr).as_py()['max'])
+        except NotImplementedError:
+            return ListChunk.reduce(self, func)
 
     def sum(self) -> pa.Array:
         """sum each list scalar"""
@@ -161,7 +167,7 @@ class Column(pa.ChunkedArray):
             elif query[op]:
                 masks.append(Column.call(self, getattr(pc, op)))
         if masks:
-            return functools.reduce(lambda *args: pc.call_function(func, args), masks)
+            return functools.reduce(getattr(pc, func), masks)
         with contextlib.suppress(NotImplementedError):
             self = Column.call(self, pc.binary_length)
         return self.cast(pa.bool_())
@@ -192,7 +198,7 @@ class Column(pa.ChunkedArray):
 
     def is_in(self, values) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
-        return Column.call(self, lambda *args: pc.call_function('is_in_meta_binary', args), values)
+        return Column.call(self, pc.is_in_meta_binary, values)
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
@@ -201,11 +207,11 @@ class Column(pa.ChunkedArray):
             self = self.cast(self.type.value_type)
         if length is not None:
             func = lambda v, i: v.take(i[-length:] if reverse else i[:length])
-            chunks = Column.map(func, self, pc.call_function('sort_indices', [self]))
+            chunks = Column.map(func, self, pc.sort_indices(self))
             self = pa.chunked_array([pa.concat_arrays(chunks)])
         elif self.num_chunks > 1:
             self = pa.chunked_array([pa.concat_arrays(self.iterchunks())])
-        indices = pc.call_function('sort_indices', [self])
+        indices = pc.sort_indices(self)
         return self.take((indices[::-1] if reverse else indices)[:length])
 
     def mapreduce(self, mapper, reducer, default=None):
@@ -225,7 +231,19 @@ class Column(pa.ChunkedArray):
 
     def mean(self) -> Optional[float]:
         """Return mean of the values."""
-        return pc.call_function('mean', [self]).as_py()
+        return pc.mean(self).as_py()
+
+    def mode(self):
+        """Return mode of the values."""
+        return pc.mode(self).as_py()['mode']
+
+    def stddev(self) -> Optional[float]:
+        """Return standard deviation of the values."""
+        return pc.stddev(self).as_py()
+
+    def variance(self) -> Optional[float]:
+        """Return variance of the values."""
+        return pc.variance(self).as_py()
 
     def quantile(self, *q: float) -> list:
         """Return q-th quantiles for values."""
@@ -237,11 +255,17 @@ class Column(pa.ChunkedArray):
 
     def min(self):
         """Return min of the values."""
-        return Column.mapreduce(self, np.min, min)
+        try:
+            return pc.min_max(self).as_py()['min']
+        except NotImplementedError:
+            return Column.mapreduce(self, np.min, min)
 
     def max(self):
         """Return max of the values."""
-        return Column.mapreduce(self, np.max, max)
+        try:
+            return pc.min_max(self).as_py()['max']
+        except NotImplementedError:
+            return Column.mapreduce(self, np.max, max)
 
     def compare(self, func, value):
         if isinstance(value, pa.ChunkedArray):
@@ -296,6 +320,7 @@ class Table(pa.Table):
         'add': pc.add,
         'subtract': pc.subtract,
         'multiply': pc.multiply,
+        'divide': pc.divide,
         'minimum': Column.minimum,
         'maximum': Column.maximum,
     }
@@ -369,7 +394,7 @@ class Table(pa.Table):
             column = self[name]
             if isinstance(column.type, pa.DictionaryType):
                 column = column.cast(column.type.value_type)
-            indices = indices.take(pc.call_function('sort_indices', [column.take(indices)]))
+            indices = indices.take(pc.sort_indices(column.take(indices)))
         return self.take((indices[::-1] if reverse else indices)[:length])
 
     def mask(self, name: str, **query: dict) -> pa.Array:
@@ -381,7 +406,7 @@ class Table(pa.Table):
         masks += [getattr(pc, op)(column, self[partials[op]]) for op in partials]
         if query:
             masks.append(Column.mask(column, **query))
-        return functools.reduce(lambda *args: pc.call_function('and', args), masks)
+        return functools.reduce(getattr(pc, 'and'), masks)
 
     def apply(self, name: str, alias: str = '', **partials) -> pa.Table:
         """Return view of table with functions applied across columns."""

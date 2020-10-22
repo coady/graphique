@@ -150,6 +150,10 @@ class resolvers:
         """Return values multiplied by scalar."""
         return type(self)(pc.multiply(pa.scalar(value, self.array.type), self.array))
 
+    def divide(self, value):
+        """Return values divided *into* scalar."""
+        return type(self)(pc.divide(pa.scalar(value, self.array.type), self.array))
+
     def minimum(self, value):
         """Return element-wise minimum compared to scalar."""
         return type(self)(C.minimum(self.array, value))
@@ -228,6 +232,7 @@ class IntColumn(Column):
     add = annotate(resolvers.add, 'IntColumn', value=int)
     subtract = annotate(resolvers.subtract, 'IntColumn', value=int)
     multiply = annotate(resolvers.multiply, 'IntColumn', value=int)
+    divide = annotate(resolvers.divide, 'IntColumn', value=int)
     minimum = annotate(resolvers.minimum, 'IntColumn', value=int)
     maximum = annotate(resolvers.maximum, 'IntColumn', value=int)
     absolute = annotate(resolvers.absolute, 'IntColumn')
@@ -251,6 +256,7 @@ class LongColumn(Column):
     add = annotate(resolvers.add, 'LongColumn', value=Long)
     subtract = annotate(resolvers.subtract, 'LongColumn', value=Long)
     multiply = annotate(resolvers.multiply, 'LongColumn', value=Long)
+    divide = annotate(resolvers.divide, 'LongColumn', value=Long)
     minimum = annotate(resolvers.minimum, 'LongColumn', value=Long)
     maximum = annotate(resolvers.maximum, 'LongColumn', value=Long)
     absolute = annotate(resolvers.absolute, 'LongColumn')
@@ -273,6 +279,7 @@ class FloatColumn(Column):
     add = annotate(resolvers.add, 'FloatColumn', value=float)
     subtract = annotate(resolvers.subtract, 'FloatColumn', value=float)
     multiply = annotate(resolvers.multiply, 'FloatColumn', value=float)
+    divide = annotate(resolvers.divide, 'FloatColumn', value=float)
     minimum = annotate(resolvers.minimum, 'FloatColumn', value=float)
     maximum = annotate(resolvers.maximum, 'FloatColumn', value=float)
     absolute = annotate(resolvers.absolute, 'FloatColumn')

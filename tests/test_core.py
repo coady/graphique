@@ -1,3 +1,4 @@
+import pytest
 import pyarrow as pa
 import pyarrow.compute as pc
 from graphique.core import Chunk, ListChunk, Column as C, Table as T
@@ -56,6 +57,9 @@ def test_lists():
     assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.sum(array).to_pylist() == [3, 0, None, None, None]
     assert ListChunk.mean(array).to_pylist() == [1.5, 0.0, None, None, None]
+    array = pa.array([["a", "b"], [None]])
+    assert ListChunk.min(array).to_pylist() == ["a", None]
+    assert ListChunk.max(array).to_pylist() == ["b", None]
 
 
 def test_reduce():
@@ -71,6 +75,10 @@ def test_reduce():
     assert eq(C.max(array), 1)
     assert C.quantile(array, 0.5) == [1.0]
     assert C.quantile(array[:1], 0.5) == [None]
+    array = pa.chunked_array([[0, 3, 0]])
+    assert C.mode(array) == 0
+    assert C.stddev(array) == pytest.approx(2.0 ** 0.5)
+    assert C.variance(array) == 2.0
 
 
 def test_membership():
@@ -91,7 +99,7 @@ def test_functional(table):
     assert set(C.not_equal(array, None).to_pylist()) == {True}
     mask = C.equal(array, 'CA')
     assert mask == C.is_in(array, ['CA']) == C.is_in(table['state'], ['CA'])
-    assert C.not_equal(array, 'CA') == pc.call_function('invert', [mask])
+    assert C.not_equal(array, 'CA') == pc.invert(mask)
     assert len(array.filter(mask)) == 2647
     assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
     assert sum(C.mask(array, binary_length={'equal': 2}).to_pylist()) == 41700
