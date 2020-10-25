@@ -1,1 +1,3 @@
 cython
+mkdocs-material
+mkdocstrings

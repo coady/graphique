@@ -1,0 +1,19 @@
+site_name: graphique
+site_description: GraphQL service for arrow tables and parquet data sets.
+theme: material
+
+repo_name: coady/graphique
+repo_url: https://github.com/coady/graphique
+edit_uri: ""
+
+nav:
+  - Introduction: index.md
+  - Reference: reference.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          rendering:
+            show_root_heading: true

@@ -1,0 +1,58 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - run: |
+        pip install pyarrow
+        pip install -r docs/requirements.txt
+        python setup.py sdist
+        make
+        PYTHONPATH=$PWD mkdocs gh-deploy --force
+    - uses: pypa/gh-action-pypi-publish@v1.4.1
+      with:
+        password: ${{ secrets.PYPI_TOKEN }}
+        verbose: true
+
+  macos:
+    needs: publish
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8]
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - run: |
+        pip install wheel
+        python setup.py bdist_wheel
+    - uses: pypa/gh-action-pypi-publish@v1.4.1
+      with:
+        password: ${{ secrets.PYPI_TOKEN }}
+        verbose: true
+
+  linux:
+    needs: publish
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux2014_x86_64
+    steps:
+    - uses: actions/checkout@v2
+    - run: |
+        make cp37 cp38
+    - uses: pypa/gh-action-pypi-publish@v1.4.1
+      with:
+        password: ${{ secrets.PYPI_TOKEN }}
+        packages_dir: wheelhouse/
+        verbose: true

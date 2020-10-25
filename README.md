@@ -2,10 +2,9 @@
 ![image](https://img.shields.io/pypi/pyversions/graphique.svg)
 [![image](https://pepy.tech/badge/graphique)](https://pepy.tech/project/graphique)
 ![image](https://img.shields.io/pypi/status/graphique.svg)
-[![image](https://api.travis-ci.com/coady/graphique.svg)](https://travis-ci.com/coady/graphique)
+[![image](https://github.com/coady/graphique/workflows/build/badge.svg)](https://github.com/coady/graphique/actions)
 [![image](https://img.shields.io/codecov/c/github/coady/graphique.svg)](https://codecov.io/github/coady/graphique)
-[![image](https://readthedocs.org/projects/graphique/badge)](https://graphique.readthedocs.io)
-[![image](https://requires.io/github/coady/graphique/requirements.svg)](https://requires.io/github/coady/graphique/requirements/)
+[![image](https://requires.io/github/coady/graphique/requirements.svg?branch=main)](https://requires.io/github/coady/graphique/requirements/)
 [![image](https://img.shields.io/badge/code%20style-black-000000.svg)](https://pypi.org/project/black/)
 [![image](http://mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 
@@ -13,7 +12,7 @@
 and [parquet](https://parquet.apache.org) data sets.
 The schema is derived automatically.
 
-# Usage
+## Usage
 ```console
 % env PARQUET_PATH=... uvicorn graphique.service:app
 ```
@@ -21,9 +20,10 @@ The schema is derived automatically.
 Open http://localhost:8000/graphql to try out the API in [GraphiQL](https://github.com/graphql/graphiql/tree/main/packages/graphiql#readme).
 There is a test fixture at `./tests/fixtures/zipcodes.parquet`.
 
-## Configuration
+### Configuration
 Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file.
 Config variables are used as input to [ParquetDataset](https://arrow.apache.org/docs/python/parquet.html#reading-from-partitioned-datasets).
+
 * COLUMNS = None
 * DEBUG = False
 * DICTIONARIES = None
@@ -31,17 +31,27 @@ Config variables are used as input to [ParquetDataset](https://arrow.apache.org/
 * MMAP = True
 * PARQUET_PATH
 
-## Queries
+### Queries
 A `Table` is the primary interface.  It has fields for filtering, sorting, and grouping.
 
-```typescript
+```graphql
 """a column-oriented table"""
 type Table {
   """number of rows"""
   length: Long!
 
+  """column names"""
+  names: [String!]!
+
   """fields for each column"""
   columns: Columns!
+
+  """
+  Return column of any type by name.
+          This is typically only needed for aliased columns added by `apply` or `Groups.aggregate`.
+          If the column is in the schema, `columns` can be used instead.
+  """
+  column(name: String!): Column!
 
   """Return scalar values at index."""
   row(index: Long! = 0): Row!
@@ -54,12 +64,14 @@ type Table {
           `length` is the maximum number of tables to return.
           `count` filters and sorts tables based on the number of rows within each table.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: LongReduce): [Table!]!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
+          Optionally include counts in an aliased column.
+          Faster than `group` when only scalars are needed.
   """
-  unique(by: [String!]!, reverse: Boolean! = false): Table!
+  unique(by: [String!]!, reverse: Boolean! = false, count: String! = ""): Table!
 
   """Return table slice sorted by specified columns."""
   sort(by: [String!]!, reverse: Boolean! = false, length: Long): Table!
@@ -76,15 +88,24 @@ type Table {
           `reduce` is the binary operator to combine filters; within a column all predicates must match.
   """
   filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
+
+  """
+  Return view of table with functions applied across columns.
+          If no alias is provided, the column is replaced and should be of the same type.
+          If an alias is provided, a column is added and may be referenced in the `column` interface,
+          and in the `by` arguments of grouping and sorting.
+  """
+  apply(...): Table!
+}
 ```
 
-## Performance
+### Performance
 Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible.
 Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views.
 Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
 
 Specifying an `INDEX` of columns indicates the table is sorted, and enables a binary search interface.
-```typescript
+```graphql
   """
   Return table with matching values for compound `index`.
           Queries must be a prefix of the `index`.
@@ -93,25 +114,26 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables a bi
   search(...): Table!
 ```
 
-# Installation
+## Installation
 ```console
 % pip install graphique
 ```
 
-# Dependencies
+## Dependencies
 * pyarrow >=2
 * strawberry-graphql >=0.30
 * pytz (optional timestamp support)
 
-# Tests
+## Tests
 100% branch coverage.
 
 ```console
 % pytest [--cov]
 ```
 
-# Changes
+## Changes
 dev
+
 * `ListColumn` and `StructColumn` types
 * `Groups` type with `aggregate` field
 * `group` and `unique` optimized
