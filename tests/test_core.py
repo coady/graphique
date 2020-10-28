@@ -57,6 +57,9 @@ def test_lists():
     assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.sum(array).to_pylist() == [3, 0, None, None, None]
     assert ListChunk.mean(array).to_pylist() == [1.5, 0.0, None, None, None]
+    assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
+    assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
+    assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
     array = pa.array([["a", "b"], [None]])
     assert ListChunk.min(array).to_pylist() == ["a", None]
     assert ListChunk.max(array).to_pylist() == ["b", None]

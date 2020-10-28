@@ -139,6 +139,18 @@ class ListChunk(pa.ListArray):
         """mean of each list scalar"""
         return ListChunk.reduce(self, Column.mean, pa.float64())
 
+    def mode(self):
+        """mode of each list scalar"""
+        return ListChunk.reduce(self, Column.mode)
+
+    def stddev(self) -> Optional[float]:
+        """stddev of each list scalar"""
+        return ListChunk.reduce(self, Column.stddev, pa.float64())
+
+    def variance(self) -> Optional[float]:
+        """variance of each list scalar"""
+        return ListChunk.reduce(self, Column.variance, pa.float64())
+
 
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""

@@ -493,13 +493,22 @@ type FloatColumn implements Column {
   unique: FloatSet!
 
   """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [Float]!
+  sort(reverse: Boolean! = false, length: Long = null): [Float]!
 
   """Return sum of the values, with optional exponentiation."""
   sum(exp: Int! = 1): Float
 
   """mean of the values"""
   mean: Float
+
+  """mode of the values"""
+  mode: Float
+
+  """standard deviation of the values"""
+  stddev: Float
+
+  """variance of the values"""
+  variance: Float
 
   """minimum value"""
   min: Float
@@ -621,14 +630,14 @@ type IndexedTable {
   row(index: Long! = 0): Row!
 
   """Return table slice."""
-  slice(offset: Long! = 0, length: Long): Table!
+  slice(offset: Long! = 0, length: Long = null): Table!
 
   """
   Return tables grouped by columns, with stable ordering.
           `length` is the maximum number of tables to return.
           `count` filters and sorts tables based on the number of rows within each table.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): Groups!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: CountQuery = null): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -638,7 +647,7 @@ type IndexedTable {
   unique(by: [String!]!, reverse: Boolean! = false, count: String! = ""): Table!
 
   """Return table slice sorted by specified columns."""
-  sort(by: [String!]!, reverse: Boolean! = false, length: Long): Table!
+  sort(by: [String!]!, reverse: Boolean! = false, length: Long = null): Table!
 
   """Return table with minimum values per column."""
   min(by: [String!]!): Table!
@@ -693,13 +702,22 @@ type IntColumn implements Column {
   unique: IntSet!
 
   """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [Int]!
+  sort(reverse: Boolean! = false, length: Long = null): [Int]!
 
   """Return sum of the values, with optional exponentiation."""
   sum(exp: Int! = 1): Int
 
   """mean of the values"""
   mean: Float
+
+  """mode of the values"""
+  mode: Int
+
+  """standard deviation of the values"""
+  stddev: Float
+
+  """variance of the values"""
+  variance: Float
 
   """minimum value"""
   min: Int
@@ -833,6 +851,15 @@ type ListColumn implements Column {
 
   """mean of each list scalar"""
   mean: FloatColumn!
+
+  """mode of each list scalar"""
+  mode: Column!
+
+  """stddev of each list scalar"""
+  stddev: FloatColumn!
+
+  """mean of each list scalar"""
+  variance: FloatColumn!
 }
 
 """aggregate functions for lists"""
@@ -872,13 +899,22 @@ type LongColumn implements Column {
   unique: LongSet!
 
   """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [Long]!
+  sort(reverse: Boolean! = false, length: Long = null): [Long]!
 
   """Return sum of the values, with optional exponentiation."""
   sum(exp: Int! = 1): Long
 
   """mean of the values"""
   mean: Float
+
+  """mode of the values"""
+  mode: Long
+
+  """standard deviation of the values"""
+  stddev: Float
+
+  """variance of the values"""
+  variance: Float
 
   """minimum value"""
   min: Long
@@ -1057,7 +1093,7 @@ type StringColumn implements Column {
   unique: StringSet!
 
   """Return sorted values. Optimized for fixed length."""
-  sort(reverse: Boolean! = false, length: Long): [String]!
+  sort(reverse: Boolean! = false, length: Long = null): [String]!
 
   """minimum value"""
   min: String
@@ -1162,14 +1198,14 @@ type Table {
   row(index: Long! = 0): Row!
 
   """Return table slice."""
-  slice(offset: Long! = 0, length: Long): Table!
+  slice(offset: Long! = 0, length: Long = null): Table!
 
   """
   Return tables grouped by columns, with stable ordering.
           `length` is the maximum number of tables to return.
           `count` filters and sorts tables based on the number of rows within each table.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): Groups!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: CountQuery = null): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -1179,7 +1215,7 @@ type Table {
   unique(by: [String!]!, reverse: Boolean! = false, count: String! = ""): Table!
 
   """Return table slice sorted by specified columns."""
-  sort(by: [String!]!, reverse: Boolean! = false, length: Long): Table!
+  sort(by: [String!]!, reverse: Boolean! = false, length: Long = null): Table!
 
   """Return table with minimum values per column."""
   min(by: [String!]!): Table!

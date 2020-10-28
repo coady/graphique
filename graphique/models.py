@@ -112,6 +112,20 @@ class resolvers:
         """mean of the values"""
         return C.mean(self.array)
 
+    def mode(self):
+        """mode of the values"""
+        return C.mode(self.array)
+
+    @doc_field
+    def stddev(self) -> Optional[float]:
+        """standard deviation of the values"""
+        return C.stddev(self.array)
+
+    @doc_field
+    def variance(self) -> Optional[float]:
+        """variance of the values"""
+        return C.variance(self.array)
+
     def min(self):
         """minimum value"""
         return C.min(self.array)
@@ -224,6 +238,9 @@ class IntColumn(Column):
     sort = annotate(resolvers.sort, List[Optional[int]])
     sum = annotate(resolvers.sum, Optional[int])
     mean = resolvers.mean
+    mode = annotate(resolvers.mode, Optional[int])
+    stddev = resolvers.stddev
+    variance = resolvers.variance
     min = annotate(resolvers.min, Optional[int])
     max = annotate(resolvers.max, Optional[int])
     quantile = resolvers.quantile
@@ -248,6 +265,9 @@ class LongColumn(Column):
     sort = annotate(resolvers.sort, List[Optional[Long]])
     sum = annotate(resolvers.sum, Optional[Long])
     mean = resolvers.mean
+    mode = annotate(resolvers.mode, Optional[Long])
+    stddev = resolvers.stddev
+    variance = resolvers.variance
     min = annotate(resolvers.min, Optional[Long])
     max = annotate(resolvers.max, Optional[Long])
     quantile = resolvers.quantile
@@ -272,6 +292,9 @@ class FloatColumn(Column):
     sort = annotate(resolvers.sort, List[Optional[float]])
     sum = annotate(resolvers.sum, Optional[float])
     mean = resolvers.mean
+    mode = annotate(resolvers.mode, Optional[float])
+    stddev = resolvers.stddev
+    variance = resolvers.variance
     min = annotate(resolvers.min, Optional[float])
     max = annotate(resolvers.max, Optional[float])
     quantile = resolvers.quantile
@@ -451,6 +474,21 @@ class ListColumn(Column):
     def mean(self) -> FloatColumn:
         """mean of each list scalar"""
         return self.map(ListChunk.mean)  # type: ignore
+
+    @doc_field
+    def mode(self) -> Column:
+        """mode of each list scalar"""
+        return self.map(ListChunk.mode)
+
+    @doc_field
+    def stddev(self) -> FloatColumn:
+        """stddev of each list scalar"""
+        return self.map(ListChunk.stddev)  # type: ignore
+
+    @doc_field
+    def variance(self) -> FloatColumn:
+        """mean of each list scalar"""
+        return self.map(ListChunk.variance)  # type: ignore
 
 
 @strawberry.type(description="column of structs")

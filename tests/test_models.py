@@ -108,6 +108,8 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'subtract': {'sum': 1}}}}
         data = executor(f'{{ columns {{ {name} {{ multiply(value: 1) {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'multiply': {'sum': 0}}}}
+        with pytest.raises(ValueError):
+            executor(f'{{ columns {{ {name} {{ divide(value: 1) {{ sum }} }} }} }}')
 
         data = executor(f'{{ columns {{ {name} {{ minimum(value: -1) {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'minimum': {'sum': -1}}}}
@@ -115,6 +117,8 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'maximum': {'sum': 1}}}}
         data = executor(f'{{ columns {{ {name} {{ absolute {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'absolute': {'sum': 0}}}}
+        data = executor(f'{{ columns {{ {name} {{ mean mode stddev variance }} }} }}')
+        assert data == {'columns': {name: {'mean': 0.0, 'mode': 0, 'stddev': 0.0, 'variance': 0.0}}}
 
     data = executor(
         '''{ apply(int32: {fillNull: -1, alias: "i"})
@@ -165,7 +169,8 @@ def test_list(executor):
         '''{ columns { list { count { values }
         first { ... on IntColumn { values } } last { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
-        sum { ... on IntColumn { values } } mean { values } } } }'''
+        sum { ... on IntColumn { values } } mean { values }
+        mode { ... on IntColumn { values } } stddev { values } variance { values } } } }'''
     )
     assert data['columns']['list'] == {
         'count': {'values': [3, None]},
@@ -175,6 +180,9 @@ def test_list(executor):
         'max': {'values': [2, None]},
         'sum': {'values': [3, None]},
         'mean': {'values': [1.0, None]},
+        'mode': {'values': [0, None]},
+        'stddev': {'values': [pytest.approx((2 / 3) ** 0.5), None]},
+        'variance': {'values': [pytest.approx(2 / 3), None]},
     }
     data = executor(
         '''{ apply(list: {count: true}) {
