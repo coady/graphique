@@ -214,17 +214,22 @@ class Column(pa.ChunkedArray):
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
-        # arrow may seg fault when `sort_indices` is called on a non-chunked array
         if isinstance(self.type, pa.DictionaryType):
             self = self.cast(self.type.value_type)
         if length is not None:
-            func = lambda v, i: v.take(i[-length:] if reverse else i[:length])
-            chunks = Column.map(func, self, pc.sort_indices(self))
-            self = pa.chunked_array([pa.concat_arrays(chunks)])
-        elif self.num_chunks > 1:
+            with contextlib.suppress(IndexError):  # fallback to sorting if length > len(chunk)
+                if reverse:
+                    indices = pc.partition_nth_indices(self, pivot=len(self) - length)
+                    chunks = [chunk[-length:] for chunk in indices.iterchunks()]
+                else:
+                    indices = pc.partition_nth_indices(self, pivot=length)
+                    chunks = [chunk[:length] for chunk in indices.iterchunks()]
+                self = pa.chunked_array(map(pa.Array.take, self.iterchunks(), chunks))
+        # arrow may seg fault when `sort_indices` is called on a non-chunked array
+        if self.num_chunks > 1:
             self = pa.chunked_array([pa.concat_arrays(self.iterchunks())])
         indices = pc.sort_indices(self)
-        return self.take((indices[::-1] if reverse else indices)[:length])
+        return self and self.take((indices[::-1] if reverse else indices)[:length])
 
     def mapreduce(self, mapper, reducer, default=None):
         if self.null_count:

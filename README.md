@@ -3,7 +3,6 @@
 [![image](https://pepy.tech/badge/graphique)](https://pepy.tech/project/graphique)
 ![image](https://img.shields.io/pypi/status/graphique.svg)
 [![image](https://github.com/coady/graphique/workflows/build/badge.svg)](https://github.com/coady/graphique/actions)
-[![image](https://img.shields.io/codecov/c/github/coady/graphique.svg)](https://codecov.io/github/coady/graphique)
 [![image](https://requires.io/github/coady/graphique/requirements.svg?branch=main)](https://requires.io/github/coady/graphique/requirements/)
 [![image](https://img.shields.io/badge/code%20style-black-000000.svg)](https://pypi.org/project/black/)
 [![image](http://mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)

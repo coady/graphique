@@ -150,6 +150,8 @@ def test_sort(table):
     assert (states[0], states[-1]) == ('WY', 'AK')
     assert C.sort(table['state'], length=1).to_pylist() == ['AK']
     assert C.sort(table['state'], reverse=True, length=1).to_pylist() == ['WY']
+    len(C.sort(table['state'], length=10 ** 5)) == 41700
+    assert C.sort(table['state'], length=0).to_pylist() == []
     data = T.sort(table, 'state').to_pydict()
     assert (data['state'][0], data['county'][0]) == ('AK', 'Anchorage')
     data = T.sort(table, 'state', 'county', length=1).to_pydict()
