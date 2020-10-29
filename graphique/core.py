@@ -109,9 +109,7 @@ class ListChunk(pa.ListArray):
         """min value of each list scalar"""
 
         def func(array):
-            if array.null_count:
-                array = array.filter(array.is_valid())
-            return np.min(array) if len(array) else None
+            return array[pc.partition_nth_indices(array, pivot=1)[0].as_py()].as_py()
 
         try:
             return ListChunk.reduce(self, lambda arr: pc.min_max(arr).as_py()['min'])
@@ -122,9 +120,7 @@ class ListChunk(pa.ListArray):
         """max value of each list scalar"""
 
         def func(array):
-            if array.null_count:
-                array = array.filter(array.is_valid())
-            return np.max(array) if len(array) else None
+            return array[pc.partition_nth_indices(array, pivot=len(array) - 1)[-1].as_py()].as_py()
 
         try:
             return ListChunk.reduce(self, lambda arr: pc.min_max(arr).as_py()['max'])
