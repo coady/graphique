@@ -103,9 +103,9 @@ class resolvers:
         """list of values"""
         return self.array.to_pylist()
 
-    def sum(self, exp: int = 1):
-        """Return sum of the values, with optional exponentiation."""
-        return C.sum(self.array, exp)
+    def sum(self):
+        """sum of the values"""
+        return C.sum(self.array)
 
     @doc_field
     def mean(self) -> Optional[float]:
@@ -374,8 +374,6 @@ class DurationColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, DurationQuery)
     values = annotate(resolvers.values, List[Optional[timedelta]])
-    min = annotate(resolvers.min, Optional[timedelta])
-    max = annotate(resolvers.max, Optional[timedelta])
     quantile = annotate(resolvers.quantile, List[Optional[timedelta]])
     minimum = annotate(resolvers.minimum, 'DurationColumn', value=timedelta)
     maximum = annotate(resolvers.maximum, 'DurationColumn', value=timedelta)

@@ -231,20 +231,9 @@ class Column(pa.ChunkedArray):
         indices = pc.sort_indices(self)
         return self and self.take((indices[::-1] if reverse else indices)[:length])
 
-    def mapreduce(self, mapper, reducer, default=None):
-        if self.null_count:
-            self = self.filter(self.is_valid())
-        try:
-            value = reducer(Column.map(mapper, self))
-        except ValueError:
-            return default
-        return value.item() if hasattr(value, 'item') else value
-
-    def sum(self, exp: int = 1):
-        """Return sum of the values, with optional exponentiation."""
-        if exp == 1:
-            return pc.sum(self).as_py()
-        return Column.mapreduce(self, lambda ch: np.sum(np.power(ch, exp)), sum)
+    def sum(self):
+        """Return sum of the values."""
+        return pc.sum(self).as_py()
 
     def mean(self) -> Optional[float]:
         """Return mean of the values."""
@@ -270,19 +259,23 @@ class Column(pa.ChunkedArray):
             return [None] * len(q)
         return np.quantile(self, q).tolist()
 
+    def min_max(self, reverse=False):
+        if not self:
+            return None
+        if isinstance(self.type, pa.DictionaryType):
+            self = pa.chunked_array([self.unique().cast(self.type.value_type)])
+        try:
+            return pc.min_max(self)['max' if reverse else 'min'].as_py()
+        except NotImplementedError:
+            return Column.sort(self, reverse, length=1)[0].as_py()
+
     def min(self):
         """Return min of the values."""
-        try:
-            return pc.min_max(self).as_py()['min']
-        except NotImplementedError:
-            return Column.mapreduce(self, np.min, min)
+        return Column.min_max(self, reverse=False)
 
     def max(self):
         """Return max of the values."""
-        try:
-            return pc.min_max(self).as_py()['max']
-        except NotImplementedError:
-            return Column.mapreduce(self, np.max, max)
+        return Column.min_max(self, reverse=True)
 
     def compare(self, func, value):
         if isinstance(value, pa.ChunkedArray):

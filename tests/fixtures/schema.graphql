@@ -411,12 +411,6 @@ type DurationColumn implements Column {
   """list of values"""
   values: [Duration]!
 
-  """minimum value"""
-  min: Duration
-
-  """maximum value"""
-  max: Duration
-
   """Return q-th quantiles for values."""
   quantile(q: [Float!]!): [Duration]!
 
@@ -495,8 +489,8 @@ type FloatColumn implements Column {
   """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long = null): [Float]!
 
-  """Return sum of the values, with optional exponentiation."""
-  sum(exp: Int! = 1): Float
+  """sum of the values"""
+  sum: Float
 
   """mean of the values"""
   mean: Float
@@ -704,8 +698,8 @@ type IntColumn implements Column {
   """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long = null): [Int]!
 
-  """Return sum of the values, with optional exponentiation."""
-  sum(exp: Int! = 1): Int
+  """sum of the values"""
+  sum: Int
 
   """mean of the values"""
   mean: Float
@@ -901,8 +895,8 @@ type LongColumn implements Column {
   """Return sorted values. Optimized for fixed length."""
   sort(reverse: Boolean! = false, length: Long = null): [Long]!
 
-  """Return sum of the values, with optional exponentiation."""
-  sum(exp: Int! = 1): Long
+  """sum of the values"""
+  sum: Long
 
   """mean of the values"""
   mean: Float

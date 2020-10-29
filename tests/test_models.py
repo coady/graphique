@@ -140,11 +140,10 @@ def test_duration(executor):
     assert column['subtract'] == {'values': [-62135596800.0, 0.0], 'quantile': [-31067798400.0]}
     data = executor(
         '''{ apply(timestamp: {alias: "diff", subtract: "timestamp"}) { column(name: "diff")
-        { ... on DurationColumn { values min max count(equal: 0.0) } } } }'''
+        { ... on DurationColumn { values count(equal: 0.0) } } } }'''
     )
     column = data['apply']['column']
     assert column['values'] == [0.0, None]
-    assert column['min'] == column['max'] == 0.0
     assert column['count'] == 1
     data = executor(
         '''{ filter(query: {timestamp: {duration: {equal: 0.0}, apply: {subtract: "timestamp"}}})

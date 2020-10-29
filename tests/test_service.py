@@ -45,10 +45,10 @@ def test_ints(client):
 
 
 def test_floats(client):
-    data = client.execute('{ columns { latitude { values sum(exp: 2) mean } } }')
+    data = client.execute('{ columns { latitude { values sum mean } } }')
     latitudes = data['columns']['latitude']
     assert len(latitudes['values']) == 41700
-    assert latitudes['sum'] == pytest.approx(63075443.42831)
+    assert latitudes['sum'] == pytest.approx(1606220.07592)
     assert latitudes['mean'] == pytest.approx(38.518467)
     data = client.execute('{ columns { longitude { min max } } }')
     longitudes = data['columns']['longitude']
