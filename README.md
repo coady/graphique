@@ -120,7 +120,7 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables a bi
 
 ## Dependencies
 * pyarrow >=2
-* strawberry-graphql >=0.30
+* strawberry-graphql >=0.39
 * pytz (optional timestamp support)
 
 ## Tests

@@ -10,7 +10,7 @@ fixtures = Path(__file__).parent / 'fixtures'
 
 
 def pytest_report_header(config):
-    return f'pyarrow {pa.__version__}, strawberry {strawberry.__version__}'
+    return f'pyarrow {pa.__version__}'
 
 
 class TestClient(testclient.TestClient):

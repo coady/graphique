@@ -383,7 +383,7 @@ class Table(pa.Table):
         """Return table with first or last occurrences from grouping by column.
 
         Optionally include counts in an additional column.
-        Faster than :meth:`group` when only scalars are needed.
+        Faster than [group][graphique.core.Table.group] when only scalars are needed.
         """
         self = self.combine_chunks()
         table = self.take(Chunk.unique_indices(self[name].chunk(0), reverse))
