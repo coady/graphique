@@ -3,15 +3,17 @@ all:
 	python3 setup.py build_ext -i --define CYTHON_TRACE_NOGIL
 
 check: all
-	python3 setup.py $@ -ms
-	black -q --$@ .
+	pytest --cov
+
+lint:
+	python3 setup.py check -ms
+	black --check .
 	flake8
 	flake8 graphique/*.pyx --ignore E999,E211
 	mypy -p graphique
-	pytest --cov --cov-fail-under=100
 
 docs: all
-	PYTHONPATH=$(PWD) mkdocs build
+	mkdocs build
 
 dist:
 	python3 setup.py sdist bdist_wheel

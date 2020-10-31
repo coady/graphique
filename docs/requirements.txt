@@ -1,3 +1,4 @@
+pyarrow
 cython
 mkdocs-material
 mkdocstrings
