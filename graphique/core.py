@@ -260,10 +260,16 @@ class Column(pa.ChunkedArray):
             return None
         if isinstance(self.type, pa.DictionaryType):
             self = pa.chunked_array([self.unique().cast(self.type.value_type)])
-        try:
+        with contextlib.suppress(NotImplementedError):
             return pc.min_max(self)['max' if reverse else 'min'].as_py()
-        except NotImplementedError:
+        with contextlib.suppress(NotImplementedError):
             return Column.sort(self, reverse, length=1)[0].as_py()
+        if self.null_count:
+            self = self.filter(self.is_valid())
+        if not self:
+            return None
+        value = (np.max if reverse else np.min)(self)
+        return value.item() if hasattr(value, 'item') else value
 
     def min(self):
         """Return min of the values."""

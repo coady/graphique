@@ -20,8 +20,6 @@ jobs:
     - run: pip install cython pyarrow strawberry-graphql pytz requests pytest-cov
     - run: make check
     - uses: codecov/codecov-action@v1
-      with:
-        verbose: true
 
   lint:
     runs-on: ubuntu-latest
@@ -41,4 +39,4 @@ jobs:
       with:
         python-version: 3.8
     - run: pip install -r docs/requirements.txt
-    - run: make docs
+    - run: make html

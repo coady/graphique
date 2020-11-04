@@ -1,3 +1,4 @@
+from datetime import date
 import pytest
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -81,6 +82,9 @@ def test_reduce():
     assert C.mode(array) == 0
     assert C.stddev(array) == pytest.approx(2.0 ** 0.5)
     assert C.variance(array) == 2.0
+    array = pa.chunked_array([[date.today(), None]])
+    assert C.min(array) == C.max(array[:1])
+    assert C.min(array[1:]) is C.max(array[1:]) is None
 
 
 def test_membership():
