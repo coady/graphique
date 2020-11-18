@@ -9,6 +9,8 @@ from typing import Callable, List, Optional
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
+from strawberry.field import StrawberryField
+from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.type_resolver import resolve_type
 from strawberry.types.types import ArgumentDefinition, FieldDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
@@ -62,7 +64,11 @@ class Column:
 @strawberry.interface(description="unique values")
 class Set:
     counts: List[Long]
-    length = Column.length
+
+    @doc_field
+    def length(self) -> Long:
+        """number of rows"""
+        return len(self.array)  # type: ignore
 
     @classmethod
     def subclass(base, cls, name, description):
@@ -134,7 +140,6 @@ class resolvers:
         """maximum value"""
         return C.max(self.array)
 
-    @doc_field
     def quantile(self, q: List[float]) -> List[Optional[float]]:
         """Return q-th quantiles for values."""
         return C.quantile(self.array, *q)
@@ -194,16 +199,18 @@ def resolve_arguments(func, arguments):
         argument.origin = func
         argument.name = to_camel_case(argument.origin_name)
         resolve_type(argument)
-    func._field_definition = FieldDefinition(
+    resolver = StrawberryResolver(func)
+    resolver.arguments = arguments
+    field_definition = FieldDefinition(
         name=to_camel_case(func.__name__),
         origin_name=func.__name__,
         type=func.__annotations__['return'],
         origin=func,
         arguments=arguments,
         description=func.__doc__,
-        base_resolver=func,
+        base_resolver=resolver,
     )
-    return func
+    return StrawberryField(field_definition)
 
 
 def query_args(func, query):
@@ -243,7 +250,7 @@ class IntColumn(Column):
     variance = resolvers.variance
     min = annotate(resolvers.min, Optional[int])
     max = annotate(resolvers.max, Optional[int])
-    quantile = resolvers.quantile
+    quantile = doc_field(resolvers.quantile)
     unique = annotate(resolvers.unique, Set)
     fill_null = annotate(resolvers.fill_null, 'IntColumn', value=int)
     add = annotate(resolvers.add, 'IntColumn', value=int)
@@ -270,7 +277,7 @@ class LongColumn(Column):
     variance = resolvers.variance
     min = annotate(resolvers.min, Optional[Long])
     max = annotate(resolvers.max, Optional[Long])
-    quantile = resolvers.quantile
+    quantile = doc_field(resolvers.quantile)
     unique = annotate(resolvers.unique, Set)
     fill_null = annotate(resolvers.fill_null, 'LongColumn', value=Long)
     add = annotate(resolvers.add, 'LongColumn', value=Long)
@@ -297,7 +304,7 @@ class FloatColumn(Column):
     variance = resolvers.variance
     min = annotate(resolvers.min, Optional[float])
     max = annotate(resolvers.max, Optional[float])
-    quantile = resolvers.quantile
+    quantile = doc_field(resolvers.quantile)
     fill_null = annotate(resolvers.fill_null, 'FloatColumn', value=float)
     add = annotate(resolvers.add, 'FloatColumn', value=float)
     subtract = annotate(resolvers.subtract, 'FloatColumn', value=float)

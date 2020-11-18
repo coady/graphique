@@ -5,7 +5,7 @@ import functools
 import itertools
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable, List, Optional, get_type_hints
+from typing import Callable, Iterable, List, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -39,7 +39,7 @@ def resolver(name):
     arguments = [
         ArgumentDefinition(origin_name=field, type=Optional[str])
         for field in T.projected
-        if hasattr(cls, field) and get_type_hints(getattr(cls, field))['return'] is cls
+        if cls.__annotations__.get(field) == cls.__name__
     ]
 
     def method(self, **fields) -> cls:
@@ -208,8 +208,9 @@ class Table:
         Optionally include counts in an aliased column.
         Faster than `group` when only scalars are needed."""
         tables = [self.select(info)]
+        groupby = self._type_definition.get_field('group').origin  # type: ignore
         if len(by) > 1:
-            tables = [group.table for group in self.group(info, by[:-1], reverse=reverse).tables]
+            tables = [group.table for group in groupby(self, info, by[:-1], reverse=reverse).tables]
         name = to_snake_case(by[-1])
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
             return Table(range(sum(len(table[name].unique()) for table in tables)))  # type: ignore
@@ -333,7 +334,7 @@ class Groups:
             columns = self.columns(name)
             tp = C.scalar_type(columns[0])
             arrays[name] = pa.array(map(self.aggregates['first'], columns), tp)  # type: ignore
-        counts = pa.array(map(Table.length, self.tables), pa.int32())
+        counts = pa.array((len(table.table) for table in self.tables), pa.int32())
         if count:
             arrays[count] = counts
         offsets = np.concatenate([[0], np.cumsum(counts)])
