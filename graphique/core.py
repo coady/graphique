@@ -64,11 +64,12 @@ class Chunk:
         _, indices = group_indices(Chunk.encode(self))
         return map(operator.attrgetter('values'), indices)
 
-    def unique_indices(self, reverse=False) -> pa.IntegerArray:
+    def unique_indices(self, reverse=False, count=False) -> tuple:
         array = Chunk.encode(self)
         if not reverse:
-            return unique_indices(array)
-        return pc.subtract(pa.scalar(len(array) - 1), unique_indices(array[::-1]))
+            return unique_indices(array, count)
+        indices, counts = unique_indices(array[::-1], count)
+        return pc.subtract(pa.scalar(len(array) - 1), indices), counts
 
     def call(self: pa.DictionaryArray, func: Callable, *args, **kwargs) -> pa.Array:
         dictionary = func(self.dictionary, *args, **kwargs)
@@ -160,6 +161,12 @@ class Column(pa.ChunkedArray):
     def scalar_type(self):
         return self.type.value_type if isinstance(self.type, pa.DictionaryType) else self.type
 
+    def decode(self) -> pa.ChunkedArray:
+        return self.cast(self.type.value_type) if isinstance(self.type, pa.DictionaryType) else self
+
+    def combine_chunks(self) -> pa.Array:
+        return self.chunk(0) if self.num_chunks == 1 else pa.concat_arrays(self.iterchunks())
+
     def mask(self, func='and', **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
         masks = []
@@ -210,8 +217,7 @@ class Column(pa.ChunkedArray):
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
-        if isinstance(self.type, pa.DictionaryType):
-            self = self.cast(self.type.value_type)
+        self = Column.decode(self)
         if length is not None:
             with contextlib.suppress(IndexError):  # fallback to sorting if length > len(chunk)
                 if reverse:
@@ -222,8 +228,7 @@ class Column(pa.ChunkedArray):
                     chunks = [chunk[:length] for chunk in indices.iterchunks()]
                 self = pa.chunked_array(map(pa.Array.take, self.iterchunks(), chunks))
         # arrow may seg fault when `sort_indices` is called on a non-chunked array
-        if self.num_chunks > 1:
-            self = pa.chunked_array([pa.concat_arrays(self.iterchunks())])
+        self = pa.chunked_array([Column.combine_chunks(self)])
         indices = pc.sort_indices(self)
         return self and self.take((indices[::-1] if reverse else indices)[:length])
 
@@ -392,21 +397,23 @@ class Table(pa.Table):
         Faster than [group][graphique.core.Table.group] when only scalars are needed.
         """
         self = self.combine_chunks()
-        table = self.take(Chunk.unique_indices(self[name].chunk(0), reverse))
-        if not count:
-            return table
-        _, counts = (self[name][::-1] if reverse else self[name]).value_counts().flatten()
-        return table.add_column(len(table.column_names), count, counts)
+        indices, counts = Chunk.unique_indices(self[name].chunk(0), reverse, count)
+        table = self.take(indices)
+        return table.add_column(len(table.column_names), count, counts) if count else table
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
-        """Return table sorted by columns."""
+        """Return table sorted by columns, optimized for single column with fixed length."""
         self = self.combine_chunks()
-        indices = pa.array(np.arange(len(self)))
-        for name in reversed(names):
-            column = self[name]
-            if isinstance(column.type, pa.DictionaryType):
-                column = column.cast(column.type.value_type)
-            indices = indices.take(pc.sort_indices(column.take(indices)))
+        if len(names) == 1 and len(self[:length]) < len(self):
+            column = Column.decode(self[names[-1]])
+            if reverse:
+                indices = pc.partition_nth_indices(column, pivot=len(self) - length)[-length:]  # type: ignore
+            else:
+                indices = pc.partition_nth_indices(column, pivot=length)[:length]
+            self = self.take(indices)
+        indices = pc.sort_indices(Column.decode(self[names[-1]]))
+        for name in reversed(names[:-1]):
+            indices = indices.take(pc.sort_indices(Column.decode(self[name]).take(indices)))
         return self.take((indices[::-1] if reverse else indices)[:length])
 
     def mask(self, name: str, **query: dict) -> pa.Array:

@@ -142,7 +142,7 @@ def test_unique(table):
     assert len(zipcodes) == 52
     assert zipcodes[0] == 99950
     assert zipcodes[-1] == 988
-    indices = Chunk.unique_indices(pa.array([1, None, 1]))
+    indices, _ = Chunk.unique_indices(pa.array([1, None, 1]))
     assert indices.to_pylist() == [0, 1]
 
 
