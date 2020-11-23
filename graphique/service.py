@@ -207,15 +207,11 @@ class Table:
         """Return table of first or last occurrences grouped by columns, with stable ordering.
         Optionally include counts in an aliased column.
         Faster than `group` when only scalars are needed."""
-        tables = [self.select(info)]
-        groupby = self._type_definition.get_field('group').origin  # type: ignore
-        if len(by) > 1:
-            tables = [group.table for group in groupby(self, info, by[:-1], reverse=reverse).tables]
-        name = to_snake_case(by[-1])
+        table = self.select(info)
+        names = list(map(to_snake_case, by))
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
-            return Table(range(sum(len(table[name].unique()) for table in tables)))  # type: ignore
-        tables = [T.unique(table, name, reverse, count) for table in tables]
-        return Table(pa.concat_tables(tables[::-1] if reverse else tables))
+            return Table(T.unique_indices(table, *names)[0])
+        return Table(T.unique(table, *names, reverse=reverse, count=count))
 
     @doc_field
     def sort(

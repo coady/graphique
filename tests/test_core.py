@@ -144,6 +144,10 @@ def test_unique(table):
     assert zipcodes[-1] == 988
     indices, _ = Chunk.unique_indices(pa.array([1, None, 1]))
     assert indices.to_pylist() == [0, 1]
+    table = T.unique(table, 'state', 'county', 'city', reverse=True, count='counts')
+    assert len(table) == 29865
+    assert table['zipcode'][0].as_py() == 99927
+    assert table['counts'][0].as_py() == 1
 
 
 def test_sort(table):

@@ -79,6 +79,10 @@ class Chunk:
         func = np.isnat if array.dtype.type in (np.datetime64, np.timedelta64) else np.isnan
         return pa.array(array, mask=func(array))
 
+    def take_list(self, indices: pa.ListArray) -> pa.ListArray:
+        assert len(self) == len(indices.values)  # type: ignore
+        return pa.ListArray.from_arrays(indices.offsets, self.take(indices.values))  # type: ignore
+
 
 class ListChunk(pa.ListArray):
     count = pa.ListArray.value_lengths
@@ -390,14 +394,40 @@ class Table(pa.Table):
             groups.sort(key=len)
         return map(self.take, reversed(groups) if reverse else groups)
 
-    def unique(self, name: str, reverse=False, count='') -> pa.Table:
+    def group_indices(self, *names: str) -> pa.ListArray:
+        arrays = [Chunk.encode(Column.combine_chunks(self[name])) for name in names]
+        _, indices = group_indices(arrays[0])
+        for array in arrays[1:]:
+            groups = [group_indices(scalar.values)[1] for scalar in Chunk.take_list(array, indices)]
+            indices = pa.concat_arrays(
+                Chunk.take_list(scalar.values, group) for scalar, group in zip(indices, groups)
+            )
+        return indices
+
+    def unique_indices(self, *names: str, reverse=False, count=False) -> tuple:
+        array = Chunk.encode(Column.combine_chunks(self[names[-1]]))
+        if len(names) == 1:
+            return Chunk.unique_indices(array, reverse, count)
+        indices = Table.group_indices(self, *names[:-1])
+        if reverse:
+            indices = indices[::-1]
+        items = [
+            Chunk.unique_indices(scalar.values, reverse, count)
+            for scalar in Chunk.take_list(array, indices)
+        ]
+        indices = pa.concat_arrays(
+            scalar.values.take(group) for scalar, (group, _) in zip(indices, items)
+        )
+        return indices, (pa.concat_arrays(c for _, c in items) if count else None)
+
+    def unique(self, *names: str, reverse=False, count: str = '') -> pa.Table:
         """Return table with first or last occurrences from grouping by column.
 
         Optionally include counts in an additional column.
         Faster than [group][graphique.core.Table.group] when only scalars are needed.
         """
         self = self.combine_chunks()
-        indices, counts = Chunk.unique_indices(self[name].chunk(0), reverse, count)
+        indices, counts = Table.unique_indices(self, *names, reverse=reverse, count=bool(count))
         table = self.take(indices)
         return table.add_column(len(table.column_names), count, counts) if count else table
 
