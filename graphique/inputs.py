@@ -327,12 +327,9 @@ class CountQuery(LongQuery):
         'is_in': '__contains__',
     }
 
-    def predicate(self, lower=False) -> Callable:
-        """Return predicate function corresponding to query, optionally only the lower bound."""
+    def predicate(self) -> Callable:
+        """Return predicate function corresponding to query."""
         query = self.asdict()
-        if lower:
-            values = [query.get(key, 0) for key in ('equal', 'greater', 'greater_equal')]
-            return max(values + [min(query.get('is_in', [0]))]).__le__
         funcs = [getattr(query[key], self.methods[key]) for key in set(query) - {'sort'}]
         return lambda value: all(func(value) for func in funcs)
 

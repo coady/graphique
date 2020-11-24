@@ -221,8 +221,6 @@ def test_sort(client):
 def test_group(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ group { length } }')
-    data = client.execute('{ slice(length: 0) { group(by: []) { aggregate { length } } } }')
-    assert data['slice']['group']['aggregate']['length'] == 0
     data = client.execute(
         '''{ group(by: ["state"]) { length tables { length columns { state { min max } } }
         aggregate(count: "c") { column(name: "c") { ... on IntColumn { values } } } } }'''

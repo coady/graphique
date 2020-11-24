@@ -60,10 +60,6 @@ class Chunk:
             return self.indices
         return self.indices.fill_null(len(self.dictionary))
 
-    def group_indices(self) -> Iterable[pa.Array]:
-        _, indices = group_indices(Chunk.encode(self))
-        return map(operator.attrgetter('values'), indices)
-
     def unique_indices(self, reverse=False, count=False) -> tuple:
         array = Chunk.encode(self)
         if not reverse:
@@ -385,15 +381,6 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
-    def group(self, name: str, reverse=False, predicate=int, sort=False) -> Iterator[pa.Table]:
-        """Generate tables grouped by column, with filtering and slicing on table length."""
-        self = self.combine_chunks()
-        groups = Chunk.group_indices(self[name].chunk(0))
-        groups = [indices for indices in groups if predicate(len(indices))]
-        if sort:
-            groups.sort(key=len)
-        return map(self.take, reversed(groups) if reverse else groups)
-
     def group_indices(self, *names: str) -> pa.ListArray:
         arrays = [Chunk.encode(Column.combine_chunks(self[name])) for name in names]
         _, indices = group_indices(arrays[0])
@@ -403,6 +390,15 @@ class Table(pa.Table):
                 Chunk.take_list(scalar.values, group) for scalar, group in zip(indices, groups)
             )
         return indices
+
+    def group(self, *names: str, reverse=False, predicate=int, sort=False) -> Iterator[pa.Table]:
+        """Generate tables grouped by columns, with filtering and slicing on table length."""
+        self = self.combine_chunks()
+        indices = Table.group_indices(self, *names)
+        groups = [scalar.values for scalar in indices if predicate(len(scalar))]
+        if sort:
+            groups.sort(key=len)
+        return map(self.take, reversed(groups) if reverse else groups)
 
     def unique_indices(self, *names: str, reverse=False, count=False) -> tuple:
         array = Chunk.encode(Column.combine_chunks(self[names[-1]]))
@@ -421,7 +417,7 @@ class Table(pa.Table):
         return indices, (pa.concat_arrays(c for _, c in items) if count else None)
 
     def unique(self, *names: str, reverse=False, count: str = '') -> pa.Table:
-        """Return table with first or last occurrences from grouping by column.
+        """Return table with first or last occurrences from grouping by columns.
 
         Optionally include counts in an additional column.
         Faster than [group][graphique.core.Table.group] when only scalars are needed.

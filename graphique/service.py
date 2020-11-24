@@ -179,27 +179,10 @@ class Table:
         """Return tables grouped by columns, with stable ordering.
         `length` is the maximum number of tables to return.
         `count` filters and sorts tables based on the number of rows within each table."""
-        chain = itertools.chain.from_iterable
-        tables = [self.select(info)]
+        table = self.select(info)
         names = list(map(to_snake_case, by))
-        if count is None:
-            for name in names:
-                func = functools.partial(T.group, name=name, reverse=reverse)
-                tables = chain(map(func, tables))  # type: ignore
-        else:
-            predicate = count.predicate(lower=True)
-            for name in names[:-1]:
-                func = functools.partial(T.group, name=name, predicate=predicate)
-                tables = chain(map(func, tables))  # type: ignore
-            kwargs = {'predicate': count.predicate(), 'sort': count.sort}
-            groups = [
-                itertools.islice(T.group(table, names[-1], reverse, **kwargs), length)
-                for table in tables
-            ]
-            if count.sort:
-                tables = sorted(chain(groups), key=len, reverse=reverse)
-            else:
-                tables = chain(reversed(groups) if reverse else groups)  # type: ignore
+        sort, predicate = (count.sort, count.predicate()) if count else (False, int)
+        tables = T.group(table, *names, reverse=reverse, predicate=predicate, sort=sort)
         return Groups(map(Table, itertools.islice(tables, length)), names)
 
     @doc_field
