@@ -5,7 +5,7 @@ import functools
 import itertools
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterable, List, Optional
+from typing import Callable, List, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -15,8 +15,8 @@ from starlette.applications import Starlette
 from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
-from .core import Column as C, Table as T
-from .inputs import CountQuery, Field, UniqueField, filter_map, function_map, query_map
+from .core import Column as C, ListChunk, Table as T
+from .inputs import Field, UniqueField, filter_map, function_map, query_map
 from .models import Column, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -160,30 +160,20 @@ class Table:
         return Row(**row)  # type: ignore
 
     @doc_field
-    def slice(
-        self, info, offset: Long = 0, length: Optional[Long] = None  # type: ignore
-    ) -> 'Table':
+    def slice(self, info, offset: Long = 0, length: Optional[Long] = None) -> 'Table':  # type: ignore
         """Return table slice."""
         table = self.select(info)
         return Table(table.slice(offset, length))
 
     @doc_field
     def group(
-        self,
-        info,
-        by: List[str],
-        reverse: bool = False,
-        length: Optional[Long] = None,
-        count: Optional[CountQuery] = None,
+        self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
     ) -> 'Groups':
-        """Return tables grouped by columns, with stable ordering.
-        `length` is the maximum number of tables to return.
-        `count` filters and sorts tables based on the number of rows within each table."""
+        """Return table grouped by columns, with stable ordering.
+        `length` is the maximum number of groups to return."""
         table = self.select(info)
-        names = list(map(to_snake_case, by))
-        sort, predicate = (count.sort, count.predicate()) if count else (False, int)
-        tables = T.group(table, *names, reverse=reverse, predicate=predicate, sort=sort)
-        return Groups(map(Table, itertools.islice(tables, length)), names)
+        table, counts = T.group(table, *map(to_snake_case, by), reverse=reverse, length=length)
+        return Groups(table, counts)
 
     @doc_field
     def unique(self, info, by: List[str], reverse: bool = False, count: str = '') -> 'Table':
@@ -194,7 +184,8 @@ class Table:
         names = list(map(to_snake_case, by))
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
             return Table(T.unique_indices(table, *names)[0])
-        return Table(T.unique(table, *names, reverse=reverse, count=count))
+        table, counts = T.unique(table, *names, reverse=reverse, count=bool(count))
+        return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field
     def sort(
@@ -250,34 +241,67 @@ class Table:
         return Table(table)
 
 
-@strawberry.type(description="a list of tables")
+@strawberry.type(description="table grouped by columns")
 class Groups:
-    tables: List[Table]
-    aggregates = {
-        'first': lambda array: array[0].as_py(),
-        'last': lambda array: array[-1].as_py(),
-        'min': C.min,
-        'max': C.max,
-        'sum': C.sum,
-        'mean': C.mean,
-    }
+    select = Table.select
 
-    def __init__(self, tables: Iterable[Table], names: Iterable[str]):
-        self.tables = list(tables)
-        self.names = set(names)
+    def __init__(self, table, counts):
+        self.table = table
+        self.counts = counts
 
     @doc_field
-    def length(self) -> int:
-        """number of tables"""
-        return len(self.tables)
+    def length(self) -> Long:
+        """number of rows"""
+        return len(self.table)  # type: ignore
 
-    def columns(self, name):
-        return [tbl.table[name] for tbl in self.tables]
+    @doc_field
+    def sort(self, info, reverse: bool = False, length: Optional[Long] = None) -> 'Groups':
+        """Return groups sorted by value counts."""
+        table = self.select(info)  # type: ignore
+        indices = pc.sort_indices(pa.chunked_array([self.counts]))
+        indices = (indices[::-1] if reverse else indices)[:length]
+        return Groups(table.take(indices), self.counts.take(indices))
+
+    @doc_field
+    def filter(
+        self,
+        info,
+        equal: int = None,
+        not_equal: int = None,
+        less: int = None,
+        less_equal: int = None,
+        greater: int = None,
+        greater_equal: int = None,
+    ) -> 'Groups':
+        """Return groups filtered by value counts."""
+        table = self.select(info)  # type: ignore
+        query = {}
+        for op in ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'):
+            value = locals()[op]
+            if value is not None:
+                query[op] = value
+        mask = C.mask(self.counts, **query)
+        return Groups(table.filter(mask), self.counts.filter(mask))
+
+    @doc_field
+    def tables(self, info) -> List[Table]:  # type: ignore
+        """list of tables"""
+        table = self.select(info)  # type: ignore
+        lists = {name for name in table.column_names if isinstance(table[name].type, pa.ListType)}
+        scalars = set(table.column_names) - lists
+        for index, count in enumerate(self.counts.to_pylist()):
+            columns = {name: table[name][index].values for name in lists}
+            indices = pa.array(np.repeat(0, count))
+            row = table.slice(index, length=1)
+            for name in scalars:
+                columns[name] = pa.DictionaryArray.from_arrays(indices, row[name].chunk(0))
+            if not columns:  # ensure at least 1 column for `length`
+                columns[''] = indices
+            yield Table(pa.Table.from_pydict(columns))
 
     @doc_field
     def aggregate(
         self,
-        info,
         count: str = '',
         first: List[Field] = [],
         last: List[Field] = [],
@@ -289,40 +313,19 @@ class Groups:
     ) -> Table:
         """Return single table with aggregate functions applied to columns.
         The grouping keys are automatically included.
-        Any remaining columns referenced in fields are transformed into list columns.
+        Any remaining columns referenced in fields are kept as list columns.
         Columns which are aliased or change type can be accessed by the `column` field."""
-        arrays = {}
-        for key, func in self.aggregates.items():
+        columns = {name: self.table[name].chunk(0) for name in self.table.column_names}
+        for key in ('first', 'last', 'min', 'max', 'sum', 'mean', 'unique'):
             for field in locals()[key]:
                 name = to_snake_case(field.name)
-                columns = self.columns(name)
-                tp = pa.float64() if key == 'mean' else C.scalar_type(columns[0])
-                arrays[field.alias or name] = pa.array(map(func, columns), tp)  # type: ignore
-        for field in unique:
-            name = to_snake_case(field.name)
-            chunks = [column.chunk(0).unique() for column in self.columns(name)]
-            if field.count:
-                arrays[field.alias or name] = pa.array(map(len, chunks), pa.int32())
-            else:
-                values = pa.concat_arrays(chunks)
-                if isinstance(values, pa.DictionaryArray):
-                    values = values.cast(values.type.value_type)
-                offsets = np.concatenate([[0], np.cumsum(list(map(len, chunks)))])
-                arrays[field.alias or name] = pa.ListArray.from_arrays(offsets, values)
-        for name in self.names - set(arrays):
-            columns = self.columns(name)
-            tp = C.scalar_type(columns[0])
-            arrays[name] = pa.array(map(self.aggregates['first'], columns), tp)  # type: ignore
-        counts = pa.array((len(table.table) for table in self.tables), pa.int32())
+                column = getattr(ListChunk, key)(columns[name])
+                if getattr(field, 'count', False):
+                    column = column.value_lengths()
+                columns[field.alias or name] = column
         if count:
-            arrays[count] = counts
-        offsets = np.concatenate([[0], np.cumsum(counts)])
-        for name in set(self.tables[0].select(info).column_names) - set(arrays):
-            values = pa.concat_arrays(column.chunk(0) for column in self.columns(name))
-            if isinstance(values, pa.DictionaryArray):
-                values = values.cast(values.type.value_type)
-            arrays[name] = pa.ListArray.from_arrays(offsets, values)
-        return Table(pa.Table.from_pydict(arrays))
+            columns[count] = self.counts
+        return Table(pa.Table.from_pydict(columns))
 
 
 @strawberry.type(description="a table sorted by a composite index")

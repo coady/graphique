@@ -3,7 +3,7 @@ GraphQL input types.
 """
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, List, Optional
+from typing import List, Optional
 import strawberry
 from strawberry.types.types import undefined
 from .scalars import Long
@@ -312,26 +312,6 @@ function_map = {
     str: StringFunction,
     list: ListFunction,
 }
-
-
-@strawberry.input(description="predicates and sorting for counts")
-class CountQuery(LongQuery):
-    sort: bool = False
-    methods = {
-        'equal': '__eq__',
-        'not_equal': '__ne__',
-        'less': '__gt__',
-        'less_equal': '__ge__',
-        'greater': '__lt__',
-        'greater_equal': '__le__',
-        'is_in': '__contains__',
-    }
-
-    def predicate(self) -> Callable:
-        """Return predicate function corresponding to query."""
-        query = self.asdict()
-        funcs = [getattr(query[key], self.methods[key]) for key in set(query) - {'sort'}]
-        return lambda value: all(func(value) for func in funcs)
 
 
 @strawberry.input(description="names and aliases for aggregation")

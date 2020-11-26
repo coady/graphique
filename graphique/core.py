@@ -97,8 +97,11 @@ class ListChunk(pa.ListArray):
 
     def unique(self) -> pa.ListArray:
         """unique values within each scalar"""
-        empty = pa.array([], self.type.value_type)
-        values = [empty if scalar.values is None else scalar.values.unique() for scalar in self]
+        empty = Column.decode(pa.array([], self.type.value_type))  # flatten dicts for concatenation
+        values = [
+            empty if scalar.values is None else Column.decode(scalar.values.unique())
+            for scalar in self
+        ]
         offsets = np.concatenate([[0], np.cumsum(list(map(len, values)))])
         return pa.ListArray.from_arrays(offsets, pa.concat_arrays(values))
 
@@ -382,23 +385,25 @@ class Table(pa.Table):
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
     def group_indices(self, *names: str) -> pa.ListArray:
-        arrays = [Chunk.encode(Column.combine_chunks(self[name])) for name in names]
-        _, indices = group_indices(arrays[0])
-        for array in arrays[1:]:
+        arrays = (Chunk.encode(Column.combine_chunks(self[name])) for name in names)
+        _, indices = group_indices(next(arrays))
+        for array in arrays:
             groups = [group_indices(scalar.values)[1] for scalar in Chunk.take_list(array, indices)]
             indices = pa.concat_arrays(
                 Chunk.take_list(scalar.values, group) for scalar, group in zip(indices, groups)
             )
         return indices
 
-    def group(self, *names: str, reverse=False, predicate=int, sort=False) -> Iterator[pa.Table]:
-        """Generate tables grouped by columns, with filtering and slicing on table length."""
+    def group(self, *names: str, reverse=False, length: int = None) -> tuple:
+        """Return table grouped by columns and corresponding counts."""
         self = self.combine_chunks()
         indices = Table.group_indices(self, *names)
-        groups = [scalar.values for scalar in indices if predicate(len(scalar))]
-        if sort:
-            groups.sort(key=len)
-        return map(self.take, reversed(groups) if reverse else groups)
+        indices = (indices[::-1] if reverse else indices)[:length]
+        scalars = ListChunk.first(indices)
+        columns = {name: self[name].take(scalars) for name in names}
+        for name in set(self.column_names) - set(names):
+            columns[name] = Chunk.take_list(self[name].chunk(0), indices)
+        return pa.Table.from_pydict(columns), indices.value_lengths()
 
     def unique_indices(self, *names: str, reverse=False, count=False) -> tuple:
         array = Chunk.encode(Column.combine_chunks(self[names[-1]]))
@@ -416,16 +421,15 @@ class Table(pa.Table):
         )
         return indices, (pa.concat_arrays(c for _, c in items) if count else None)
 
-    def unique(self, *names: str, reverse=False, count: str = '') -> pa.Table:
+    def unique(self, *names: str, reverse=False, count=False) -> tuple:
         """Return table with first or last occurrences from grouping by columns.
 
-        Optionally include counts in an additional column.
+        Optionally compute corresponding counts.
         Faster than [group][graphique.core.Table.group] when only scalars are needed.
         """
         self = self.combine_chunks()
-        indices, counts = Table.unique_indices(self, *names, reverse=reverse, count=bool(count))
-        table = self.take(indices)
-        return table.add_column(len(table.column_names), count, counts) if count else table
+        indices, counts = Table.unique_indices(self, *names, reverse=reverse, count=count)
+        return self.take(indices), counts
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns, optimized for single column with fixed length."""
@@ -437,9 +441,10 @@ class Table(pa.Table):
             else:
                 indices = pc.partition_nth_indices(column, pivot=length)[:length]
             self = self.take(indices)
-        indices = pc.sort_indices(Column.decode(self[names[-1]]))
-        for name in reversed(names[:-1]):
-            indices = indices.take(pc.sort_indices(Column.decode(self[name]).take(indices)))
+        columns = (Column.decode(self[name]) for name in reversed(names))
+        indices = pc.sort_indices(next(columns))
+        for column in columns:
+            indices = indices.take(pc.sort_indices(column.take(indices)))
         return self.take((indices[::-1] if reverse else indices)[:length])
 
     def mask(self, name: str, **query: dict) -> pa.Array:

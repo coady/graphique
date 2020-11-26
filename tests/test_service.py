@@ -246,25 +246,25 @@ def test_group(client):
     assert data['group']['aggregate']['f']['values'] == ['Meyers Chuck', 'Ketchikan', 'Sitka']
     assert data['group']['aggregate']['l']['values'] == ['Point Baker', 'Ketchikan', 'Sitka']
     data = client.execute(
-        '''{ group(by: ["state", "county"], reverse: true, count: {greaterEqual: 200})
-        { tables { length }
+        '''{ group(by: ["state", "county"], reverse: true) { filter(greaterEqual: 200) {
+        tables { length }
         aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
         min: column(name: "min") { ... on StringColumn { values } }
-        max: column(name: "max") { ... on StringColumn { values } } } } }'''
+        max: column(name: "max") { ... on StringColumn { values } } } } } }'''
     )
-    assert [row['length'] for row in data['group']['tables']] == [525, 242, 219, 284]
-    agg = data['group']['aggregate']
+    assert [row['length'] for row in data['group']['filter']['tables']] == [525, 242, 219, 284]
+    agg = data['group']['filter']['aggregate']
     assert agg['min']['values'] == ['Acton', 'Alief', 'Alsip', 'Naval Anacost Annex']
     assert agg['max']['values'] == ['Woodland Hills', 'Webster', 'Worth', 'Washington Navy Yard']
     data = client.execute(
-        '''{ group(by: ["state", "county"], reverse: true, count: {greaterEqual: 200, sort: true})
-        { tables { length }
+        '''{ group(by: ["state", "county"]) { sort(reverse: true, length: 4) {
+        tables { length }
         aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
         columns { latitude { values } longitude { values } }
-        column(name: "zipcode") { ... on ListColumn { count { values } } } } } }'''
+        column(name: "zipcode") { ... on ListColumn { count { values } } } } } } }'''
     )
-    counts = [row['length'] for row in data['group']['tables']]
-    agg = data['group']['aggregate']
+    counts = [row['length'] for row in data['group']['sort']['tables']]
+    agg = data['group']['sort']['aggregate']
     assert counts == agg['column']['count']['values'] == [525, 284, 242, 219]
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
@@ -274,8 +274,8 @@ def test_group(client):
     )
     assert data['sc']['length'] == data['cs']['length'] == 3216
     data = client.execute(
-        '''{ sc: group(by: ["state", "county"], count: {sort: true}) { length }
-        cs: group(by: ["county", "state"], count: {sort: true}) { length } }'''
+        '''{ sc: group(by: ["state", "county"]) { length }
+        cs: group(by: ["county", "state"]) { length } }'''
     )
     assert data['sc']['length'] == data['cs']['length'] == 3216
 

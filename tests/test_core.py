@@ -31,22 +31,18 @@ def test_chunks():
     assert C.minimum(array, array).equals(array)
     assert C.maximum(array, array).equals(array)
     table = pa.Table.from_pydict({'col': array})
-    assert T.unique(table, 'col', count='counts')['counts'].to_pylist() == [2, 3, 1]
-    tables = list(T.group(table, 'col'))
-    assert list(map(len, tables)) == [2, 3, 1]
+    assert T.unique(table, 'col', count=True)[1].to_pylist() == [2, 3, 1]
+    groups, counts = T.group(table, 'col')
+    assert groups['col'].to_pylist() == list('abc')
+    assert counts.to_pylist() == [2, 3, 1]
     assert table['col'].unique() == pa.array('abc')
     assert C.sort(array, length=1).to_pylist() == ['a']
     assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
-    groups = [''.join(tbl['col'].to_pylist()) for tbl in T.group(table, 'col')]
-    assert groups == ['aa', 'bbb', 'c']
-    assert ''.join(T.unique(table, 'col')['col'].to_pylist()) == 'abc'
+    assert ''.join(T.unique(table, 'col')[0]['col'].to_pylist()) == 'abc'
     table = pa.Table.from_pydict({'col': array.dictionary_encode()})
-    groups = [''.join(tbl['col'].to_pylist()) for tbl in T.group(table, 'col', reverse=True)]
-    assert groups == ['c', 'bbb', 'aa']
-    assert ''.join(T.unique(table, 'col', reverse=True)['col'].to_pylist()) == 'bca'
+    assert ''.join(T.unique(table, 'col', reverse=True)[0]['col'].to_pylist()) == 'bca'
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
-    assert len(list(T.group(table, 'col'))) == 3
-    assert len(T.unique(table, 'col')) == 3
+    assert len(T.unique(table, 'col')[0]) == 3
 
 
 def test_lists():
@@ -125,29 +121,30 @@ def test_functional(table):
 
 
 def test_group(table):
-    tables = list(T.group(table, 'state'))
-    assert len(tables) == 52
-    assert set(tables[0]['state'].to_pylist()) == {'NY'}
-    tables = list(T.group(table, 'state', predicate=(100).__ge__, sort=True))
-    assert [table['state'][0].as_py() for table in tables] == ['RI', 'DE']
+    groups, counts = T.group(table, 'state')
+    assert len(groups) == len(counts) == 52
+    assert groups['state'][0].as_py() == 'NY'
+    groups, counts = T.group(table, 'state', reverse=True, length=2)
+    assert groups['state'].to_pylist() == ['AK', 'WA']
+    assert counts.to_pylist() == [273, 732]
 
 
 def test_unique(table):
-    assert len(T.unique(table, 'zipcode')) == 41700
-    zipcodes = T.unique(table, 'state')['zipcode'].to_pylist()
+    assert len(T.unique(table, 'zipcode')[0]) == 41700
+    zipcodes = T.unique(table, 'state')[0]['zipcode'].to_pylist()
     assert len(zipcodes) == 52
     assert zipcodes[0] == 501
     assert zipcodes[-1] == 99501
-    zipcodes = T.unique(table, 'state', reverse=True)['zipcode'].to_pylist()
+    zipcodes = T.unique(table, 'state', reverse=True)[0]['zipcode'].to_pylist()
     assert len(zipcodes) == 52
     assert zipcodes[0] == 99950
     assert zipcodes[-1] == 988
     indices, _ = Chunk.unique_indices(pa.array([1, None, 1]))
     assert indices.to_pylist() == [0, 1]
-    table = T.unique(table, 'state', 'county', 'city', reverse=True, count='counts')
+    table, counts = T.unique(table, 'state', 'county', 'city', reverse=True, count=True)
     assert len(table) == 29865
     assert table['zipcode'][0].as_py() == 99927
-    assert table['counts'][0].as_py() == 1
+    assert counts[0].as_py() == 1
 
 
 def test_sort(table):

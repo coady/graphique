@@ -168,18 +168,6 @@ type Columns {
   struct: StructColumn!
 }
 
-"""predicates and sorting for counts"""
-input CountQuery {
-  equal: Long
-  notEqual: Long
-  less: Long
-  lessEqual: Long
-  greater: Long
-  greaterEqual: Long
-  isIn: [Long!]
-  sort: Boolean! = false
-}
-
 """Date (isoformat)"""
 scalar Date
 
@@ -586,17 +574,24 @@ type FloatSet implements Set {
   values: [Float]!
 }
 
-"""a list of tables"""
+"""table grouped by columns"""
 type Groups {
-  tables: [Table!]!
+  """number of rows"""
+  length: Long!
 
-  """number of tables"""
-  length: Int!
+  """Return groups sorted by value counts."""
+  sort(reverse: Boolean! = false, length: Long = null): Groups!
+
+  """Return groups filtered by value counts."""
+  filter(equal: Int!, notEqual: Int!, less: Int!, lessEqual: Int!, greater: Int!, greaterEqual: Int!): Groups!
+
+  """list of tables"""
+  tables: [Table!]!
 
   """
   Return single table with aggregate functions applied to columns.
           The grouping keys are automatically included.
-          Any remaining columns referenced in fields are transformed into list columns.
+          Any remaining columns referenced in fields are kept as list columns.
           Columns which are aliased or change type can be accessed by the `column` field.
   """
   aggregate(count: String! = "", first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = [], unique: [UniqueField!]! = []): Table!
@@ -627,11 +622,10 @@ type IndexedTable {
   slice(offset: Long! = 0, length: Long = null): Table!
 
   """
-  Return tables grouped by columns, with stable ordering.
-          `length` is the maximum number of tables to return.
-          `count` filters and sorts tables based on the number of rows within each table.
+  Return table grouped by columns, with stable ordering.
+          `length` is the maximum number of groups to return.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: CountQuery = null): Groups!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long = null): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -1195,11 +1189,10 @@ type Table {
   slice(offset: Long! = 0, length: Long = null): Table!
 
   """
-  Return tables grouped by columns, with stable ordering.
-          `length` is the maximum number of tables to return.
-          `count` filters and sorts tables based on the number of rows within each table.
+  Return table grouped by columns, with stable ordering.
+          `length` is the maximum number of groups to return.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: CountQuery = null): Groups!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long = null): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
