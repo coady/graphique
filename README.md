@@ -132,9 +132,11 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables a bi
 ```
 
 ## Changes
-dev
+0.2
 
 * `ListColumn` and `StructColumn` types
 * `Groups` type with `aggregate` field
 * `group` and `unique` optimized
 * pyarrow >= 2 required
+* Statistical fields: `mode`, `stddev`, `variance`
+* `is_in`, `min`, and `max` optimized
