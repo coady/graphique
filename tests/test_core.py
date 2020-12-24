@@ -43,6 +43,9 @@ def test_chunks():
     assert ''.join(T.unique(table, 'col', reverse=True)[0]['col'].to_pylist()) == 'bca'
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(T.unique(table, 'col')[0]) == 3
+    array = pa.chunked_array([list('ab'), list('a')]).dictionary_encode()
+    assert C.equal(array, 'a').to_pylist() == [True, False, True]
+    assert C.equal(array[-1:], 'a').to_pylist() == [True]
 
 
 def test_lists():

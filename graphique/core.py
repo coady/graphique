@@ -1,5 +1,5 @@
 """
-Core utilities that add pandas-esque features to arrow arrays and table.
+Core utilities that add pandas-esque features to arrow arrays and tables.
 
 Arrow forbids subclassing, so the classes are for logical grouping.
 Their methods are called as functions.
@@ -68,6 +68,8 @@ class Chunk:
         return pc.subtract(pa.scalar(len(array) - 1), indices), counts
 
     def call(self: pa.DictionaryArray, func: Callable, *args, **kwargs) -> pa.Array:
+        if len(self.dictionary) > len(self):
+            return func(self.cast(self.type.value_type), *args, **kwargs)
         dictionary = func(self.dictionary, *args, **kwargs)
         return pa.DictionaryArray.from_arrays(self.indices, dictionary)
 
@@ -196,8 +198,12 @@ class Column(pa.ChunkedArray):
             args = (pa.scalar(args[0], Column.scalar_type(self)),)
         if not isinstance(self.type, pa.DictionaryType):
             return func(self, *args)
-        array = pa.chunked_array(Column.map(rpartial(Chunk.call, func, *args), self))
-        with contextlib.suppress(ValueError):
+        chunks = list(Column.map(rpartial(Chunk.call, func, *args), self))
+        try:
+            array = pa.chunked_array(chunks)
+        except TypeError:  # mixed dictionary encoding
+            return pa.chunked_array(map(Column.decode, chunks))
+        with contextlib.suppress(ValueError, AttributeError):
             if array.type.value_type.bit_width <= array.type.index_type.bit_width:
                 return array.cast(array.type.value_type)
         return array
