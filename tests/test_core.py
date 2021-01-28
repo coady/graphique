@@ -24,6 +24,9 @@ def test_dictionary(table):
     assert C.sort(array)[0].as_py() == "AK"
     table = pa.Table.from_pydict({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
+    array = C.call(pa.chunked_array([[0]]).dictionary_encode(), pc.add, 1)
+    assert isinstance(array.type, pa.DictionaryType)
+    assert array.to_pylist() == [1]
 
 
 def test_chunks():

@@ -20,7 +20,7 @@ strawberry.scalar(
     parse_value=base64.b64decode,
 )
 
-strawberry.scalar(  # pragma: no branch
+strawberry.scalar(
     timedelta,
     name='Duration',
     description="duration float (in seconds)",
@@ -40,7 +40,8 @@ type_map = {
     pa.lib.Type_INT64: Long,
     pa.lib.Type_FLOAT: float,
     pa.lib.Type_DOUBLE: float,
-    pa.lib.Type_DECIMAL: Decimal,
+    pa.lib.Type_DECIMAL128: Decimal,
+    pa.lib.Type_DECIMAL256: Decimal,
     pa.lib.Type_DATE32: date,
     pa.lib.Type_DATE64: date,
     pa.lib.Type_TIMESTAMP: datetime,

@@ -251,7 +251,8 @@ class Column(pa.ChunkedArray):
 
     def mode(self):
         """Return mode of the values."""
-        return pc.mode(self).as_py()['mode']
+        values, _ = pc.mode(self).flatten()
+        return values[0].as_py() if values else None
 
     def stddev(self) -> Optional[float]:
         """Return standard deviation of the values."""
@@ -276,14 +277,7 @@ class Column(pa.ChunkedArray):
             self = pa.chunked_array([self.unique().cast(self.type.value_type)])
         with contextlib.suppress(NotImplementedError):
             return pc.min_max(self)['max' if reverse else 'min'].as_py()
-        with contextlib.suppress(NotImplementedError):
-            return Column.sort(self, reverse, length=1)[0].as_py()
-        if self.null_count:
-            self = self.filter(self.is_valid())
-        if not self:
-            return None
-        value = (np.max if reverse else np.min)(self)
-        return value.item() if hasattr(value, 'item') else value
+        return Column.sort(self, reverse, length=1)[0].as_py() if self else None
 
     def min(self):
         """Return min of the values."""
@@ -455,11 +449,11 @@ class Table(pa.Table):
 
     def mask(self, name: str, **query: dict) -> pa.Array:
         """Return mask array which matches query."""
-        masks, column = [], self[name]
+        column = self[name]
         partials = dict(query.pop('apply', {}))
         for func in set(Table.projected) & set(partials):
             column = Table.projected[func](column, self[partials.pop(func)])
-        masks += [getattr(pc, op)(column, self[partials[op]]) for op in partials]
+        masks = [getattr(pc, op)(column, self[partials[op]]) for op in partials]
         if query:
             masks.append(Column.mask(column, **query))
         return functools.reduce(getattr(pc, 'and'), masks)
