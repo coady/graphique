@@ -176,15 +176,22 @@ class Table:
         return Groups(table, counts)
 
     @doc_field
-    def unique(self, info, by: List[str], reverse: bool = False, count: str = '') -> 'Table':
+    def unique(
+        self,
+        info,
+        by: List[str],
+        reverse: bool = False,
+        length: Optional[Long] = None,
+        count: str = '',
+    ) -> 'Table':
         """Return table of first or last occurrences grouped by columns, with stable ordering.
         Optionally include counts in an aliased column.
         Faster than `group` when only scalars are needed."""
         table = self.select(info)
         names = list(map(to_snake_case, by))
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
-            return Table(T.unique_indices(table, *names)[0])
-        table, counts = T.unique(table, *names, reverse=reverse, count=bool(count))
+            return Table(T.unique_indices(table, *names)[0][:length])
+        table, counts = T.unique(table, *names, reverse=reverse, length=length, count=bool(count))
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field

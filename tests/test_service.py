@@ -286,6 +286,10 @@ def test_unique(client):
     with pytest.raises(ValueError, match="out of range"):
         client.execute('{ unique(by: []) { length } }')
     assert client.execute('{ unique(by: ["state"]) { length } }') == {'unique': {'length': 52}}
+    data = client.execute('{ unique(by: ["state"], length: 3) { length } }')
+    assert data == {'unique': {'length': 3}}
+    data = client.execute('{ unique(by: ["state"], length: 3) { columns { state { values } } } }')
+    assert data == {'unique': {'columns': {'state': {'values': ['NY', 'PR', 'MA']}}}}
     data = client.execute('{ unique(by: ["state"]) { length columns { zipcode { min max } } } }')
     assert data == {'unique': {'length': 52, 'columns': {'zipcode': {'min': 501, 'max': 99501}}}}
     data = client.execute(

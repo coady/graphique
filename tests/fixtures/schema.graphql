@@ -632,7 +632,7 @@ type IndexedTable {
           Optionally include counts in an aliased column.
           Faster than `group` when only scalars are needed.
   """
-  unique(by: [String!]!, reverse: Boolean! = false, count: String! = ""): Table!
+  unique(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: String! = ""): Table!
 
   """Return table slice sorted by specified columns."""
   sort(by: [String!]!, reverse: Boolean! = false, length: Long = null): Table!
@@ -1199,7 +1199,7 @@ type Table {
           Optionally include counts in an aliased column.
           Faster than `group` when only scalars are needed.
   """
-  unique(by: [String!]!, reverse: Boolean! = false, count: String! = ""): Table!
+  unique(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: String! = ""): Table!
 
   """Return table slice sorted by specified columns."""
   sort(by: [String!]!, reverse: Boolean! = false, length: Long = null): Table!

@@ -277,7 +277,7 @@ class Column(pa.ChunkedArray):
             self = pa.chunked_array([self.unique().cast(self.type.value_type)])
         with contextlib.suppress(NotImplementedError):
             return pc.min_max(self)['max' if reverse else 'min'].as_py()
-        return Column.sort(self, reverse, length=1)[0].as_py() if self else None
+        return Column.sort(self, reverse, length=1)[0].as_py()
 
     def min(self):
         """Return min of the values."""
@@ -421,7 +421,7 @@ class Table(pa.Table):
         )
         return indices, (pa.concat_arrays(c for _, c in items) if count else None)
 
-    def unique(self, *names: str, reverse=False, count=False) -> tuple:
+    def unique(self, *names: str, reverse=False, length: int = None, count=False) -> tuple:
         """Return table with first or last occurrences from grouping by columns.
 
         Optionally compute corresponding counts.
@@ -429,7 +429,7 @@ class Table(pa.Table):
         """
         self = self.combine_chunks()
         indices, counts = Table.unique_indices(self, *names, reverse=reverse, count=count)
-        return self.take(indices), counts
+        return self.take(indices[:length]), (counts and counts[:length])
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns, optimized for single column with fixed length."""
