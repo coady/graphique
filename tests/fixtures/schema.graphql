@@ -1108,7 +1108,7 @@ type StringColumn implements Column {
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDecimal: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsNumeric: Boolean! = false, utf8IsPrintable: Boolean! = false, utf8IsSpace: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
 
   """whether any values evaluate to true"""
   any: Boolean!
@@ -1145,6 +1145,9 @@ type StringColumn implements Column {
 
   """strings converted to uppercase"""
   utf8Upper: StringColumn!
+
+  """Return strings split on pattern, by default whitespace."""
+  split(pattern: String! = "", maxSplits: Int! = -1, reverse: Boolean! = false): ListColumn!
 }
 
 """predicates for strings"""
@@ -1163,8 +1166,12 @@ input StringFilter {
   stringIsAscii: Boolean! = false
   utf8IsAlnum: Boolean! = false
   utf8IsAlpha: Boolean! = false
+  utf8IsDecimal: Boolean! = false
   utf8IsDigit: Boolean! = false
   utf8IsLower: Boolean! = false
+  utf8IsNumeric: Boolean! = false
+  utf8IsPrintable: Boolean! = false
+  utf8IsSpace: Boolean! = false
   utf8IsTitle: Boolean! = false
   utf8IsUpper: Boolean! = false
   apply: Ordinal

@@ -110,6 +110,20 @@ def test_strings(client):
         column(name: "size") { ... on IntColumn { max } } } } }'''
     )
     assert data == {'filter': {'apply': {'column': {'max': 24}}}}
+    data = client.execute(
+        '''{ unique(by: ["city"]) { columns { city { split {
+        first { ... on StringColumn { count(equal: "New") } }
+        count { ... on IntColumn { max } } } } } } }'''
+    )
+    cities = data['unique']['columns']['city']
+    assert cities['split'] == {'first': {'count': 177}, 'count': {'max': 6}}
+    data = client.execute(
+        '''{ unique(by: ["city"]) { columns { city {
+        split(pattern: "-", maxSplits: 1, reverse: true) {
+        count { unique { values counts } } } } } } }'''
+    )
+    cities = data['unique']['columns']['city']
+    cities['split']['count']['unique'] == {'values': [1, 2], 'counts': [18718, 1]}
 
 
 def test_search(client):

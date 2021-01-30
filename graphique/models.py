@@ -443,6 +443,14 @@ class StringColumn(Column):
         """strings converted to uppercase"""
         return StringColumn(pc.utf8_upper(self.array))  # type: ignore
 
+    @doc_field
+    def split(self, pattern: str = '', max_splits: int = -1, reverse: bool = False) -> 'ListColumn':
+        """Return strings split on pattern, by default whitespace."""
+        kwargs = {'max_splits': max_splits, 'reverse': reverse}
+        if pattern:
+            return ListColumn(pc.split_pattern(self.array, pattern=pattern, **kwargs))  # type: ignore
+        return ListColumn(pc.utf8_split_whitespace(self.array, **kwargs))  # type: ignore
+
 
 @strawberry.type(description="column of lists")
 class ListColumn(Column):

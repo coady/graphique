@@ -198,8 +198,12 @@ class StringFilter(StringQuery):
     string_is_ascii: bool = False
     utf8_is_alnum: bool = False
     utf8_is_alpha: bool = False
+    utf8_is_decimal: bool = False
     utf8_is_digit: bool = False
     utf8_is_lower: bool = False
+    utf8_is_numeric: bool = False
+    utf8_is_printable: bool = False
+    utf8_is_space: bool = False
     utf8_is_title: bool = False
     utf8_is_upper: bool = False
     apply: Optional[Ordinal] = undefined

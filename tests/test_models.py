@@ -104,7 +104,14 @@ def test_columns(executor):
     assert execute('{ string { count(stringIsAscii: true) } }') == {'string': {'count': 1}}
     assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsAlpha: true) } }') == {'string': {'count': 0}}
+    assert execute('{ string { count(utf8IsDecimal: true) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsDigit: true) } }') == {'string': {'count': 0}}
+    assert execute('{ string { count(utf8IsLower: true) } }') == {'string': {'count': 0}}
+    assert execute('{ string { count(utf8IsNumeric: true) } }') == {'string': {'count': 0}}
+    assert execute('{ string { count(utf8IsPrintable: true) } }') == {'string': {'count': 1}}
+    assert execute('{ string { count(utf8IsSpace: true) } }') == {'string': {'count': 0}}
+    assert execute('{ string { count(utf8IsTitle: true) } }') == {'string': {'count': 0}}
+    assert execute('{ string { count(utf8IsUpper: true) } }') == {'string': {'count': 0}}
     assert execute('{ string { any all } }') == {'string': {'any': False, 'all': False}}
     assert execute('{ string { type } }') == {
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
