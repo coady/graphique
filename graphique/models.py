@@ -105,6 +105,16 @@ class resolvers:
         }
         return C.count(C.mask(self.array, **query), True)  # type: ignore
 
+    @doc_field
+    def any(self) -> bool:
+        """whether any values evaluate to true"""
+        return C.any(self.array)
+
+    @doc_field
+    def all(self) -> bool:
+        """whether all values evaluate to true"""
+        return C.all(self.array)
+
     def values(self):
         """list of values"""
         return self.array.to_pylist()
@@ -230,6 +240,8 @@ def query_args(func, query):
 class BooleanColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, BooleanQuery)
+    any = resolvers.any
+    all = resolvers.all
     values = annotate(resolvers.values, List[Optional[bool]])
     Set = Set.subclass(bool, "BooleanSet", "unique booleans")
     unique = annotate(resolvers.unique, Set)
@@ -239,6 +251,8 @@ class BooleanColumn(Column):
 class IntColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, IntQuery)
+    any = resolvers.any
+    all = resolvers.all
     values = annotate(resolvers.values, List[Optional[int]])
     Set = Set.subclass(int, "IntSet", "unique ints")
     unique = annotate(resolvers.unique, Set)
@@ -266,6 +280,8 @@ class IntColumn(Column):
 class LongColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, LongQuery)
+    any = resolvers.any
+    all = resolvers.all
     values = annotate(resolvers.values, List[Optional[Long]])
     Set = Set.subclass(Long, "LongSet", "unique longs")
     unique = annotate(resolvers.unique, Set)
@@ -293,6 +309,8 @@ class LongColumn(Column):
 class FloatColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, FloatQuery)
+    any = resolvers.any
+    all = resolvers.all
     values = annotate(resolvers.values, List[Optional[float]])
     Set = Set.subclass(float, "FloatSet", "unique floats")
     unique = annotate(resolvers.unique, Set)
@@ -391,6 +409,8 @@ class DurationColumn(Column):
 class BinaryColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, BinaryQuery)
+    any = resolvers.any
+    all = resolvers.all
     values = annotate(resolvers.values, List[Optional[bytes]])
     Set = Set.subclass(bytes, "BinarySet", "unique binaries")
     unique = annotate(resolvers.unique, Set)
@@ -401,6 +421,8 @@ class BinaryColumn(Column):
 class StringColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = query_args(resolvers.count, StringFilter)
+    any = resolvers.any
+    all = resolvers.all
     values = annotate(resolvers.values, List[Optional[str]])
     Set = Set.subclass(str, "StringSet", "unique strings")
     unique = annotate(resolvers.unique, Set)
@@ -494,6 +516,16 @@ class ListColumn(Column):
     def variance(self) -> FloatColumn:
         """mean of each list scalar"""
         return self.map(ListChunk.variance)  # type: ignore
+
+    @doc_field
+    def any(self) -> BooleanColumn:
+        """any true of each list scalar"""
+        return self.map(ListChunk.any)  # type: ignore
+
+    @doc_field
+    def all(self) -> BooleanColumn:
+        """all true of each list scalar"""
+        return self.map(ListChunk.all)  # type: ignore
 
 
 @strawberry.type(description="column of structs")

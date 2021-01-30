@@ -55,12 +55,14 @@ def test_columns(executor):
         assert data == {name: {'fillNull': {'values': [0, 1]}}}
         assert execute(f'{{ {name} {{ type }} }}') == {name: {'type': name}}
         assert execute(f'{{ {name} {{ min max sort first: sort(length: 1) }} }}')
+        assert execute(f'{{ {name} {{ any all }} }}')
     for name in ('uint32', 'uint64', 'int64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
         data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0, 1]}}}
         assert execute(f'{{ {name} {{ min max sort first: sort(length: 1) }} }}')
+        assert execute(f'{{ {name} {{ any all }} }}')
 
     for name in ('float', 'double'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0.0, None]}}
@@ -68,6 +70,7 @@ def test_columns(executor):
         data = execute(f'{{ {name} {{ fillNull(value: 1.0) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0.0, 1.0]}}}
         assert execute(f'{{ {name} {{ min max sort first: sort(length: 1) }} }}')
+        assert execute(f'{{ {name} {{ any all }} }}')
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
 
     for name in ('date32', 'date64'):
@@ -95,12 +98,14 @@ def test_columns(executor):
 
     assert execute('{ binary { values } }') == {'binary': {'values': ['', None]}}
     assert execute('{ binary { count(equal: "") } }') == {'binary': {'count': 1}}
+    assert execute('{ binary { any all } }') == {'binary': {'any': False, 'all': False}}
     assert execute('{ string { values } }') == {'string': {'values': ['', None]}}
     assert execute('{ string { count(equal: "") } }') == {'string': {'count': 1}}
     assert execute('{ string { count(stringIsAscii: true) } }') == {'string': {'count': 1}}
     assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsAlpha: true) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsDigit: true) } }') == {'string': {'count': 0}}
+    assert execute('{ string { any all } }') == {'string': {'any': False, 'all': False}}
     assert execute('{ string { type } }') == {
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
     }
@@ -176,7 +181,8 @@ def test_list(executor):
         first { ... on IntColumn { values } } last { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
         sum { ... on IntColumn { values } } mean { values }
-        mode { ... on IntColumn { values } } stddev { values } variance { values } } } }'''
+        mode { ... on IntColumn { values } } stddev { values } variance { values }
+        any { values } all { values } } } }'''
     )
     assert data['columns']['list'] == {
         'count': {'values': [3, None]},
@@ -189,6 +195,8 @@ def test_list(executor):
         'mode': {'values': [0, None]},
         'stddev': {'values': [pytest.approx((2 / 3) ** 0.5), None]},
         'variance': {'values': [pytest.approx(2 / 3), None]},
+        'any': {'values': [True, None]},
+        'all': {'values': [False, None]},
     }
     data = executor(
         '''{ apply(list: {count: true}) {

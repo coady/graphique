@@ -63,6 +63,8 @@ def test_lists():
     assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
+    assert ListChunk.any(array).to_pylist() == [True, False, False, False, None]
+    assert ListChunk.all(array).to_pylist() == [True, False, True, True, None]
     array = pa.array([["a", "b"], [None]])
     assert ListChunk.min(array).to_pylist() == ["a", None]
     assert ListChunk.max(array).to_pylist() == ["b", None]
@@ -92,12 +94,16 @@ def test_reduce():
 def test_membership():
     array = pa.chunked_array([[0]])
     assert C.count(array, True) == 0
+    assert not C.any(array)
     array = pa.chunked_array([[0, 1]])
     assert C.count(array, True) == 1
+    assert C.any(array)
+    assert not C.all(array)
     array = pa.chunked_array([[1, 1]])
     assert C.count(array, True) == 2
     assert C.count(array, False) == C.count(array, None) == 0
     assert C.count(array, 0) == 0 and C.count(array, 1) == 2
+    assert C.all(array)
 
 
 def test_functional(table):

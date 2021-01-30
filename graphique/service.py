@@ -316,6 +316,8 @@ class Groups:
         max: List[Field] = [],
         sum: List[Field] = [],
         mean: List[Field] = [],
+        any: List[Field] = [],
+        all: List[Field] = [],
         unique: List[UniqueField] = [],
     ) -> Table:
         """Return single table with aggregate functions applied to columns.
@@ -323,7 +325,7 @@ class Groups:
         Any remaining columns referenced in fields are kept as list columns.
         Columns which are aliased or change type can be accessed by the `column` field."""
         columns = {name: self.table[name].chunk(0) for name in self.table.column_names}
-        for key in ('first', 'last', 'min', 'max', 'sum', 'mean', 'unique'):
+        for key in ('first', 'last', 'min', 'max', 'sum', 'mean', 'any', 'all', 'unique'):
             for field in locals()[key]:
                 name = to_snake_case(field.name)
                 column = getattr(ListChunk, key)(columns[name])

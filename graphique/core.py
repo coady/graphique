@@ -137,21 +137,31 @@ class ListChunk(pa.ListArray):
         """sum each list scalar"""
         return ListChunk.reduce(self, Column.sum)
 
-    def mean(self) -> pa.Array:
+    def mean(self) -> pa.FloatingPointArray:
         """mean of each list scalar"""
         return ListChunk.reduce(self, Column.mean, pa.float64())
 
-    def mode(self):
+    def mode(self) -> pa.Array:
         """mode of each list scalar"""
         return ListChunk.reduce(self, Column.mode)
 
-    def stddev(self) -> Optional[float]:
+    def stddev(self) -> pa.FloatingPointArray:
         """stddev of each list scalar"""
         return ListChunk.reduce(self, Column.stddev, pa.float64())
 
-    def variance(self) -> Optional[float]:
+    def variance(self) -> pa.FloatingPointArray:
         """variance of each list scalar"""
         return ListChunk.reduce(self, Column.variance, pa.float64())
+
+    def any(self) -> pa.BooleanArray:
+        """any true of each list scalar"""
+        values = (None if scalar.values is None else Column.any(scalar.values) for scalar in self)
+        return pa.array(values, pa.bool_())
+
+    def all(self) -> pa.BooleanArray:
+        """all true of each list scalar"""
+        values = (None if scalar.values is None else Column.all(scalar.values) for scalar in self)
+        return pa.array(values, pa.bool_())
 
 
 class Column(pa.ChunkedArray):
@@ -315,6 +325,14 @@ class Column(pa.ChunkedArray):
             self, value = Column.equal(self, value), True
         getter = operator.attrgetter('true_count' if value else 'false_count')
         return sum(map(getter, Column.mask(self).iterchunks()))
+
+    def any(self) -> bool:
+        """Return whether any values evaluate to true."""
+        return pc.any(Column.mask(self)).as_py()
+
+    def all(self) -> bool:
+        """Return whether all values evaluate to true."""
+        return pc.all(Column.mask(self)).as_py()
 
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""

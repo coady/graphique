@@ -135,6 +135,7 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables a bi
 dev
 
 * Pyarrow >=3 required
+* `any` and `all` fields
 
 0.2
 

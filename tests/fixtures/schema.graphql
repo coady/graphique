@@ -19,6 +19,12 @@ type BinaryColumn implements Column {
   """
   count(equal: Binary, notEqual: Binary, isIn: [Binary!]): Long!
 
+  """whether any values evaluate to true"""
+  any: Boolean!
+
+  """whether all values evaluate to true"""
+  all: Boolean!
+
   """list of values"""
   values: [Binary]!
 
@@ -68,6 +74,12 @@ type BooleanColumn implements Column {
           Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Boolean, notEqual: Boolean): Long!
+
+  """whether any values evaluate to true"""
+  any: Boolean!
+
+  """whether all values evaluate to true"""
+  all: Boolean!
 
   """list of values"""
   values: [Boolean]!
@@ -468,6 +480,12 @@ type FloatColumn implements Column {
   """
   count(equal: Float, notEqual: Float, less: Float, lessEqual: Float, greater: Float, greaterEqual: Float, isIn: [Float!]): Long!
 
+  """whether any values evaluate to true"""
+  any: Boolean!
+
+  """whether all values evaluate to true"""
+  all: Boolean!
+
   """list of values"""
   values: [Float]!
 
@@ -594,7 +612,7 @@ type Groups {
           Any remaining columns referenced in fields are kept as list columns.
           Columns which are aliased or change type can be accessed by the `column` field.
   """
-  aggregate(count: String! = "", first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = [], unique: [UniqueField!]! = []): Table!
+  aggregate(count: String! = "", first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = [], any: [Field!]! = [], all: [Field!]! = [], unique: [UniqueField!]! = []): Table!
 }
 
 """a table sorted by a composite index"""
@@ -682,6 +700,12 @@ type IntColumn implements Column {
           Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Int, notEqual: Int, less: Int, lessEqual: Int, greater: Int, greaterEqual: Int, isIn: [Int!]): Long!
+
+  """whether any values evaluate to true"""
+  any: Boolean!
+
+  """whether all values evaluate to true"""
+  all: Boolean!
 
   """list of values"""
   values: [Int]!
@@ -848,6 +872,12 @@ type ListColumn implements Column {
 
   """mean of each list scalar"""
   variance: FloatColumn!
+
+  """any true of each list scalar"""
+  any: BooleanColumn!
+
+  """all true of each list scalar"""
+  all: BooleanColumn!
 }
 
 """aggregate functions for lists"""
@@ -879,6 +909,12 @@ type LongColumn implements Column {
           Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: Long, notEqual: Long, less: Long, lessEqual: Long, greater: Long, greaterEqual: Long, isIn: [Long!]): Long!
+
+  """whether any values evaluate to true"""
+  any: Boolean!
+
+  """whether all values evaluate to true"""
+  all: Boolean!
 
   """list of values"""
   values: [Long]!
@@ -1073,6 +1109,12 @@ type StringColumn implements Column {
           Optimized for `null`, and empty queries will attempt boolean conversion.
   """
   count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
+
+  """whether any values evaluate to true"""
+  any: Boolean!
+
+  """whether all values evaluate to true"""
+  all: Boolean!
 
   """list of values"""
   values: [String]!
