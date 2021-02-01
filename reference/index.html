@@ -1,0 +1,1726 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="GraphQL service for arrow tables and parquet data sets.">
+      
+      
+      
+      
+      <link rel="shortcut icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-6.2.7">
+    
+    
+      
+        <title>Reference - graphique</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.cb6bc1d0.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.39b8e14a.min.css">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#graphique.core.Column" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href=".." title="graphique" class="md-header-nav__button md-logo" aria-label="graphique">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            graphique
+          </span>
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            
+              Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/coady/graphique" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    coady/graphique
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="graphique" class="md-nav__button md-logo" aria-label="graphique">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    graphique
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/coady/graphique" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    coady/graphique
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        Introduction
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Reference
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#graphique.core.Column" class="md-nav__link">
+    Column
+  </a>
+  
+    <nav class="md-nav" aria-label="Column">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.absolute" class="md-nav__link">
+    absolute()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.all" class="md-nav__link">
+    all()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.any" class="md-nav__link">
+    any()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.call" class="md-nav__link">
+    call()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.combine_chunks" class="md-nav__link">
+    combine_chunks()
+  </a>
+  
+    <nav class="md-nav" aria-label="combine_chunks()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.combine_chunks--parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.combine_chunks--returns" class="md-nav__link">
+    Returns
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.count" class="md-nav__link">
+    count()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.equal" class="md-nav__link">
+    equal()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.find" class="md-nav__link">
+    find()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.is_in" class="md-nav__link">
+    is_in()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.mask" class="md-nav__link">
+    mask()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.max" class="md-nav__link">
+    max()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.maximum" class="md-nav__link">
+    maximum()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.mean" class="md-nav__link">
+    mean()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.min" class="md-nav__link">
+    min()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.minimum" class="md-nav__link">
+    minimum()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.mode" class="md-nav__link">
+    mode()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.not_equal" class="md-nav__link">
+    not_equal()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.quantile" class="md-nav__link">
+    quantile()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.range" class="md-nav__link">
+    range()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.sort" class="md-nav__link">
+    sort()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.stddev" class="md-nav__link">
+    stddev()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.sum" class="md-nav__link">
+    sum()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.variance" class="md-nav__link">
+    variance()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graphique.core.Table" class="md-nav__link">
+    Table
+  </a>
+  
+    <nav class="md-nav" aria-label="Table">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.apply" class="md-nav__link">
+    apply()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.group" class="md-nav__link">
+    group()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.index" class="md-nav__link">
+    index()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.is_in" class="md-nav__link">
+    is_in()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.mask" class="md-nav__link">
+    mask()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.not_equal" class="md-nav__link">
+    not_equal()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.range" class="md-nav__link">
+    range()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.sort" class="md-nav__link">
+    sort()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.types" class="md-nav__link">
+    types()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.unique" class="md-nav__link">
+    unique()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#graphique.core.Column" class="md-nav__link">
+    Column
+  </a>
+  
+    <nav class="md-nav" aria-label="Column">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.absolute" class="md-nav__link">
+    absolute()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.all" class="md-nav__link">
+    all()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.any" class="md-nav__link">
+    any()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.call" class="md-nav__link">
+    call()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.combine_chunks" class="md-nav__link">
+    combine_chunks()
+  </a>
+  
+    <nav class="md-nav" aria-label="combine_chunks()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.combine_chunks--parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.combine_chunks--returns" class="md-nav__link">
+    Returns
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.count" class="md-nav__link">
+    count()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.equal" class="md-nav__link">
+    equal()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.find" class="md-nav__link">
+    find()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.is_in" class="md-nav__link">
+    is_in()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.mask" class="md-nav__link">
+    mask()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.max" class="md-nav__link">
+    max()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.maximum" class="md-nav__link">
+    maximum()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.mean" class="md-nav__link">
+    mean()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.min" class="md-nav__link">
+    min()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.minimum" class="md-nav__link">
+    minimum()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.mode" class="md-nav__link">
+    mode()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.not_equal" class="md-nav__link">
+    not_equal()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.quantile" class="md-nav__link">
+    quantile()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.range" class="md-nav__link">
+    range()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.sort" class="md-nav__link">
+    sort()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.stddev" class="md-nav__link">
+    stddev()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.sum" class="md-nav__link">
+    sum()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Column.variance" class="md-nav__link">
+    variance()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graphique.core.Table" class="md-nav__link">
+    Table
+  </a>
+  
+    <nav class="md-nav" aria-label="Table">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.apply" class="md-nav__link">
+    apply()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.group" class="md-nav__link">
+    group()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.index" class="md-nav__link">
+    index()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.is_in" class="md-nav__link">
+    is_in()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.mask" class="md-nav__link">
+    mask()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.not_equal" class="md-nav__link">
+    not_equal()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.range" class="md-nav__link">
+    range()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.sort" class="md-nav__link">
+    sort()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.types" class="md-nav__link">
+    types()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphique.core.Table.unique" class="md-nav__link">
+    unique()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  <h1>Reference</h1>
+                
+                <div class="doc doc-object doc-class">
+<h2 class="doc doc-heading" id="graphique.core.Column">
+
+        <code>graphique.core.Column</code>
+
+
+
+      </h2>
+<div class="doc doc-contents first">
+<p>Chunked array interface as a namespace of functions.</p>
+<div class="doc doc-children">
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.absolute">
+
+<code class="highlight language-python"><span class="n">absolute</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return absolute values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">absolute</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">:</span>
+    <span class="sd">"""Return absolute values."""</span>
+    <span class="n">chunks</span> <span class="o">=</span> <span class="n">Column</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">absolute</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">chunked_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">Chunk</span><span class="o">.</span><span class="n">to_null</span><span class="p">,</span> <span class="n">chunks</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">null_count</span> <span class="k">else</span> <span class="n">chunks</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.all">
+
+<code class="highlight language-python"><span class="nb">all</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return whether all values evaluate to true.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">all</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">"""Return whether all values evaluate to true."""</span>
+    <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">mask</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.any">
+
+<code class="highlight language-python"><span class="nb">any</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return whether any values evaluate to true.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">any</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">"""Return whether any values evaluate to true."""</span>
+    <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">mask</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.call">
+
+<code class="highlight language-python"><span class="n">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Call compute function on array with support for dictionaries.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">:</span>
+    <span class="sd">"""Call compute function on array with support for dictionaries."""</span>
+    <span class="k">if</span> <span class="n">args</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Scalar</span><span class="p">)</span> <span class="ow">and</span> <span class="n">func</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">pc</span><span class="o">.</span><span class="n">match_substring</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">scalar</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Column</span><span class="o">.</span><span class="n">scalar_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)),)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">DictionaryType</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="n">chunks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">rpartial</span><span class="p">(</span><span class="n">Chunk</span><span class="o">.</span><span class="n">call</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">),</span> <span class="bp">self</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">array</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">chunked_array</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>  <span class="c1"># mixed dictionary encoding</span>
+        <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">chunked_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">decode</span><span class="p">,</span> <span class="n">chunks</span><span class="p">))</span>
+    <span class="k">with</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">suppress</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">array</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">value_type</span><span class="o">.</span><span class="n">bit_width</span> <span class="o">&lt;=</span> <span class="n">array</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">index_type</span><span class="o">.</span><span class="n">bit_width</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">array</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">array</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">value_type</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">array</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.combine_chunks">
+
+<code class="highlight language-python"><span class="n">combine_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>ChunkedArray.combine_chunks(self, MemoryPool memory_pool=None)</p>
+<p>Flatten this ChunkedArray into a single non-chunked array.</p>
+<h5 id="graphique.core.Column.combine_chunks--parameters">Parameters</h5>
+<p>memory_pool : MemoryPool, default None
+    For memory allocations, if required, otherwise use default pool</p>
+<h5 id="graphique.core.Column.combine_chunks--returns">Returns</h5>
+<p>result : Array</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">combine_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_chunks</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">pa</span><span class="o">.</span><span class="n">concat_arrays</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iterchunks</span><span class="p">())</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.count">
+
+<code class="highlight language-python"><span class="n">count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return number of occurrences of value.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="sd">"""Return number of occurrences of value."""</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">null_count</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">Column</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span> <span class="kc">True</span>
+    <span class="n">getter</span> <span class="o">=</span> <span class="n">operator</span><span class="o">.</span><span class="n">attrgetter</span><span class="p">(</span><span class="s1">'true_count'</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="s1">'false_count'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">getter</span><span class="p">,</span> <span class="n">Column</span><span class="o">.</span><span class="n">mask</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">iterchunks</span><span class="p">()))</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.equal">
+
+<code class="highlight language-python"><span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return boolean mask array which matches scalar value.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">:</span>
+    <span class="sd">"""Return boolean mask array which matches scalar value."""</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">is_null</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Column</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">equal</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.find">
+
+<code class="highlight language-python"><span class="n">find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">values</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Generate slices of matching rows from a sorted array.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">values</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">slice</span><span class="p">]:</span>
+    <span class="sd">"""Generate slices of matching rows from a sorted array."""</span>
+    <span class="n">stop</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="n">Compare</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">values</span><span class="p">)):</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_right</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">start</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="nb">slice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.is_in">
+
+<code class="highlight language-python"><span class="n">is_in</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return boolean mask array which matches any value.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">is_in</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">:</span>
+    <span class="sd">"""Return boolean mask array which matches any value."""</span>
+    <span class="k">return</span> <span class="n">Column</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">is_in_meta_binary</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.mask">
+
+<code class="highlight language-python"><span class="n">mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="s1">'and'</span><span class="p">,</span> <span class="o">**</span><span class="n">query</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return boolean mask array which matches query predicates.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="s1">'and'</span><span class="p">,</span> <span class="o">**</span><span class="n">query</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">:</span>
+    <span class="sd">"""Return boolean mask array which matches query predicates."""</span>
+    <span class="n">masks</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">op</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">'equal'</span><span class="p">,</span> <span class="s1">'not_equal'</span><span class="p">,</span> <span class="s1">'is_in'</span><span class="p">):</span>
+            <span class="n">masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">Column</span><span class="p">,</span> <span class="n">op</span><span class="p">)(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s1">'absolute'</span><span class="p">:</span>
+            <span class="n">masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">mask</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">Column</span><span class="p">,</span> <span class="n">op</span><span class="p">)(</span><span class="bp">self</span><span class="p">),</span> <span class="n">func</span><span class="p">,</span> <span class="o">**</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">'utf8_lower'</span><span class="p">,</span> <span class="s1">'utf8_upper'</span><span class="p">,</span> <span class="s1">'binary_length'</span><span class="p">):</span>
+            <span class="n">masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">mask</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="n">op</span><span class="p">)),</span> <span class="n">func</span><span class="p">,</span> <span class="o">**</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="s1">'_is_'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">op</span><span class="p">:</span>
+            <span class="n">masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="n">op</span><span class="p">),</span> <span class="n">value</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">query</span><span class="p">[</span><span class="n">op</span><span class="p">]:</span>
+            <span class="n">masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="n">op</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="n">masks</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">functools</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="n">func</span><span class="p">),</span> <span class="n">masks</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">suppress</span><span class="p">(</span><span class="ne">NotImplementedError</span><span class="p">):</span>
+        <span class="bp">self</span> <span class="o">=</span> <span class="n">Column</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">binary_length</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">bool_</span><span class="p">())</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.max">
+
+<code class="highlight language-python"><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return max of the values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">max</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""Return max of the values."""</span>
+    <span class="k">return</span> <span class="n">Column</span><span class="o">.</span><span class="n">min_max</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.maximum">
+
+<code class="highlight language-python"><span class="n">maximum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return element-wise maximum of values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">maximum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">:</span>
+    <span class="sd">"""Return element-wise maximum of values."""</span>
+    <span class="k">return</span> <span class="n">Column</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.mean">
+
+<code class="highlight language-python"><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return mean of the values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+    <span class="sd">"""Return mean of the values."""</span>
+    <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.min">
+
+<code class="highlight language-python"><span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return min of the values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">min</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""Return min of the values."""</span>
+    <span class="k">return</span> <span class="n">Column</span><span class="o">.</span><span class="n">min_max</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.minimum">
+
+<code class="highlight language-python"><span class="n">minimum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return element-wise minimum of values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">minimum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">:</span>
+    <span class="sd">"""Return element-wise minimum of values."""</span>
+    <span class="k">return</span> <span class="n">Column</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.mode">
+
+<code class="highlight language-python"><span class="n">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return mode of the values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""Return mode of the values."""</span>
+    <span class="n">values</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span> <span class="k">if</span> <span class="n">values</span> <span class="k">else</span> <span class="kc">None</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.not_equal">
+
+<code class="highlight language-python"><span class="n">not_equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return boolean mask array which doesn't match scalar value.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">not_equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">ChunkedArray</span><span class="p">:</span>
+    <span class="sd">"""Return boolean mask array which doesn't match scalar value."""</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">is_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Column</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pc</span><span class="o">.</span><span class="n">not_equal</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.quantile">
+
+<code class="highlight language-python"><span class="n">quantile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">q</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return q-th quantiles for values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">quantile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">q</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="sd">"""Return q-th quantiles for values."""</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">null_count</span><span class="p">:</span>
+        <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_valid</span><span class="p">())</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.range">
+
+<code class="highlight language-python"><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">include_lower</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">include_upper</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return slice within range from a sorted array, by default a half-open interval.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">include_lower</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">include_upper</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">slice</span><span class="p">:</span>
+    <span class="sd">"""Return slice within range from a sorted array, by default a half-open interval."""</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span> <span class="k">if</span> <span class="n">include_lower</span> <span class="k">else</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_right</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">lower</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Compare</span><span class="p">(</span><span class="n">lower</span><span class="p">))</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_right</span> <span class="k">if</span> <span class="n">include_upper</span> <span class="k">else</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span>
+    <span class="n">stop</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">upper</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Compare</span><span class="p">(</span><span class="n">upper</span><span class="p">),</span> <span class="n">start</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">slice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.sort">
+
+<code class="highlight language-python"><span class="n">sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return sorted values, optimized for fixed length.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
+    <span class="sd">"""Return sorted values, optimized for fixed length."""</span>
+    <span class="bp">self</span> <span class="o">=</span> <span class="n">Column</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">length</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">suppress</span><span class="p">(</span><span class="ne">IndexError</span><span class="p">):</span>  <span class="c1"># fallback to sorting if length &gt; len(chunk)</span>
+            <span class="k">if</span> <span class="n">reverse</span><span class="p">:</span>
+                <span class="n">indices</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">partition_nth_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pivot</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-</span> <span class="n">length</span><span class="p">)</span>
+                <span class="n">chunks</span> <span class="o">=</span> <span class="p">[</span><span class="n">chunk</span><span class="p">[</span><span class="o">-</span><span class="n">length</span><span class="p">:]</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">indices</span><span class="o">.</span><span class="n">iterchunks</span><span class="p">()]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">indices</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">partition_nth_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pivot</span><span class="o">=</span><span class="n">length</span><span class="p">)</span>
+                <span class="n">chunks</span> <span class="o">=</span> <span class="p">[</span><span class="n">chunk</span><span class="p">[:</span><span class="n">length</span><span class="p">]</span> <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">indices</span><span class="o">.</span><span class="n">iterchunks</span><span class="p">()]</span>
+            <span class="bp">self</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">chunked_array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">Array</span><span class="o">.</span><span class="n">take</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterchunks</span><span class="p">(),</span> <span class="n">chunks</span><span class="p">))</span>
+    <span class="c1"># arrow may seg fault when `sort_indices` is called on a non-chunked array</span>
+    <span class="bp">self</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">chunked_array</span><span class="p">([</span><span class="n">Column</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">(</span><span class="bp">self</span><span class="p">)])</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">take</span><span class="p">((</span><span class="n">indices</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">reverse</span> <span class="k">else</span> <span class="n">indices</span><span class="p">)[:</span><span class="n">length</span><span class="p">])</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.stddev">
+
+<code class="highlight language-python"><span class="n">stddev</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return standard deviation of the values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">stddev</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+    <span class="sd">"""Return standard deviation of the values."""</span>
+    <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">stddev</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.sum">
+
+<code class="highlight language-python"><span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return sum of the values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">"""Return sum of the values."""</span>
+    <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Column.variance">
+
+<code class="highlight language-python"><span class="n">variance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return variance of the values.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">variance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+    <span class="sd">"""Return variance of the values."""</span>
+    <span class="k">return</span> <span class="n">pc</span><span class="o">.</span><span class="n">variance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">as_py</span><span class="p">()</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="doc doc-object doc-class">
+<h2 class="doc doc-heading" id="graphique.core.Table">
+
+        <code>graphique.core.Table</code>
+
+
+
+      </h2>
+<div class="doc doc-contents first">
+<p>Table interface as a namespace of functions.</p>
+<div class="doc doc-children">
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.apply">
+
+<code class="highlight language-python"><span class="n">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s1">''</span><span class="p">,</span> <span class="o">**</span><span class="n">partials</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return view of table with functions applied across columns.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">alias</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">''</span><span class="p">,</span> <span class="o">**</span><span class="n">partials</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+    <span class="sd">"""Return view of table with functions applied across columns."""</span>
+    <span class="n">column</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">func</span><span class="p">,</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">partials</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">Table</span><span class="o">.</span><span class="n">projected</span><span class="p">:</span>
+            <span class="n">column</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">projected</span><span class="p">[</span><span class="n">func</span><span class="p">](</span><span class="n">column</span><span class="p">,</span> <span class="bp">self</span><span class="p">[</span><span class="n">arg</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="n">column</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">applied</span><span class="p">[</span><span class="n">func</span><span class="p">](</span><span class="n">column</span><span class="p">,</span> <span class="n">arg</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">arg</span> <span class="ow">and</span> <span class="n">func</span> <span class="ow">in</span> <span class="n">Table</span><span class="o">.</span><span class="n">applied</span><span class="p">:</span>
+            <span class="n">column</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">applied</span><span class="p">[</span><span class="n">func</span><span class="p">](</span><span class="n">column</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">arg</span><span class="p">:</span>
+            <span class="n">column</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">chunked_array</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">ListChunk</span><span class="p">,</span> <span class="n">func</span><span class="p">),</span> <span class="n">column</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">alias</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column_names</span><span class="p">),</span> <span class="n">alias</span><span class="p">,</span> <span class="n">column</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_column</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">name</span><span class="p">,</span> <span class="n">column</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.group">
+
+<code class="highlight language-python"><span class="n">group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">names</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return table grouped by columns and corresponding counts.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">names</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+    <span class="sd">"""Return table grouped by columns and corresponding counts."""</span>
+    <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">()</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">group_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">names</span><span class="p">)</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="p">(</span><span class="n">indices</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">reverse</span> <span class="k">else</span> <span class="n">indices</span><span class="p">)[:</span><span class="n">length</span><span class="p">]</span>
+    <span class="n">scalars</span> <span class="o">=</span> <span class="n">ListChunk</span><span class="o">.</span><span class="n">first</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">scalars</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column_names</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">names</span><span class="p">):</span>
+        <span class="n">columns</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">Chunk</span><span class="o">.</span><span class="n">take_list</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">chunk</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">indices</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="o">.</span><span class="n">from_pydict</span><span class="p">(</span><span class="n">columns</span><span class="p">),</span> <span class="n">indices</span><span class="o">.</span><span class="n">value_lengths</span><span class="p">()</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.index">
+
+<code class="highlight language-python"><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return index column names from pandas metadata.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="sd">"""Return index column names from pandas metadata."""</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">schema</span><span class="o">.</span><span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">b</span><span class="s1">'pandas'</span><span class="p">,</span> <span class="sa">b</span><span class="s1">'</span><span class="si">{}</span><span class="s1">'</span><span class="p">))</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'index_columns'</span><span class="p">,</span> <span class="p">[])</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.is_in">
+
+<code class="highlight language-python"><span class="n">is_in</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">values</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return rows which matches one of the values.</p>
+<p>Assumes the table is sorted by the column name, i.e., indexed.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">is_in</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">values</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+    <span class="sd">"""Return rows which matches one of the values.</span>
+
+<span class="sd">    Assumes the table is sorted by the column name, i.e., indexed.</span>
+<span class="sd">    """</span>
+    <span class="n">slices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="o">*</span><span class="n">values</span><span class="p">))</span> <span class="ow">or</span> <span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">concat_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">slc</span><span class="p">]</span> <span class="k">for</span> <span class="n">slc</span> <span class="ow">in</span> <span class="n">slices</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.mask">
+
+<code class="highlight language-python"><span class="n">mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">query</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return mask array which matches query.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">query</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
+    <span class="sd">"""Return mask array which matches query."""</span>
+    <span class="n">column</span> <span class="o">=</span> <span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="n">partials</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">query</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">'apply'</span><span class="p">,</span> <span class="p">{}))</span>
+    <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Table</span><span class="o">.</span><span class="n">projected</span><span class="p">)</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">partials</span><span class="p">):</span>
+        <span class="n">column</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">projected</span><span class="p">[</span><span class="n">func</span><span class="p">](</span><span class="n">column</span><span class="p">,</span> <span class="bp">self</span><span class="p">[</span><span class="n">partials</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">func</span><span class="p">)])</span>
+    <span class="n">masks</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="n">op</span><span class="p">)(</span><span class="n">column</span><span class="p">,</span> <span class="bp">self</span><span class="p">[</span><span class="n">partials</span><span class="p">[</span><span class="n">op</span><span class="p">]])</span> <span class="k">for</span> <span class="n">op</span> <span class="ow">in</span> <span class="n">partials</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">query</span><span class="p">:</span>
+        <span class="n">masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">mask</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="o">**</span><span class="n">query</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">functools</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">pc</span><span class="p">,</span> <span class="s1">'and'</span><span class="p">),</span> <span class="n">masks</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.not_equal">
+
+<code class="highlight language-python"><span class="n">not_equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return rows which don't match the value.</p>
+<p>Assumes the table is sorted by the column name, i.e., indexed.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">not_equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+    <span class="sd">"""Return rows which don't match the value.</span>
+
+<span class="sd">    Assumes the table is sorted by the column name, i.e., indexed.</span>
+<span class="sd">    """</span>
+    <span class="p">(</span><span class="n">slc</span><span class="p">,)</span> <span class="o">=</span> <span class="n">Column</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pa</span><span class="o">.</span><span class="n">concat_tables</span><span class="p">([</span><span class="bp">self</span><span class="p">[:</span> <span class="n">slc</span><span class="o">.</span><span class="n">start</span><span class="p">],</span> <span class="bp">self</span><span class="p">[</span><span class="n">slc</span><span class="o">.</span><span class="n">stop</span> <span class="p">:]])</span>  <span class="c1"># noqa: E203</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.range">
+
+<code class="highlight language-python"><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">includes</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return rows within range, by default a half-open interval.</p>
+<p>Assumes the table is sorted by the column name, i.e., indexed.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">includes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+    <span class="sd">"""Return rows within range, by default a half-open interval.</span>
+
+<span class="sd">    Assumes the table is sorted by the column name, i.e., indexed.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="p">[</span><span class="n">Column</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="o">**</span><span class="n">includes</span><span class="p">)]</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.sort">
+
+<code class="highlight language-python"><span class="n">sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">names</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return table sorted by columns, optimized for single column with fixed length.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">sort</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">names</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pa</span><span class="o">.</span><span class="n">Table</span><span class="p">:</span>
+    <span class="sd">"""Return table sorted by columns, optimized for single column with fixed length."""</span>
+    <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">[:</span><span class="n">length</span><span class="p">])</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">column</span> <span class="o">=</span> <span class="n">Column</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="k">if</span> <span class="n">reverse</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">partition_nth_indices</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">pivot</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-</span> <span class="n">length</span><span class="p">)[</span><span class="o">-</span><span class="n">length</span><span class="p">:]</span>  <span class="c1"># type: ignore</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">partition_nth_indices</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">pivot</span><span class="o">=</span><span class="n">length</span><span class="p">)[:</span><span class="n">length</span><span class="p">]</span>
+        <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="p">(</span><span class="n">Column</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">])</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">names</span><span class="p">))</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">indices</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">pc</span><span class="o">.</span><span class="n">sort_indices</span><span class="p">(</span><span class="n">column</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">indices</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">take</span><span class="p">((</span><span class="n">indices</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">reverse</span> <span class="k">else</span> <span class="n">indices</span><span class="p">)[:</span><span class="n">length</span><span class="p">])</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.types">
+
+<code class="highlight language-python"><span class="n">types</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return mapping of column types.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">types</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="sd">"""Return mapping of column types."""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">Column</span><span class="o">.</span><span class="n">scalar_type</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="n">name</span><span class="p">])</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_names</span><span class="p">}</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="graphique.core.Table.unique">
+
+<code class="highlight language-python"><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">names</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+
+      </h3>
+<div class="doc doc-contents ">
+<p>Return table with first or last occurrences from grouping by columns.</p>
+<p>Optionally compute corresponding counts.
+Faster than <a href="#graphique.core.Table.group">group</a> when only scalars are needed.</p>
+<details class="quote">
+          <summary>Source code in <code>graphique/core.py</code></summary>
+          <div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">unique</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">names</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+    <span class="sd">"""Return table with first or last occurrences from grouping by columns.</span>
+
+<span class="sd">    Optionally compute corresponding counts.</span>
+<span class="sd">    Faster than [group][graphique.core.Table.group] when only scalars are needed.</span>
+<span class="sd">    """</span>
+    <span class="bp">self</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">()</span>
+    <span class="n">indices</span><span class="p">,</span> <span class="n">counts</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">unique_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">names</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="n">reverse</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="n">count</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">indices</span><span class="p">[:</span><span class="n">length</span><span class="p">]),</span> <span class="p">(</span><span class="n">counts</span> <span class="ow">and</span> <span class="n">counts</span><span class="p">[:</span><span class="n">length</span><span class="p">])</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+</div>
+</div>
+</div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href=".." class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Introduction
+              </div>
+            </div>
+          </a>
+        
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../assets/javascripts/vendor.53cc9318.min.js"></script>
+      <script src="../assets/javascripts/bundle.e9c9f54f.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
+      
+      <script>
+        app = initialize({
+          base: "..",
+          features: [],
+          search: Object.assign({
+            worker: "../assets/javascripts/worker/search.9c0e82ba.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>
