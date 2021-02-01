@@ -8,21 +8,17 @@
 [![image](https://img.shields.io/badge/code%20style-black-000000.svg)](https://pypi.org/project/black/)
 [![image](http://mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 
-[GraphQL](https://graphql.org) service for [arrow](https://arrow.apache.org) tables
-and [parquet](https://parquet.apache.org) data sets.
-The schema is derived automatically.
+[GraphQL](https://graphql.org) service for [arrow](https://arrow.apache.org) tables and [parquet](https://parquet.apache.org) data sets. The schema is derived automatically.
 
 ## Usage
 ```console
 % env PARQUET_PATH=... uvicorn graphique.service:app
 ```
 
-Open http://localhost:8000/graphql to try out the API in [GraphiQL](https://github.com/graphql/graphiql/tree/main/packages/graphiql#readme).
-There is a test fixture at `./tests/fixtures/zipcodes.parquet`.
+Open http://localhost:8000/graphql to try out the API in [GraphiQL](https://github.com/graphql/graphiql/tree/main/packages/graphiql#readme). There is a test fixture at `./tests/fixtures/zipcodes.parquet`.
 
 ### Configuration
-Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file.
-Config variables are used as input to [ParquetDataset](https://arrow.apache.org/docs/python/parquet.html#reading-from-partitioned-datasets).
+Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to [ParquetDataset](https://arrow.apache.org/docs/python/parquet.html#reading-from-partitioned-datasets).
 
 * COLUMNS = None
 * DEBUG = False
@@ -100,9 +96,7 @@ type Table {
 ```
 
 ### Performance
-Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible.
-Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views.
-Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
+Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views. Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
 
 Specifying an `INDEX` of columns indicates the table is sorted, and enables a binary search interface.
 ```graphql
@@ -122,6 +116,7 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables a bi
 ## Dependencies
 * pyarrow >=3
 * strawberry-graphql >=0.42
+* uvicorn (or other [ASGI](https://asgi.readthedocs.io/en/latest/) server)
 * pytz (optional timestamp support)
 
 ## Tests
@@ -132,10 +127,11 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables a bi
 ```
 
 ## Changes
-dev
+0.3
 
 * Pyarrow >=3 required
 * `any` and `all` fields
+* Sting column `split` field
 
 0.2
 
