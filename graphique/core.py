@@ -65,7 +65,7 @@ class Chunk:
         if not reverse:
             return unique_indices(array, count)
         indices, counts = unique_indices(array[::-1], count)
-        return pc.subtract(pa.scalar(len(array) - 1), indices), counts
+        return pc.subtract(len(array) - 1, indices), counts
 
     def call(self: pa.DictionaryArray, func: Callable, *args, **kwargs) -> pa.Array:
         if len(self.dictionary) > len(self):
@@ -73,6 +73,7 @@ class Chunk:
         dictionary = func(self.dictionary, *args, **kwargs)
         return pa.DictionaryArray.from_arrays(self.indices, dictionary)
 
+    @staticmethod
     def to_null(array: np.ndarray) -> pa.Array:
         func = np.isnat if array.dtype.type in (np.datetime64, np.timedelta64) else np.isnan
         return pa.array(array, mask=func(array))
@@ -182,6 +183,20 @@ class Column(pa.ChunkedArray):
     def combine_chunks(self) -> pa.Array:
         return self.chunk(0) if self.num_chunks == 1 else pa.concat_arrays(self.iterchunks())
 
+    def unique(self) -> pa.Array:
+        """Native `unique` only supports equal dictionaries."""
+        try:
+            return self.unique()
+        except pa.ArrowInvalid:
+            return Column.combine_chunks(self).unique()
+
+    def value_counts(self) -> pa.Array:
+        """Native `value_counts` only supports equal dictionaries."""
+        try:
+            return self.value_counts()
+        except pa.ArrowInvalid:
+            return Column.combine_chunks(self).value_counts()
+
     def mask(self, func='and', **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
         masks = []
@@ -284,7 +299,7 @@ class Column(pa.ChunkedArray):
         if not self:
             return None
         if isinstance(self.type, pa.DictionaryType):
-            self = pa.chunked_array([self.unique().cast(self.type.value_type)])
+            self = pa.chunked_array([Column.unique(self).cast(self.type.value_type)])
         with contextlib.suppress(NotImplementedError):
             return pc.min_max(self)['max' if reverse else 'min'].as_py()
         return Column.sort(self, reverse, length=1)[0].as_py()

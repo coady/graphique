@@ -46,6 +46,9 @@ def test_chunks():
     assert ''.join(T.unique(table, 'col', reverse=True)[0]['col'].to_pylist()) == 'bca'
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(T.unique(table, 'col')[0]) == 3
+    array = pa.chunked_array(chunk.dictionary_encode() for chunk in array.chunks)
+    assert C.unique(array).to_pylist() == ["a", "b", "c"]
+    assert C.value_counts(array).field('counts').to_pylist() == [2, 3, 1]
     array = pa.chunked_array([list('ab'), list('a')]).dictionary_encode()
     assert C.equal(array, 'a').to_pylist() == [True, False, True]
     assert C.equal(array[-1:], 'a').to_pylist() == [True]
