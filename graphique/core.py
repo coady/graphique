@@ -50,7 +50,7 @@ def rpartial(func, *values):
     return lambda arg: func(arg, *values)
 
 
-class Chunk:
+class Chunk(pa.Array):
     def encode(self):
         if not isinstance(self, pa.DictionaryArray):
             if not self.null_count and np.can_cast(self.type.to_pandas_dtype(), np.intp):
@@ -81,6 +81,25 @@ class Chunk:
     def take_list(self, indices: pa.ListArray) -> pa.ListArray:
         assert len(self) == len(indices.values)  # type: ignore
         return pa.ListArray.from_arrays(indices.offsets, self.take(indices.values))  # type: ignore
+
+    def partition_nth_indices(self, pivot: int) -> pa.IntegerArray:
+        if pivot >= 0:
+            return pc.partition_nth_indices(self, pivot=pivot)[:pivot]
+        return pc.partition_nth_indices(self, pivot=len(self) + pivot)[pivot:]
+
+    def partition_nth(self, pivot: int) -> pa.Array:
+        if len(self) <= abs(pivot):
+            return self
+        return self.take(Chunk.partition_nth_indices(self, pivot))
+
+    def sort_keys(self) -> pa.Array:
+        if not isinstance(self, pa.DictionaryArray):
+            return self
+        if len(self) <= len(self.dictionary):
+            return self.cast(self.type.value_type)
+        # arrow may seg fault after sorting a non-chunked array
+        keys = pc.sort_indices(pc.array_sort_indices(pa.chunked_array([self.dictionary])))
+        return keys.take(self.indices)
 
 
 class ListChunk(pa.ListArray):
@@ -251,20 +270,12 @@ class Column(pa.ChunkedArray):
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
-        self = Column.decode(self)
-        if length is not None:
-            with contextlib.suppress(IndexError):  # fallback to sorting if length > len(chunk)
-                if reverse:
-                    indices = pc.partition_nth_indices(self, pivot=len(self) - length)
-                    chunks = [chunk[-length:] for chunk in indices.iterchunks()]
-                else:
-                    indices = pc.partition_nth_indices(self, pivot=length)
-                    chunks = [chunk[:length] for chunk in indices.iterchunks()]
-                self = pa.chunked_array(map(pa.Array.take, self.iterchunks(), chunks))
-        # arrow may seg fault when `sort_indices` is called on a non-chunked array
-        self = pa.chunked_array([Column.combine_chunks(self)])
-        indices = pc.sort_indices(self)
-        return self and self.take((indices[::-1] if reverse else indices)[:length])
+        if len(self[:length]) < len(self):
+            func = rpartial(Chunk.partition_nth, (-length if reverse else length))  # type: ignore
+            self = pa.chunked_array(Column.map(func, Column.decode(self)))
+        order = 'descending' if reverse else 'ascending'
+        array = Column.combine_chunks(self)
+        return array.take(pc.array_sort_indices(Chunk.sort_keys(array), order=order)[:length])
 
     def sum(self):
         """Return sum of the values."""
@@ -429,13 +440,12 @@ class Table(pa.Table):
 
     def group(self, *names: str, reverse=False, length: int = None) -> tuple:
         """Return table grouped by columns and corresponding counts."""
-        self = self.combine_chunks()
         indices = Table.group_indices(self, *names)
         indices = (indices[::-1] if reverse else indices)[:length]
         scalars = ListChunk.first(indices)
         columns = {name: self[name].take(scalars) for name in names}
         for name in set(self.column_names) - set(names):
-            columns[name] = Chunk.take_list(self[name].chunk(0), indices)
+            columns[name] = Chunk.take_list(Column.combine_chunks(self[name]), indices)
         return pa.Table.from_pydict(columns), indices.value_lengths()
 
     def unique_indices(self, *names: str, reverse=False, count=False) -> tuple:
@@ -460,25 +470,19 @@ class Table(pa.Table):
         Optionally compute corresponding counts.
         Faster than [group][graphique.core.Table.group] when only scalars are needed.
         """
-        self = self.combine_chunks()
         indices, counts = Table.unique_indices(self, *names, reverse=reverse, count=count)
         return self.take(indices[:length]), (counts and counts[:length])
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns, optimized for single column with fixed length."""
-        self = self.combine_chunks()
         if len(names) == 1 and len(self[:length]) < len(self):
-            column = Column.decode(self[names[-1]])
-            if reverse:
-                indices = pc.partition_nth_indices(column, pivot=len(self) - length)[-length:]  # type: ignore
-            else:
-                indices = pc.partition_nth_indices(column, pivot=length)[:length]
-            self = self.take(indices)
-        columns = (Column.decode(self[name]) for name in reversed(names))
-        indices = pc.sort_indices(next(columns))
-        for column in columns:
-            indices = indices.take(pc.sort_indices(column.take(indices)))
-        return self.take((indices[::-1] if reverse else indices)[:length])
+            array = Column.decode(Column.combine_chunks(self[names[-1]]))
+            self = self.take(Chunk.partition_nth_indices(array, (-length if reverse else length)))  # type: ignore
+        order = 'descending' if reverse else 'ascending'
+        columns = {name: Chunk.sort_keys(Column.combine_chunks(self[name])) for name in names}
+        table = pa.Table.from_pydict(columns)
+        indices = pc.sort_indices(table, sort_keys=[(name, order) for name in names])
+        return self.take(indices[:length])
 
     def mask(self, name: str, **query: dict) -> pa.Array:
         """Return mask array which matches query."""

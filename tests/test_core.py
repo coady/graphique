@@ -40,6 +40,8 @@ def test_chunks():
     assert counts.to_pylist() == [2, 3, 1]
     assert table['col'].unique() == pa.array('abc')
     assert C.sort(array, length=1).to_pylist() == ['a']
+    assert C.sort(array, length=3).to_pylist() == ['a', 'a', 'b']
+    assert C.sort(array.dictionary_encode()[:2]).to_pylist() == ['a', 'b']
     assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
     assert ''.join(T.unique(table, 'col')[0]['col'].to_pylist()) == 'abc'
     table = pa.Table.from_pydict({'col': array.dictionary_encode()})
