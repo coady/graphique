@@ -265,8 +265,8 @@ class Groups:
     def sort(self, info, reverse: bool = False, length: Optional[Long] = None) -> 'Groups':
         """Return groups sorted by value counts."""
         table = self.select(info)  # type: ignore
-        indices = pc.sort_indices(pa.chunked_array([self.counts]))
-        indices = (indices[::-1] if reverse else indices)[:length]
+        order = 'descending' if reverse else 'ascending'
+        indices = pc.array_sort_indices(self.counts, order=order)[:length]
         return Groups(table.take(indices), self.counts.take(indices))
 
     @doc_field

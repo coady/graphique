@@ -79,8 +79,8 @@ class Chunk(pa.Array):
         return pa.array(array, mask=func(array))
 
     def take_list(self, indices: pa.ListArray) -> pa.ListArray:
-        assert len(self) == len(indices.values)  # type: ignore
-        return pa.ListArray.from_arrays(indices.offsets, self.take(indices.values))  # type: ignore
+        assert len(self) == len(indices.values)
+        return pa.ListArray.from_arrays(indices.offsets, self.take(indices.values))
 
     def partition_nth_indices(self, pivot: int) -> pa.IntegerArray:
         if pivot >= 0:
@@ -238,8 +238,11 @@ class Column(pa.ChunkedArray):
 
     def call(self, func: Callable, *args) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
-        if args and isinstance(args[0], Scalar) and func is not pc.match_substring:
-            args = (pa.scalar(args[0], Column.scalar_type(self)),)
+        if args:
+            if isinstance(args[0], Scalar) and func is not pc.match_substring:
+                args = (pa.scalar(args[0], Column.scalar_type(self)),)
+            elif isinstance(args[0], pa.ChunkedArray):
+                self, *args = map(Column.decode, (self,) + args)  # type: ignore
         if not isinstance(self.type, pa.DictionaryType):
             return func(self, *args)
         chunks = list(Column.map(rpartial(Chunk.call, func, *args), self))

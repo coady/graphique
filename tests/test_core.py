@@ -117,6 +117,7 @@ def test_functional(table):
     assert set(C.equal(array, None).to_pylist()) == {False}
     assert set(C.not_equal(array, None).to_pylist()) == {True}
     mask = C.equal(array, 'CA')
+    assert C.count(table['city'], table['county'].dictionary_encode()) == 2805
     assert mask == C.is_in(array, ['CA']) == C.is_in(table['state'], ['CA'])
     assert C.not_equal(array, 'CA') == pc.invert(mask)
     assert len(array.filter(mask)) == 2647
