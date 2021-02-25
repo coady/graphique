@@ -147,6 +147,17 @@ def test_group(table):
     assert counts.to_pylist() == [273, 732]
 
 
+def test_partition(table):
+    groups, counts = T.partition(table, 'state')
+    assert len(groups) == len(counts) == 66
+    assert C.sum(counts) == 41700
+    assert groups['state'][0].as_py() == 'NY'
+    assert C.count(groups['state'], 'NY') == 3
+    assert groups['county'][0].values.to_pylist() == ['Suffolk', 'Suffolk']
+    groups, counts = T.partition(table, 'state', 'county')
+    assert len(groups) == len(counts) == 22751
+
+
 def test_unique(table):
     assert len(T.unique(table, 'zipcode')[0]) == 41700
     zipcodes = T.unique(table, 'state')[0]['zipcode'].to_pylist()

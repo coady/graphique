@@ -280,6 +280,17 @@ class Column(pa.ChunkedArray):
         array = Column.combine_chunks(self)
         return array.take(pc.array_sort_indices(Chunk.sort_keys(array), order=order)[:length])
 
+    def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
+        """Return discrete differences between adjacent values."""
+        self = Column.decode(self)
+        return func(self[1:], self[:-1])
+
+    def partition_offsets(self, predicate: Callable = pc.not_equal) -> pa.IntegerArray:
+        """Return list array offsets by partitioning adjacent values."""
+        ends = [pa.array([True])]
+        chunks = Column.diff(self, predicate).chunks
+        return pa.array(*np.nonzero(pa.concat_arrays(ends + chunks + ends)))
+
     def sum(self):
         """Return sum of the values."""
         return pc.sum(self).as_py()
@@ -450,6 +461,20 @@ class Table(pa.Table):
         for name in set(self.column_names) - set(names):
             columns[name] = Chunk.take_list(Column.combine_chunks(self[name]), indices)
         return pa.Table.from_pydict(columns), indices.value_lengths()
+
+    def partition(self, *names: str, predicate: Callable = pc.not_equal) -> tuple:
+        """Return table partitioned by equal values in columns and corresponding counts."""
+        offsets = Column.partition_offsets(self[names[0]], predicate)
+        for name in names[1:]:
+            groups = [pa.array([0])]
+            for scalar in pa.ListArray.from_arrays(offsets, Column.combine_chunks(self[name])):
+                group = Column.partition_offsets(pa.chunked_array([scalar.values]), predicate)
+                groups.append(pc.add(group[1:], groups[-1][-1]))
+            offsets = pa.concat_arrays(groups)
+        columns = {name: self[name].take(offsets[:-1]) for name in names}
+        for name in set(self.column_names) - set(names):
+            columns[name] = pa.ListArray.from_arrays(offsets, Column.combine_chunks(self[name]))
+        return pa.Table.from_pydict(columns), Column.diff(offsets)
 
     def unique_indices(self, *names: str, reverse=False, count=False) -> tuple:
         array = Chunk.encode(Column.combine_chunks(self[names[-1]]))
