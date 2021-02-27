@@ -462,17 +462,19 @@ class Table(pa.Table):
             columns[name] = Chunk.take_list(Column.combine_chunks(self[name]), indices)
         return pa.Table.from_pydict(columns), indices.value_lengths()
 
-    def partition(self, *names: str, predicate: Callable = pc.not_equal) -> tuple:
+    def partition(self, *names: str, **predicates) -> tuple:
         """Return table partitioned by equal values in columns and corresponding counts."""
-        offsets = Column.partition_offsets(self[names[0]], predicate)
+        names += tuple(predicates)
+        offsets = Column.partition_offsets(self[names[0]], predicates.get(names[0], pc.not_equal))
         for name in names[1:]:
             groups = [pa.array([0])]
+            predicate = predicates.get(name, pc.not_equal)
             for scalar in pa.ListArray.from_arrays(offsets, Column.combine_chunks(self[name])):
                 group = Column.partition_offsets(pa.chunked_array([scalar.values]), predicate)
                 groups.append(pc.add(group[1:], groups[-1][-1]))
             offsets = pa.concat_arrays(groups)
-        columns = {name: self[name].take(offsets[:-1]) for name in names}
-        for name in set(self.column_names) - set(names):
+        columns = {name: self[name].take(offsets[:-1]) for name in set(names) - set(predicates)}
+        for name in set(self.column_names) - set(columns):
             columns[name] = pa.ListArray.from_arrays(offsets, Column.combine_chunks(self[name]))
         return pa.Table.from_pydict(columns), Column.diff(offsets)
 

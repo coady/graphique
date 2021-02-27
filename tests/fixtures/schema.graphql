@@ -646,6 +646,12 @@ type IndexedTable {
   group(by: [String!]!, reverse: Boolean! = false, length: Long = null): Groups!
 
   """
+  Return table partitioned by equal column values.
+          Differs from `group` by relying on adjacency, and is typically faster.
+  """
+  partition(by: [String!]!): Groups!
+
+  """
   Return table of first or last occurrences grouped by columns, with stable ordering.
           Optionally include counts in an aliased column.
           Faster than `group` when only scalars are needed.
@@ -1242,6 +1248,12 @@ type Table {
           `length` is the maximum number of groups to return.
   """
   group(by: [String!]!, reverse: Boolean! = false, length: Long = null): Groups!
+
+  """
+  Return table partitioned by equal column values.
+          Differs from `group` by relying on adjacency, and is typically faster.
+  """
+  partition(by: [String!]!): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.

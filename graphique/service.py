@@ -176,6 +176,14 @@ class Table:
         return Groups(table, counts)
 
     @doc_field
+    def partition(self, info, by: List[str]) -> 'Groups':
+        """Return table partitioned by equal column values.
+        Differs from `group` by relying on adjacency, and is typically faster."""
+        table = self.select(info)
+        table, counts = T.partition(table, *map(to_snake_case, by))
+        return Groups(table, counts)
+
+    @doc_field
     def unique(
         self,
         info,

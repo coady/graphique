@@ -306,6 +306,19 @@ def test_group(client):
     assert data['sc']['length'] == data['cs']['length'] == 3216
 
 
+def test_partition(client):
+    with pytest.raises(ValueError, match="is required"):
+        client.execute('{ group { length } }')
+    data = client.execute(
+        '''{ partition(by: ["state"]) { aggregate { length columns { state { values } }
+        column(name: "county") { ... on ListColumn { count { values } } } } } }'''
+    )
+    agg = data['partition']['aggregate']
+    assert agg['length'] == 66
+    assert agg['columns']['state']['values'][:3] == ['NY', 'PR', 'MA']
+    assert agg['column']['count']['values'][:3] == [2, 176, 701]
+
+
 def test_unique(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ unique { length } }')

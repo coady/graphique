@@ -156,6 +156,11 @@ def test_partition(table):
     assert groups['county'][0].values.to_pylist() == ['Suffolk', 'Suffolk']
     groups, counts = T.partition(table, 'state', 'county')
     assert len(groups) == len(counts) == 22751
+    predicate = lambda *arrs: pc.greater(pc.subtract(*arrs), 1.0)  # noqa: E731
+    groups, counts = T.partition(T.sort(table, 'state', 'longitude'), 'state', longitude=predicate)
+    assert len(groups) == len(counts) == 62
+    assert groups['state'].value_counts()[0].as_py() == {'values': 'AK', 'counts': 7}
+    assert groups['longitude'][:2].to_pylist() == [[-174.213333], [-171.701685]]
 
 
 def test_unique(table):
