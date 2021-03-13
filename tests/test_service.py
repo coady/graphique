@@ -107,9 +107,10 @@ def test_strings(client):
     data = client.execute(
         '''{ filter(query: {state: {equal: "CA"}}) {
         apply(city: {binaryLength: true, alias: "size"}) {
+        filter(predicates: [{name: "size", int: {greater: 23}}]) { length }
         column(name: "size") { ... on IntColumn { max } } } } }'''
     )
-    assert data == {'filter': {'apply': {'column': {'max': 24}}}}
+    assert data == {'filter': {'apply': {'filter': {'length': 1}, 'column': {'max': 24}}}}
     data = client.execute(
         '''{ unique(by: ["city"]) { columns { city { split {
         first { ... on StringColumn { count(equal: "New") } }

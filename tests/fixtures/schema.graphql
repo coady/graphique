@@ -40,7 +40,6 @@ input BinaryFilter {
   equal: Binary
   notEqual: Binary
   isIn: [Binary!]
-  binaryLength: IntQuery
   apply: Nominal
 }
 
@@ -301,7 +300,6 @@ input DateTimeFilter {
   greater: DateTime
   greaterEqual: DateTime
   isIn: [DateTime!]
-  duration: DurationQuery
   apply: Interval
 }
 
@@ -425,7 +423,7 @@ type DurationColumn implements Column {
 }
 
 """predicates for durations"""
-input DurationQuery {
+input DurationFilter {
   equal: Duration
   notEqual: Duration
   less: Duration
@@ -433,12 +431,29 @@ input DurationQuery {
   greater: Duration
   greaterEqual: Duration
   isIn: [Duration!]
+  apply: Ordinal
 }
 
 """names and aliases for aggregation"""
 input Field {
   name: String!
   alias: String! = ""
+}
+
+"""predicates for columns of unknown type as a tagged union"""
+input Filter {
+  name: String!
+  bool: BooleanFilter
+  int: IntFilter
+  long: LongFilter
+  float: FloatFilter
+  decimal: DecimalFilter
+  date: DateFilter
+  datetime: DateTimeFilter
+  time: TimeFilter
+  duration: DurationFilter
+  binary: BinaryFilter
+  str: StringFilter
 }
 
 """predicates for each column"""
@@ -671,14 +686,15 @@ type IndexedTable {
   Return table with rows which match all (by default) queries.
           `invert` optionally excludes matching rows.
           `reduce` is the binary operator to combine filters; within a column all predicates must match.
+          `predicates` are additional filters for column of unknown types, as the result of `apply`.
   """
-  filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
+  filter(query: Filters = null, invert: Boolean! = false, reduce: Operator! = AND, predicates: [Filter!]! = []): Table!
 
   """
   Return view of table with functions applied across columns.
           If no alias is provided, the column is replaced and should be of the same type.
           If an alias is provided, a column is added and may be referenced in the `column` interface,
-          and in the `by` arguments of grouping and sorting.
+          in filter `predicates`, and in the `by` arguments of grouping and sorting.
   """
   apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction, list: ListFunction): Table!
 
@@ -1114,7 +1130,7 @@ type StringColumn implements Column {
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, binaryLength: IntQuery, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDecimal: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsNumeric: Boolean! = false, utf8IsPrintable: Boolean! = false, utf8IsSpace: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDecimal: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsNumeric: Boolean! = false, utf8IsPrintable: Boolean! = false, utf8IsSpace: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
 
   """whether any values evaluate to true"""
   any: Boolean!
@@ -1166,7 +1182,6 @@ input StringFilter {
   greaterEqual: String
   isIn: [String!]
   matchSubstring: String
-  binaryLength: IntQuery
   utf8Lower: StringFilter
   utf8Upper: StringFilter
   stringIsAscii: Boolean! = false
@@ -1275,14 +1290,15 @@ type Table {
   Return table with rows which match all (by default) queries.
           `invert` optionally excludes matching rows.
           `reduce` is the binary operator to combine filters; within a column all predicates must match.
+          `predicates` are additional filters for column of unknown types, as the result of `apply`.
   """
-  filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
+  filter(query: Filters = null, invert: Boolean! = false, reduce: Operator! = AND, predicates: [Filter!]! = []): Table!
 
   """
   Return view of table with functions applied across columns.
           If no alias is provided, the column is replaced and should be of the same type.
           If an alias is provided, a column is added and may be referenced in the `column` interface,
-          and in the `by` arguments of grouping and sorting.
+          in filter `predicates`, and in the `by` arguments of grouping and sorting.
   """
   apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction, list: ListFunction): Table!
 }

@@ -165,10 +165,10 @@ def test_duration(executor):
     assert column['values'] == [0.0, None]
     assert column['count'] == 1
     data = executor(
-        '''{ filter(query: {timestamp: {duration: {equal: 0.0}, apply: {subtract: "timestamp"}}})
-        { length } }'''
+        '''{ apply(timestamp: {subtract: "timestamp", alias: "elapsed"})
+        { filter(predicates: [{name: "elapsed", duration: {equal: 0.0}}]) { length } } }'''
     )
-    assert data == {'filter': {'length': 1}}
+    assert data == {'apply': {'filter': {'length': 1}}}
 
 
 def test_list(executor):

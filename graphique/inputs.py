@@ -169,12 +169,7 @@ class DateFilter(DateQuery):
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeFilter(DateTimeQuery):
-    duration: Optional[DurationQuery] = undefined
     apply: Optional[Interval] = undefined
-
-    def asdict(self):
-        query = super().asdict()
-        return dict(query, **query.pop('duration', {}))
 
 
 @strawberry.input(description="predicates for times")
@@ -182,9 +177,13 @@ class TimeFilter(TimeQuery):
     apply: Optional[Ordinal] = undefined
 
 
+@strawberry.input(description="predicates for durations")
+class DurationFilter(DurationQuery):
+    apply: Optional[Ordinal] = undefined
+
+
 @strawberry.input(description="predicates for binaries")
 class BinaryFilter(BinaryQuery):
-    binary_length: Optional[IntQuery] = undefined
     apply: Optional[Nominal] = undefined
 
 
@@ -192,7 +191,6 @@ class BinaryFilter(BinaryQuery):
 class StringFilter(StringQuery):
     __annotations__ = dict(StringQuery.__annotations__)  # used for `count` interface
     match_substring: Optional[str] = undefined
-    binary_length: Optional[IntQuery] = undefined
     utf8_lower: Optional['StringFilter'] = undefined
     utf8_upper: Optional['StringFilter'] = undefined
     string_is_ascii: bool = False
@@ -218,9 +216,33 @@ filter_map = {
     date: DateFilter,
     datetime: DateTimeFilter,
     time: TimeFilter,
+    timedelta: DurationFilter,
     bytes: BinaryFilter,
     str: StringFilter,
 }
+
+
+@strawberry.input(description="predicates for columns of unknown type as a tagged union")
+class Filter:
+    name: str
+
+    bool: Optional[BooleanFilter] = undefined
+    int: Optional[IntFilter] = undefined
+    long: Optional[LongFilter] = undefined
+    float: Optional[FloatFilter] = undefined
+    decimal: Optional[DecimalFilter] = undefined
+    date: Optional[DateFilter] = undefined
+    datetime: Optional[DateTimeFilter] = undefined
+    time: Optional[TimeFilter] = undefined
+    duration: Optional[DurationFilter] = undefined
+    binary: Optional[BinaryFilter] = undefined
+    str: Optional[StringFilter] = undefined
+
+    def asdict(self):
+        query = Query.asdict(self)
+        name = query.pop('name')
+        (values,) = query.values()  # only one allowed
+        return {name: values}
 
 
 @strawberry.input

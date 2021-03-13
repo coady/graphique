@@ -16,7 +16,7 @@ from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
-from .inputs import Field, UniqueField, filter_map, function_map, query_map
+from .inputs import Field, Filter, UniqueField, filter_map, function_map, query_map
 from .models import Column, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -224,14 +224,23 @@ class Table:
 
     @doc_field
     def filter(
-        self, info, query: Filters, invert: bool = False, reduce: Operator = 'and'  # type: ignore
+        self,
+        info,
+        query: Optional[Filters] = None,
+        invert: bool = False,
+        reduce: Operator = 'and',  # type: ignore
+        predicates: List[Filter] = [],
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
         `invert` optionally excludes matching rows.
-        `reduce` is the binary operator to combine filters; within a column all predicates must match."""
+        `reduce` is the binary operator to combine filters; within a column all predicates must match.
+        `predicates` are additional filters for column of unknown types, as the result of `apply`."""
         table = self.select(info)
+        filters = query.asdict() if query else {}  # type: ignore
+        for predicate in predicates:
+            filters.update(predicate.asdict())
         masks = []
-        for name, value in query.asdict().items():  # type: ignore
+        for name, value in filters.items():
             apply = value.get('apply', {})
             apply.update({key: to_snake_case(apply[key]) for key in apply})
             masks.append(T.mask(table, name, **value))
@@ -247,7 +256,7 @@ class Table:
         """Return view of table with functions applied across columns.
         If no alias is provided, the column is replaced and should be of the same type.
         If an alias is provided, a column is added and may be referenced in the `column` interface,
-        and in the `by` arguments of grouping and sorting."""
+        in filter `predicates`, and in the `by` arguments of grouping and sorting."""
         table = self.table
         for name in functions:
             value = functions[name].asdict()
