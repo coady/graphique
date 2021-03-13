@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 import pytest
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -201,3 +201,9 @@ def test_sort(table):
     assert data['state'] == ['WY', 'WY']
     assert data['county'] == ['Weston', 'Weston']
     assert data['city'] == ['Upton', 'Osage']
+
+
+def test_duration():
+    array = pa.array([timedelta(), None])
+    assert C.is_in(array, array[:0]).to_pylist() == [False, False]
+    assert C.is_in(array, array[:1]).to_pylist() == [True, False]

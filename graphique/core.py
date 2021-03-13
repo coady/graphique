@@ -269,7 +269,12 @@ class Column(pa.ChunkedArray):
 
     def is_in(self, values) -> pa.ChunkedArray:
         """Return boolean mask array which matches any value."""
-        return Column.call(self, pc.is_in_meta_binary, values)
+        with contextlib.suppress(NotImplementedError):
+            return Column.call(self, pc.is_in_meta_binary, values)
+        if not values:
+            return pa.array(np.full(len(self), False))
+        masks = (pc.equal(self, value) for value in values)
+        return functools.reduce(pc.or_, masks).fill_null(False)
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""

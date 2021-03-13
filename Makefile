@@ -3,7 +3,7 @@ all:
 	python3 setup.py build_ext -i --define CYTHON_TRACE_NOGIL
 
 check: all
-	pytest --cov
+	python3 -m pytest --cov
 
 lint:
 	python3 setup.py check -ms
@@ -13,7 +13,7 @@ lint:
 	mypy -p graphique
 
 html: all
-	mkdocs build
+	python3 -m mkdocs build
 
 dist:
 	python3 setup.py sdist bdist_wheel
