@@ -31,6 +31,9 @@ type BinaryColumn implements Column {
   """unique values and counts"""
   unique: BinarySet!
 
+  """Return values with null elements replaced."""
+  fillNull(value: Binary!): BinaryColumn!
+
   """length of bytes or strings"""
   binaryLength: IntColumn!
 }
@@ -46,6 +49,7 @@ input BinaryFilter {
 """functions for binaries"""
 input BinaryFunction {
   alias: String
+  fillNull: Binary
   binaryLength: Boolean! = false
 }
 
@@ -1122,6 +1126,9 @@ type StringColumn implements Column {
   """maximum value"""
   max: String
 
+  """Return values with null elements replaced."""
+  fillNull(value: String!): StringColumn!
+
   """length of bytes or strings"""
   binaryLength: IntColumn!
 
@@ -1172,6 +1179,7 @@ input StringFunction {
   alias: String
   minimum: String
   maximum: String
+  fillNull: String
   binaryLength: Boolean! = false
   utf8Lower: Boolean! = false
   utf8Upper: Boolean! = false

@@ -24,9 +24,13 @@ def test_dictionary(table):
     assert C.sort(array)[0].as_py() == "AK"
     table = pa.Table.from_pydict({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
-    array = C.call(pa.chunked_array([[0]]).dictionary_encode(), pc.add, 1)
+    array = C.call(pa.chunked_array([[0, 0]]).dictionary_encode(), pc.add, 1)
     assert isinstance(array.type, pa.DictionaryType)
-    assert array.to_pylist() == [1]
+    assert array.to_pylist() == [1, 1]
+    array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()
+    assert C.fill_null(array, "c").to_pylist() == C.fill_null(C.decode(array), "c").to_pylist()
+    assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
+    assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
 
 
 def test_chunks():
@@ -51,8 +55,8 @@ def test_chunks():
     array = pa.chunked_array(chunk.dictionary_encode() for chunk in array.chunks)
     assert C.unique(array).to_pylist() == ["a", "b", "c"]
     assert C.value_counts(array).field('counts').to_pylist() == [2, 3, 1]
-    array = pa.chunked_array([list('ab'), list('a')]).dictionary_encode()
-    assert C.equal(array, 'a').to_pylist() == [True, False, True]
+    array = pa.chunked_array([list('aba'), list('a')]).dictionary_encode()
+    assert C.equal(array, 'a').to_pylist() == [True, False, True, True]
     assert C.equal(array[-1:], 'a').to_pylist() == [True]
 
 

@@ -68,10 +68,19 @@ class Chunk(pa.Array):
         return pc.subtract(len(array) - 1, indices), counts
 
     def call(self: pa.DictionaryArray, func: Callable, *args, **kwargs) -> pa.Array:
-        if len(self.dictionary) > len(self):
+        if len(self.dictionary) >= len(self):
             return func(self.cast(self.type.value_type), *args, **kwargs)
         dictionary = func(self.dictionary, *args, **kwargs)
         return pa.DictionaryArray.from_arrays(self.indices, dictionary)
+
+    def fill_null(self: pa.DictionaryArray, value) -> pa.DictionaryArray:
+        if not self.null_count:
+            return self
+        if len(self.dictionary) >= len(self):
+            return self.cast(self.type.value_type).fill_null(value)
+        indices = self.indices.fill_null(len(self.dictionary))
+        dictionary = pa.concat_arrays([self.dictionary, pa.array([value], self.dictionary.type)])
+        return pa.DictionaryArray.from_arrays(indices, dictionary)
 
     @staticmethod
     def to_null(array: np.ndarray) -> pa.Array:
@@ -276,6 +285,14 @@ class Column(pa.ChunkedArray):
         masks = (pc.equal(self, value) for value in values)
         return functools.reduce(pc.or_, masks).fill_null(False)
 
+    def fill_null(self, value) -> pa.ChunkedArray:
+        """Replace each null element in values with fill_value with dictionary support."""
+        if not self.null_count:
+            return self
+        if not isinstance(self.type, pa.DictionaryType):
+            return self.fill_null(value)
+        return pa.chunked_array(Column.map(rpartial(Chunk.fill_null, value), self))
+
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
         if len(self[:length]) < len(self):
@@ -408,7 +425,7 @@ class Table(pa.Table):
         'maximum': Column.maximum,
     }
     applied = {
-        'fill_null': pc.fill_null,
+        'fill_null': Column.fill_null,
         'binary_length': pc.binary_length,
         'utf8_lower': pc.utf8_lower,
         'utf8_upper': pc.utf8_upper,

@@ -96,11 +96,13 @@ def test_columns(executor):
         assert data == {name: {'fillNull': {'values': ['00:00:00', '00:00:01']}}}
         assert execute(f'{{ {name} {{ min max }} }}')
 
-    assert execute('{ binary { values } }') == {'binary': {'values': ['', None]}}
-    assert execute('{ binary { count(equal: "") } }') == {'binary': {'count': 1}}
-    assert execute('{ binary { any all } }') == {'binary': {'any': False, 'all': False}}
-    assert execute('{ string { values } }') == {'string': {'values': ['', None]}}
-    assert execute('{ string { count(equal: "") } }') == {'string': {'count': 1}}
+    for name in ('binary', 'string'):
+        assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
+        assert execute(f'{{ {name} {{ count(equal: "") }} }}') == {name: {'count': 1}}
+        assert execute(f'{{ {name} {{ any all }} }}') == {name: {'any': False, 'all': False}}
+        data = execute(f'{{ {name} {{ fillNull(value: "") {{ values }} }} }}')
+        assert data == {name: {'fillNull': {'values': ['', '']}}}
+
     assert execute('{ string { count(stringIsAscii: true) } }') == {'string': {'count': 1}}
     assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsAlpha: true) } }') == {'string': {'count': 0}}
@@ -112,7 +114,6 @@ def test_columns(executor):
     assert execute('{ string { count(utf8IsSpace: true) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsTitle: true) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsUpper: true) } }') == {'string': {'count': 0}}
-    assert execute('{ string { any all } }') == {'string': {'any': False, 'all': False}}
     assert execute('{ string { type } }') == {
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
     }
@@ -240,3 +241,5 @@ def test_dictionary(executor):
         { column(name: "string") { ... on IntColumn { values } } } } }'''
     )
     assert data == {'group': {'aggregate': {'column': {'values': [1, 1]}}}}
+    data = executor('{ apply(string: {fillNull: ""}) { columns { string { values } } } }')
+    assert data == {'apply': {'columns': {'string': {'values': ['', '']}}}}

@@ -291,11 +291,13 @@ class TimeFunction(OrdinalFunction):
 
 @strawberry.input(description="functions for binaries")
 class BinaryFunction(Function):
+    fill_null: Optional[bytes] = undefined
     binary_length: bool = False
 
 
 @strawberry.input(description="functions for strings")
 class StringFunction(OrdinalFunction):
+    fill_null: Optional[str] = undefined
     binary_length: bool = False
     utf8_lower: bool = False
     utf8_upper: bool = False

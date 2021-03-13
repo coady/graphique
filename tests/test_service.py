@@ -203,7 +203,8 @@ def test_apply(client):
     data = client.execute('{ apply(zipcode: {add: "zipcode"}) { columns { zipcode { min } } } }')
     assert data['apply']['columns']['zipcode']['min'] == 1002
     data = client.execute(
-        '{ apply(zipcode: {subtract: "zipcode"}) { columns { zipcode { unique { values } } } } }')
+        '{ apply(zipcode: {subtract: "zipcode"}) { columns { zipcode { unique { values } } } } }'
+    )
     assert data['apply']['columns']['zipcode']['unique']['values'] == [0]
     data = client.execute(
         '''{ apply(latitude: {multiply: "longitude", alias: "product"})

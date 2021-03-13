@@ -165,7 +165,7 @@ class resolvers:
 
     def fill_null(self, value):
         """Return values with null elements replaced."""
-        return type(self)(self.array.fill_null(value))
+        return type(self)(C.fill_null(self.array, value))
 
     def add(self, value):
         """Return values added to scalar."""
@@ -414,6 +414,7 @@ class BinaryColumn(Column):
     values = annotate(resolvers.values, List[Optional[bytes]])
     Set = Set.subclass(bytes, "BinarySet", "unique binaries")
     unique = annotate(resolvers.unique, Set)
+    fill_null = annotate(resolvers.fill_null, 'BinaryColumn', value=bytes)
     binary_length = resolvers.binary_length
 
 
@@ -429,6 +430,7 @@ class StringColumn(Column):
     sort = annotate(resolvers.sort, List[Optional[str]])
     min = annotate(resolvers.min, Optional[str])
     max = annotate(resolvers.max, Optional[str])
+    fill_null = annotate(resolvers.fill_null, 'StringColumn', value=str)
     binary_length = resolvers.binary_length
     minimum = annotate(resolvers.minimum, 'StringColumn', value=str)
     maximum = annotate(resolvers.maximum, 'StringColumn', value=str)
