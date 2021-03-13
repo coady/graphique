@@ -195,20 +195,29 @@ def test_filter(client):
     assert data['filter']['length'] == 41700
     data = client.execute('{ filter(query: {city: {}}) { length } }')
     assert data['filter']['length'] == 41700
-    data = client.execute(
-        '{ filter(query: {zipcode: {apply: {add: "zipcode"}, equal: 1002}}) { length } }'
-    )
-    assert data['filter']['length'] == 1
-    data = client.execute(
-        '{ filter(query: {zipcode: {apply: {subtract: "zipcode"}, equal: 0}}) { length } }'
-    )
-    assert data['filter']['length'] == 41700
-    data = client.execute(
-        '{ filter(query: {latitude: {apply: {multiply: "longitude"}, greater: 0}}) { length } }'
-    )
-    assert data['filter']['length'] == 0
     data = client.execute('{ filter(query: {longitude: {absolute: {less: 66}}}) { length } }')
     assert data['filter']['length'] == 30
+
+
+def test_apply(client):
+    data = client.execute('{ apply(zipcode: {add: "zipcode"}) { columns { zipcode { min } } } }')
+    assert data['apply']['columns']['zipcode']['min'] == 1002
+    data = client.execute(
+        '{ apply(zipcode: {subtract: "zipcode"}) { columns { zipcode { unique { values } } } } }')
+    assert data['apply']['columns']['zipcode']['unique']['values'] == [0]
+    data = client.execute(
+        '''{ apply(latitude: {multiply: "longitude", alias: "product"})
+        { filter(predicates: [{name: "product", float: {greater: 0}}]) { length } } }'''
+    )
+    assert data['apply']['filter']['length'] == 0
+    data = client.execute(
+        '{ apply(longitude: {maximum: "latitude"}) { columns { longitude { min } } } }'
+    )
+    assert data['apply']['columns']['longitude']['min'] == pytest.approx(17.963333)
+    data = client.execute(
+        '{ apply(latitude: {minimum: "longitude"}) { columns { latitude { max } } } }'
+    )
+    assert data['apply']['columns']['latitude']['max'] == pytest.approx(-65.301389)
 
 
 def test_sort(client):

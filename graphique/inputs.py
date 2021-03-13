@@ -11,47 +11,34 @@ from .scalars import Long
 ops = 'equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'
 
 
-@strawberry.input(description="nominal functions projected across two columns")
-class Nominal:
+def asdict(self) -> dict:
+    return {
+        name: (value.asdict() if hasattr(value, 'asdict') else value)
+        for name, value in self.__dict__.items()
+        if value is not undefined
+    }
+
+
+@strawberry.input(description="nominal predicates projected across two columns")
+class NominalFilter:
     equal: Optional[str] = undefined
     not_equal: Optional[str] = undefined
-
-    def asdict(self):
-        return {name: value for name, value in self.__dict__.items() if value is not undefined}
+    asdict = asdict
 
 
-@strawberry.input(description="ordinal functions projected across two columns")
-class Ordinal(Nominal):
+@strawberry.input(description="ordinal predicates projected across two columns")
+class OrdinalFilter(NominalFilter):
     less: Optional[str] = undefined
     less_equal: Optional[str] = undefined
     greater: Optional[str] = undefined
     greater_equal: Optional[str] = undefined
-    minimum: Optional[str] = undefined
-    maximum: Optional[str] = undefined
-
-
-@strawberry.input(description="interval functions projected across two columns")
-class Interval(Ordinal):
-    subtract: Optional[str] = undefined
-
-
-@strawberry.input(description="ratio functions projected across two columns")
-class Ratio(Interval):
-    add: Optional[str] = undefined
-    multiply: Optional[str] = undefined
-    divide: Optional[str] = undefined
 
 
 class Query:
     """base class for predicates"""
 
     locals().update(dict.fromkeys(ops, undefined))
-
-    def asdict(self):
-        return {
-            name: (value.asdict() if hasattr(value, 'asdict') else value)
-            for name, value in Nominal.asdict(self).items()
-        }
+    asdict = asdict
 
 
 @strawberry.input(description="predicates for booleans")
@@ -136,55 +123,55 @@ query_map = {
 
 @strawberry.input(description="predicates for booleans")
 class BooleanFilter(BooleanQuery):
-    apply: Optional[Nominal] = undefined
+    apply: Optional[NominalFilter] = undefined
 
 
 @strawberry.input(description="predicates for ints")
 class IntFilter(IntQuery):
     absolute: Optional[IntQuery] = undefined
-    apply: Optional[Ratio] = undefined
+    apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for longs")
 class LongFilter(LongQuery):
     absolute: Optional[LongQuery] = undefined
-    apply: Optional[Ratio] = undefined
+    apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for floats")
 class FloatFilter(FloatQuery):
     absolute: Optional[FloatQuery] = undefined
-    apply: Optional[Ratio] = undefined
+    apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for decimals")
 class DecimalFilter(DecimalQuery):
-    apply: Optional[Ordinal] = undefined
+    apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for dates")
 class DateFilter(DateQuery):
-    apply: Optional[Ordinal] = undefined
+    apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeFilter(DateTimeQuery):
-    apply: Optional[Interval] = undefined
+    apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for times")
 class TimeFilter(TimeQuery):
-    apply: Optional[Ordinal] = undefined
+    apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for durations")
 class DurationFilter(DurationQuery):
-    apply: Optional[Ordinal] = undefined
+    apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for binaries")
 class BinaryFilter(BinaryQuery):
-    apply: Optional[Nominal] = undefined
+    apply: Optional[NominalFilter] = undefined
 
 
 @strawberry.input(description="predicates for strings")
@@ -204,7 +191,7 @@ class StringFilter(StringQuery):
     utf8_is_space: bool = False
     utf8_is_title: bool = False
     utf8_is_upper: bool = False
-    apply: Optional[Ordinal] = undefined
+    apply: Optional[OrdinalFilter] = undefined
 
 
 filter_map = {
@@ -239,7 +226,7 @@ class Filter:
     str: Optional[StringFilter] = undefined
 
     def asdict(self):
-        query = Query.asdict(self)
+        query = asdict(self)
         name = query.pop('name')
         (values,) = query.values()  # only one allowed
         return {name: values}
@@ -248,7 +235,7 @@ class Filter:
 @strawberry.input
 class Function:
     alias: Optional[str] = undefined
-    asdict = Nominal.asdict
+    asdict = asdict
 
 
 @strawberry.input
@@ -258,7 +245,7 @@ class OrdinalFunction(Function):
 
 
 @strawberry.input
-class RatioFunction(OrdinalFunction):
+class NumericFunction(OrdinalFunction):
     add: Optional[str] = undefined
     subtract: Optional[str] = undefined
     multiply: Optional[str] = undefined
@@ -267,17 +254,17 @@ class RatioFunction(OrdinalFunction):
 
 
 @strawberry.input(description="functions for ints")
-class IntFunction(RatioFunction):
+class IntFunction(NumericFunction):
     fill_null: Optional[int] = undefined
 
 
 @strawberry.input(description="functions for longs")
-class LongFunction(RatioFunction):
+class LongFunction(NumericFunction):
     fill_null: Optional[Long] = undefined
 
 
 @strawberry.input(description="functions for floats")
-class FloatFunction(RatioFunction):
+class FloatFunction(NumericFunction):
     fill_null: Optional[float] = undefined
 
 

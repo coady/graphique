@@ -16,7 +16,7 @@ from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
-from .inputs import Field, Filter, UniqueField, filter_map, function_map, query_map
+from .inputs import Field, Filter, UniqueField, asdict, filter_map, function_map, query_map
 from .models import Column, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -95,7 +95,7 @@ class Filters:
         name: Optional[filter_map[types[name]]] for name in types if types[name] in filter_map
     }
     locals().update(dict.fromkeys(types, undefined))
-    asdict = next(iter(query_map.values())).asdict
+    asdict = asdict
 
 
 def references(node):
@@ -236,7 +236,7 @@ class Table:
         `reduce` is the binary operator to combine filters; within a column all predicates must match.
         `predicates` are additional filters for column of unknown types, as the result of `apply`."""
         table = self.select(info)
-        filters = query.asdict() if query else {}  # type: ignore
+        filters = query.asdict() if query else {}
         for predicate in predicates:
             filters.update(predicate.asdict())
         masks = []
