@@ -572,7 +572,7 @@ input FloatFilter {
   greater: Float
   greaterEqual: Float
   isIn: [Float!]
-  absolute: FloatQuery
+  absolute: Boolean! = false
   apply: OrdinalFilter
 }
 
@@ -587,17 +587,6 @@ input FloatFunction {
   divide: String
   absolute: Boolean! = false
   fillNull: Float
-}
-
-"""predicates for floats"""
-input FloatQuery {
-  equal: Float
-  notEqual: Float
-  less: Float
-  lessEqual: Float
-  greater: Float
-  greaterEqual: Float
-  isIn: [Float!]
 }
 
 """unique floats"""
@@ -800,7 +789,7 @@ input IntFilter {
   greater: Int
   greaterEqual: Int
   isIn: [Int!]
-  absolute: IntQuery
+  absolute: Boolean! = false
   apply: OrdinalFilter
 }
 
@@ -815,17 +804,6 @@ input IntFunction {
   divide: String
   absolute: Boolean! = false
   fillNull: Int
-}
-
-"""predicates for ints"""
-input IntQuery {
-  equal: Int
-  notEqual: Int
-  less: Int
-  lessEqual: Int
-  greater: Int
-  greaterEqual: Int
-  isIn: [Int!]
 }
 
 """unique ints"""
@@ -996,7 +974,7 @@ input LongFilter {
   greater: Long
   greaterEqual: Long
   isIn: [Long!]
-  absolute: LongQuery
+  absolute: Boolean! = false
   apply: OrdinalFilter
 }
 
@@ -1103,7 +1081,7 @@ type StringColumn implements Column {
   Return number of matching values.
           Optimized for `null`, and empty queries will attempt boolean conversion.
   """
-  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, utf8Lower: StringFilter, utf8Upper: StringFilter, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDecimal: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsNumeric: Boolean! = false, utf8IsPrintable: Boolean! = false, utf8IsSpace: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
+  count(equal: String, notEqual: String, less: String, lessEqual: String, greater: String, greaterEqual: String, isIn: [String!], matchSubstring: String, utf8Lower: Boolean! = false, utf8Upper: Boolean! = false, stringIsAscii: Boolean! = false, utf8IsAlnum: Boolean! = false, utf8IsAlpha: Boolean! = false, utf8IsDecimal: Boolean! = false, utf8IsDigit: Boolean! = false, utf8IsLower: Boolean! = false, utf8IsNumeric: Boolean! = false, utf8IsPrintable: Boolean! = false, utf8IsSpace: Boolean! = false, utf8IsTitle: Boolean! = false, utf8IsUpper: Boolean! = false): Long!
 
   """whether any values evaluate to true"""
   any: Boolean!
@@ -1158,8 +1136,8 @@ input StringFilter {
   greaterEqual: String
   isIn: [String!]
   matchSubstring: String
-  utf8Lower: StringFilter
-  utf8Upper: StringFilter
+  utf8Lower: Boolean! = false
+  utf8Upper: Boolean! = false
   stringIsAscii: Boolean! = false
   utf8IsAlnum: Boolean! = false
   utf8IsAlpha: Boolean! = false

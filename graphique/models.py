@@ -99,10 +99,6 @@ class resolvers:
             return self.array.null_count
         if query == {'not_equal': None}:
             return len(self.array) - self.array.null_count
-        query = {
-            key: (value.asdict() if hasattr(value, 'asdict') else value)
-            for key, value in query.items()
-        }
         return C.count(C.mask(self.array, **query), True)  # type: ignore
 
     @doc_field

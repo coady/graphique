@@ -227,17 +227,18 @@ class Column(pa.ChunkedArray):
 
     def mask(self, func='and', **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
+        if query.pop('absolute', False):
+            self = Column.absolute(self)
+        for op in ('utf8_lower', 'utf8_upper'):
+            if query.pop(op, False):
+                self = Column.call(self, getattr(pc, op))
         masks = []
         for op, value in query.items():
             if op in ('equal', 'not_equal', 'is_in'):
                 masks.append(getattr(Column, op)(self, value))
-            elif op == 'absolute':
-                masks.append(Column.mask(getattr(Column, op)(self), func, **value))
-            elif op in ('utf8_lower', 'utf8_upper', 'binary_length'):
-                masks.append(Column.mask(Column.call(self, getattr(pc, op)), func, **value))
             elif '_is_' not in op:
                 masks.append(Column.call(self, getattr(pc, op), value))
-            elif query[op]:
+            elif value:
                 masks.append(Column.call(self, getattr(pc, op)))
         if masks:
             return functools.reduce(getattr(pc, func), masks)

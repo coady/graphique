@@ -19,7 +19,7 @@ def test_dictionary(table):
     assert C.min(array[:0]) is None
     assert C.max(array[:0]) is None
     assert sum(C.mask(array, match_substring="CA").to_pylist()) == 2647
-    assert sum(C.mask(array, is_in=["CA"]).to_pylist()) == 2647
+    assert sum(C.mask(array, utf8_lower=True, is_in=["ca"]).to_pylist()) == 2647
     assert "ca" in C.call(array, pc.utf8_lower).unique().dictionary.to_pylist()
     assert C.sort(array)[0].as_py() == "AK"
     table = pa.Table.from_pydict({'state': array})
@@ -126,10 +126,9 @@ def test_functional(table):
     assert C.not_equal(array, 'CA') == pc.invert(mask)
     assert len(array.filter(mask)) == 2647
     assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
-    assert sum(C.mask(array, binary_length={'equal': 2}).to_pylist()) == 41700
     assert sum(C.mask(array, utf8_is_upper=True).to_pylist()) == 41700
     assert sum(C.mask(array, utf8_is_upper=False).to_pylist()) == 41700
-    assert sum(C.mask(table['longitude'], absolute={'less': 0}).to_pylist()) == 0
+    assert sum(C.mask(table['longitude'], absolute=True, less=0).to_pylist()) == 0
     mask = T.mask(table, 'state', equal='CA', apply={'minimum': 'state'})
     assert sum(mask.to_pylist()) == 2647
     mask = T.mask(table, 'city', apply={'equal': 'county'})

@@ -96,7 +96,7 @@ def test_strings(client):
     assert states['count'] == 0
     data = client.execute('{ columns { state { count(equal: "CA") } } }')
     assert data == {'columns': {'state': {'count': 2647}}}
-    data = client.execute('{ columns { state { count(utf8Lower: {equal: "ca"}) } } }')
+    data = client.execute('{ columns { state { count(utf8Lower: true, equal: "ca") } } }')
     assert data == {'columns': {'state': {'count': 2647}}}
     data = client.execute('{ columns { state { binaryLength { unique { values } } } } }')
     assert data['columns']['state']['binaryLength']['unique']['values'] == [2]
@@ -180,11 +180,11 @@ def test_filter(client):
     data = client.execute('{ filter(query: {city: {matchSubstring: "Mountain"}}) { length } }')
     assert data['filter']['length'] == 88
     data = client.execute(
-        '{ filter(query: {city: {utf8Lower: {matchSubstring: "mountain"}}}) { length } }'
+        '{ filter(query: {city: {utf8Lower: true, matchSubstring: "mountain"}}) { length } }'
     )
     assert data['filter']['length'] == 88
     data = client.execute(
-        '{ filter(query: {city: {utf8Upper: {matchSubstring: "MOUNTAIN"}}}) { length } }'
+        '{ filter(query: {city: {utf8Upper: true, matchSubstring: "MOUNTAIN"}}) { length } }'
     )
     assert data['filter']['length'] == 88
     data = client.execute('{ filter(query: {county: {apply: {equal: "city"}}}) { length } }')
@@ -195,7 +195,7 @@ def test_filter(client):
     assert data['filter']['length'] == 41700
     data = client.execute('{ filter(query: {city: {}}) { length } }')
     assert data['filter']['length'] == 41700
-    data = client.execute('{ filter(query: {longitude: {absolute: {less: 66}}}) { length } }')
+    data = client.execute('{ filter(query: {longitude: {absolute: true, less: 66}}) { length } }')
     assert data['filter']['length'] == 30
 
 

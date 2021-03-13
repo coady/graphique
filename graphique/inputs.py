@@ -128,19 +128,19 @@ class BooleanFilter(BooleanQuery):
 
 @strawberry.input(description="predicates for ints")
 class IntFilter(IntQuery):
-    absolute: Optional[IntQuery] = undefined
+    absolute: bool = False
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for longs")
 class LongFilter(LongQuery):
-    absolute: Optional[LongQuery] = undefined
+    absolute: bool = False
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for floats")
 class FloatFilter(FloatQuery):
-    absolute: Optional[FloatQuery] = undefined
+    absolute: bool = False
     apply: Optional[OrdinalFilter] = undefined
 
 
@@ -178,8 +178,8 @@ class BinaryFilter(BinaryQuery):
 class StringFilter(StringQuery):
     __annotations__ = dict(StringQuery.__annotations__)  # used for `count` interface
     match_substring: Optional[str] = undefined
-    utf8_lower: Optional['StringFilter'] = undefined
-    utf8_upper: Optional['StringFilter'] = undefined
+    utf8_lower: bool = False
+    utf8_upper: bool = False
     string_is_ascii: bool = False
     utf8_is_alnum: bool = False
     utf8_is_alpha: bool = False
