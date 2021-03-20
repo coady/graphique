@@ -9,8 +9,8 @@ from typing import NewType
 import pyarrow as pa
 import strawberry
 
-Long = NewType('Long', int)
-strawberry.scalar(Long, description="64-bit int")
+Long = strawberry.scalar(NewType('Long', int), description="64-bit int")
+Null = strawberry.scalar(type(None), name='Null')
 
 strawberry.scalar(
     bytes,

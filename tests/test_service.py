@@ -328,6 +328,24 @@ def test_partition(client):
     assert agg['length'] == 66
     assert agg['columns']['state']['values'][:3] == ['NY', 'PR', 'MA']
     assert agg['column']['count']['values'][:3] == [2, 176, 701]
+    data = client.execute(
+        '''{ sort(by: ["state", "longitude"]) {
+        partition(by: ["state", "longitude"], diffs: {longitude: {greater: 1.0}}) {
+        aggregate { length columns { state { values } }
+        column(name: "longitude") { ... on ListColumn { count { values } } } } } } }'''
+    )
+    agg = data['sort']['partition']['aggregate']
+    assert agg['length'] == 62
+    assert agg['columns']['state']['values'][:7] == ['AK'] * 7
+    assert agg['column']['count']['values'][:7] == [1, 1, 5, 232, 1, 32, 1]
+    data = client.execute(
+        '''{ partition(by: ["state"], diffs: {state: {less: null}}) {
+        aggregate { length column(name: "state") {
+        ... on ListColumn {values { ... on StringColumn { values } } } } } } }'''
+    )
+    agg = data['partition']['aggregate']
+    assert agg['length'] == 34
+    assert agg['column']['values'][0]['values'] == (['NY'] * 2) + (['PR'] * 176)
 
 
 def test_unique(client):

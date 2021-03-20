@@ -295,6 +295,14 @@ type DateTimeColumn implements Column {
   subtract(value: DateTime!): DurationColumn!
 }
 
+"""discrete difference predicates for datetimes"""
+input DateTimeDiff {
+  less: DateTime
+  lessEqual: DateTime
+  greater: DateTime
+  greaterEqual: DateTime
+}
+
 """predicates for datetimes"""
 input DateTimeFilter {
   equal: DateTime
@@ -391,6 +399,37 @@ type DecimalSet implements Set {
 
   """list of values"""
   values: [Decimal]!
+}
+
+"""discrete difference predicates"""
+input Diff {
+  less: Null
+  lessEqual: Null
+  greater: Null
+  greaterEqual: Null
+}
+
+"""discrete difference predicates for each column"""
+input Diffs {
+  uint8: IntDiff
+  int8: IntDiff
+  uint16: IntDiff
+  int16: IntDiff
+  uint32: LongDiff
+  int32: IntDiff
+  uint64: LongDiff
+  int64: LongDiff
+  float: FloatDiff
+  double: FloatDiff
+  decimal: Diff
+  date32: Diff
+  date64: Diff
+  timestamp: DateTimeDiff
+  time32: Diff
+  time64: Diff
+  string: Diff
+  snakeId: LongDiff
+  camelId: LongDiff
 }
 
 """duration float (in seconds)"""
@@ -563,6 +602,14 @@ type FloatColumn implements Column {
   absolute: FloatColumn!
 }
 
+"""discrete difference predicates for floats"""
+input FloatDiff {
+  less: Float
+  lessEqual: Float
+  greater: Float
+  greaterEqual: Float
+}
+
 """predicates for floats"""
 input FloatFilter {
   equal: Float
@@ -654,10 +701,10 @@ type IndexedTable {
   group(by: [String!]!, reverse: Boolean! = false, length: Long = null): Groups!
 
   """
-  Return table partitioned by equal column values.
+  Return table partitioned by discrete differences of the values.
           Differs from `group` by relying on adjacency, and is typically faster.
   """
-  partition(by: [String!]!): Groups!
+  partition(by: [String!]!, diffs: Diffs = null): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -778,6 +825,14 @@ type IntColumn implements Column {
 
   """absolute values"""
   absolute: IntColumn!
+}
+
+"""discrete difference predicates for ints"""
+input IntDiff {
+  less: Int
+  lessEqual: Int
+  greater: Int
+  greaterEqual: Int
 }
 
 """predicates for ints"""
@@ -965,6 +1020,14 @@ type LongColumn implements Column {
   absolute: LongColumn!
 }
 
+"""discrete difference predicates for longs"""
+input LongDiff {
+  less: Long
+  lessEqual: Long
+  greater: Long
+  greaterEqual: Long
+}
+
 """predicates for longs"""
 input LongFilter {
   equal: Long
@@ -1018,6 +1081,8 @@ input NominalFilter {
   equal: String
   notEqual: String
 }
+
+scalar Null
 
 enum Operator {
   AND
@@ -1220,10 +1285,10 @@ type Table {
   group(by: [String!]!, reverse: Boolean! = false, length: Long = null): Groups!
 
   """
-  Return table partitioned by equal column values.
+  Return table partitioned by discrete differences of the values.
           Differs from `group` by relying on adjacency, and is typically faster.
   """
-  partition(by: [String!]!): Groups!
+  partition(by: [String!]!, diffs: Diffs = null): Groups!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.

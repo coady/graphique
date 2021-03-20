@@ -8,6 +8,7 @@ import abc
 import bisect
 import contextlib
 import functools
+import inspect
 import json
 import operator
 from concurrent import futures
@@ -309,10 +310,18 @@ class Column(pa.ChunkedArray):
         return func(self[1:], self[:-1])
 
     def partition_offsets(self, predicate: Callable = pc.not_equal) -> pa.IntegerArray:
-        """Return list array offsets by partitioning adjacent values."""
+        """Return list array offsets by partitioning on discrete differences.
+
+        Args:
+            predicate: binary function applied to adjacent values, or unary function in which case
+                `subtract` will be the difference function.
+        """
         ends = [pa.array([True])]
-        chunks = Column.diff(self, predicate).chunks
-        return pa.array(*np.nonzero(pa.concat_arrays(ends + chunks + ends)))
+        if len(inspect.getfullargspec(predicate).args) > 1:
+            mask = Column.diff(self, predicate)
+        else:
+            mask = Column.call(Column.diff(self), predicate)
+        return pa.array(*np.nonzero(pa.concat_arrays(ends + mask.chunks + ends)))
 
     def sum(self):
         """Return sum of the values."""
@@ -485,8 +494,13 @@ class Table(pa.Table):
             columns[name] = Chunk.take_list(Column.combine_chunks(self[name]), indices)
         return pa.Table.from_pydict(columns), indices.value_lengths()
 
-    def partition(self, *names: str, **predicates) -> tuple:
-        """Return table partitioned by equal values in columns and corresponding counts."""
+    def partition(self, *names: str, **predicates: Callable) -> tuple:
+        """Return table partitioned by discrete differences and corresponding counts.
+
+        Args:
+            names: columns to partition by `not_equal` which will return scalars
+            predicates: optionally inequality predicates which will return list arrays
+        """
         names += tuple(predicates)
         offsets = Column.partition_offsets(self[names[0]], predicates.get(names[0], pc.not_equal))
         for name in names[1:]:

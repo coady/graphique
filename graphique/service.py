@@ -15,8 +15,17 @@ from starlette.applications import Starlette
 from starlette.middleware import Middleware, base
 from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
-from .core import Column as C, ListChunk, Table as T
-from .inputs import Field, Filter, UniqueField, asdict, filter_map, function_map, query_map
+from .core import Column as C, ListChunk, Table as T, rpartial
+from .inputs import (
+    Field,
+    Filter,
+    UniqueField,
+    asdict,
+    diff_map,
+    filter_map,
+    function_map,
+    query_map,
+)
 from .models import Column, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -98,12 +107,21 @@ class Filters:
     asdict = asdict
 
 
+@strawberry.input(description="discrete difference predicates for each column")
+class Diffs:
+    __annotations__ = {
+        name: Optional[diff_map[types[name]]] for name in types if types[name] in diff_map
+    }
+    locals().update(dict.fromkeys(types, undefined))
+    asdict = asdict
+
+
 def references(node):
     """Generate every possible column reference."""
     if hasattr(node, 'name'):
         yield node.name.value
     value = getattr(node, 'value', None)
-    yield value.value if hasattr(value, 'value') else value
+    yield getattr(value, 'value', value)
     nodes = itertools.chain(
         getattr(node, 'arguments', []),
         getattr(node, 'fields', []),
@@ -176,11 +194,18 @@ class Table:
         return Groups(table, counts)
 
     @doc_field
-    def partition(self, info, by: List[str]) -> 'Groups':
-        """Return table partitioned by equal column values.
+    def partition(self, info, by: List[str], diffs: Optional[Diffs] = None) -> 'Groups':
+        """Return table partitioned by discrete differences of the values.
         Differs from `group` by relying on adjacency, and is typically faster."""
         table = self.select(info)
-        table, counts = T.partition(table, *map(to_snake_case, by))
+        funcs = diffs.asdict() if diffs else {}
+        names = list(map(to_snake_case, itertools.takewhile(lambda name: name not in funcs, by)))
+        predicates = {}
+        for name in by[len(names) :]:  # noqa: E203
+            ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
+            func = getattr(pc, func)
+            predicates[to_snake_case(name)] = func if value is None else rpartial(func, value)
+        table, counts = T.partition(table, *names, **predicates)
         return Groups(table, counts)
 
     @doc_field
@@ -196,7 +221,7 @@ class Table:
         Optionally include counts in an aliased column.
         Faster than `group` when only scalars are needed."""
         table = self.select(info)
-        names = list(map(to_snake_case, by))
+        names = map(to_snake_case, by)
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
             return Table(T.unique_indices(table, *names)[0][:length])
         table, counts = T.unique(table, *names, reverse=reverse, length=length, count=bool(count))
