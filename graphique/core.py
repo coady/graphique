@@ -321,7 +321,7 @@ class Column(pa.ChunkedArray):
             mask = Column.diff(self, predicate)
         else:
             mask = Column.call(Column.diff(self), predicate)
-        return pa.array(*np.nonzero(pa.concat_arrays(ends + mask.chunks + ends)))
+        return pa.array(*np.nonzero(pa.concat_arrays(ends + mask.chunks + ends)), pa.int32())
 
     def sum(self):
         """Return sum of the values."""
@@ -504,7 +504,7 @@ class Table(pa.Table):
         names += tuple(predicates)
         offsets = Column.partition_offsets(self[names[0]], predicates.get(names[0], pc.not_equal))
         for name in names[1:]:
-            groups = [pa.array([0])]
+            groups = [pa.array([0], pa.int32())]
             predicate = predicates.get(name, pc.not_equal)
             for scalar in pa.ListArray.from_arrays(offsets, Column.combine_chunks(self[name])):
                 group = Column.partition_offsets(pa.chunked_array([scalar.values]), predicate)

@@ -5,7 +5,7 @@ import functools
 import itertools
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -138,7 +138,7 @@ class Table:
     def __init__(self, table):
         self.table = table
 
-    def select(self, info) -> pa.Table:
+    def select(self: Any, info) -> pa.Table:
         """Return table with only the columns necessary to proceed."""
         names = set(map(to_snake_case, references(*info.field_nodes)))
         return self.table.select(names & set(self.table.column_names))
@@ -304,11 +304,17 @@ class Groups:
         return len(self.table)  # type: ignore
 
     @doc_field
+    def slice(self, info, offset: Long = 0, length: Optional[Long] = None) -> 'Groups':  # type: ignore
+        """Return slice of groups."""
+        table = self.select(info)
+        return Groups(table.slice(offset, length), self.counts.slice(offset, length))
+
+    @doc_field
     def sort(
         self, info, by: List[str] = [], reverse: bool = False, length: Optional[Long] = None
     ) -> 'Groups':
         """Return groups sorted by specified scalar columns, or by default counts."""
-        table = self.select(info)  # type: ignore
+        table = self.select(info)
         order = 'descending' if reverse else 'ascending'
         if not by:
             indices = pc.array_sort_indices(self.counts, order=order)[:length]
@@ -329,7 +335,7 @@ class Groups:
         greater_equal: int = None,
     ) -> 'Groups':
         """Return groups filtered by value counts."""
-        table = self.select(info)  # type: ignore
+        table = self.select(info)
         query = {}
         for op in ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'):
             value = locals()[op]
@@ -341,7 +347,7 @@ class Groups:
     @doc_field
     def tables(self, info) -> List[Table]:  # type: ignore
         """list of tables"""
-        table = self.select(info)  # type: ignore
+        table = self.select(info)
         lists = {name for name in table.column_names if isinstance(table[name].type, pa.ListType)}
         scalars = set(table.column_names) - lists
         for index, count in enumerate(self.counts.to_pylist()):

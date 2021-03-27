@@ -352,6 +352,13 @@ def test_partition(client):
     )
     agg = data['partition']['sort']['aggregate']
     assert agg['columns']['state']['values'][-2:] == ['WY', 'WY']
+    data = client.execute(
+        '''{ partition(by: ["state"]) { slice(offset: 2, length: 2) { aggregate(count: "c") {
+        column(name: "c") { ... on IntColumn { values } } columns { state { values } } } } } }'''
+    )
+    agg = data['partition']['slice']['aggregate']
+    assert agg['column']['values'] == [701, 91]
+    assert agg['columns']['state']['values'] == ['MA', 'RI']
 
 
 def test_unique(client):

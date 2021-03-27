@@ -652,6 +652,9 @@ type Groups {
   """number of rows"""
   length: Long!
 
+  """Return slice of groups."""
+  slice(offset: Long! = 0, length: Long = null): Groups!
+
   """
   Return groups sorted by specified scalar columns, or by default counts.
   """
