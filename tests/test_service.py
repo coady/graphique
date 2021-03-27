@@ -346,6 +346,12 @@ def test_partition(client):
     agg = data['partition']['aggregate']
     assert agg['length'] == 34
     assert agg['column']['values'][0]['values'] == (['NY'] * 2) + (['PR'] * 176)
+    data = client.execute(
+        '''{ partition(by: ["state"]) { sort(by: ["state"]) {
+        aggregate { columns { state { values } } } } } }'''
+    )
+    agg = data['partition']['sort']['aggregate']
+    assert agg['columns']['state']['values'][-2:] == ['WY', 'WY']
 
 
 def test_unique(client):

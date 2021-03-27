@@ -652,8 +652,10 @@ type Groups {
   """number of rows"""
   length: Long!
 
-  """Return groups sorted by value counts."""
-  sort(reverse: Boolean! = false, length: Long = null): Groups!
+  """
+  Return groups sorted by specified scalar columns, or by default counts.
+  """
+  sort(by: [String!]! = [], reverse: Boolean! = false, length: Long = null): Groups!
 
   """Return groups filtered by value counts."""
   filter(equal: Int!, notEqual: Int!, less: Int!, lessEqual: Int!, greater: Int!, greaterEqual: Int!): Groups!

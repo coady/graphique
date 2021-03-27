@@ -304,12 +304,18 @@ class Groups:
         return len(self.table)  # type: ignore
 
     @doc_field
-    def sort(self, info, reverse: bool = False, length: Optional[Long] = None) -> 'Groups':
-        """Return groups sorted by value counts."""
+    def sort(
+        self, info, by: List[str] = [], reverse: bool = False, length: Optional[Long] = None
+    ) -> 'Groups':
+        """Return groups sorted by specified scalar columns, or by default counts."""
         table = self.select(info)  # type: ignore
         order = 'descending' if reverse else 'ascending'
-        indices = pc.array_sort_indices(self.counts, order=order)[:length]
-        return Groups(table.take(indices), self.counts.take(indices))
+        if not by:
+            indices = pc.array_sort_indices(self.counts, order=order)[:length]
+            return Groups(table.take(indices), self.counts.take(indices))
+        table = table.add_column(0, '', self.counts)
+        table = T.sort(table, *map(to_snake_case, by), reverse=reverse, length=length)
+        return Groups(table.remove_column(0), table[0])
 
     @doc_field
     def filter(
