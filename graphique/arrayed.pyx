@@ -10,6 +10,12 @@ def asiarray(array):
     return np.asarray(array).astype(np.intp, casting='safe', copy=False)
 
 
+def split(counts: pa.IntegerArray, values: pa.Array) -> pa.ListArray:
+    """Return list array by converting counts into offsets and splitting the values."""
+    offsets = np.concatenate([[0], np.cumsum(counts)])
+    return pa.ListArray.from_arrays(offsets, values)
+
+
 def group_indices(array: pa.IntegerArray) -> tuple:
     """Return unique keys with corresponding index arrays."""
     cdef const Py_ssize_t [:] array_view = asiarray(array)
@@ -27,8 +33,7 @@ def group_indices(array: pa.IntegerArray) -> tuple:
             offset += counts_view[i]
         for i in range(array_view.shape[0]):
             indices_view[postincrement(offsets[array_view[i]])] = i
-    slices = np.concatenate([[0], np.cumsum(counts)])
-    return values, pa.ListArray.from_arrays(slices, indices)
+    return values, split(counts, indices)
 
 
 def unique_indices(array: pa.IntegerArray, count=False) -> tuple:

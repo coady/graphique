@@ -486,7 +486,7 @@ input Field {
 """predicates for columns of unknown type as a tagged union"""
 input Filter {
   name: String!
-  bool: BooleanFilter
+  boolean: BooleanFilter
   int: IntFilter
   long: LongFilter
   float: FloatFilter
@@ -496,7 +496,7 @@ input Filter {
   time: TimeFilter
   duration: DurationFilter
   binary: BinaryFilter
-  str: StringFilter
+  string: StringFilter
 }
 
 """predicates for each column"""
@@ -660,8 +660,14 @@ type Groups {
   """
   sort(by: [String!]! = [], reverse: Boolean! = false, length: Long = null): Groups!
 
-  """Return groups filtered by value counts."""
-  filter(equal: Int!, notEqual: Int!, less: Int!, lessEqual: Int!, greater: Int!, greaterEqual: Int!): Groups!
+  """
+  Return groups filtered by counts, scalar columns, or scalar values within groups.
+          Note it's always faster to filter values before grouping.
+          Filtering afterwards is useful when empty groups need to be accounted for.
+          Counts retain their original values because they're not column specific.
+          
+  """
+  filter(query: Filters = null, reduce: Operator! = AND, predicates: [Filter!]! = [], counts: IntQuery = null): Groups!
 
   """list of tables"""
   tables: [Table!]!
@@ -864,6 +870,17 @@ input IntFunction {
   divide: String
   absolute: Boolean! = false
   fillNull: Int
+}
+
+"""predicates for ints"""
+input IntQuery {
+  equal: Int
+  notEqual: Int
+  less: Int
+  lessEqual: Int
+  greater: Int
+  greaterEqual: Int
+  isIn: [Int!]
 }
 
 """unique ints"""

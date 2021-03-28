@@ -16,7 +16,7 @@ from typing import Callable, Iterable, Iterator, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
-from .arrayed import group_indices, unique_indices  # type: ignore
+from .arrayed import group_indices, split, unique_indices  # type: ignore
 
 
 class Compare:
@@ -134,8 +134,13 @@ class ListChunk(pa.ListArray):
             empty if scalar.values is None else Column.decode(scalar.values.unique())
             for scalar in self
         ]
-        offsets = np.concatenate([[0], np.cumsum(list(map(len, values)))])
-        return pa.ListArray.from_arrays(offsets, pa.concat_arrays(values))
+        return split(pa.array(map(len, values)), pa.concat_arrays(values))
+
+    def filter_list(self, mask: pa.BooleanArray) -> pa.ListArray:
+        """Return list array by selecting true values."""
+        masks = pa.ListArray.from_arrays(self.offsets, mask)
+        counts = pa.array(scalar.values.true_count for scalar in masks)
+        return split(counts, self.values.filter(mask))
 
     def reduce(self, func: Callable, tp=None) -> pa.Array:
         values = (func(scalar.values) if scalar.values else None for scalar in self)
@@ -234,6 +239,8 @@ class Column(pa.ChunkedArray):
             if query.pop(op, False):
                 self = Column.call(self, getattr(pc, op))
         masks = []
+        if isinstance(self.type, pa.ListType):
+            self = pa.chunked_array(chunk.values for chunk in self.iterchunks())
         for op, value in query.items():
             if op in ('equal', 'not_equal', 'is_in'):
                 masks.append(getattr(Column, op)(self, value))

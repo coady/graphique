@@ -19,6 +19,7 @@ from .core import Column as C, ListChunk, Table as T, rpartial
 from .inputs import (
     Field,
     Filter,
+    IntQuery,
     UniqueField,
     asdict,
     diff_map,
@@ -327,21 +328,36 @@ class Groups:
     def filter(
         self,
         info,
-        equal: int = None,
-        not_equal: int = None,
-        less: int = None,
-        less_equal: int = None,
-        greater: int = None,
-        greater_equal: int = None,
+        query: Optional[Filters] = None,
+        reduce: Operator = 'and',  # type: ignore
+        predicates: List[Filter] = [],
+        counts: Optional[IntQuery] = None,
     ) -> 'Groups':
-        """Return groups filtered by value counts."""
+        """Return groups filtered by counts, scalar columns, or scalar values within groups.
+        Note it's always faster to filter values before grouping.
+        Filtering afterwards is useful when empty groups need to be accounted for.
+        Counts retain their original values because they're not column specific.
+        """
         table = self.select(info)
-        query = {}
-        for op in ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal'):
-            value = locals()[op]
-            if value is not None:
-                query[op] = value
-        mask = C.mask(self.counts, **query)
+        filters = query.asdict() if query else {}
+        for predicate in predicates:
+            filters.update(predicate.asdict())
+        masks = []
+        columns = {name: table[name].chunk(0) for name in table.column_names}
+        for name, value in filters.items():
+            apply = value.get('apply', {})
+            apply.update({key: to_snake_case(apply[key]) for key in apply})
+            mask = T.mask(table, name, **value).chunk(0)
+            if isinstance(table[name].type, pa.ListType):
+                columns[name] = ListChunk.filter_list(columns[name], mask)
+            else:
+                masks.append(mask)
+        if counts is not None:
+            masks.append(C.mask(self.counts, **counts.asdict()))
+        table = pa.Table.from_pydict(columns)
+        if not masks:
+            return Groups(table, self.counts)
+        mask = functools.reduce(getattr(pc, reduce.value), masks)
         return Groups(table.filter(mask), self.counts.filter(mask))
 
     @doc_field

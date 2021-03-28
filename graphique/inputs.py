@@ -214,7 +214,7 @@ filter_map = {
 class Filter:
     name: str
 
-    bool: Optional[BooleanFilter] = undefined
+    boolean: Optional[BooleanFilter] = undefined
     int: Optional[IntFilter] = undefined
     long: Optional[LongFilter] = undefined
     float: Optional[FloatFilter] = undefined
@@ -224,7 +224,7 @@ class Filter:
     time: Optional[TimeFilter] = undefined
     duration: Optional[DurationFilter] = undefined
     binary: Optional[BinaryFilter] = undefined
-    str: Optional[StringFilter] = undefined
+    string: Optional[StringFilter] = undefined
 
     def asdict(self):
         query = asdict(self)
