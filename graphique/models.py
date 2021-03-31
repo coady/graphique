@@ -11,8 +11,8 @@ import pyarrow.compute as pc
 import strawberry
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.types.type_resolver import resolve_type
-from strawberry.types.types import ArgumentDefinition, FieldDefinition, undefined
+from strawberry.types.type_resolver import _resolve_type
+from strawberry.types.types import ArgumentDefinition, undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk
 from .inputs import (
@@ -204,19 +204,16 @@ def resolve_arguments(func, arguments):
     for argument in arguments:
         argument.origin = func
         argument.name = to_camel_case(argument.origin_name)
-        resolve_type(argument)
+        _resolve_type(argument)
     resolver = StrawberryResolver(func)
     resolver.arguments = arguments
-    field_definition = FieldDefinition(
-        name=to_camel_case(func.__name__),
-        origin_name=func.__name__,
-        type=func.__annotations__['return'],
-        origin=func,
-        arguments=arguments,
+    return StrawberryField(
+        python_name=func.__name__,
+        graphql_name=to_camel_case(func.__name__),
+        type_=func.__annotations__['return'],
         description=func.__doc__,
         base_resolver=resolver,
     )
-    return StrawberryField(field_definition)
 
 
 def query_args(func, query):
