@@ -738,6 +738,7 @@ type IndexedTable {
           `invert` optionally excludes matching rows.
           `reduce` is the binary operator to combine filters; within a column all predicates must match.
           `predicates` are additional filters for column of unknown types, as the result of `apply`.
+          List columns apply their respective filters to their own scalar values.
   """
   filter(query: Filters = null, invert: Boolean! = false, reduce: Operator! = AND, predicates: [Filter!]! = []): Table!
 
@@ -1333,6 +1334,7 @@ type Table {
           `invert` optionally excludes matching rows.
           `reduce` is the binary operator to combine filters; within a column all predicates must match.
           `predicates` are additional filters for column of unknown types, as the result of `apply`.
+          List columns apply their respective filters to their own scalar values.
   """
   filter(query: Filters = null, invert: Boolean! = false, reduce: Operator! = AND, predicates: [Filter!]! = []): Table!
 

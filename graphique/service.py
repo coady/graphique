@@ -260,7 +260,8 @@ class Table:
         """Return table with rows which match all (by default) queries.
         `invert` optionally excludes matching rows.
         `reduce` is the binary operator to combine filters; within a column all predicates must match.
-        `predicates` are additional filters for column of unknown types, as the result of `apply`."""
+        `predicates` are additional filters for column of unknown types, as the result of `apply`.
+        List columns apply their respective filters to their own scalar values."""
         table = self.select(info)
         filters = query.asdict() if query else {}
         for predicate in predicates:
@@ -269,9 +270,14 @@ class Table:
         for name, value in filters.items():
             apply = value.get('apply', {})
             apply.update({key: to_snake_case(apply[key]) for key in apply})
-            masks.append(T.mask(table, name, **value))
+            mask = T.mask(table, name, **value)
+            if isinstance(table[name].type, pa.ListType):
+                column = pa.chunked_array(C.map(ListChunk.filter_list, table[name], mask))
+                table = table.set_column(table.column_names.index(name), name, column)
+            else:
+                masks.append(mask)
         if not masks:
-            return self
+            return Table(table)
         mask = functools.reduce(getattr(pc, reduce.value), masks)
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
             return Table(range(C.count(mask, not invert)))  # type: ignore

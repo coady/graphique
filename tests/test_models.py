@@ -218,6 +218,12 @@ def test_list(executor):
     assert data == {'apply': {'column': {'values': [0, None]}}}
     data = executor('{ apply(list: {unique: true}) { columns { list { count { values } } } } }')
     assert data == {'apply': {'columns': {'list': {'count': {'values': [3, 0]}}}}}
+    data = executor(
+        '''{ filter(predicates: [{name: "list", int: {notEqual: 1}}]) {
+        columns { list { values { ... on IntColumn { values } } } } } }'''
+    )
+    column = data['filter']['columns']['list']
+    assert column == {'values': [{'values': [0, 2]}, {'values': []}]}
 
 
 def test_struct(executor):

@@ -127,11 +127,17 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables a bi
 ```
 
 ## Changes
+dev
+
+* `sort` updated to use new native routines
+* `partition` tables by adjacent values and differences
+* `filter` supports unknown column types using tagged union pattern
+
 0.3
 
 * Pyarrow >=3 required
 * `any` and `all` fields
-* Sting column `split` field
+* String column `split` field
 
 0.2
 
