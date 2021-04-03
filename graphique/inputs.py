@@ -336,11 +336,6 @@ class Field:
     alias: str = ''
 
 
-@strawberry.input(description="names and aliases for aggregation of unique values")
-class UniqueField(Field):
-    count: bool = False
-
-
 @strawberry.input(description="discrete difference predicates")
 class Diff:
     locals().update(dict.fromkeys(inequalities, undefined))

@@ -132,6 +132,7 @@ dev
 * `sort` updated to use new native routines
 * `partition` tables by adjacent values and differences
 * `filter` supports unknown column types using tagged union pattern
+* `Groups` replaced with `Table.tables` and `Table.aggregate` fields
 
 0.3
 

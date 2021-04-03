@@ -211,8 +211,11 @@ class Column(pa.ChunkedArray):
     def scalar_type(self):
         return self.type.value_type if isinstance(self.type, pa.DictionaryType) else self.type
 
-    def decode(self) -> pa.ChunkedArray:
-        return self.cast(self.type.value_type) if isinstance(self.type, pa.DictionaryType) else self
+    def decode(self, check=False) -> pa.ChunkedArray:
+        with contextlib.suppress(ValueError, AttributeError):
+            if not check or self.type.value_type.bit_width <= self.type.index_type.bit_width:
+                return self.cast(self.type.value_type)
+        return self
 
     def combine_chunks(self) -> pa.Array:
         return self.chunk(0) if self.num_chunks == 1 else pa.concat_arrays(self.iterchunks())
@@ -268,10 +271,7 @@ class Column(pa.ChunkedArray):
             array = pa.chunked_array(chunks)
         except TypeError:  # mixed dictionary encoding
             return pa.chunked_array(map(Column.decode, chunks))
-        with contextlib.suppress(ValueError, AttributeError):
-            if array.type.value_type.bit_width <= array.type.index_type.bit_width:
-                return array.cast(array.type.value_type)
-        return array
+        return Column.decode(array, check=True)
 
     def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""

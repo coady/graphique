@@ -233,19 +233,20 @@ def test_struct(executor):
 
 def test_dictionary(executor):
     data = executor(
-        '''{ group(by: ["camelId"]) { aggregate { column(name: "string") {
-        ... on ListColumn { unique { count { values } } } } } } }'''
+        '''{ group(by: ["camelId"]) { column(name: "string") {
+        ... on ListColumn { unique { count { values } } } } } }'''
     )
-    assert data == {'group': {'aggregate': {'column': {'unique': {'count': {'values': [1, 1]}}}}}}
+    assert data == {'group': {'column': {'unique': {'count': {'values': [1, 1]}}}}}
     data = executor(
         '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string"}) { column(name: "string") {
         ... on ListColumn { count { values } } } } } }'''
     )
     assert data == {'group': {'aggregate': {'column': {'count': {'values': [1, 1]}}}}}
     data = executor(
-        '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string", count: true})
-        { column(name: "string") { ... on IntColumn { values } } } } }'''
+        '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string"}) {
+        aggregate(count: {name: "string"}) {
+        column(name: "string") { ... on IntColumn { values } } } } } }'''
     )
-    assert data == {'group': {'aggregate': {'column': {'values': [1, 1]}}}}
+    assert data == {'group': {'aggregate': {'aggregate': {'column': {'values': [1, 1]}}}}}
     data = executor('{ apply(string: {fillNull: ""}) { columns { string { values } } } }')
     assert data == {'apply': {'columns': {'string': {'values': ['', '']}}}}

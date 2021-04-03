@@ -19,8 +19,6 @@ from .core import Column as C, ListChunk, Table as T, rpartial
 from .inputs import (
     Field,
     Filter,
-    IntQuery,
-    UniqueField,
     asdict,
     diff_map,
     filter_map,
@@ -162,7 +160,7 @@ class Table:
     @doc_field
     def column(self, name: str) -> Column:
         """Return column of any type by name.
-        This is typically only needed for aliased columns added by `apply` or `Groups.aggregate`.
+        This is typically only needed for aliased columns added by `apply` or `aggregate`.
         If the column is in the schema, `columns` can be used instead."""
         column = self.table[to_snake_case(name)]
         return column_map[type_map[column.type.id]](column)
@@ -186,16 +184,23 @@ class Table:
 
     @doc_field
     def group(
-        self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
-    ) -> 'Groups':
+        self,
+        info,
+        by: List[str],
+        reverse: bool = False,
+        length: Optional[Long] = None,
+        count: str = '',
+    ) -> 'Table':
         """Return table grouped by columns, with stable ordering.
         `length` is the maximum number of groups to return."""
         table = self.select(info)
         table, counts = T.group(table, *map(to_snake_case, by), reverse=reverse, length=length)
-        return Groups(table, counts)
+        return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field
-    def partition(self, info, by: List[str], diffs: Optional[Diffs] = None) -> 'Groups':
+    def partition(
+        self, info, by: List[str], diffs: Optional[Diffs] = None, count: str = ''
+    ) -> 'Table':
         """Return table partitioned by discrete differences of the values.
         Differs from `group` by relying on adjacency, and is typically faster."""
         table = self.select(info)
@@ -207,7 +212,7 @@ class Table:
             func = getattr(pc, func)
             predicates[to_snake_case(name)] = func if value is None else rpartial(func, value)
         table, counts = T.partition(table, *names, **predicates)
-        return Groups(table, counts)
+        return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field
     def unique(
@@ -296,96 +301,28 @@ class Table:
             table = T.apply(table, name, **value)
         return Table(table)
 
-
-@strawberry.type(description="table grouped by columns")
-class Groups:
-    select = Table.select
-
-    def __init__(self, table, counts):
-        self.table = table
-        self.counts = counts
-
     @doc_field
-    def length(self) -> Long:
-        """number of rows"""
-        return len(self.table)  # type: ignore
-
-    @doc_field
-    def slice(self, info, offset: Long = 0, length: Optional[Long] = None) -> 'Groups':  # type: ignore
-        """Return slice of groups."""
-        table = self.select(info)
-        return Groups(table.slice(offset, length), self.counts.slice(offset, length))
-
-    @doc_field
-    def sort(
-        self, info, by: List[str] = [], reverse: bool = False, length: Optional[Long] = None
-    ) -> 'Groups':
-        """Return groups sorted by specified scalar columns, or by default counts."""
-        table = self.select(info)
-        order = 'descending' if reverse else 'ascending'
-        if not by:
-            indices = pc.array_sort_indices(self.counts, order=order)[:length]
-            return Groups(table.take(indices), self.counts.take(indices))
-        table = table.add_column(0, '', self.counts)
-        table = T.sort(table, *map(to_snake_case, by), reverse=reverse, length=length)
-        return Groups(table.remove_column(0), table[0])
-
-    @doc_field
-    def filter(
-        self,
-        info,
-        query: Optional[Filters] = None,
-        reduce: Operator = 'and',  # type: ignore
-        predicates: List[Filter] = [],
-        counts: Optional[IntQuery] = None,
-    ) -> 'Groups':
-        """Return groups filtered by counts, scalar columns, or scalar values within groups.
-        Note it's always faster to filter values before grouping.
-        Filtering afterwards is useful when empty groups need to be accounted for.
-        Counts retain their original values because they're not column specific.
-        """
-        table = self.select(info)
-        filters = query.asdict() if query else {}
-        for predicate in predicates:
-            filters.update(predicate.asdict())
-        masks = []
-        columns = {name: table[name].chunk(0) for name in table.column_names}
-        for name, value in filters.items():
-            apply = value.get('apply', {})
-            apply.update({key: to_snake_case(apply[key]) for key in apply})
-            mask = T.mask(table, name, **value).chunk(0)
-            if isinstance(table[name].type, pa.ListType):
-                columns[name] = ListChunk.filter_list(columns[name], mask)
-            else:
-                masks.append(mask)
-        if counts is not None:
-            masks.append(C.mask(self.counts, **counts.asdict()))
-        table = pa.Table.from_pydict(columns)
-        if not masks:
-            return Groups(table, self.counts)
-        mask = functools.reduce(getattr(pc, reduce.value), masks)
-        return Groups(table.filter(mask), self.counts.filter(mask))
-
-    @doc_field
-    def tables(self, info) -> List[Table]:  # type: ignore
-        """list of tables"""
+    def tables(self, info) -> List['Table']:  # type: ignore
+        """Return a list of tables by splitting list columns, typically used after grouping.
+        At least one list column must be referenced, and all list columns must have the same shape."""
         table = self.select(info)
         lists = {name for name in table.column_names if isinstance(table[name].type, pa.ListType)}
         scalars = set(table.column_names) - lists
-        for index, count in enumerate(self.counts.to_pylist()):
+        for index in range(len(table)):
             columns = {name: table[name][index].values for name in lists}
+            (count,) = set(map(len, columns.values()))  # table columns must have the same length
             indices = pa.array(np.repeat(0, count))
             row = table.slice(index, length=1)
             for name in scalars:
-                columns[name] = pa.DictionaryArray.from_arrays(indices, row[name].chunk(0))
-            if not columns:  # ensure at least 1 column for `length`
-                columns[''] = indices
+                column = pa.DictionaryArray.from_arrays(indices, row[name].chunk(0))
+                columns[name] = C.decode(column, check=True)
             yield Table(pa.Table.from_pydict(columns))
 
     @doc_field
     def aggregate(
         self,
-        count: str = '',
+        info,
+        count: List[Field] = [],
         first: List[Field] = [],
         last: List[Field] = [],
         min: List[Field] = [],
@@ -394,22 +331,19 @@ class Groups:
         mean: List[Field] = [],
         any: List[Field] = [],
         all: List[Field] = [],
-        unique: List[UniqueField] = [],
-    ) -> Table:
+        unique: List[Field] = [],
+    ) -> 'Table':
         """Return single table with aggregate functions applied to columns.
         The grouping keys are automatically included.
         Any remaining columns referenced in fields are kept as list columns.
         Columns which are aliased or change type can be accessed by the `column` field."""
-        columns = {name: self.table[name].chunk(0) for name in self.table.column_names}
-        for key in ('first', 'last', 'min', 'max', 'sum', 'mean', 'any', 'all', 'unique'):
+        table = self.select(info)
+        columns = {name: table[name] for name in table.column_names}
+        for key in ('count', 'first', 'last', 'min', 'max', 'sum', 'mean', 'any', 'all', 'unique'):
+            func = getattr(ListChunk, key)
             for field in locals()[key]:
                 name = to_snake_case(field.name)
-                column = getattr(ListChunk, key)(columns[name])
-                if getattr(field, 'count', False):
-                    column = column.value_lengths()
-                columns[field.alias or name] = column
-        if count:
-            columns[count] = self.counts
+                columns[field.alias or name] = pa.chunked_array(C.map(func, table[name]))
         return Table(pa.Table.from_pydict(columns))
 
 

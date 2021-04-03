@@ -647,40 +647,6 @@ type FloatSet implements Set {
   values: [Float]!
 }
 
-"""table grouped by columns"""
-type Groups {
-  """number of rows"""
-  length: Long!
-
-  """Return slice of groups."""
-  slice(offset: Long! = 0, length: Long = null): Groups!
-
-  """
-  Return groups sorted by specified scalar columns, or by default counts.
-  """
-  sort(by: [String!]! = [], reverse: Boolean! = false, length: Long = null): Groups!
-
-  """
-  Return groups filtered by counts, scalar columns, or scalar values within groups.
-          Note it's always faster to filter values before grouping.
-          Filtering afterwards is useful when empty groups need to be accounted for.
-          Counts retain their original values because they're not column specific.
-          
-  """
-  filter(query: Filters = null, reduce: Operator! = AND, predicates: [Filter!]! = [], counts: IntQuery = null): Groups!
-
-  """list of tables"""
-  tables: [Table!]!
-
-  """
-  Return single table with aggregate functions applied to columns.
-          The grouping keys are automatically included.
-          Any remaining columns referenced in fields are kept as list columns.
-          Columns which are aliased or change type can be accessed by the `column` field.
-  """
-  aggregate(count: String! = "", first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = [], any: [Field!]! = [], all: [Field!]! = [], unique: [UniqueField!]! = []): Table!
-}
-
 """a table sorted by a composite index"""
 type IndexedTable {
   """number of rows"""
@@ -694,7 +660,7 @@ type IndexedTable {
 
   """
   Return column of any type by name.
-          This is typically only needed for aliased columns added by `apply` or `Groups.aggregate`.
+          This is typically only needed for aliased columns added by `apply` or `aggregate`.
           If the column is in the schema, `columns` can be used instead.
   """
   column(name: String!): Column!
@@ -709,13 +675,13 @@ type IndexedTable {
   Return table grouped by columns, with stable ordering.
           `length` is the maximum number of groups to return.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long = null): Groups!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: String! = ""): Table!
 
   """
   Return table partitioned by discrete differences of the values.
           Differs from `group` by relying on adjacency, and is typically faster.
   """
-  partition(by: [String!]!, diffs: Diffs = null): Groups!
+  partition(by: [String!]!, diffs: Diffs = null, count: String! = ""): Table!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -749,6 +715,20 @@ type IndexedTable {
           in filter `predicates`, and in the `by` arguments of grouping and sorting.
   """
   apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction, list: ListFunction): Table!
+
+  """
+  Return a list of tables by splitting list columns, typically used after grouping.
+          At least one list column must be referenced, and all list columns must have the same shape.
+  """
+  tables: [Table!]!
+
+  """
+  Return single table with aggregate functions applied to columns.
+          The grouping keys are automatically included.
+          Any remaining columns referenced in fields are kept as list columns.
+          Columns which are aliased or change type can be accessed by the `column` field.
+  """
+  aggregate(count: [Field!]! = [], first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = [], any: [Field!]! = [], all: [Field!]! = [], unique: [Field!]! = []): Table!
 
   """indexed columns"""
   index: [String!]!
@@ -871,17 +851,6 @@ input IntFunction {
   divide: String
   absolute: Boolean! = false
   fillNull: Int
-}
-
-"""predicates for ints"""
-input IntQuery {
-  equal: Int
-  notEqual: Int
-  less: Int
-  lessEqual: Int
-  greater: Int
-  greaterEqual: Int
-  isIn: [Int!]
 }
 
 """unique ints"""
@@ -1290,7 +1259,7 @@ type Table {
 
   """
   Return column of any type by name.
-          This is typically only needed for aliased columns added by `apply` or `Groups.aggregate`.
+          This is typically only needed for aliased columns added by `apply` or `aggregate`.
           If the column is in the schema, `columns` can be used instead.
   """
   column(name: String!): Column!
@@ -1305,13 +1274,13 @@ type Table {
   Return table grouped by columns, with stable ordering.
           `length` is the maximum number of groups to return.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long = null): Groups!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: String! = ""): Table!
 
   """
   Return table partitioned by discrete differences of the values.
           Differs from `group` by relying on adjacency, and is typically faster.
   """
-  partition(by: [String!]!, diffs: Diffs = null): Groups!
+  partition(by: [String!]!, diffs: Diffs = null, count: String! = ""): Table!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
@@ -1345,6 +1314,20 @@ type Table {
           in filter `predicates`, and in the `by` arguments of grouping and sorting.
   """
   apply(uint8: IntFunction, int8: IntFunction, uint16: IntFunction, int16: IntFunction, uint32: LongFunction, int32: IntFunction, uint64: LongFunction, int64: LongFunction, float: FloatFunction, double: FloatFunction, decimal: DecimalFunction, date32: DateFunction, date64: DateFunction, timestamp: DateTimeFunction, time32: TimeFunction, time64: TimeFunction, binary: BinaryFunction, string: StringFunction, snakeId: LongFunction, camelId: LongFunction, list: ListFunction): Table!
+
+  """
+  Return a list of tables by splitting list columns, typically used after grouping.
+          At least one list column must be referenced, and all list columns must have the same shape.
+  """
+  tables: [Table!]!
+
+  """
+  Return single table with aggregate functions applied to columns.
+          The grouping keys are automatically included.
+          Any remaining columns referenced in fields are kept as list columns.
+          Columns which are aliased or change type can be accessed by the `column` field.
+  """
+  aggregate(count: [Field!]! = [], first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = [], any: [Field!]! = [], all: [Field!]! = [], unique: [Field!]! = []): Table!
 }
 
 """Time (isoformat)"""
@@ -1415,11 +1398,4 @@ type TimeSet implements Set {
 
   """list of values"""
   values: [Time]!
-}
-
-"""names and aliases for aggregation of unique values"""
-input UniqueField {
-  name: String!
-  alias: String! = ""
-  count: Boolean! = false
 }
