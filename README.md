@@ -115,7 +115,7 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables a bi
 
 ## Dependencies
 * pyarrow >=3
-* strawberry-graphql >=0.53
+* strawberry-graphql >=0.54
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 * pytz (optional timestamp support)
 

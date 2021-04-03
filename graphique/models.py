@@ -9,10 +9,11 @@ from typing import Callable, List, Optional
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
+from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.type_resolver import _resolve_type
-from strawberry.types.types import ArgumentDefinition, undefined
+from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk
 from .inputs import (
@@ -203,7 +204,6 @@ def annotate(func, return_type, **annotations):
 def resolve_arguments(func, arguments):
     for argument in arguments:
         argument.origin = func
-        argument.name = to_camel_case(argument.origin_name)
         _resolve_type(argument)
     resolver = StrawberryResolver(func)
     resolver.arguments = arguments
@@ -220,8 +220,8 @@ def query_args(func, query):
     clone = types.FunctionType(func.__code__, func.__globals__)
     clone.__annotations__.update(func.__annotations__)
     arguments = [
-        ArgumentDefinition(
-            origin_name=name, type=value, default_value=getattr(query, name, undefined)
+        StrawberryArgument(
+            name, to_camel_case(name), value, default_value=getattr(query, name, undefined)
         )
         for name, value in query.__annotations__.items()
         if name != 'apply'

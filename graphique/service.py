@@ -12,8 +12,9 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import strawberry.asgi
 from starlette.applications import Starlette
+from strawberry.arguments import StrawberryArgument
 from starlette.middleware import Middleware, base
-from strawberry.types.types import ArgumentDefinition, undefined
+from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T, rpartial
 from .inputs import (
@@ -45,7 +46,7 @@ def to_snake_case(name):
 def resolver(name):
     cls = column_map[types[name]]
     arguments = [
-        ArgumentDefinition(origin_name=field, type=Optional[str])
+        StrawberryArgument(field, to_camel_case(field), Optional[str])
         for field in T.projected
         if cls.__annotations__.get(field) == cls.__name__
     ]
@@ -82,7 +83,7 @@ class Row:
 
 def query_field(func: Callable) -> Callable:
     arguments = [
-        ArgumentDefinition(origin_name=name, type=Optional[query_map[types[name]]])
+        StrawberryArgument(name, to_camel_case(name), Optional[query_map[types[name]]])
         for name in indexed
     ]
     return resolve_arguments(func, arguments)
@@ -90,7 +91,7 @@ def query_field(func: Callable) -> Callable:
 
 def function_field(func: Callable) -> Callable:
     arguments = [
-        ArgumentDefinition(origin_name=name, type=Optional[function_map[types[name]]])
+        StrawberryArgument(name, to_camel_case(name), Optional[function_map[types[name]]])
         for name in types
         if types[name] in function_map
     ]
