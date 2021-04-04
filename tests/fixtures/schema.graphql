@@ -652,9 +652,6 @@ type IndexedTable {
   """number of rows"""
   length: Long!
 
-  """column names"""
-  names: [String!]!
-
   """fields for each column"""
   columns: Columns!
 
@@ -673,12 +670,14 @@ type IndexedTable {
 
   """
   Return table grouped by columns, with stable ordering.
+          Optionally include counts in an aliased column.
           `length` is the maximum number of groups to return.
   """
   group(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: String! = ""): Table!
 
   """
   Return table partitioned by discrete differences of the values.
+          Optionally include counts in an aliased column.
           Differs from `group` by relying on adjacency, and is typically faster.
   """
   partition(by: [String!]!, diffs: Diffs = null, count: String! = ""): Table!
@@ -1251,9 +1250,6 @@ type Table {
   """number of rows"""
   length: Long!
 
-  """column names"""
-  names: [String!]!
-
   """fields for each column"""
   columns: Columns!
 
@@ -1272,12 +1268,14 @@ type Table {
 
   """
   Return table grouped by columns, with stable ordering.
+          Optionally include counts in an aliased column.
           `length` is the maximum number of groups to return.
   """
   group(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: String! = ""): Table!
 
   """
   Return table partitioned by discrete differences of the values.
+          Optionally include counts in an aliased column.
           Differs from `group` by relying on adjacency, and is typically faster.
   """
   partition(by: [String!]!, diffs: Diffs = null, count: String! = ""): Table!

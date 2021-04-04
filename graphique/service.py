@@ -149,11 +149,6 @@ class Table:
         return len(self.table)  # type: ignore
 
     @doc_field
-    def names(self) -> List[str]:
-        """column names"""
-        return list(map(to_camel_case, self.table.column_names))
-
-    @doc_field
     def columns(self) -> Columns:
         """fields for each column"""
         return Columns(self.table)
@@ -193,6 +188,7 @@ class Table:
         count: str = '',
     ) -> 'Table':
         """Return table grouped by columns, with stable ordering.
+        Optionally include counts in an aliased column.
         `length` is the maximum number of groups to return."""
         table = self.select(info)
         table, counts = T.group(table, *map(to_snake_case, by), reverse=reverse, length=length)
@@ -203,6 +199,7 @@ class Table:
         self, info, by: List[str], diffs: Optional[Diffs] = None, count: str = ''
     ) -> 'Table':
         """Return table partitioned by discrete differences of the values.
+        Optionally include counts in an aliased column.
         Differs from `group` by relying on adjacency, and is typically faster."""
         table = self.select(info)
         funcs = diffs.asdict() if diffs else {}

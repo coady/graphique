@@ -128,9 +128,8 @@ def test_strings(client):
 
 
 def test_search(client):
-    data = client.execute('{ index names search { length } }')
+    data = client.execute('{ index search { length } }')
     assert data['index'] == ['zipcode']
-    assert set(data['names']) == {'latitude', 'longitude', 'state', 'city', 'county', 'zipcode'}
     assert data['search']['length'] == 41700
     data = client.execute('{ search(zipcode: {equal: 501}) { columns { zipcode { values } } } }')
     assert data == {'search': {'columns': {'zipcode': {'values': [501]}}}}
