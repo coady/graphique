@@ -1,11 +1,4 @@
 import pytest
-from strawberry.printer import print_schema
-from .conftest import fixtures
-
-
-def test_schema(schema):
-    with open(fixtures / 'schema.graphql', 'w') as file:
-        file.write(print_schema(schema))
 
 
 def test_case(executor):

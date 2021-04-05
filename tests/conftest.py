@@ -56,12 +56,9 @@ def service():
 
 
 @pytest.fixture(scope='module')
-def schema(service):
-    return strawberry.Schema(query=service.IndexedTable)
+def executor(service):
+    schema = strawberry.Schema(query=service.IndexedTable)
 
-
-@pytest.fixture(scope='module')
-def executor(service, schema):
     def execute(query):
         result = schema.execute_sync(query, root_value=service.IndexedTable(service.table))
         for error in result.errors or ():

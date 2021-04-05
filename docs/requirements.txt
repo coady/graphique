@@ -1,4 +1,5 @@
 pyarrow
 cython
+strawberry-graphql
 mkdocs-material
 mkdocstrings

@@ -7,3 +7,4 @@ site/
 *.o
 *.html
 .venv/
+docs/schema.*

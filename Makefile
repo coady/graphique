@@ -15,6 +15,9 @@ lint:
 html: all
 	python3 -m mkdocs build
 
+docs/schema.graphql: tests/fixtures/zipcodes.parquet
+	python3 -m docs.schema $? > $@
+
 dist:
 	python3 setup.py sdist bdist_wheel
 	docker run --rm -v $(PWD):/usr/src -w /usr/src quay.io/pypa/manylinux_2_24_x86_64 make cp37 cp38 cp39
