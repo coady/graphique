@@ -8,3 +8,5 @@ site/
 *.html
 .venv/
 docs/schema.*
+node_modules/
+package-lock.json

@@ -36,15 +36,12 @@ type Table {
   """number of rows"""
   length: Long!
 
-  """column names"""
-  names: [String!]!
-
   """fields for each column"""
   columns: Columns!
 
   """
   Return column of any type by name.
-          This is typically only needed for aliased columns added by `apply` or `Groups.aggregate`.
+          This is typically only needed for aliased columns added by `apply` or `aggregate`.
           If the column is in the schema, `columns` can be used instead.
   """
   column(name: String!): Column!
@@ -53,24 +50,31 @@ type Table {
   row(index: Long! = 0): Row!
 
   """Return table slice."""
-  slice(offset: Long! = 0, length: Long): Table!
+  slice(offset: Long! = 0, length: Long = null): Table!
 
   """
-  Return tables grouped by columns, with stable ordering.
-          `length` is the maximum number of tables to return.
-          `count` filters and sorts tables based on the number of rows within each table.
+  Return table grouped by columns, with stable ordering.
+          Optionally include counts in an aliased column.
+          `length` is the maximum number of groups to return.
   """
-  group(by: [String!]!, reverse: Boolean! = false, length: Long, count: CountQuery): Groups!
+  group(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: String! = ""): Table!
+
+  """
+  Return table partitioned by discrete differences of the values.
+          Optionally include counts in an aliased column.
+          Differs from `group` by relying on adjacency, and is typically faster.
+  """
+  partition(by: [String!]!, diffs: Diffs = null, count: String! = ""): Table!
 
   """
   Return table of first or last occurrences grouped by columns, with stable ordering.
           Optionally include counts in an aliased column.
           Faster than `group` when only scalars are needed.
   """
-  unique(by: [String!]!, reverse: Boolean! = false, count: String! = ""): Table!
+  unique(by: [String!]!, reverse: Boolean! = false, length: Long = null, count: String! = ""): Table!
 
   """Return table slice sorted by specified columns."""
-  sort(by: [String!]!, reverse: Boolean! = false, length: Long): Table!
+  sort(by: [String!]!, reverse: Boolean! = false, length: Long = null): Table!
 
   """Return table with minimum values per column."""
   min(by: [String!]!): Table!
@@ -82,16 +86,32 @@ type Table {
   Return table with rows which match all (by default) queries.
           `invert` optionally excludes matching rows.
           `reduce` is the binary operator to combine filters; within a column all predicates must match.
+          `predicates` are additional filters for column of unknown types, as the result of `apply`.
+          List columns apply their respective filters to their own scalar values.
   """
-  filter(query: Filters!, invert: Boolean! = false, reduce: Operator! = AND): Table!
+  filter(query: Filters = null, invert: Boolean! = false, reduce: Operator! = AND, predicates: [Filter!]! = []): Table!
 
   """
   Return view of table with functions applied across columns.
           If no alias is provided, the column is replaced and should be of the same type.
           If an alias is provided, a column is added and may be referenced in the `column` interface,
-          and in the `by` arguments of grouping and sorting.
+          in filter `predicates`, and in the `by` arguments of grouping and sorting.
   """
   apply(...): Table!
+
+  """
+  Return a list of tables by splitting list columns, typically used after grouping.
+          At least one list column must be referenced, and all list columns must have the same shape.
+  """
+  tables: [Table!]!
+
+  """
+  Return single table with aggregate functions applied to columns.
+          The grouping keys are automatically included.
+          Any remaining columns referenced in fields are kept as list columns.
+          Columns which are aliased or change type can be accessed by the `column` field.
+  """
+  aggregate(count: [Field!]! = [], first: [Field!]! = [], last: [Field!]! = [], min: [Field!]! = [], max: [Field!]! = [], sum: [Field!]! = [], mean: [Field!]! = [], any: [Field!]! = [], all: [Field!]! = [], unique: [Field!]! = []): Table!
 }
 ```
 

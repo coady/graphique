@@ -12,8 +12,14 @@ lint:
 	flake8 graphique/*.pyx --ignore E999,E211
 	mypy -p graphique
 
-html: all
+html: all docs/schema.md
 	python3 -m mkdocs build
+
+docs/schema.md: docs/schema.graphql
+	./node_modules/.bin/graphql-markdown \
+		--title "Example Schema" \
+		--prologue "Generated from a test fixture of zipcodes." \
+		$? > $@
 
 docs/schema.graphql: tests/fixtures/zipcodes.parquet
 	python3 -m docs.schema $? > $@

@@ -9,6 +9,7 @@ edit_uri: ""
 nav:
   - Introduction: index.md
   - Reference: reference.md
+  - Schema: schema.md
 
 plugins:
   - search

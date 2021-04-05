@@ -16,7 +16,8 @@ jobs:
     - run: pip install -r docs/requirements.txt
     # avoid .tar.gz name conflicts with previous project until v1.0
     - run: python setup.py sdist --formats zip
-    - run: make
+    - run: npm install
+    - run: make html
     - run: mkdocs gh-deploy --force
     - uses: pypa/gh-action-pypi-publish@v1.4.2
       with:
