@@ -3,29 +3,21 @@ GraphQL service and top-level resolvers.
 """
 import functools
 import itertools
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, List, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
-import strawberry.asgi
+import strawberry
 from starlette.applications import Starlette
 from strawberry.arguments import StrawberryArgument
-from starlette.middleware import Middleware, base
+from starlette.middleware import Middleware
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T, rpartial
-from .inputs import (
-    Field,
-    Filter,
-    asdict,
-    diff_map,
-    filter_map,
-    function_map,
-    query_map,
-)
+from .inputs import Field, Filter, asdict, diff_map, filter_map, function_map, query_map
+from .middleware import GraphQL, TimingMiddleware, references
 from .models import Column, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -114,23 +106,6 @@ class Diffs:
     }
     locals().update(dict.fromkeys(types, undefined))
     asdict = asdict
-
-
-def references(node):
-    """Generate every possible column reference."""
-    if hasattr(node, 'name'):
-        yield node.name.value
-    value = getattr(node, 'value', None)
-    yield getattr(value, 'value', value)
-    nodes = itertools.chain(
-        getattr(node, 'arguments', []),
-        getattr(node, 'fields', []),
-        getattr(value, 'fields', []),
-        getattr(value, 'values', []),
-        getattr(getattr(node, 'selection_set', None), 'selections', []),
-    )
-    for node in nodes:
-        yield from references(node)
 
 
 @strawberry.type(description="a column-oriented table")
@@ -385,26 +360,6 @@ class IndexedTable(Table):
         if queries:
             raise ValueError(f"expected query for {name}; have {queries} remaining")
         return Table(table)
-
-
-class TimingMiddleware(base.BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):  # pragma: no cover
-        start = datetime.now()
-        try:
-            return await call_next(request)
-        finally:
-            end = datetime.now()
-            print(f"[{end.replace(microsecond=0)}]: {end - start}")
-
-
-class GraphQL(strawberry.asgi.GraphQL):
-    def __init__(self, root_value, **kwargs):
-        schema = strawberry.Schema(type(root_value), types=Column.__subclasses__())
-        super().__init__(schema, **kwargs)
-        self.root_value = root_value
-
-    async def get_root_value(self, request):
-        return self.root_value
 
 
 Query = IndexedTable if indexed else Table
