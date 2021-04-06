@@ -172,6 +172,7 @@ class Table:
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field(
+        diffs="predicates defaulting to `not_equal`; scalars are compared to the adjacent difference",
         count="optionally include counts in an aliased column",
     )
     def partition(
@@ -214,7 +215,7 @@ class Table:
 
     @doc_field(
         reverse="descending stable order",
-        length="maximum number of rows to return; may be significantly faster on a single field",
+        length="maximum number of rows to return; may be significantly faster on a single column",
     )
     def sort(
         self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
@@ -236,9 +237,10 @@ class Table:
         return Table(T.matched(table, C.max, *map(to_snake_case, by)))
 
     @doc_field(
+        query="filters organized by column",
         invert="optionally exclude matching rows",
         reduce="binary operator to combine filters; within a column all predicates must match",
-        predicates="additional filters for column of unknown types, as the result of `apply`",
+        predicates="additional filters for columns of unknown types, as the result of `apply`",
     )
     def filter(
         self,
