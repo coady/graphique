@@ -1,6 +1,7 @@
 """
 GraphQL output types and resolvers.
 """
+import functools
 import operator
 import types
 from datetime import date, datetime, time, timedelta
@@ -15,6 +16,7 @@ from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.type_resolver import _resolve_type
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
+from typing_extensions import Annotated
 from .core import Column as C, ListChunk
 from .inputs import (
     BooleanQuery,
@@ -38,7 +40,13 @@ def selections(node):
     return {node.name.value for node in nodes if hasattr(node, 'name')}
 
 
-def doc_field(func):
+def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField:
+    """Return strawberry field with argument and docstring descriptions."""
+    if func is None:
+        return functools.partial(doc_field, **kwargs)
+    for name in kwargs:
+        argument = strawberry.argument(description=kwargs[name])
+        func.__annotations__[name] = Annotated[func.__annotations__[name], argument]
     return strawberry.field(func, description=func.__doc__)
 
 

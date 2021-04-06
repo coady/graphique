@@ -18,7 +18,7 @@ from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T, rpartial
 from .inputs import Field, Filter, asdict, diff_map, filter_map, function_map, query_map
 from .middleware import GraphQL, TimingMiddleware, references
-from .models import Column, column_map, doc_field, resolve_arguments, selections
+from .models import Column, ListColumn, column_map, doc_field, resolve_arguments, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
@@ -153,7 +153,11 @@ class Table:
         table = self.select(info)
         return Table(table.slice(offset, length))
 
-    @doc_field
+    @doc_field(
+        reverse="return groups in reversed stable order",
+        length="maximum number of groups to return",
+        count="optionally include counts in an aliased column",
+    )
     def group(
         self,
         info,
@@ -162,19 +166,18 @@ class Table:
         length: Optional[Long] = None,
         count: str = '',
     ) -> 'Table':
-        """Return table grouped by columns, with stable ordering.
-        Optionally include counts in an aliased column.
-        `length` is the maximum number of groups to return."""
+        """Return table grouped by columns, with stable ordering."""
         table = self.select(info)
         table, counts = T.group(table, *map(to_snake_case, by), reverse=reverse, length=length)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
-    @doc_field
+    @doc_field(
+        count="optionally include counts in an aliased column",
+    )
     def partition(
         self, info, by: List[str], diffs: Optional[Diffs] = None, count: str = ''
     ) -> 'Table':
         """Return table partitioned by discrete differences of the values.
-        Optionally include counts in an aliased column.
         Differs from `group` by relying on adjacency, and is typically faster."""
         table = self.select(info)
         funcs = diffs.asdict() if diffs else {}
@@ -187,7 +190,11 @@ class Table:
         table, counts = T.partition(table, *names, **predicates)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
-    @doc_field
+    @doc_field(
+        reverse="return last occurrences in reversed order",
+        length="maximum number of rows to return",
+        count="optionally include counts in an aliased column",
+    )
     def unique(
         self,
         info,
@@ -197,7 +204,6 @@ class Table:
         count: str = '',
     ) -> 'Table':
         """Return table of first or last occurrences grouped by columns, with stable ordering.
-        Optionally include counts in an aliased column.
         Faster than `group` when only scalars are needed."""
         table = self.select(info)
         names = map(to_snake_case, by)
@@ -206,7 +212,10 @@ class Table:
         table, counts = T.unique(table, *names, reverse=reverse, length=length, count=bool(count))
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
-    @doc_field
+    @doc_field(
+        reverse="descending stable order",
+        length="maximum number of rows to return; may be significantly faster on a single field",
+    )
     def sort(
         self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
     ) -> 'Table':
@@ -226,7 +235,11 @@ class Table:
         table = self.select(info)
         return Table(T.matched(table, C.max, *map(to_snake_case, by)))
 
-    @doc_field
+    @doc_field(
+        invert="optionally exclude matching rows",
+        reduce="binary operator to combine filters; within a column all predicates must match",
+        predicates="additional filters for column of unknown types, as the result of `apply`",
+    )
     def filter(
         self,
         info,
@@ -236,9 +249,6 @@ class Table:
         predicates: List[Filter] = [],
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
-        `invert` optionally excludes matching rows.
-        `reduce` is the binary operator to combine filters; within a column all predicates must match.
-        `predicates` are additional filters for column of unknown types, as the result of `apply`.
         List columns apply their respective filters to their own scalar values."""
         table = self.select(info)
         filters = query.asdict() if query else {}
@@ -291,7 +301,18 @@ class Table:
                 columns[name] = C.decode(column, check=True)
             yield Table(pa.Table.from_pydict(columns))
 
-    @doc_field
+    @doc_field(
+        count=ListColumn.count.__doc__,
+        first=ListColumn.first.__doc__,
+        last=ListColumn.last.__doc__,
+        min=ListColumn.min.__doc__,
+        max=ListColumn.max.__doc__,
+        sum=ListColumn.sum.__doc__,
+        mean=ListColumn.mean.__doc__,
+        any=ListColumn.any.__doc__,
+        all=ListColumn.all.__doc__,
+        unique=ListColumn.unique.__doc__,
+    )
     def aggregate(
         self,
         info,
@@ -306,9 +327,7 @@ class Table:
         all: List[Field] = [],
         unique: List[Field] = [],
     ) -> 'Table':
-        """Return single table with aggregate functions applied to columns.
-        The grouping keys are automatically included.
-        Any remaining columns referenced in fields are kept as list columns.
+        """Return table with aggregate functions applied to list columns, typically used after grouping.
         Columns which are aliased or change type can be accessed by the `column` field."""
         table = self.select(info)
         columns = {name: table[name] for name in table.column_names}
