@@ -247,7 +247,7 @@ def test_sort(client):
 def test_group(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ group { length } }')
-    with pytest.raises(ValueError, match="not enough values to unpack"):
+    with pytest.raises(ValueError, match="empty"):
         client.execute('{ group(by: ["state"]) { tables { length } } }')
     data = client.execute(
         '''{ group(by: ["state"]) { length tables { length

@@ -166,7 +166,9 @@ class Table:
         length: Optional[Long] = None,
         count: str = '',
     ) -> 'Table':
-        """Return table grouped by columns, with stable ordering."""
+        """Return table grouped by columns, with stable ordering.
+        Other columns can be accessed by the `column` field as a `ListColumn`.
+        Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
         table, counts = T.group(table, *map(to_snake_case, by), reverse=reverse, length=length)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
@@ -179,7 +181,9 @@ class Table:
         self, info, by: List[str], diffs: Optional[Diffs] = None, count: str = ''
     ) -> 'Table':
         """Return table partitioned by discrete differences of the values.
-        Differs from `group` by relying on adjacency, and is typically faster."""
+        Differs from `group` by relying on adjacency, and is typically faster.
+        Other columns can be accessed by the `column` field as a `ListColumn`.
+        Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
         funcs = diffs.asdict() if diffs else {}
         names = list(map(to_snake_case, itertools.takewhile(lambda name: name not in funcs, by)))
@@ -277,7 +281,7 @@ class Table:
     def apply(self, **functions) -> 'Table':
         """Return view of table with functions applied across columns.
         If no alias is provided, the column is replaced and should be of the same type.
-        If an alias is provided, a column is added and may be referenced in the `column` interface,
+        If an alias is provided, a column is added and may be referenced in the `column` field,
         in filter `predicates`, and in the `by` arguments of grouping and sorting."""
         table = self.table
         for name in functions:
@@ -292,16 +296,17 @@ class Table:
         At least one list column must be referenced, and all list columns must have the same shape."""
         table = self.select(info)
         lists = {name for name in table.column_names if isinstance(table[name].type, pa.ListType)}
-        scalars = set(table.column_names) - lists
+        columns = {name: table[name] for name in lists}
+        # use simplest list column to determine the lengths
+        shape = C.combine_chunks(min(columns.values(), key=lambda col: col.type.value_type.id))
+        counts = shape.value_lengths().to_pylist()
+        indices = pa.concat_arrays(pa.array(np.repeat(*pair)) for pair in enumerate(counts))
+        for name in set(table.column_names) - lists:
+            column = pa.DictionaryArray.from_arrays(indices, C.combine_chunks(table[name]))
+            columns[name] = pa.ListArray.from_arrays(shape.offsets, C.decode(column, check=True))
         for index in range(len(table)):
-            columns = {name: table[name][index].values for name in lists}
-            (count,) = set(map(len, columns.values()))  # table columns must have the same length
-            indices = pa.array(np.repeat(0, count))
-            row = table.slice(index, length=1)
-            for name in scalars:
-                column = pa.DictionaryArray.from_arrays(indices, row[name].chunk(0))
-                columns[name] = C.decode(column, check=True)
-            yield Table(pa.Table.from_pydict(columns))
+            row = {name: columns[name][index].values for name in columns}
+            yield Table(pa.Table.from_pydict(row))
 
     @doc_field(
         count=ListColumn.count.__doc__,
