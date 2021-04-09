@@ -12,5 +12,5 @@ if __name__ == '__main__':
     os.environ['PARQUET_PATH'] = parser.parse_args().path
     from graphique import service
 
-    schema = strawberry.Schema(query=service.Table)
+    schema = strawberry.Schema(query=service.Query)
     print(strawberry.printer.print_schema(schema))

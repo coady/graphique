@@ -27,133 +27,39 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * MMAP = True
 * PARQUET_PATH
 
-### Queries
-A `Table` is the primary interface.  It has fields for filtering, sorting, and grouping.
+### API
+#### types
+* `Table`: an arrow Table; the primary interface.
+* `Column`: an arrow Column (a.k.a. ChunkedArray). Each arrow data type has a corresponding column implementation: Boolean, Int, Long, Float, Decimal, Date, DateTime, Time, Duration, Binary, String, List, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
+* `Row`: scalar fields. Arrow tables are column-oriented, and graphique encourages that usage for performance. A single `row` field is provided for convenience, but a field for a list of rows is not. Requesting parallel columns is far more efficient.
 
-```graphql
-"""a column-oriented table"""
-type Table {
-  """number of rows"""
-  length: Long!
+#### selection
+* `slice`: contiguous selection of rows
+* `search`: binary search if the table is sorted, i.e., provides an index
+* `filter`: select rows from predicate functions
 
-  """fields for each column"""
-  columns: Columns!
+#### projection
+* `columns`: provides a field for every `Column` in the schema
+* `column`: access a column of any type by name
+* `row`: provides a field for each scalar of a single row
+* `apply`: transform columns by applying a function
 
-  """
-  Return column of any type by name.
-          This is typically only needed for aliased columns added by `apply` or `aggregate`.
-          If the column is in the schema, `columns` can be used instead.
-  """
-  column(name: String!): Column!
+#### aggregation
+* `group`: group by given columns, transforming the others into list columns
+* `unique`: group by given columns, only retaining one scalar per group
+* `partition`: partition on adjacent values in given columns, transforming the others into list columns
+* `aggregate`: apply reduce functions to list columns
+* `tables`: return a list of tables by splitting on the scalars in list columns
 
-  """Return scalar values at index."""
-  row(index: Long! = 0): Row!
-
-  """Return table slice."""
-  slice(offset: Long! = 0, length: Long = null): Table!
-
-  """Return table grouped by columns, with stable ordering."""
-  group(
-    by: [String!]!
-
-    """return groups in reversed stable order"""
-    reverse: Boolean! = false
-
-    """maximum number of groups to return"""
-    length: Long = null
-
-    """optionally include counts in an aliased column"""
-    count: String! = ""
-  ): Table!
-
-  """
-  Return table partitioned by discrete differences of the values.
-          Differs from `group` by relying on adjacency, and is typically faster.
-  """
-  partition(
-    by: [String!]!
-
-    """
-    predicates defaulting to `not_equal`; scalars are compared to the adjacent difference
-    """
-    diffs: Diffs = null
-
-    """optionally include counts in an aliased column"""
-    count: String! = ""
-  ): Table!
-
-  """
-  Return table of first or last occurrences grouped by columns, with stable ordering.
-          Faster than `group` when only scalars are needed.
-  """
-  unique(
-    by: [String!]!
-
-    """return last occurrences in reversed order"""
-    reverse: Boolean! = false
-
-    """maximum number of rows to return"""
-    length: Long = null
-
-    """optionally include counts in an aliased column"""
-    count: String! = ""
-  ): Table!
-
-  """Return table slice sorted by specified columns."""
-  sort(
-    by: [String!]!
-
-    """descending stable order"""
-    reverse: Boolean! = false
-
-    """
-    maximum number of rows to return; may be significantly faster on a single column
-    """
-    length: Long = null
-  ): Table!
-
-  """Return table with minimum values per column."""
-  min(by: [String!]!): Table!
-
-  """Return table with maximum values per column."""
-  max(by: [String!]!): Table!
-
-  """
-  Return table with rows which match all (by default) queries.
-          List columns apply their respective filters to their own scalar values.
-  """
-  filter(
-    """filters organized by column"""
-    query: Filters = null
-
-    """optionally exclude matching rows"""
-    invert: Boolean! = false
-
-    """
-    binary operator to combine filters; within a column all predicates must match
-    """
-    reduce: Operator! = AND
-
-    """
-    additional filters for columns of unknown types, as the result of `apply`
-    """
-    predicates: [Filter!]! = []
-  ): Table!
-}
-```
+#### ordering
+* `sort`: sort table by given columns
+* `min`: select rows with smallest values
+* `max`: select rows with largest values
 
 ### Performance
 Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views. Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
 
-Specifying an `INDEX` of columns indicates the table is sorted, and enables a binary search interface.
-```graphql
-  """
-  Return table with matching values for compound `index`.
-          Queries must be a prefix of the `index`.
-          Only one non-equal query is allowed, and applied last.
-  """
-  search(...): Table!
-```
+Specifying an `INDEX` of columns indicates the table is sorted, and enables the binary `search` field.
 
 ## Installation
 ```console

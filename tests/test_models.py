@@ -26,7 +26,7 @@ def test_case(executor):
     assert data == {'min': {'row': {'snakeId': 1, 'camelId': 1}}}
     data = executor('{ max(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
     assert data == {'max': {'row': {'snakeId': 2, 'camelId': 2}}}
-    with pytest.raises(ValueError, match="non-equal query for"):
+    with pytest.raises(ValueError, match="inequality query for"):
         executor('{ index search(snakeId: {less: 1}, camelId: {equal: 1}) { length } }')
     with pytest.raises(ValueError, match="expected query for"):
         executor('{ index search(camelId: {equal: 1}) { length } }')

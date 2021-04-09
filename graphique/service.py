@@ -293,7 +293,7 @@ class Table:
     @doc_field
     def tables(self, info) -> List['Table']:  # type: ignore
         """Return a list of tables by splitting list columns, typically used after grouping.
-        At least one list column must be referenced, and all list columns must have the same shape."""
+        At least one list column must be referenced, and all list columns must have the same lengths."""
         table = self.select(info)
         lists = {name for name in table.column_names if isinstance(table[name].type, pa.ListType)}
         columns = {name: table[name] for name in lists}
@@ -353,24 +353,23 @@ class IndexedTable(Table):
 
     @doc_field
     def index(self) -> List[str]:
-        """indexed columns"""
+        """the composite index"""
         return list(map(to_camel_case, indexed))
 
     @query_field
     def search(self, info, **queries) -> Table:
-        """Return table with matching values for compound `index`.
+        """Return table with matching values for composite `index`.
         Queries must be a prefix of the `index`.
-        Only one non-equal query is allowed, and applied last."""
+        Only one inequality query is allowed, and must be last."""
         table = self.select(info)
         for name in indexed:
-            query = queries.pop(name, None)
-            if query is None:
+            if name not in queries:
                 break
-            query = query.asdict()
+            query = queries.pop(name).asdict()
             if 'equal' in query:
                 table = T.is_in(table, name, query.pop('equal'))
             if query and queries:
-                raise ValueError(f"non-equal query for {name} not last; have {queries} remaining")
+                raise ValueError(f"inequality query for {name} not last; have {queries} remaining")
             if 'not_equal' in query:
                 table = T.not_equal(table, name, query['not_equal'])
             if 'is_in' in query:

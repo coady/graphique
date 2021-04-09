@@ -8,8 +8,8 @@ edit_uri: ""
 
 nav:
   - Introduction: index.md
-  - Reference: reference.md
-  - Schema: schema.md
+  - Example Schema: schema.md
+  - Core Reference: reference.md
 
 plugins:
   - search

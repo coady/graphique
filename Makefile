@@ -18,6 +18,7 @@ html: all docs/schema.md
 docs/schema.md: docs/schema.graphql
 	./node_modules/.bin/graphql-markdown \
 		--title "Example Schema" \
+		--no-toc \
 		--prologue "Generated from a test fixture of zipcodes." \
 		$? > $@
 
