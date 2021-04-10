@@ -3,9 +3,11 @@ Service related utilities which don't require knowledge of the schema.
 """
 import itertools
 from datetime import datetime
+import pyarrow as pa
 import strawberry.asgi
 from starlette.middleware import base
-from .models import Column
+from .models import Column, doc_field
+from .scalars import Long
 
 
 def references(node):
@@ -43,3 +45,14 @@ class GraphQL(strawberry.asgi.GraphQL):
 
     async def get_root_value(self, request):
         return self.root_value
+
+
+@strawberry.interface
+class AbstractTable:
+    def __init__(self, table: pa.Table):
+        self.table = table
+
+    @doc_field
+    def length(self) -> Long:
+        """number of rows"""
+        return len(self.table)  # type: ignore

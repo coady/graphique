@@ -4,7 +4,7 @@ GraphQL service and top-level resolvers.
 import functools
 import itertools
 from pathlib import Path
-from typing import Any, Callable, List, Optional
+from typing import Callable, List, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -16,8 +16,9 @@ from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T, rpartial
 from .inputs import Field, Filter, asdict, diff_map, filter_map, function_map, query_map
-from .middleware import GraphQL, TimingMiddleware, references
-from .models import Column, ListColumn, column_map, doc_field, resolve_annotations, selections
+from .middleware import AbstractTable, GraphQL, TimingMiddleware, references
+from .models import Column, ListColumn
+from .models import annotate, column_map, doc_field, resolve_annotations, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
@@ -99,19 +100,13 @@ class Diffs:
 
 
 @strawberry.type(description="a column-oriented table")
-class Table:
-    def __init__(self, table):
-        self.table = table
+class Table(AbstractTable):
+    __init__ = AbstractTable.__init__
 
-    def select(self: Any, info) -> pa.Table:
+    def select(self, info) -> pa.Table:
         """Return table with only the columns necessary to proceed."""
         names = set(map(to_snake_case, references(*info.field_nodes)))
         return self.table.select(names & set(self.table.column_names))
-
-    @doc_field
-    def length(self) -> Long:
-        """number of rows"""
-        return len(self.table)  # type: ignore
 
     @doc_field
     def columns(self) -> Columns:
@@ -141,7 +136,7 @@ class Table:
     def slice(self, info, offset: Long = 0, length: Optional[Long] = None) -> 'Table':  # type: ignore
         """Return table slice."""
         table = self.select(info)
-        return Table(table.slice(offset, length))
+        return type(self)(table.slice(offset, length))
 
     @doc_field(
         reverse="return groups in reversed stable order",
@@ -338,8 +333,8 @@ class Table:
 
 @strawberry.type(description="a table sorted by a composite index")
 class IndexedTable(Table):
-    def __init__(self, table):
-        self.table = table
+    __init__ = AbstractTable.__init__
+    slice = annotate(Table.slice, 'IndexedTable')
 
     @doc_field
     def index(self) -> List[str]:

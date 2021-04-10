@@ -14,6 +14,8 @@ def test_slice(client):
     assert data['columns']['zipcode']['count'] == 0
     data = client.execute('{ slice(length: 0) { columns { zipcode { any all } } } }')
     assert data['slice']['columns']['zipcode'] == {'any': False, 'all': True}
+    data = client.execute('{ slice { __typename } }')
+    assert data['slice']['__typename'] == 'IndexedTable'
 
 
 def test_ints(client):
