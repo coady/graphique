@@ -2,7 +2,6 @@
 GraphQL output types and resolvers.
 """
 import functools
-import inspect
 import operator
 import types
 from datetime import date, datetime, time, timedelta
@@ -11,10 +10,7 @@ from typing import Callable, List, Optional
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
-from strawberry.arguments import get_arguments_from_annotations
 from strawberry.field import StrawberryField
-from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.types.types import undefined
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
 from .inputs import (
@@ -206,38 +202,10 @@ def annotate(func, return_type, **annotations):
     return strawberry.field(clone, description=func.__doc__)
 
 
-def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) -> StrawberryField:
-    """Return field by transforming annotations into function arguments."""
-    kind = inspect.Parameter.KEYWORD_ONLY
-    parameters = {
-        name: inspect.Parameter(name, kind, default=defaults.get(name, undefined))
-        for name in annotations
-    }
-    resolver = StrawberryResolver(func)
-    resolver.arguments = get_arguments_from_annotations(annotations, parameters, func)
-    return StrawberryField(
-        python_name=func.__name__,
-        graphql_name='',
-        type_=func.__annotations__['return'],
-        description=func.__doc__,
-        base_resolver=resolver,
-    )
-
-
-def query_args(func: Callable, query: type) -> StrawberryField:
-    """Return field by transforming a type's annotations into function arguments."""
-    clone = types.FunctionType(func.__code__, func.__globals__)  # type: ignore
-    clone.__annotations__.update(func.__annotations__)
-    annotations = dict(query.__annotations__)
-    annotations.pop('apply', None)
-    defaults = {name: getattr(query, name, undefined) for name in annotations}
-    return resolve_annotations(clone, annotations, defaults)
-
-
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, BooleanQuery)
+    count = BooleanQuery.resolver(resolvers.count)
     any = resolvers.any
     all = resolvers.all
     values = annotate(resolvers.values, List[Optional[bool]])
@@ -248,7 +216,7 @@ class BooleanColumn(Column):
 @strawberry.type(description="column of ints")
 class IntColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, IntQuery)
+    count = IntQuery.resolver(resolvers.count)
     any = resolvers.any
     all = resolvers.all
     values = annotate(resolvers.values, List[Optional[int]])
@@ -277,7 +245,7 @@ class IntColumn(Column):
 @strawberry.type(description="column of longs")
 class LongColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, LongQuery)
+    count = LongQuery.resolver(resolvers.count)
     any = resolvers.any
     all = resolvers.all
     values = annotate(resolvers.values, List[Optional[Long]])
@@ -306,7 +274,7 @@ class LongColumn(Column):
 @strawberry.type(description="column of floats")
 class FloatColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, FloatQuery)
+    count = FloatQuery.resolver(resolvers.count)
     any = resolvers.any
     all = resolvers.all
     values = annotate(resolvers.values, List[Optional[float]])
@@ -334,7 +302,7 @@ class FloatColumn(Column):
 @strawberry.type(description="column of decimals")
 class DecimalColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, DecimalQuery)
+    count = DecimalQuery.resolver(resolvers.count)
     values = annotate(resolvers.values, List[Optional[Decimal]])
     Set = Set.subclass(Decimal, "DecimalSet", "unique decimals")
     unique = annotate(resolvers.unique, Set)
@@ -347,7 +315,7 @@ class DecimalColumn(Column):
 @strawberry.type(description="column of dates")
 class DateColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, DateQuery)
+    count = DateQuery.resolver(resolvers.count)
     values = annotate(resolvers.values, List[Optional[date]])
     Set = Set.subclass(date, "DateSet", "unique dates")
     unique = annotate(resolvers.unique, Set)
@@ -362,7 +330,7 @@ class DateColumn(Column):
 @strawberry.type(description="column of datetimes")
 class DateTimeColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, DateTimeQuery)
+    count = DateTimeQuery.resolver(resolvers.count)
     values = annotate(resolvers.values, List[Optional[datetime]])
     Set = Set.subclass(datetime, "DatetimeSet", "unique datetimes")
     unique = annotate(resolvers.unique, Set)
@@ -381,7 +349,7 @@ class DateTimeColumn(Column):
 @strawberry.type(description="column of times")
 class TimeColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, TimeQuery)
+    count = TimeQuery.resolver(resolvers.count)
     values = annotate(resolvers.values, List[Optional[time]])
     Set = Set.subclass(time, "TimeSet", "unique times")
     unique = annotate(resolvers.unique, Set)
@@ -395,7 +363,7 @@ class TimeColumn(Column):
 @strawberry.type(description="column of durations")
 class DurationColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, DurationQuery)
+    count = DurationQuery.resolver(resolvers.count)
     values = annotate(resolvers.values, List[Optional[timedelta]])
     quantile = annotate(resolvers.quantile, List[Optional[timedelta]])
     minimum = annotate(resolvers.minimum, 'DurationColumn', value=timedelta)
@@ -406,7 +374,7 @@ class DurationColumn(Column):
 @strawberry.type(description="column of binaries")
 class BinaryColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, BinaryQuery)
+    count = BinaryQuery.resolver(resolvers.count)
     any = resolvers.any
     all = resolvers.all
     values = annotate(resolvers.values, List[Optional[bytes]])
@@ -419,7 +387,7 @@ class BinaryColumn(Column):
 @strawberry.type(description="column of strings")
 class StringColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
-    count = query_args(resolvers.count, StringFilter)
+    count = StringFilter.resolver(resolvers.count)
     any = resolvers.any
     all = resolvers.all
     values = annotate(resolvers.values, List[Optional[str]])

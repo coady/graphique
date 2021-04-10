@@ -60,3 +60,10 @@ class Operator(enum.Enum):
     AND = 'and'
     OR = 'or'
     XOR = 'xor'
+
+
+class classproperty(property):
+    """A property bound to a class."""
+
+    def __get__(self, instance, owner):
+        return self.fget(owner)

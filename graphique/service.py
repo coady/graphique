@@ -4,7 +4,7 @@ GraphQL service and top-level resolvers.
 import functools
 import itertools
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import List, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -15,10 +15,10 @@ from starlette.middleware import Middleware
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T, rpartial
-from .inputs import Field, Filter, asdict, diff_map, filter_map, function_map, query_map
+from .inputs import Diff, Field, Filter, Function, Query as QueryInput, asdict, resolve_annotations
 from .middleware import AbstractTable, GraphQL, TimingMiddleware, references
 from .models import Column, ListColumn
-from .models import annotate, column_map, doc_field, resolve_annotations, selections
+from .models import annotate, column_map, doc_field, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
@@ -69,32 +69,16 @@ class Row:
     locals().update(dict.fromkeys(types))
 
 
-def query_field(func: Callable) -> Callable:
-    annotations = {name: Optional[query_map[types[name]]] for name in indexed}
-    return resolve_annotations(func, annotations)
-
-
-def function_field(func: Callable) -> Callable:
-    annotations = {
-        name: Optional[function_map[types[name]]] for name in types if types[name] in function_map
-    }
-    return resolve_annotations(func, annotations)
-
-
 @strawberry.input(description="predicates for each column")
 class Filters:
-    __annotations__ = {
-        name: Optional[filter_map[types[name]]] for name in types if types[name] in filter_map
-    }
+    __annotations__ = Filter.annotations(types)
     locals().update(dict.fromkeys(types, undefined))
     asdict = asdict
 
 
 @strawberry.input(description="discrete difference predicates for each column")
 class Diffs:
-    __annotations__ = {
-        name: Optional[diff_map[types[name]]] for name in types if types[name] in diff_map
-    }
+    __annotations__ = Diff.annotations(types)
     locals().update(dict.fromkeys(types, undefined))
     asdict = asdict
 
@@ -262,7 +246,7 @@ class Table(AbstractTable):
             return Table(range(C.count(mask, not invert)))  # type: ignore
         return Table(table.filter(pc.invert(mask) if invert else mask))
 
-    @function_field
+    @Function.resolve_types(types)
     def apply(self, **functions) -> 'Table':
         """Return view of table with functions applied across columns.
         If no alias is provided, the column is replaced and should be of the same type.
@@ -341,7 +325,7 @@ class IndexedTable(Table):
         """the composite index"""
         return list(map(to_camel_case, indexed))
 
-    @query_field
+    @QueryInput.resolve_types({name: types[name] for name in indexed})
     def search(self, info, **queries) -> Table:
         """Return table with matching values for composite `index`.
         Queries must be a prefix of the `index`.

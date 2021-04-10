@@ -1,12 +1,17 @@
 """
 GraphQL input types.
 """
+import functools
+import inspect
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import List, Optional
+from typing import Callable, List, Optional
 import strawberry
+from strawberry.arguments import get_arguments_from_annotations
+from strawberry.field import StrawberryField
+from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import undefined
-from .scalars import Long, Null
+from .scalars import Long, Null, classproperty
 
 inequalities = 'less', 'less_equal', 'greater', 'greater_equal'
 ops = ('equal', 'not_equal') + inequalities
@@ -18,6 +23,36 @@ def asdict(self) -> dict:
         for name, value in self.__dict__.items()
         if value is not undefined
     }
+
+
+def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) -> StrawberryField:
+    """Return field by transforming annotations into function arguments."""
+    kind = inspect.Parameter.KEYWORD_ONLY
+    parameters = {
+        name: inspect.Parameter(name, kind, default=defaults.get(name, undefined))
+        for name in annotations
+    }
+    resolver = StrawberryResolver(func)
+    resolver.arguments = get_arguments_from_annotations(annotations, parameters, func)
+    return StrawberryField(
+        python_name=func.__name__,
+        graphql_name='',
+        type_=func.__annotations__['return'],
+        description=func.__doc__,
+        base_resolver=resolver,
+    )
+
+
+def annotations(cls, types: dict) -> dict:
+    """Return mapping of annotations from a mapping of types."""
+    return {
+        name: Optional[cls.type_map[types[name]]] for name in types if types[name] in cls.type_map
+    }
+
+
+def resolve_types(cls, types: dict) -> Callable:
+    """Return a decorator which transforms the type map into arguments."""
+    return functools.partial(resolve_annotations, annotations=cls.annotations(types))
 
 
 @strawberry.input(description="nominal predicates projected across two columns")
@@ -40,6 +75,16 @@ class Query:
 
     locals().update(dict.fromkeys(ops, undefined))
     asdict = asdict
+    annotations = classmethod(annotations)
+    resolve_types = classmethod(resolve_types)
+
+    @classproperty
+    def resolver(cls) -> Callable:
+        """a decorator which transforms the query's fields into arguments"""
+        annotations = dict(cls.__annotations__)
+        annotations.pop('apply', None)
+        defaults = {name: getattr(cls, name) for name in annotations}
+        return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
 @strawberry.input(description="predicates for booleans")
@@ -107,7 +152,7 @@ class StringQuery(Query):
     is_in: Optional[List[str]] = undefined
 
 
-query_map = {
+Query.type_map = {  # type: ignore
     bool: BooleanQuery,
     int: IntQuery,
     Long: LongQuery,
@@ -195,24 +240,23 @@ class StringFilter(StringQuery):
     apply: Optional[OrdinalFilter] = undefined
 
 
-filter_map = {
-    bool: BooleanFilter,
-    int: IntFilter,
-    Long: LongFilter,
-    float: FloatFilter,
-    Decimal: DecimalFilter,
-    date: DateFilter,
-    datetime: DateTimeFilter,
-    time: TimeFilter,
-    timedelta: DurationFilter,
-    bytes: BinaryFilter,
-    str: StringFilter,
-}
-
-
 @strawberry.input(description="predicates for columns of unknown type as a tagged union")
 class Filter:
     name: str
+    annotations = classmethod(annotations)
+    type_map = {
+        bool: BooleanFilter,
+        int: IntFilter,
+        Long: LongFilter,
+        float: FloatFilter,
+        Decimal: DecimalFilter,
+        date: DateFilter,
+        datetime: DateTimeFilter,
+        time: TimeFilter,
+        timedelta: DurationFilter,
+        bytes: BinaryFilter,
+        str: StringFilter,
+    }
 
     boolean: Optional[BooleanFilter] = undefined
     int: Optional[IntFilter] = undefined
@@ -237,6 +281,8 @@ class Filter:
 class Function:
     alias: Optional[str] = undefined
     asdict = asdict
+    annotations = classmethod(annotations)
+    resolve_types = classmethod(resolve_types)
 
 
 @strawberry.input
@@ -304,7 +350,7 @@ class StringFunction(OrdinalFunction):
     utf8_upper: bool = False
 
 
-function_map = {
+Function.type_map = {  # type: ignore
     int: IntFunction,
     Long: LongFunction,
     float: FloatFunction,
@@ -328,6 +374,7 @@ class Diff:
     locals().update(dict.fromkeys(inequalities, undefined))
     __annotations__ = dict.fromkeys(inequalities, Optional[Null])
     asdict = asdict
+    annotations = classmethod(annotations)
 
 
 @strawberry.input(description="discrete difference predicates for ints")
@@ -355,7 +402,7 @@ class DurationDiff(Diff):
     __annotations__ = dict.fromkeys(inequalities, Optional[timedelta])
 
 
-diff_map = {
+Diff.type_map = {  # type: ignore
     int: IntDiff,
     Long: LongDiff,
     float: FloatDiff,
