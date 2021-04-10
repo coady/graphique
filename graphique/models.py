@@ -71,12 +71,12 @@ class Column:
 
 @strawberry.interface(description="unique values")
 class Set:
-    counts: List[Long]
+    length = doc_field(Column.length)
 
     @doc_field
-    def length(self) -> Long:
-        """number of rows"""
-        return len(self.array)  # type: ignore
+    def counts(self) -> List[Long]:
+        """list of counts"""
+        return self.count.to_pylist()  # type: ignore
 
     @classmethod
     def subclass(base, cls, name, description):
@@ -88,17 +88,14 @@ class Set:
 
 
 class resolvers:
-    def __init__(self, array, **attrs):
-        self.array = array
-        self.__dict__.update(attrs)
+    def __init__(self, array, count=pa.array([])):
+        self.array, self.count = array, count
 
     def unique(self, info):
         """unique values and counts"""
         if 'counts' in selections(*info.field_nodes):
-            values, counts = C.value_counts(self.array).flatten()
-        else:
-            values, counts = C.unique(self.array), pa.array([])
-        return self.Set(values, counts=counts.to_pylist())
+            return self.Set(*C.value_counts(self.array).flatten())
+        return self.Set(C.unique(self.array))
 
     def count(self, **query) -> Long:
         """Return number of matching values.
@@ -132,9 +129,9 @@ class resolvers:
         """mean of the values"""
         return C.mean(self.array)
 
-    def mode(self):
+    def mode(self, length: int = 1):
         """mode of the values"""
-        return C.mode(self.array)
+        return self.Set(*pc.mode(self.array, length).flatten())  # type: ignore
 
     @doc_field
     def stddev(self) -> Optional[float]:
@@ -260,7 +257,7 @@ class IntColumn(Column):
     sort = annotate(resolvers.sort, List[Optional[int]])
     sum = annotate(resolvers.sum, Optional[int])
     mean = resolvers.mean
-    mode = annotate(resolvers.mode, Optional[int])
+    mode = annotate(resolvers.mode, Set)
     stddev = resolvers.stddev
     variance = resolvers.variance
     min = annotate(resolvers.min, Optional[int])
@@ -289,7 +286,7 @@ class LongColumn(Column):
     sort = annotate(resolvers.sort, List[Optional[Long]])
     sum = annotate(resolvers.sum, Optional[Long])
     mean = resolvers.mean
-    mode = annotate(resolvers.mode, Optional[Long])
+    mode = annotate(resolvers.mode, Set)
     stddev = resolvers.stddev
     variance = resolvers.variance
     min = annotate(resolvers.min, Optional[Long])
@@ -318,7 +315,7 @@ class FloatColumn(Column):
     sort = annotate(resolvers.sort, List[Optional[float]])
     sum = annotate(resolvers.sum, Optional[float])
     mean = resolvers.mean
-    mode = annotate(resolvers.mode, Optional[float])
+    mode = annotate(resolvers.mode, Set)
     stddev = resolvers.stddev
     variance = resolvers.variance
     min = annotate(resolvers.min, Optional[float])
@@ -514,9 +511,9 @@ class ListColumn(Column):
         return self.map(ListChunk.mean)  # type: ignore
 
     @doc_field
-    def mode(self) -> Column:
+    def mode(self, length: int = 1) -> 'ListColumn':
         """mode of each list scalar"""
-        return self.map(ListChunk.mode)
+        return self.map(functools.partial(ListChunk.mode, length=length))  # type: ignore
 
     @doc_field
     def stddev(self) -> FloatColumn:

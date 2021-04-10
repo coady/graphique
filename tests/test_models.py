@@ -130,8 +130,12 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'maximum': {'sum': 1}}}}
         data = executor(f'{{ columns {{ {name} {{ absolute {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'absolute': {'sum': 0}}}}
-        data = executor(f'{{ columns {{ {name} {{ mean mode stddev variance }} }} }}')
-        assert data == {'columns': {name: {'mean': 0.0, 'mode': 0, 'stddev': 0.0, 'variance': 0.0}}}
+        data = executor(f'{{ columns {{ {name} {{ mean stddev variance }} }} }}')
+        assert data == {'columns': {name: {'mean': 0.0, 'stddev': 0.0, 'variance': 0.0}}}
+        data = executor(f'{{ columns {{ {name} {{ mode {{ values }} }} }} }}')
+        assert data == {'columns': {name: {'mode': {'values': [0]}}}}
+        data = executor(f'{{ columns {{ {name} {{ mode(length: 2) {{ counts }} }} }} }}')
+        assert data == {'columns': {name: {'mode': {'counts': [1]}}}}
 
     data = executor(
         '''{ apply(int32: {fillNull: -1, alias: "i"})
@@ -176,13 +180,19 @@ def test_list(executor):
     assert data == {'row': {'list': None}}
     data = executor('{ columns { list { unique { flatten { ... on IntColumn { values } } } } } }')
     assert data == {'columns': {'list': {'unique': {'flatten': {'values': [0, 1, 2]}}}}}
+    data = executor('{ columns { list { mode { flatten { ... on IntColumn { values } } } } } }')
+    assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0]}}}}}
+    data = executor(
+        '''{ columns { list { mode(length: 2) { flatten { ... on IntColumn { values } } } } } }'''
+    )
+    assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0, 1]}}}}}
 
     data = executor(
         '''{ columns { list { count { values }
         first { ... on IntColumn { values } } last { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
         sum { ... on IntColumn { values } } mean { values }
-        mode { ... on IntColumn { values } } stddev { values } variance { values }
+        stddev { values } variance { values }
         any { values } all { values } } } }'''
     )
     assert data['columns']['list'] == {
@@ -193,7 +203,6 @@ def test_list(executor):
         'max': {'values': [2, None]},
         'sum': {'values': [3, None]},
         'mean': {'values': [1.0, None]},
-        'mode': {'values': [0, None]},
         'stddev': {'values': [pytest.approx((2 / 3) ** 0.5), None]},
         'variance': {'values': [pytest.approx(2 / 3), None]},
         'any': {'values': [True, None]},

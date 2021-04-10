@@ -176,9 +176,11 @@ class ListChunk(pa.ListArray):
         """mean of each list scalar"""
         return ListChunk.reduce(self, Column.mean, pa.float64())
 
-    def mode(self) -> pa.Array:
-        """mode of each list scalar"""
-        return ListChunk.reduce(self, Column.mode)
+    def mode(self, length: int = 1) -> pa.ListArray:
+        """modes of each list scalar"""
+        empty = pa.array([], self.type.value_type)
+        values = [pc.mode(scalar.values or empty, length).field(0) for scalar in self]
+        return split(pa.array(map(len, values)), pa.concat_arrays(values))
 
     def stddev(self) -> pa.FloatingPointArray:
         """stddev of each list scalar"""
@@ -337,11 +339,6 @@ class Column(pa.ChunkedArray):
     def mean(self) -> Optional[float]:
         """Return mean of the values."""
         return pc.mean(self).as_py()
-
-    def mode(self):
-        """Return mode of the values."""
-        values, _ = pc.mode(self).flatten()
-        return values[0].as_py() if values else None
 
     def stddev(self) -> Optional[float]:
         """Return standard deviation of the values."""

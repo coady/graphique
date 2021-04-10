@@ -69,7 +69,8 @@ def test_lists():
     assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.sum(array).to_pylist() == [3, 0, None, None, None]
     assert ListChunk.mean(array).to_pylist() == [1.5, 0.0, None, None, None]
-    assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
+    assert ListChunk.mode(array).to_pylist() == [[1], [0], [], [], []]
+    assert ListChunk.mode(array, length=2).flatten().to_pylist() == [1, 2, 0]
     assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
     assert ListChunk.any(array).to_pylist() == [True, False, False, False, None]
@@ -92,7 +93,6 @@ def test_reduce():
     assert C.quantile(array, 0.5) == [1.0]
     assert C.quantile(array[:1], 0.5) == [None]
     array = pa.chunked_array([[0, 3, 0]])
-    assert C.mode(array) == 0
     assert C.stddev(array) == pytest.approx(2.0 ** 0.5)
     assert C.variance(array) == 2.0
     array = pa.chunked_array([[date.today(), None]])
