@@ -214,6 +214,18 @@ def test_list(executor):
     )
     column = data['filter']['columns']['list']
     assert column == {'values': [{'values': [0, 2]}, {'values': []}]}
+    data = executor(
+        '''{ aggregate(mode: {name: "list"}) {
+        columns { list { values { ... on IntColumn { values } } } } } }'''
+    )
+    assert data['aggregate']['columns']['list']['values'] == [{'values': [0]}, {'values': []}]
+    data = executor(
+        '''{ aggregate(stddev: {name: "list"}, variance: {name: "list", alias: "var"}) {
+        column(name: "list") { ... on FloatColumn { values } }
+        var: column(name: "var") { ... on FloatColumn { values } } } }'''
+    )
+    assert data['aggregate']['column']['values'] == [pytest.approx((2 / 3) ** 0.5), None]
+    assert data['aggregate']['var']['values'] == [pytest.approx((2 / 3)), None]
 
 
 def test_struct(executor):

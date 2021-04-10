@@ -13,20 +13,10 @@ import strawberry
 from strawberry.field import StrawberryField
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
-from .inputs import (
-    BooleanQuery,
-    IntQuery,
-    LongQuery,
-    FloatQuery,
-    DecimalQuery,
-    DateQuery,
-    DateTimeQuery,
-    TimeQuery,
-    DurationQuery,
-    BinaryQuery,
-    StringFilter,
-)
-from .scalars import Long, type_map
+from .inputs import BooleanQuery, IntQuery, LongQuery, FloatQuery, DecimalQuery, DateQuery
+from .inputs import DateTimeQuery, TimeQuery, DurationQuery, BinaryQuery, StringFilter
+from .inputs import Field, resolve_annotations
+from .scalars import Long, classproperty, type_map
 
 
 def selections(node):
@@ -423,6 +413,31 @@ class StringColumn(Column):
 @strawberry.type(description="column of lists")
 class ListColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
+    aggregates = (
+        'count',
+        'unique',
+        'first',
+        'last',
+        'min',
+        'max',
+        'sum',
+        'mean',
+        'mode',
+        'stddev',
+        'variance',
+        'any',
+        'all',
+    )
+
+    @classproperty
+    def resolver(cls) -> Callable:
+        """a decorator which transforms aggregate functions into arguments"""
+        annotations = {}
+        for key in cls.aggregates:
+            argument = strawberry.argument(description=getattr(cls, key).__doc__)
+            annotations[key] = Annotated[List[Field], argument]
+        defaults = dict.fromkeys(cls.aggregates, [])  # type: ignore
+        return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
     @doc_field
     def values(self) -> List[Optional[Column]]:

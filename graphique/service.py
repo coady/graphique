@@ -15,7 +15,7 @@ from starlette.middleware import Middleware
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T, rpartial
-from .inputs import Diff, Field, Filter, Function, Query as QueryInput, asdict, resolve_annotations
+from .inputs import Diff, Filter, Function, Query as QueryInput, asdict, resolve_annotations
 from .middleware import AbstractTable, GraphQL, TimingMiddleware, references
 from .models import Column, ListColumn
 from .models import annotate, column_map, doc_field, selections
@@ -277,39 +277,15 @@ class Table(AbstractTable):
             row = {name: columns[name][index].values for name in columns}
             yield Table(pa.Table.from_pydict(row))
 
-    @doc_field(
-        count=ListColumn.count.__doc__,
-        first=ListColumn.first.__doc__,
-        last=ListColumn.last.__doc__,
-        min=ListColumn.min.__doc__,
-        max=ListColumn.max.__doc__,
-        sum=ListColumn.sum.__doc__,
-        mean=ListColumn.mean.__doc__,
-        any=ListColumn.any.__doc__,
-        all=ListColumn.all.__doc__,
-        unique=ListColumn.unique.__doc__,
-    )
-    def aggregate(
-        self,
-        info,
-        count: List[Field] = [],
-        first: List[Field] = [],
-        last: List[Field] = [],
-        min: List[Field] = [],
-        max: List[Field] = [],
-        sum: List[Field] = [],
-        mean: List[Field] = [],
-        any: List[Field] = [],
-        all: List[Field] = [],
-        unique: List[Field] = [],
-    ) -> 'Table':
+    @ListColumn.resolver
+    def aggregate(self, info, **fields) -> 'Table':
         """Return table with aggregate functions applied to list columns, typically used after grouping.
         Columns which are aliased or change type can be accessed by the `column` field."""
         table = self.select(info)
         columns = {name: table[name] for name in table.column_names}
-        for key in ('count', 'first', 'last', 'min', 'max', 'sum', 'mean', 'any', 'all', 'unique'):
+        for key in fields:
             func = getattr(ListChunk, key)
-            for field in locals()[key]:
+            for field in fields[key]:
                 name = to_snake_case(field.name)
                 columns[field.alias or name] = pa.chunked_array(C.map(func, table[name]))
         return Table(pa.Table.from_pydict(columns))
