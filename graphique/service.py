@@ -11,14 +11,13 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import strawberry
 from starlette.applications import Starlette
-from strawberry.arguments import StrawberryArgument
 from starlette.middleware import Middleware
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T, rpartial
 from .inputs import Field, Filter, asdict, diff_map, filter_map, function_map, query_map
 from .middleware import GraphQL, TimingMiddleware, references
-from .models import Column, ListColumn, column_map, doc_field, resolve_arguments, selections
+from .models import Column, ListColumn, column_map, doc_field, resolve_annotations, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
@@ -37,11 +36,6 @@ def to_snake_case(name):
 
 def resolver(name):
     cls = column_map[types[name]]
-    arguments = [
-        StrawberryArgument(field, to_camel_case(field), Optional[str])
-        for field in T.projected
-        if cls.__annotations__.get(field) == cls.__name__
-    ]
 
     def method(self, **fields) -> cls:
         column = self.table[name]
@@ -50,9 +44,10 @@ def resolver(name):
         return cls(column)
 
     method.__name__ = name
-    if arguments:
+    annotations = [key for key in T.projected if cls.__annotations__.get(key) == cls.__name__]
+    if annotations:
         method.__doc__ = "Return column with optional projection."
-    return resolve_arguments(method, arguments)
+    return resolve_annotations(method, dict.fromkeys(annotations, Optional[str]))
 
 
 @strawberry.type(description="fields for each column")
@@ -74,20 +69,15 @@ class Row:
 
 
 def query_field(func: Callable) -> Callable:
-    arguments = [
-        StrawberryArgument(name, to_camel_case(name), Optional[query_map[types[name]]])
-        for name in indexed
-    ]
-    return resolve_arguments(func, arguments)
+    annotations = {name: Optional[query_map[types[name]]] for name in indexed}
+    return resolve_annotations(func, annotations)
 
 
 def function_field(func: Callable) -> Callable:
-    arguments = [
-        StrawberryArgument(name, to_camel_case(name), Optional[function_map[types[name]]])
-        for name in types
-        if types[name] in function_map
-    ]
-    return resolve_arguments(func, arguments)
+    annotations = {
+        name: Optional[function_map[types[name]]] for name in types if types[name] in function_map
+    }
+    return resolve_annotations(func, annotations)
 
 
 @strawberry.input(description="predicates for each column")

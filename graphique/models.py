@@ -2,6 +2,7 @@
 GraphQL output types and resolvers.
 """
 import functools
+import inspect
 import operator
 import types
 from datetime import date, datetime, time, timedelta
@@ -10,12 +11,10 @@ from typing import Callable, List, Optional
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
-from strawberry.arguments import StrawberryArgument
+from strawberry.arguments import get_arguments_from_annotations
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.types.type_resolver import _resolve_type
 from strawberry.types.types import undefined
-from strawberry.utils.str_converters import to_camel_case
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
 from .inputs import (
@@ -202,6 +201,7 @@ class resolvers:
 
 
 def annotate(func, return_type, **annotations):
+    """Return field from an annotated clone of the function."""
     clone = types.FunctionType(func.__code__, func.__globals__)
     annotations['return'] = return_type
     clone.__annotations__.update(func.__annotations__, **annotations)
@@ -209,32 +209,32 @@ def annotate(func, return_type, **annotations):
     return strawberry.field(clone, description=func.__doc__)
 
 
-def resolve_arguments(func, arguments):
-    for argument in arguments:
-        argument.origin = func
-        _resolve_type(argument)
+def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) -> StrawberryField:
+    """Return field by transforming annotations into function arguments."""
+    kind = inspect.Parameter.KEYWORD_ONLY
+    parameters = {
+        name: inspect.Parameter(name, kind, default=defaults.get(name, undefined))
+        for name in annotations
+    }
     resolver = StrawberryResolver(func)
-    resolver.arguments = arguments
+    resolver.arguments = get_arguments_from_annotations(annotations, parameters, func)
     return StrawberryField(
         python_name=func.__name__,
-        graphql_name=to_camel_case(func.__name__),
+        graphql_name='',
         type_=func.__annotations__['return'],
         description=func.__doc__,
         base_resolver=resolver,
     )
 
 
-def query_args(func, query):
-    clone = types.FunctionType(func.__code__, func.__globals__)
+def query_args(func: Callable, query: type) -> StrawberryField:
+    """Return field by transforming a type's annotations into function arguments."""
+    clone = types.FunctionType(func.__code__, func.__globals__)  # type: ignore
     clone.__annotations__.update(func.__annotations__)
-    arguments = [
-        StrawberryArgument(
-            name, to_camel_case(name), value, default_value=getattr(query, name, undefined)
-        )
-        for name, value in query.__annotations__.items()
-        if name != 'apply'
-    ]
-    return resolve_arguments(clone, arguments)
+    annotations = dict(query.__annotations__)
+    annotations.pop('apply', None)
+    defaults = {name: getattr(query, name, undefined) for name in annotations}
+    return resolve_annotations(clone, annotations, defaults)
 
 
 @strawberry.type(description="column of booleans")
