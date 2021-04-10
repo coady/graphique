@@ -574,10 +574,8 @@ class Table(pa.Table):
                 column = Table.projected[func](column, self[arg])
             elif not isinstance(arg, bool):
                 column = Table.applied[func](column, arg)
-            elif arg and func in Table.applied:
-                column = Table.applied[func](column)
             elif arg:
-                column = pa.chunked_array(Column.map(getattr(ListChunk, func), column))
+                column = Table.applied[func](column)
         if alias:
             return self.add_column(len(self.column_names), alias, column)
         return self.set_column(self.column_names.index(name), name, column)

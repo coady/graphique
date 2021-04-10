@@ -209,18 +209,6 @@ def test_list(executor):
         'all': {'values': [False, None]},
     }
     data = executor(
-        '''{ apply(list: {count: true}) {
-        column(name: "list") { ... on IntColumn { values } } } }'''
-    )
-    assert data == {'apply': {'column': {'values': [3, None]}}}
-    data = executor(
-        '''{ apply(list: {first: true, alias: "first"}) {
-        column(name: "first") { ... on IntColumn { values } } } }'''
-    )
-    assert data == {'apply': {'column': {'values': [0, None]}}}
-    data = executor('{ apply(list: {unique: true}) { columns { list { count { values } } } } }')
-    assert data == {'apply': {'columns': {'list': {'count': {'values': [3, 0]}}}}}
-    data = executor(
         '''{ filter(predicates: [{name: "list", int: {notEqual: 1}}]) {
         columns { list { values { ... on IntColumn { values } } } } } }'''
     )
