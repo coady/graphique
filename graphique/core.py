@@ -176,11 +176,12 @@ class ListChunk(pa.ListArray):
         """mean of each list scalar"""
         return ListChunk.reduce(self, Column.mean, pa.float64())
 
-    def mode(self, length: int = 1) -> pa.ListArray:
+    def mode(self, length: int = 0) -> pa.Array:
         """modes of each list scalar"""
         empty = pa.array([], self.type.value_type)
-        values = [pc.mode(scalar.values or empty, length).field(0) for scalar in self]
-        return split(pa.array(map(len, values)), pa.concat_arrays(values))
+        values = [pc.mode(scalar.values or empty, length or 1).field(0) for scalar in self]
+        array = split(pa.array(map(len, values)), pa.concat_arrays(values))
+        return array if length else ListChunk.first(array)
 
     def stddev(self) -> pa.FloatingPointArray:
         """stddev of each list scalar"""

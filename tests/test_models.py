@@ -216,9 +216,9 @@ def test_list(executor):
     assert column == {'values': [{'values': [0, 2]}, {'values': []}]}
     data = executor(
         '''{ aggregate(mode: {name: "list"}) {
-        columns { list { values { ... on IntColumn { values } } } } } }'''
+        column(name: "list") { ... on IntColumn { values } } } }'''
     )
-    assert data['aggregate']['columns']['list']['values'] == [{'values': [0]}, {'values': []}]
+    assert data['aggregate']['column']['values'] == [0, None]
     data = executor(
         '''{ aggregate(stddev: {name: "list"}, variance: {name: "list", alias: "var"}) {
         column(name: "list") { ... on FloatColumn { values } }

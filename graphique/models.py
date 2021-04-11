@@ -48,11 +48,14 @@ class Column:
         return len(self.array)  # type: ignore
 
     @classmethod
+    def cast(cls, array: pa.ChunkedArray) -> 'Column':
+        """Return typed column based on array type."""
+        return cls.type_map[type_map[array.type.id]](array)  # type: ignore
+
+    @classmethod
     def fromlist(cls, scalar: pa.ListScalar) -> Optional['Column']:
         array = scalar.values
-        if array is None:
-            return None
-        return column_map[type_map[array.type.id]](pa.chunked_array([array]))
+        return None if array is None else cls.cast(pa.chunked_array([array]))
 
 
 @strawberry.interface(description="unique values")
@@ -445,8 +448,7 @@ class ListColumn(Column):
         return list(map(self.fromlist, self.array))  # type: ignore
 
     def map(self, func: Callable) -> Column:
-        array = pa.chunked_array(C.map(func, self.array))  # type: ignore
-        return column_map[type_map[array.type.id]](array)
+        return self.cast(pa.chunked_array(C.map(func, self.array)))  # type: ignore
 
     @doc_field
     def count(self) -> IntColumn:
@@ -534,7 +536,7 @@ class StructColumn(Column):
         return ListColumn.map(self, operator.methodcaller('field', name))
 
 
-column_map = {
+Column.type_map = {  # type: ignore
     bool: BooleanColumn,
     int: IntColumn,
     Long: LongColumn,

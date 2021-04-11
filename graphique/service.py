@@ -17,8 +17,7 @@ from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T, rpartial
 from .inputs import Diff, Filter, Function, Query as QueryInput, asdict, resolve_annotations
 from .middleware import AbstractTable, GraphQL, TimingMiddleware, references
-from .models import Column, ListColumn
-from .models import annotate, column_map, doc_field, selections
+from .models import Column, ListColumn, annotate, doc_field, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
@@ -36,7 +35,7 @@ def to_snake_case(name):
 
 
 def resolver(name):
-    cls = column_map[types[name]]
+    cls = Column.type_map[types[name]]
 
     def method(self, **fields) -> cls:
         column = self.table[name]
@@ -102,8 +101,7 @@ class Table(AbstractTable):
         """Return column of any type by name.
         This is typically only needed for aliased columns added by `apply` or `aggregate`.
         If the column is in the schema, `columns` can be used instead."""
-        column = self.table[to_snake_case(name)]
-        return column_map[type_map[column.type.id]](column)
+        return Column.cast(self.table[to_snake_case(name)])
 
     @doc_field
     def row(self, info, index: Long = 0) -> Row:  # type: ignore
