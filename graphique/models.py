@@ -10,6 +10,7 @@ from typing import Callable, List, Optional
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
+from cached_property import cached_property
 from strawberry.field import StrawberryField
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
@@ -95,16 +96,6 @@ class resolvers:
             return len(self.array) - self.array.null_count
         return C.count(C.mask(self.array, **query), True)  # type: ignore
 
-    @doc_field
-    def any(self) -> bool:
-        """whether any values evaluate to true"""
-        return C.any(self.array)
-
-    @doc_field
-    def all(self) -> bool:
-        """whether all values evaluate to true"""
-        return C.all(self.array)
-
     def values(self):
         """list of values"""
         return self.array.to_pylist()
@@ -113,24 +104,9 @@ class resolvers:
         """sum of the values"""
         return C.sum(self.array)
 
-    @doc_field
-    def mean(self) -> Optional[float]:
-        """mean of the values"""
-        return C.mean(self.array)
-
     def mode(self, length: int = 1):
         """mode of the values"""
         return self.Set(*pc.mode(self.array, length).flatten())  # type: ignore
-
-    @doc_field
-    def stddev(self) -> Optional[float]:
-        """standard deviation of the values"""
-        return C.stddev(self.array)
-
-    @doc_field
-    def variance(self) -> Optional[float]:
-        """variance of the values"""
-        return C.variance(self.array)
 
     def min(self):
         """minimum value"""
@@ -140,18 +116,9 @@ class resolvers:
         """maximum value"""
         return C.max(self.array)
 
-    def quantile(self, q: List[float]) -> List[Optional[float]]:
-        """Return q-th quantiles for values."""
-        return C.quantile(self.array, *q)
-
     def sort(self, reverse: bool = False, length: Optional[Long] = None):
         """Return sorted values. Optimized for fixed length."""
         return C.sort(self.array, reverse, length).to_pylist()
-
-    @doc_field
-    def binary_length(self) -> 'IntColumn':
-        """length of bytes or strings"""
-        return IntColumn(pc.binary_length(self.array))
 
     def fill_null(self, value):
         """Return values with null elements replaced."""
@@ -195,35 +162,74 @@ def annotate(func, return_type, **annotations):
     return strawberry.field(clone, description=func.__doc__)
 
 
+@strawberry.interface(description="numeric column interface")
+class NumericColumn:
+    @doc_field
+    def any(self) -> bool:
+        """whether any values evaluate to true"""
+        return C.any(self.array)  # type: ignore
+
+    @doc_field
+    def all(self) -> bool:
+        """whether all values evaluate to true"""
+        return C.all(self.array)  # type: ignore
+
+    @doc_field
+    def mean(self) -> Optional[float]:
+        """mean of the values"""
+        return C.mean(self.array)  # type: ignore
+
+    @doc_field
+    def stddev(self) -> Optional[float]:
+        """standard deviation of the values"""
+        return C.stddev(self.array)  # type: ignore
+
+    @doc_field
+    def variance(self) -> Optional[float]:
+        """variance of the values"""
+        return C.variance(self.array)  # type: ignore
+
+    @doc_field
+    def quantile(self, q: List[float]) -> List[Optional[float]]:
+        """Return q-th quantiles for values."""
+        return C.quantile(self.array, *q)  # type: ignore
+
+    @cached_property
+    def min_max(self):
+        return pc.min_max(self.array).as_py()
+
+    def min(self):
+        """minimum value"""
+        return self.min_max['min']
+
+    def max(self):
+        """maximum value"""
+        return self.min_max['max']
+
+
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = BooleanQuery.resolver(resolvers.count)
-    any = resolvers.any
-    all = resolvers.all
+    any = doc_field(NumericColumn.any)
+    all = doc_field(NumericColumn.all)
     values = annotate(resolvers.values, List[Optional[bool]])
     Set = Set.subclass(bool, "BooleanSet", "unique booleans")
     unique = annotate(resolvers.unique, Set)
 
 
 @strawberry.type(description="column of ints")
-class IntColumn(Column):
+class IntColumn(Column, NumericColumn):
     __init__ = resolvers.__init__  # type: ignore
     count = IntQuery.resolver(resolvers.count)
-    any = resolvers.any
-    all = resolvers.all
     values = annotate(resolvers.values, List[Optional[int]])
     Set = Set.subclass(int, "IntSet", "unique ints")
     unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[int]])
     sum = annotate(resolvers.sum, Optional[int])
-    mean = resolvers.mean
     mode = annotate(resolvers.mode, Set)
-    stddev = resolvers.stddev
-    variance = resolvers.variance
-    min = annotate(resolvers.min, Optional[int])
-    max = annotate(resolvers.max, Optional[int])
-    quantile = doc_field(resolvers.quantile)
+    min = annotate(NumericColumn.min, Optional[int])
+    max = annotate(NumericColumn.max, Optional[int])
     unique = annotate(resolvers.unique, Set)
     fill_null = annotate(resolvers.fill_null, 'IntColumn', value=int)
     add = annotate(resolvers.add, 'IntColumn', value=int)
@@ -236,23 +242,17 @@ class IntColumn(Column):
 
 
 @strawberry.type(description="column of longs")
-class LongColumn(Column):
+class LongColumn(Column, NumericColumn):
     __init__ = resolvers.__init__  # type: ignore
     count = LongQuery.resolver(resolvers.count)
-    any = resolvers.any
-    all = resolvers.all
     values = annotate(resolvers.values, List[Optional[Long]])
     Set = Set.subclass(Long, "LongSet", "unique longs")
     unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[Long]])
     sum = annotate(resolvers.sum, Optional[Long])
-    mean = resolvers.mean
     mode = annotate(resolvers.mode, Set)
-    stddev = resolvers.stddev
-    variance = resolvers.variance
-    min = annotate(resolvers.min, Optional[Long])
-    max = annotate(resolvers.max, Optional[Long])
-    quantile = doc_field(resolvers.quantile)
+    min = annotate(NumericColumn.min, Optional[Long])
+    max = annotate(NumericColumn.max, Optional[Long])
     unique = annotate(resolvers.unique, Set)
     fill_null = annotate(resolvers.fill_null, 'LongColumn', value=Long)
     add = annotate(resolvers.add, 'LongColumn', value=Long)
@@ -265,23 +265,17 @@ class LongColumn(Column):
 
 
 @strawberry.type(description="column of floats")
-class FloatColumn(Column):
+class FloatColumn(Column, NumericColumn):
     __init__ = resolvers.__init__  # type: ignore
     count = FloatQuery.resolver(resolvers.count)
-    any = resolvers.any
-    all = resolvers.all
     values = annotate(resolvers.values, List[Optional[float]])
     Set = Set.subclass(float, "FloatSet", "unique floats")
     unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[float]])
     sum = annotate(resolvers.sum, Optional[float])
-    mean = resolvers.mean
     mode = annotate(resolvers.mode, Set)
-    stddev = resolvers.stddev
-    variance = resolvers.variance
-    min = annotate(resolvers.min, Optional[float])
-    max = annotate(resolvers.max, Optional[float])
-    quantile = doc_field(resolvers.quantile)
+    min = annotate(NumericColumn.min, Optional[float])
+    max = annotate(NumericColumn.max, Optional[float])
     fill_null = annotate(resolvers.fill_null, 'FloatColumn', value=float)
     add = annotate(resolvers.add, 'FloatColumn', value=float)
     subtract = annotate(resolvers.subtract, 'FloatColumn', value=float)
@@ -358,7 +352,7 @@ class DurationColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = DurationQuery.resolver(resolvers.count)
     values = annotate(resolvers.values, List[Optional[timedelta]])
-    quantile = annotate(resolvers.quantile, List[Optional[timedelta]])
+    quantile = annotate(NumericColumn.quantile, List[Optional[timedelta]])
     minimum = annotate(resolvers.minimum, 'DurationColumn', value=timedelta)
     maximum = annotate(resolvers.maximum, 'DurationColumn', value=timedelta)
     absolute = annotate(resolvers.absolute, 'DurationColumn')
@@ -368,21 +362,25 @@ class DurationColumn(Column):
 class BinaryColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = BinaryQuery.resolver(resolvers.count)
-    any = resolvers.any
-    all = resolvers.all
+    any = doc_field(NumericColumn.any)
+    all = doc_field(NumericColumn.all)
     values = annotate(resolvers.values, List[Optional[bytes]])
     Set = Set.subclass(bytes, "BinarySet", "unique binaries")
     unique = annotate(resolvers.unique, Set)
     fill_null = annotate(resolvers.fill_null, 'BinaryColumn', value=bytes)
-    binary_length = resolvers.binary_length
+
+    @doc_field
+    def binary_length(self) -> 'IntColumn':
+        """length of bytes or strings"""
+        return IntColumn(pc.binary_length(self.array))  # type: ignore
 
 
 @strawberry.type(description="column of strings")
 class StringColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = StringFilter.resolver(resolvers.count)
-    any = resolvers.any
-    all = resolvers.all
+    any = doc_field(NumericColumn.any)
+    all = doc_field(NumericColumn.all)
     values = annotate(resolvers.values, List[Optional[str]])
     Set = Set.subclass(str, "StringSet", "unique strings")
     unique = annotate(resolvers.unique, Set)
@@ -390,7 +388,7 @@ class StringColumn(Column):
     min = annotate(resolvers.min, Optional[str])
     max = annotate(resolvers.max, Optional[str])
     fill_null = annotate(resolvers.fill_null, 'StringColumn', value=str)
-    binary_length = resolvers.binary_length
+    binary_length = doc_field(BinaryColumn.binary_length)
     minimum = annotate(resolvers.minimum, 'StringColumn', value=str)
     maximum = annotate(resolvers.maximum, 'StringColumn', value=str)
 
