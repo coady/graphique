@@ -8,7 +8,6 @@ import abc
 import bisect
 import contextlib
 import functools
-import inspect
 import json
 import operator
 from concurrent import futures
@@ -319,18 +318,18 @@ class Column(pa.ChunkedArray):
         self = Column.decode(self)
         return func(self[1:], self[:-1])
 
-    def partition_offsets(self, predicate: Callable = pc.not_equal) -> pa.IntegerArray:
+    def partition_offsets(self, predicate: Callable = pc.not_equal, *args) -> pa.IntegerArray:
         """Return list array offsets by partitioning on discrete differences.
 
         Args:
-            predicate: binary function applied to adjacent values, or unary function in which case
-                `subtract` will be the difference function.
+            predicate: binary function applied to adjacent values
+            args: apply binary function to scalar, using `subtract` as the difference function
         """
         ends = [pa.array([True])]
-        if len(inspect.getfullargspec(predicate).args) > 1:
-            mask = Column.diff(self, predicate)
+        if args:
+            mask = Column.call(Column.diff(self), predicate, *args)
         else:
-            mask = Column.call(Column.diff(self), predicate)
+            mask = Column.diff(self, predicate)
         return pa.array(*np.nonzero(pa.concat_arrays(ends + mask.chunks + ends)), pa.int32())
 
     def sum(self):
@@ -499,20 +498,22 @@ class Table(pa.Table):
             columns[name] = Chunk.take_list(Column.combine_chunks(self[name]), indices)
         return pa.Table.from_pydict(columns), indices.value_lengths()
 
-    def partition(self, *names: str, **predicates: Callable) -> tuple:
+    def partition(self, *names: str, **predicates: tuple) -> tuple:
         """Return table partitioned by discrete differences and corresponding counts.
 
         Args:
             names: columns to partition by `not_equal` which will return scalars
-            predicates: optionally inequality predicates which will return list arrays
+            predicates: inequality predicates with optional args which will return list arrays;
+                if the predicate has args, it will be called on the differences
         """
         names += tuple(predicates)
-        offsets = Column.partition_offsets(self[names[0]], predicates.get(names[0], pc.not_equal))
+        default = (pc.not_equal,)
+        offsets = Column.partition_offsets(self[names[0]], *predicates.get(names[0], default))
         for name in names[1:]:
             groups = [pa.array([0], pa.int32())]
-            predicate = predicates.get(name, pc.not_equal)
+            predicate = predicates.get(name, default)
             for scalar in pa.ListArray.from_arrays(offsets, Column.combine_chunks(self[name])):
-                group = Column.partition_offsets(pa.chunked_array([scalar.values]), predicate)
+                group = Column.partition_offsets(pa.chunked_array([scalar.values]), *predicate)
                 groups.append(pc.add(group[1:], groups[-1][-1]))
             offsets = pa.concat_arrays(groups)
         columns = {name: self[name].take(offsets[:-1]) for name in set(names) - set(predicates)}

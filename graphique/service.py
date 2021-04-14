@@ -14,7 +14,7 @@ from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
-from .core import Column as C, ListChunk, Table as T, rpartial
+from .core import Column as C, ListChunk, Table as T
 from .inputs import Diff, Filter, Function, Query as QueryInput, asdict, resolve_annotations
 from .middleware import AbstractTable, GraphQL, TimingMiddleware, references
 from .models import Column, ListColumn, annotate, doc_field, selections
@@ -158,7 +158,7 @@ class Table(AbstractTable):
         for name in by[len(names) :]:  # noqa: E203
             ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
             func = getattr(pc, func)
-            predicates[to_snake_case(name)] = func if value is None else rpartial(func, value)
+            predicates[to_snake_case(name)] = (func,) if value is None else (func, value)
         table, counts = T.partition(table, *names, **predicates)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
