@@ -23,7 +23,7 @@ docs/schema.md: docs/schema.graphql
 		$? > $@
 
 docs/schema.graphql: tests/fixtures/zipcodes.parquet
-	python3 -m docs.schema $? > $@
+	python3 -m graphique.schema $? > $@
 
 dist:
 	python3 setup.py sdist bdist_wheel
