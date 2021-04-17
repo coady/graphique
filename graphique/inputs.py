@@ -11,7 +11,7 @@ from strawberry.arguments import get_arguments_from_annotations
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import undefined
-from .scalars import Long, Null, classproperty
+from .scalars import Long, classproperty
 
 inequalities = 'less', 'less_equal', 'greater', 'greater_equal'
 ops = ('equal', 'not_equal') + inequalities
@@ -369,47 +369,21 @@ class Field:
     alias: str = ''
 
 
+@strawberry.input(description="a scalar compared to discrete differences")
+class DiffScalar:
+    int: Optional[int]
+    long: Optional[Long]
+    float: Optional[float]
+    datetime: Optional[timedelta] = undefined
+    float = long = int = undefined  # defaults here because of an obscure dataclass bug
+    asdict = asdict
+
+
 @strawberry.input(description="discrete difference predicates")
 class Diff:
-    locals().update(dict.fromkeys(inequalities, undefined))
-    __annotations__ = dict.fromkeys(inequalities, Optional[Null])
+    name: str
+    less: Optional[DiffScalar] = undefined
+    less_equal: Optional[DiffScalar] = undefined
+    greater: Optional[DiffScalar] = undefined
+    greater_equal: Optional[DiffScalar] = undefined
     asdict = asdict
-    annotations = classmethod(annotations)
-
-
-@strawberry.input(description="discrete difference predicates for ints")
-class IntDiff(Diff):
-    __annotations__ = dict.fromkeys(inequalities, Optional[int])
-
-
-@strawberry.input(description="discrete difference predicates for longs")
-class LongDiff(Diff):
-    __annotations__ = dict.fromkeys(inequalities, Optional[Long])
-
-
-@strawberry.input(description="discrete difference predicates for floats")
-class FloatDiff(Diff):
-    __annotations__ = dict.fromkeys(inequalities, Optional[float])
-
-
-@strawberry.input(description="discrete difference predicates for datetimes")
-class DateTimeDiff(Diff):
-    __annotations__ = dict.fromkeys(inequalities, Optional[datetime])
-
-
-@strawberry.input(description="discrete difference predicates for durations")
-class DurationDiff(Diff):
-    __annotations__ = dict.fromkeys(inequalities, Optional[timedelta])
-
-
-Diff.type_map = {  # type: ignore
-    int: IntDiff,
-    Long: LongDiff,
-    float: FloatDiff,
-    Decimal: Diff,
-    date: Diff,
-    datetime: DateTimeDiff,
-    time: Diff,
-    timedelta: DurationDiff,
-    str: Diff,
-}

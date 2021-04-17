@@ -10,7 +10,6 @@ import pyarrow as pa
 import strawberry
 
 Long = strawberry.scalar(NewType('Long', int), description="64-bit int")
-Null = strawberry.scalar(type(None), name='Null')
 
 strawberry.scalar(
     bytes,

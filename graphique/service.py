@@ -75,13 +75,6 @@ class Filters:
     asdict = asdict
 
 
-@strawberry.input(description="discrete difference predicates for each column")
-class Diffs:
-    __annotations__ = Diff.annotations(types)
-    locals().update(dict.fromkeys(types, undefined))
-    asdict = asdict
-
-
 @strawberry.type(description="a column-oriented table")
 class Table(AbstractTable):
     __init__ = AbstractTable.__init__
@@ -141,24 +134,21 @@ class Table(AbstractTable):
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field(
-        diffs="predicates defaulting to `not_equal`; scalars are compared to the adjacent difference",
+        diffs="optional inequality predicates; scalars are compared to the adjacent difference",
         count="optionally include counts in an aliased column",
     )
-    def partition(
-        self, info, by: List[str], diffs: Optional[Diffs] = None, count: str = ''
-    ) -> 'Table':
+    def partition(self, info, by: List[str], diffs: List[Diff] = [], count: str = '') -> 'Table':
         """Return table partitioned by discrete differences of the values.
         Differs from `group` by relying on adjacency, and is typically faster.
         Other columns can be accessed by the `column` field as a `ListColumn`.
         Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
-        funcs = diffs.asdict() if diffs else {}
+        funcs = {diff.pop('name'): diff for diff in map(Diff.asdict, diffs)}
         names = list(map(to_snake_case, itertools.takewhile(lambda name: name not in funcs, by)))
         predicates = {}
         for name in by[len(names) :]:  # noqa: E203
             ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
-            func = getattr(pc, func)
-            predicates[to_snake_case(name)] = (func,) if value is None else (func, value)
+            predicates[to_snake_case(name)] = (getattr(pc, func),) + tuple((value or {}).values())
         table, counts = T.partition(table, *names, **predicates)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
