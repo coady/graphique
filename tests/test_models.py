@@ -18,7 +18,9 @@ def test_case(executor):
     assert data == {'filter': {'length': 1}}
     data = executor('{ filter(query: {camelId: {apply: {equal: "snakeId"}}}) { length } }')
     assert data == {'filter': {'length': 2}}
-    data = executor('{ apply(camelId: {add: "snakeId"}) { columns { camelId { values } } } }')
+    data = executor(
+        '{ apply(int: [{name: "camelId", add: "snakeId"}]) { columns { camelId { values } } } }'
+    )
     assert data == {'apply': {'columns': {'camelId': {'values': [2, 4]}}}}
     data = executor('{ index search(snakeId: {equal: 1}) { length } }')
     assert data == {'index': ['snakeId', 'camelId'], 'search': {'length': 1}}
@@ -138,7 +140,7 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'mode': {'counts': [1]}}}}
 
     data = executor(
-        '''{ apply(int32: {fillNull: -1, alias: "i"})
+        '''{ apply(int: [{name: "int32", fillNull: -1, alias: "i"}])
         { column(name: "i") { type ... on IntColumn { values } } } }'''
     )
     assert data == {'apply': {'column': {'type': 'int32', 'values': [0, -1]}}}
@@ -148,7 +150,7 @@ def test_numeric(executor):
 
 def test_duration(executor):
     data = executor(
-        '''{ apply(timestamp: {fillNull: "0001-01-01"})
+        '''{ apply(datetime: [{name: "timestamp", fillNull: "0001-01-01"}])
         { columns { timestamp { values subtract(value: "0001-01-01")
         { values quantile(q: [0.5]) } } } } }'''
     )
@@ -156,14 +158,14 @@ def test_duration(executor):
     assert column['values'] == ['1970-01-01T00:00:00', '0001-01-01T00:00:00']
     assert column['subtract'] == {'values': [-62135596800.0, 0.0], 'quantile': [-31067798400.0]}
     data = executor(
-        '''{ apply(timestamp: {alias: "diff", subtract: "timestamp"}) { column(name: "diff")
-        { ... on DurationColumn { values count(equal: 0.0) } } } }'''
+        '''{ apply(datetime: [{name: "timestamp", alias: "diff", subtract: "timestamp"}])
+        { column(name: "diff") { ... on DurationColumn { values count(equal: 0.0) } } } }'''
     )
     column = data['apply']['column']
     assert column['values'] == [0.0, None]
     assert column['count'] == 1
     data = executor(
-        '''{ apply(timestamp: {subtract: "timestamp", alias: "elapsed"})
+        '''{ apply(datetime: [{name: "timestamp", subtract: "timestamp", alias: "elapsed"}])
         { filter(predicates: [{name: "elapsed", duration: {equal: 0.0}}]) { length } } }'''
     )
     assert data == {'apply': {'filter': {'length': 1}}}
@@ -250,5 +252,7 @@ def test_dictionary(executor):
         column(name: "string") { ... on IntColumn { values } } } } } }'''
     )
     assert data == {'group': {'aggregate': {'aggregate': {'column': {'values': [1, 1]}}}}}
-    data = executor('{ apply(string: {fillNull: ""}) { columns { string { values } } } }')
+    data = executor(
+        '{ apply(string: [{name: "string", fillNull: ""}]) { columns { string { values } } } }'
+    )
     assert data == {'apply': {'columns': {'string': {'values': ['', '']}}}}

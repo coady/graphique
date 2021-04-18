@@ -15,7 +15,7 @@ from starlette.middleware import Middleware
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
-from .inputs import Diff, Filter, Function, Query as QueryInput, asdict, resolve_annotations
+from .inputs import Diff, Filter, Function, Input, Query as QueryInput, resolve_annotations
 from .middleware import AbstractTable, GraphQL, TimingMiddleware, references
 from .models import Column, ListColumn, annotate, doc_field, selections
 from .scalars import Long, Operator, type_map
@@ -69,10 +69,9 @@ class Row:
 
 
 @strawberry.input(description="predicates for each column")
-class Filters:
+class Filters(Input):
     __annotations__ = Filter.annotations(types)
     locals().update(dict.fromkeys(types, undefined))
-    asdict = asdict
 
 
 @strawberry.type(description="a column-oriented table")
@@ -234,15 +233,15 @@ class Table(AbstractTable):
             return Table(range(C.count(mask, not invert)))  # type: ignore
         return Table(table.filter(pc.invert(mask) if invert else mask))
 
-    @Function.resolve_types(types)
-    def apply(self, **functions) -> 'Table':
+    @Function.resolver
+    def apply(self, info, **functions) -> 'Table':
         """Return view of table with functions applied across columns.
         If no alias is provided, the column is replaced and should be of the same type.
         If an alias is provided, a column is added and may be referenced in the `column` field,
         in filter `predicates`, and in the `by` arguments of grouping and sorting."""
-        table = self.table
-        for name in functions:
-            value = functions[name].asdict()
+        table = self.select(info)
+        for value in map(Function.asdict, itertools.chain(*functions.values())):
+            name = to_snake_case(value.pop('name'))
             value.update({key: to_snake_case(value[key]) for key in value if key in T.projected})
             table = T.apply(table, name, **value)
         return Table(table)

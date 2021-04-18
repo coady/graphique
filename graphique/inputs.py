@@ -5,24 +5,47 @@ import functools
 import inspect
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, List, Optional
+from typing import Callable, Iterator, List, Optional
 import strawberry
 from strawberry.arguments import get_arguments_from_annotations
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import undefined
+from typing_extensions import Annotated
 from .scalars import Long, classproperty
 
-inequalities = 'less', 'less_equal', 'greater', 'greater_equal'
-ops = ('equal', 'not_equal') + inequalities
+ops = ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal')
 
 
-def asdict(self) -> dict:
-    return {
-        name: (value.asdict() if hasattr(value, 'asdict') else value)
-        for name, value in self.__dict__.items()
-        if value is not undefined
-    }
+class Input:
+    """Common utilities for input types."""
+
+    def asdict(self) -> dict:
+        """Return only present values as a mapping."""
+        return {
+            name: (value.asdict() if hasattr(value, 'asdict') else value)
+            for name, value in self.__dict__.items()
+            if value is not undefined
+        }
+
+    @classmethod
+    def subclasses(cls) -> Iterator:
+        """Generate subclasses with a description for annotating."""
+        for subclass in cls.__subclasses__():
+            if subclass._type_definition.description:  # type: ignore
+                yield subclass
+            yield from subclass.subclasses()
+
+    @classproperty
+    def resolver(cls) -> Callable:
+        """a decorator which transforms the subclass input types into arguments"""
+        annotations = {}
+        for subclass in cls.subclasses():
+            name = subclass.__name__.split(cls.__name__)[0].lower()  # type: ignore
+            argument = strawberry.argument(description=subclass._type_definition.description)
+            annotations[name] = Annotated[List[subclass], argument]  # type: ignore
+        defaults = dict.fromkeys(annotations, [])  # type: dict
+        return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
 def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) -> StrawberryField:
@@ -50,16 +73,10 @@ def annotations(cls, types: dict) -> dict:
     }
 
 
-def resolve_types(cls, types: dict) -> Callable:
-    """Return a decorator which transforms the type map into arguments."""
-    return functools.partial(resolve_annotations, annotations=cls.annotations(types))
-
-
 @strawberry.input(description="nominal predicates projected across two columns")
-class NominalFilter:
+class NominalFilter(Input):
     equal: Optional[str] = undefined
     not_equal: Optional[str] = undefined
-    asdict = asdict
 
 
 @strawberry.input(description="ordinal predicates projected across two columns")
@@ -70,13 +87,16 @@ class OrdinalFilter(NominalFilter):
     greater_equal: Optional[str] = undefined
 
 
-class Query:
+class Query(Input):
     """base class for predicates"""
 
     locals().update(dict.fromkeys(ops, undefined))
-    asdict = asdict
     annotations = classmethod(annotations)
-    resolve_types = classmethod(resolve_types)
+
+    @classmethod
+    def resolve_types(cls, types: dict) -> Callable:
+        """Return a decorator which transforms the type map into arguments."""
+        return functools.partial(resolve_annotations, annotations=cls.annotations(types))
 
     @classproperty
     def resolver(cls) -> Callable:
@@ -241,7 +261,7 @@ class StringFilter(StringQuery):
 
 
 @strawberry.input(description="predicates for columns of unknown type as a tagged union")
-class Filter:
+class Filter(Input):
     name: str
     annotations = classmethod(annotations)
     type_map = {
@@ -271,18 +291,16 @@ class Filter:
     string: Optional[StringFilter] = undefined
 
     def asdict(self):
-        query = asdict(self)
+        query = super().asdict()
         name = query.pop('name')
         (values,) = query.values()  # only one allowed
         return {name: values}
 
 
 @strawberry.input
-class Function:
-    alias: Optional[str] = undefined
-    asdict = asdict
-    annotations = classmethod(annotations)
-    resolve_types = classmethod(resolve_types)
+class Function(Input):
+    name: str
+    alias: str = ''
 
 
 @strawberry.input
@@ -350,40 +368,25 @@ class StringFunction(OrdinalFunction):
     utf8_upper: bool = False
 
 
-Function.type_map = {  # type: ignore
-    int: IntFunction,
-    Long: LongFunction,
-    float: FloatFunction,
-    Decimal: DecimalFunction,
-    date: DateFunction,
-    datetime: DateTimeFunction,
-    time: TimeFunction,
-    bytes: BinaryFunction,
-    str: StringFunction,
-}
-
-
-@strawberry.input(description="names and aliases for aggregation")
-class Field:
+@strawberry.input(description="names and optional aliases for aggregation")
+class Field(Input):
     name: str
     alias: str = ''
 
 
 @strawberry.input(description="a scalar compared to discrete differences")
-class DiffScalar:
+class DiffScalar(Input):
     int: Optional[int]
     long: Optional[Long]
     float: Optional[float]
     datetime: Optional[timedelta] = undefined
     float = long = int = undefined  # defaults here because of an obscure dataclass bug
-    asdict = asdict
 
 
 @strawberry.input(description="discrete difference predicates")
-class Diff:
+class Diff(Input):
     name: str
     less: Optional[DiffScalar] = undefined
     less_equal: Optional[DiffScalar] = undefined
     greater: Optional[DiffScalar] = undefined
     greater_equal: Optional[DiffScalar] = undefined
-    asdict = asdict
