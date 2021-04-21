@@ -15,7 +15,7 @@ from starlette.middleware import Middleware
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
-from .inputs import Diff, Filter, Function, Input, Query as QueryInput, resolve_annotations
+from .inputs import Diff, Filters, Function, Input, Query as QueryInput, resolve_annotations
 from .middleware import AbstractTable, GraphQL, TimingMiddleware, references
 from .models import Column, ListColumn, annotate, doc_field, selections
 from .scalars import Long, Operator, type_map
@@ -69,8 +69,8 @@ class Row:
 
 
 @strawberry.input(description="predicates for each column")
-class Filters(Input):
-    __annotations__ = Filter.annotations(types)
+class Queries(Input):
+    __annotations__ = QueryInput.annotations(types)
     locals().update(dict.fromkeys(types, undefined))
 
 
@@ -197,27 +197,28 @@ class Table(AbstractTable):
         return Table(T.matched(table, C.max, *map(to_snake_case, by)))
 
     @doc_field(
-        query="filters organized by column",
+        query="simple queries by column",
+        on="extended filters on columns organized by type",
         invert="optionally exclude matching rows",
         reduce="binary operator to combine filters; within a column all predicates must match",
-        predicates="additional filters for columns of unknown types, as the result of `apply`",
     )
     def filter(
         self,
         info,
-        query: Optional[Filters] = None,
+        query: Optional[Queries] = None,
+        on: Optional[Filters] = None,
         invert: bool = False,
         reduce: Operator = 'and',  # type: ignore
-        predicates: List[Filter] = [],
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
         List columns apply their respective filters to their own scalar values."""
         table = self.select(info)
         filters = query.asdict() if query else {}
-        for predicate in predicates:
-            filters.update(predicate.asdict())
+        for value in map(Filters.asdict, itertools.chain(*(on.asdict() if on else {}).values())):
+            filters.setdefault(value.pop('name'), {}).update(value)
         masks = []
         for name, value in filters.items():
+            name = to_snake_case(name)
             apply = value.get('apply', {})
             apply.update({key: to_snake_case(apply[key]) for key in apply})
             mask = T.mask(table, name, **value)

@@ -16,7 +16,9 @@ def test_case(executor):
         '{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}, invert: true) { length } }'
     )
     assert data == {'filter': {'length': 1}}
-    data = executor('{ filter(query: {camelId: {apply: {equal: "snakeId"}}}) { length } }')
+    data = executor(
+        '{ filter(on: {int: {name: "camelId", apply: {equal: "snakeId"}}}) { length } }'
+    )
     assert data == {'filter': {'length': 2}}
     data = executor(
         '{ apply(int: [{name: "camelId", add: "snakeId"}]) { columns { camelId { values } } } }'
@@ -166,7 +168,7 @@ def test_duration(executor):
     assert column['count'] == 1
     data = executor(
         '''{ apply(datetime: [{name: "timestamp", subtract: "timestamp", alias: "elapsed"}])
-        { filter(predicates: [{name: "elapsed", duration: {equal: 0.0}}]) { length } } }'''
+        { filter(on: {duration: [{name: "elapsed", equal: 0.0}]}) { length } } }'''
     )
     assert data == {'apply': {'filter': {'length': 1}}}
 
@@ -211,7 +213,7 @@ def test_list(executor):
         'all': {'values': [False, None]},
     }
     data = executor(
-        '''{ filter(predicates: [{name: "list", int: {notEqual: 1}}]) {
+        '''{ filter(on: {int: [{name: "list", notEqual: 1}]}) {
         columns { list { values { ... on IntColumn { values } } } } } }'''
     )
     column = data['filter']['columns']['list']

@@ -66,13 +66,6 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     )
 
 
-def annotations(cls, types: dict) -> dict:
-    """Return mapping of annotations from a mapping of types."""
-    return {
-        name: Optional[cls.type_map[types[name]]] for name in types if types[name] in cls.type_map
-    }
-
-
 @strawberry.input(description="nominal predicates projected across two columns")
 class NominalFilter(Input):
     equal: Optional[str] = undefined
@@ -90,8 +83,17 @@ class OrdinalFilter(NominalFilter):
 class Query(Input):
     """base class for predicates"""
 
+    type_map: dict
     locals().update(dict.fromkeys(ops, undefined))
-    annotations = classmethod(annotations)
+
+    @classmethod
+    def annotations(cls, types: dict) -> dict:
+        """Return mapping of annotations from a mapping of types."""
+        return {
+            name: Optional[cls.type_map[types[name]]]
+            for name in types
+            if types[name] in cls.type_map
+        }
 
     @classmethod
     def resolve_types(cls, types: dict) -> Callable:
@@ -187,61 +189,66 @@ Query.type_map = {  # type: ignore
 }
 
 
+@strawberry.input
+class Named:
+    name: str
+
+
 @strawberry.input(description="predicates for booleans")
-class BooleanFilter(BooleanQuery):
+class BooleanFilter(BooleanQuery, Named):
     apply: Optional[NominalFilter] = undefined
 
 
 @strawberry.input(description="predicates for ints")
-class IntFilter(IntQuery):
+class IntFilter(IntQuery, Named):
     absolute: bool = False
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for longs")
-class LongFilter(LongQuery):
+class LongFilter(LongQuery, Named):
     absolute: bool = False
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for floats")
-class FloatFilter(FloatQuery):
+class FloatFilter(FloatQuery, Named):
     absolute: bool = False
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for decimals")
-class DecimalFilter(DecimalQuery):
+class DecimalFilter(DecimalQuery, Named):
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for dates")
-class DateFilter(DateQuery):
+class DateFilter(DateQuery, Named):
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for datetimes")
-class DateTimeFilter(DateTimeQuery):
+class DateTimeFilter(DateTimeQuery, Named):
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for times")
-class TimeFilter(TimeQuery):
+class TimeFilter(TimeQuery, Named):
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for durations")
-class DurationFilter(DurationQuery):
+class DurationFilter(DurationQuery, Named):
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for binaries")
-class BinaryFilter(BinaryQuery):
+class BinaryFilter(BinaryQuery, Named):
     apply: Optional[NominalFilter] = undefined
 
 
 @strawberry.input(description="predicates for strings")
-class StringFilter(StringQuery):
+class StringFilter(StringQuery, Named):
     __annotations__ = dict(StringQuery.__annotations__)  # used for `count` interface
     match_substring: Optional[str] = undefined
     utf8_lower: bool = False
@@ -260,41 +267,19 @@ class StringFilter(StringQuery):
     apply: Optional[OrdinalFilter] = undefined
 
 
-@strawberry.input(description="predicates for columns of unknown type as a tagged union")
-class Filter(Input):
-    name: str
-    annotations = classmethod(annotations)
-    type_map = {
-        bool: BooleanFilter,
-        int: IntFilter,
-        Long: LongFilter,
-        float: FloatFilter,
-        Decimal: DecimalFilter,
-        date: DateFilter,
-        datetime: DateTimeFilter,
-        time: TimeFilter,
-        timedelta: DurationFilter,
-        bytes: BinaryFilter,
-        str: StringFilter,
-    }
-
-    boolean: Optional[BooleanFilter] = undefined
-    int: Optional[IntFilter] = undefined
-    long: Optional[LongFilter] = undefined
-    float: Optional[FloatFilter] = undefined
-    decimal: Optional[DecimalFilter] = undefined
-    date: Optional[DateFilter] = undefined
-    datetime: Optional[DateTimeFilter] = undefined
-    time: Optional[TimeFilter] = undefined
-    duration: Optional[DurationFilter] = undefined
-    binary: Optional[BinaryFilter] = undefined
-    string: Optional[StringFilter] = undefined
-
-    def asdict(self):
-        query = super().asdict()
-        name = query.pop('name')
-        (values,) = query.values()  # only one allowed
-        return {name: values}
+@strawberry.input(description="predicates for columns of any type as a tagged union")
+class Filters(Input):
+    boolean: List[BooleanFilter] = ()  # type: ignore
+    int: List[IntFilter] = ()  # type: ignore
+    long: List[LongFilter] = ()  # type: ignore
+    float: List[FloatFilter] = ()  # type: ignore
+    decimal: List[DecimalFilter] = ()  # type: ignore
+    date: List[DateFilter] = ()  # type: ignore
+    datetime: List[DateTimeFilter] = ()  # type: ignore
+    time: List[TimeFilter] = ()  # type: ignore
+    duration: List[DurationFilter] = ()  # type: ignore
+    binary: List[BinaryFilter] = ()  # type: ignore
+    string: List[StringFilter] = ()  # type: ignore
 
 
 @strawberry.input

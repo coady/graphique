@@ -109,7 +109,7 @@ def test_strings(client):
     data = client.execute(
         '''{ filter(query: {state: {equal: "CA"}}) {
         apply(string: {name: "city", binaryLength: true, alias: "size"}) {
-        filter(predicates: [{name: "size", int: {greater: 23}}]) { length }
+        filter(on: {int: {name: "size", greater: 23}}) { length }
         column(name: "size") { ... on IntColumn { max } } } } }'''
     )
     assert data == {'filter': {'apply': {'filter': {'length': 1}, 'column': {'max': 24}}}}
@@ -178,25 +178,33 @@ def test_filter(client):
     assert data['filter']['length'] == 41700
     data = client.execute('{ filter(query: {state: {equal: "CA"}}, invert: true) { length } }')
     assert data['filter']['length'] == 39053
-    data = client.execute('{ filter(query: {city: {matchSubstring: "Mountain"}}) { length } }')
-    assert data['filter']['length'] == 88
     data = client.execute(
-        '{ filter(query: {city: {utf8Lower: true, matchSubstring: "mountain"}}) { length } }'
+        '{ filter(on: {string: {name: "city", matchSubstring: "Mountain"}}) { length } }'
     )
     assert data['filter']['length'] == 88
     data = client.execute(
-        '{ filter(query: {city: {utf8Upper: true, matchSubstring: "MOUNTAIN"}}) { length } }'
+        '''{ filter(on: {string: {name: "city", utf8Lower: true, matchSubstring: "mountain"}})
+        { length } }'''
     )
     assert data['filter']['length'] == 88
-    data = client.execute('{ filter(query: {county: {apply: {equal: "city"}}}) { length } }')
+    data = client.execute(
+        '''{ filter(on: {string: {name: "city", utf8Upper: true, matchSubstring: "MOUNTAIN"}})
+        { length } }'''
+    )
+    assert data['filter']['length'] == 88
+    data = client.execute(
+        '{ filter(on: {string: {name: "county", apply: {equal: "city"}}}) { length } }'
+    )
     assert data['filter']['length'] == 2805
-    data = client.execute('{ filter(query: {city: {utf8IsLower: true}}) { length } }')
+    data = client.execute('{ filter(on: {string: {name: "city", utf8IsLower: true}}) { length } }')
     assert data['filter']['length'] == 0
-    data = client.execute('{ filter(query: {city: {utf8IsTitle: true}}) { length } }')
+    data = client.execute('{ filter(on: {string: {name: "city", utf8IsTitle: true}}) { length } }')
     assert data['filter']['length'] == 41700
-    data = client.execute('{ filter(query: {city: {}}) { length } }')
+    data = client.execute('{ filter(on: {string: {name: "city"}}) { length } }')
     assert data['filter']['length'] == 41700
-    data = client.execute('{ filter(query: {longitude: {absolute: true, less: 66}}) { length } }')
+    data = client.execute(
+        '{ filter(on: {float: {name: "longitude", absolute: true, less: 66}}) { length } }'
+    )
     assert data['filter']['length'] == 30
 
 
@@ -212,7 +220,7 @@ def test_apply(client):
     assert data['apply']['columns']['zipcode']['unique']['values'] == [0]
     data = client.execute(
         '''{ apply(float: {name: "latitude", multiply: "longitude", alias: "product"})
-        { filter(predicates: [{name: "product", float: {greater: 0}}]) { length } } }'''
+        { filter(on: {float: {name: "product", greater: 0}}) { length } } }'''
     )
     assert data['apply']['filter']['length'] == 0
     data = client.execute(
@@ -277,7 +285,7 @@ def test_group(client):
     assert data['group']['aggregate']['l']['values'] == ['Point Baker', 'Ketchikan', 'Sitka']
     data = client.execute(
         '''{ group(by: ["state", "county"], reverse: true, count: "counts") {
-        filter(predicates: [{name: "counts", int: {greaterEqual: 200}}]) {
+        filter(on: {int: {name: "counts", greaterEqual: 200}}) {
         aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
         min: column(name: "min") { ... on StringColumn { values } }
         max: column(name: "max") { ... on StringColumn { values } } } } } }'''
@@ -368,7 +376,7 @@ def test_partition(client):
     assert counts.count(0) == 61
     data = client.execute(
         '''{ partition(by: ["state"], count: "c") {
-        filter(predicates: [{name: "state", string: {equal: "NY"}}]) {
+        filter(on: {string: {name: "state", equal: "NY"}}) {
         column(name: "c") { ... on IntColumn { values } } columns { state { values } } } } }'''
     )
     agg = data['partition']['filter']
