@@ -91,6 +91,7 @@ dev
 * `partition` tables by adjacent values and differences
 * `filter` supports unknown column types using tagged union pattern
 * `Groups` replaced with `Table.tables` and `Table.aggregate` fields
+* Tagged unions used for `filter`, `apply`, and `partition` functions
 
 0.3
 

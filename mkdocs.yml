@@ -8,6 +8,7 @@ edit_uri: ""
 
 nav:
   - Introduction: index.md
+  - GraphQL API: api.md
   - Example Schema: schema.md
   - Core Reference: reference.md
 
