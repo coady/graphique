@@ -259,8 +259,8 @@ class Table(AbstractTable):
         counts = shape.value_lengths().to_pylist()
         indices = pa.concat_arrays(pa.array(np.repeat(*pair)) for pair in enumerate(counts))
         for name in set(table.column_names) - lists:
-            column = pa.DictionaryArray.from_arrays(indices, C.combine_chunks(table[name]))
-            columns[name] = pa.ListArray.from_arrays(shape.offsets, C.decode(column, check=True))
+            column = C.combine_chunks(table[name]).take(indices)
+            columns[name] = pa.ListArray.from_arrays(shape.offsets, column)
         for index in range(len(table)):
             row = {name: columns[name][index].values for name in columns}
             yield Table(pa.Table.from_pydict(row))

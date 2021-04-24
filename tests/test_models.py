@@ -238,11 +238,21 @@ def test_struct(executor):
 
 
 def test_dictionary(executor):
+    data = executor('{ column(name: "string") { length } }')
+    assert data == {'column': {'length': 2}}
     data = executor(
         '''{ group(by: ["camelId"]) { column(name: "string") {
         ... on ListColumn { unique { count { values } } } } } }'''
     )
     assert data == {'group': {'column': {'unique': {'count': {'values': [1, 1]}}}}}
+    data = executor(
+        '''{ group(by: ["string"]) { tables {
+        columns { string { values } } column(name: "camelId") { length } } } }'''
+    )
+    assert data['group']['tables'] == [
+        {'columns': {'string': {'values': ['']}}, 'column': {'length': 1}},
+        {'columns': {'string': {'values': [None]}}, 'column': {'length': 1}},
+    ]
     data = executor(
         '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string"}) { column(name: "string") {
         ... on ListColumn { count { values } } } } } }'''

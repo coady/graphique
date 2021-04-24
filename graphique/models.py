@@ -51,7 +51,7 @@ class Column:
     @classmethod
     def cast(cls, array: pa.ChunkedArray) -> 'Column':
         """Return typed column based on array type."""
-        return cls.type_map[type_map[array.type.id]](array)  # type: ignore
+        return cls.type_map[type_map[C.scalar_type(array).id]](array)  # type: ignore
 
     @classmethod
     def fromlist(cls, scalar: pa.ListScalar) -> Optional['Column']:

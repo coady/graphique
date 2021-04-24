@@ -28,6 +28,7 @@ setup(
     zip_safe=False,
     ext_modules=cythonize([ext_module]) if cythonize else [ext_module],
     install_requires=['pyarrow>=3', 'strawberry-graphql>=0.54'],
+    extras_require={'server': ['uvicorn[standard]']},
     python_requires='>=3.7',
     tests_require=['pytest-cov', 'requests'],
     keywords='graphql arrow parquet',
