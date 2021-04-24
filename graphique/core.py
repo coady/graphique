@@ -220,7 +220,10 @@ class Column(pa.ChunkedArray):
         return self
 
     def combine_chunks(self) -> pa.Array:
-        return self.chunk(0) if self.num_chunks == 1 else pa.concat_arrays(self.iterchunks())
+        """Native `combine_chunks` doesn't support empty chunks."""
+        if self.num_chunks > 1:
+            return self.combine_chunks()
+        return self.chunk(0) if self.num_chunks else pa.array([], self.type)
 
     def unique(self) -> pa.Array:
         """Native `unique` only supports equal dictionaries."""
@@ -555,7 +558,7 @@ class Table(pa.Table):
         columns = {name: Chunk.sort_keys(Column.combine_chunks(self[name])) for name in names}
         table = pa.Table.from_pydict(columns)
         indices = pc.sort_indices(table, sort_keys=[(name, order) for name in names])
-        return self.take(indices[:length])
+        return self and self.take(indices[:length])
 
     def mask(self, name: str, **query: dict) -> pa.Array:
         """Return mask array which matches query."""

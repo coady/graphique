@@ -505,7 +505,7 @@ class ListColumn(Column):
 
     @doc_field
     def variance(self) -> FloatColumn:
-        """mean of each list scalar"""
+        """variance of each list scalar"""
         return self.map(ListChunk.variance)  # type: ignore
 
     @doc_field

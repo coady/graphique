@@ -209,6 +209,9 @@ def test_sort(table):
     assert data['state'] == ['WY', 'WY']
     assert data['county'] == ['Weston', 'Weston']
     assert data['city'] == ['Upton', 'Osage']
+    mask = [False] * len(table)
+    assert not C.sort(table['state'].filter(mask))
+    assert not T.sort(table.filter(mask), 'state')
 
 
 def test_duration():
