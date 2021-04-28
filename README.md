@@ -72,7 +72,7 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables the 
 ```
 
 ## Dependencies
-* pyarrow >=3
+* pyarrow >=4
 * strawberry-graphql >=0.54
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 * pytz (optional timestamp support)
@@ -87,6 +87,7 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables the 
 ## Changes
 dev
 
+* Pyarrow >=4 required
 * `sort` updated to use new native routines
 * `partition` tables by adjacent values and differences
 * `filter` supports unknown column types using tagged union pattern

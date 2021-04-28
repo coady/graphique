@@ -84,8 +84,8 @@ class resolvers:
     def unique(self, info):
         """unique values and counts"""
         if 'counts' in selections(*info.field_nodes):
-            return self.Set(*C.value_counts(self.array).flatten())
-        return self.Set(C.unique(self.array))
+            return self.Set(*self.array.value_counts().flatten())
+        return self.Set(self.array.unique())
 
     def count(self, **query) -> Long:
         """Return number of matching values.

@@ -106,8 +106,7 @@ class Chunk(pa.Array):
             return self
         if len(self) <= len(self.dictionary):
             return self.cast(self.type.value_type)
-        # arrow may seg fault after sorting a non-chunked array
-        keys = pc.sort_indices(pc.array_sort_indices(pa.chunked_array([self.dictionary])))
+        keys = pc.sort_indices(pc.sort_indices(self.dictionary))
         return keys.take(self.indices)
 
 
@@ -225,20 +224,6 @@ class Column(pa.ChunkedArray):
             return self.combine_chunks()
         return self.chunk(0) if self.num_chunks else pa.array([], self.type)
 
-    def unique(self) -> pa.Array:
-        """Native `unique` only supports equal dictionaries."""
-        try:
-            return self.unique()
-        except pa.ArrowInvalid:
-            return Column.combine_chunks(self).unique()
-
-    def value_counts(self) -> pa.Array:
-        """Native `value_counts` only supports equal dictionaries."""
-        try:
-            return self.value_counts()
-        except pa.ArrowInvalid:
-            return Column.combine_chunks(self).value_counts()
-
     def mask(self, func='and', **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
         if query.pop('absolute', False):
@@ -268,7 +253,7 @@ class Column(pa.ChunkedArray):
             if isinstance(args[0], Scalar) and func is not pc.match_substring:
                 args = (pa.scalar(args[0], Column.scalar_type(self)),)
             elif isinstance(args[0], pa.ChunkedArray):
-                self, *args = map(Column.decode, (self,) + args)  # type: ignore
+                return func(self, *args)
         if not isinstance(self.type, pa.DictionaryType):
             return func(self, *args)
         chunks = list(Column.map(rpartial(Chunk.call, func, *args), self))
@@ -363,7 +348,7 @@ class Column(pa.ChunkedArray):
         if not self:
             return None
         if isinstance(self.type, pa.DictionaryType):
-            self = pa.chunked_array([Column.unique(self).cast(self.type.value_type)])
+            self = pa.chunked_array([self.unique().cast(self.type.value_type)])
         with contextlib.suppress(NotImplementedError):
             return pc.min_max(self)['max' if reverse else 'min'].as_py()
         return Column.sort(self, reverse, length=1)[0].as_py()

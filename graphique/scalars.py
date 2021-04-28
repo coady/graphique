@@ -37,6 +37,7 @@ type_map = {
     pa.lib.Type_INT32: int,
     pa.lib.Type_UINT64: Long,
     pa.lib.Type_INT64: Long,
+    pa.lib.Type_HALF_FLOAT: float,
     pa.lib.Type_FLOAT: float,
     pa.lib.Type_DOUBLE: float,
     pa.lib.Type_DECIMAL128: Decimal,

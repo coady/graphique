@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 import pytest
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -11,9 +11,6 @@ def eq(left, right):
 
 def test_dictionary(table):
     array = table['state'].dictionary_encode()
-    values, counts = C.value_counts(array).flatten()
-    assert len(values) == len(counts) == 52
-    assert set(C.unique(array)) == set(values)
     assert C.min(array) == 'AK'
     assert C.max(array) == 'WY'
     assert C.min(array[:0]) is None
@@ -25,7 +22,6 @@ def test_dictionary(table):
     table = pa.Table.from_pydict({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
     array = C.call(pa.chunked_array([[0, 0]]).dictionary_encode(), pc.add, 1)
-    assert isinstance(array.type, pa.DictionaryType)
     assert array.to_pylist() == [1, 1]
     array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()
     assert C.fill_null(array, "c").to_pylist() == C.fill_null(C.decode(array), "c").to_pylist()
@@ -52,9 +48,6 @@ def test_chunks():
     assert ''.join(T.unique(table, 'col', reverse=True)[0]['col'].to_pylist()) == 'bca'
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(T.unique(table, 'col')[0]) == 3
-    array = pa.chunked_array(chunk.dictionary_encode() for chunk in array.chunks)
-    assert C.unique(array).to_pylist() == ["a", "b", "c"]
-    assert C.value_counts(array).field('counts').to_pylist() == [2, 3, 1]
     array = pa.chunked_array([list('aba'), list('a')]).dictionary_encode()
     assert C.equal(array, 'a').to_pylist() == [True, False, True, True]
     assert C.equal(array[-1:], 'a').to_pylist() == [True]
@@ -71,7 +64,6 @@ def test_lists():
     assert ListChunk.mean(array).to_pylist() == [1.5, 0.0, None, None, None]
     assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.mode(array, length=1).to_pylist() == [[1], [0], [], [], []]
-    assert ListChunk.mode(array, length=2).flatten().to_pylist() == [1, 2, 0]
     assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
     assert ListChunk.any(array).to_pylist() == [True, False, False, False, None]
@@ -218,3 +210,8 @@ def test_duration():
     array = pa.array([timedelta(), None])
     assert C.is_in(array, array[:0]).to_pylist() == [False, False]
     assert C.is_in(array, array[:1]).to_pylist() == [True, False]
+
+
+def test_time():
+    array = pa.array([time(), None], pa.time32('s'))
+    assert C.equal(array, time()).to_pylist() == [True, None]
