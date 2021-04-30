@@ -140,6 +140,8 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'mode': {'values': [0]}}}}
         data = executor(f'{{ columns {{ {name} {{ mode(length: 2) {{ counts }} }} }} }}')
         assert data == {'columns': {name: {'mode': {'counts': [1]}}}}
+        data = executor(f'{{ columns {{ {name} {{ quantile }} }} }}')
+        assert data == {'columns': {name: {'quantile': [0.0]}}}
 
     data = executor(
         '''{ apply(int: [{name: "int32", fillNull: -1, alias: "i"}])
@@ -153,12 +155,11 @@ def test_numeric(executor):
 def test_duration(executor):
     data = executor(
         '''{ apply(datetime: [{name: "timestamp", fillNull: "0001-01-01"}])
-        { columns { timestamp { values subtract(value: "0001-01-01")
-        { values quantile(q: [0.5]) } } } } }'''
+        { columns { timestamp { values subtract(value: "0001-01-01") { values } } } } }'''
     )
     column = data['apply']['columns']['timestamp']
     assert column['values'] == ['1970-01-01T00:00:00', '0001-01-01T00:00:00']
-    assert column['subtract'] == {'values': [-62135596800.0, 0.0], 'quantile': [-31067798400.0]}
+    assert column['subtract'] == {'values': [-62135596800.0, 0.0]}
     data = executor(
         '''{ apply(datetime: [{name: "timestamp", alias: "diff", subtract: "timestamp"}])
         { column(name: "diff") { ... on DurationColumn { values count(equal: 0.0) } } } }'''
@@ -190,6 +191,10 @@ def test_list(executor):
         '''{ columns { list { mode(length: 2) { flatten { ... on IntColumn { values } } } } } }'''
     )
     assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0, 1]}}}}}
+    data = executor(
+        '''{ columns { list { values { ... on IntColumn { quantile(q: [0.25, 0.75]) } } } } }'''
+    )
+    assert data == {'columns': {'list': {'values': [{'quantile': [0.5, 1.5]}, None]}}}
 
     data = executor(
         '''{ columns { list { count { values }

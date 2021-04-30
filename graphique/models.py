@@ -100,10 +100,6 @@ class resolvers:
         """list of values"""
         return self.array.to_pylist()
 
-    def sum(self):
-        """sum of the values"""
-        return C.sum(self.array)
-
     def mode(self, length: int = 1):
         """mode of the values"""
         return self.Set(*pc.mode(self.array, length).flatten())  # type: ignore
@@ -174,25 +170,29 @@ class NumericColumn:
         """whether all values evaluate to true"""
         return C.all(self.array)  # type: ignore
 
+    def sum(self):
+        """sum of the values"""
+        return pc.sum(self.array).as_py()
+
     @doc_field
     def mean(self) -> Optional[float]:
         """mean of the values"""
-        return C.mean(self.array)  # type: ignore
+        return pc.mean(self.array).as_py()  # type: ignore
 
     @doc_field
     def stddev(self) -> Optional[float]:
         """standard deviation of the values"""
-        return C.stddev(self.array)  # type: ignore
+        return pc.stddev(self.array).as_py()  # type: ignore
 
     @doc_field
     def variance(self) -> Optional[float]:
         """variance of the values"""
-        return C.variance(self.array)  # type: ignore
+        return pc.variance(self.array).as_py()  # type: ignore
 
     @doc_field
-    def quantile(self, q: List[float]) -> List[Optional[float]]:
-        """Return q-th quantiles for values."""
-        return C.quantile(self.array, *q)  # type: ignore
+    def quantile(self, q: List[float] = [0.5], interpolation: str = 'linear') -> List[float]:
+        """Return list of quantiles for values, defaulting to the median."""
+        return pc.quantile(self.array, q=q, interpolation=interpolation).to_pylist()  # type: ignore
 
     @cached_property
     def min_max(self):
@@ -226,7 +226,7 @@ class IntColumn(Column, NumericColumn):
     Set = Set.subclass(int, "IntSet", "unique ints")
     unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[int]])
-    sum = annotate(resolvers.sum, Optional[int])
+    sum = annotate(NumericColumn.sum, Optional[int])
     mode = annotate(resolvers.mode, Set)
     min = annotate(NumericColumn.min, Optional[int])
     max = annotate(NumericColumn.max, Optional[int])
@@ -249,7 +249,7 @@ class LongColumn(Column, NumericColumn):
     Set = Set.subclass(Long, "LongSet", "unique longs")
     unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[Long]])
-    sum = annotate(resolvers.sum, Optional[Long])
+    sum = annotate(NumericColumn.sum, Optional[Long])
     mode = annotate(resolvers.mode, Set)
     min = annotate(NumericColumn.min, Optional[Long])
     max = annotate(NumericColumn.max, Optional[Long])
@@ -272,7 +272,7 @@ class FloatColumn(Column, NumericColumn):
     Set = Set.subclass(float, "FloatSet", "unique floats")
     unique = annotate(resolvers.unique, Set)
     sort = annotate(resolvers.sort, List[Optional[float]])
-    sum = annotate(resolvers.sum, Optional[float])
+    sum = annotate(NumericColumn.sum, Optional[float])
     mode = annotate(resolvers.mode, Set)
     min = annotate(NumericColumn.min, Optional[float])
     max = annotate(NumericColumn.max, Optional[float])
@@ -352,7 +352,6 @@ class DurationColumn(Column):
     __init__ = resolvers.__init__  # type: ignore
     count = DurationQuery.resolver(resolvers.count)
     values = annotate(resolvers.values, List[Optional[timedelta]])
-    quantile = annotate(NumericColumn.quantile, List[Optional[timedelta]])
     minimum = annotate(resolvers.minimum, 'DurationColumn', value=timedelta)
     maximum = annotate(resolvers.maximum, 'DurationColumn', value=timedelta)
     absolute = annotate(resolvers.absolute, 'DurationColumn')

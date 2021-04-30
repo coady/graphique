@@ -1,5 +1,4 @@
 from datetime import date, time, timedelta
-import pytest
 import pyarrow as pa
 import pyarrow.compute as pc
 from graphique.core import Chunk, ListChunk, Column as C, Table as T
@@ -64,6 +63,9 @@ def test_lists():
     assert ListChunk.mean(array).to_pylist() == [1.5, 0.0, None, None, None]
     assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.mode(array, length=1).to_pylist() == [[1], [0], [], [], []]
+    # TODO(ARROW-12606): test whole array and add to column model
+    assert ListChunk.quantile(array)[0].as_py() == 1.5
+    assert ListChunk.quantile(array, q=[0.75])[0].as_py() == [1.75]
     assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
     assert ListChunk.any(array).to_pylist() == [True, False, False, False, None]
@@ -77,17 +79,10 @@ def test_reduce():
     array = pa.chunked_array([[0, 1], [2, 3]])
     assert eq(C.min(array), 0)
     assert eq(C.max(array), 3)
-    assert eq(C.sum(array), 6)
-    assert eq(C.mean(array), 1.5)
-    assert C.quantile(array, 0.5) == [1.5]
     array = pa.chunked_array([[None, 1]])
     assert eq(C.min(array), 1)
     assert eq(C.max(array), 1)
-    assert C.quantile(array, 0.5) == [1.0]
-    assert C.quantile(array[:1], 0.5) == [None]
     array = pa.chunked_array([[0, 3, 0]])
-    assert C.stddev(array) == pytest.approx(2.0 ** 0.5)
-    assert C.variance(array) == 2.0
     array = pa.chunked_array([[date.today(), None]])
     assert C.min(array) == C.max(array[:1])
     assert C.min(array[1:]) is C.max(array[1:]) is None
@@ -146,7 +141,7 @@ def test_group(table):
 def test_partition(table):
     groups, counts = T.partition(table, 'state')
     assert len(groups) == len(counts) == 66
-    assert C.sum(counts) == 41700
+    assert pc.sum(counts).as_py() == 41700
     assert groups['state'][0].as_py() == 'NY'
     assert C.count(groups['state'], 'NY') == 3
     assert groups['county'][0].values.to_pylist() == ['Suffolk', 'Suffolk']

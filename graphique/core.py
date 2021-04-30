@@ -11,7 +11,7 @@ import functools
 import json
 import operator
 from concurrent import futures
-from typing import Callable, Iterable, Iterator, Optional
+from typing import Callable, Iterable, Iterator, Sequence
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -141,17 +141,17 @@ class ListChunk(pa.ListArray):
         return split(counts, self.values.filter(mask))
 
     def reduce(self, func: Callable, tp=None) -> pa.Array:
-        values = (func(scalar.values) if scalar.values else None for scalar in self)
+        values = (func(scalar.values).as_py() if scalar.values else None for scalar in self)
         return pa.array(values, tp or self.type.value_type)
 
     def min(self) -> pa.Array:
         """min value of each list scalar"""
 
         def func(array):
-            return array[pc.partition_nth_indices(array, pivot=1)[0].as_py()].as_py()
+            return array[pc.partition_nth_indices(array, pivot=1)[0].as_py()]
 
         try:
-            return ListChunk.reduce(self, lambda arr: pc.min_max(arr).as_py()['min'])
+            return ListChunk.reduce(self, lambda arr: pc.min_max(arr)['min'])
         except NotImplementedError:
             return ListChunk.reduce(self, func)
 
@@ -159,20 +159,20 @@ class ListChunk(pa.ListArray):
         """max value of each list scalar"""
 
         def func(array):
-            return array[pc.partition_nth_indices(array, pivot=len(array) - 1)[-1].as_py()].as_py()
+            return array[pc.partition_nth_indices(array, pivot=len(array) - 1)[-1].as_py()]
 
         try:
-            return ListChunk.reduce(self, lambda arr: pc.min_max(arr).as_py()['max'])
+            return ListChunk.reduce(self, lambda arr: pc.min_max(arr)['max'])
         except NotImplementedError:
             return ListChunk.reduce(self, func)
 
     def sum(self) -> pa.Array:
         """sum each list scalar"""
-        return ListChunk.reduce(self, Column.sum)
+        return ListChunk.reduce(self, pc.sum)
 
     def mean(self) -> pa.FloatingPointArray:
         """mean of each list scalar"""
-        return ListChunk.reduce(self, Column.mean, pa.float64())
+        return ListChunk.reduce(self, pc.mean, pa.float64())
 
     def mode(self, length: int = 0) -> pa.Array:
         """modes of each list scalar"""
@@ -181,13 +181,20 @@ class ListChunk(pa.ListArray):
         array = split(pa.array(map(len, values)), pa.concat_arrays(values))
         return array if length else ListChunk.first(array)
 
+    def quantile(self, q: Sequence[float] = ()) -> pa.Array:
+        """quantiles of each list scalar"""
+        empty = pa.array([], self.type.value_type)
+        values = [pc.quantile(scalar.values or empty, q=q or 0.5) for scalar in self]
+        array = split(pa.array(map(len, values)), pa.concat_arrays(values))
+        return array if q else ListChunk.first(array)
+
     def stddev(self) -> pa.FloatingPointArray:
         """stddev of each list scalar"""
-        return ListChunk.reduce(self, Column.stddev, pa.float64())
+        return ListChunk.reduce(self, pc.stddev, pa.float64())
 
     def variance(self) -> pa.FloatingPointArray:
         """variance of each list scalar"""
-        return ListChunk.reduce(self, Column.variance, pa.float64())
+        return ListChunk.reduce(self, pc.variance, pa.float64())
 
     def any(self) -> pa.BooleanArray:
         """any true of each list scalar"""
@@ -319,30 +326,6 @@ class Column(pa.ChunkedArray):
         else:
             mask = Column.diff(self, predicate)
         return pa.array(*np.nonzero(pa.concat_arrays(ends + mask.chunks + ends)), pa.int32())
-
-    def sum(self):
-        """Return sum of the values."""
-        return pc.sum(self).as_py()
-
-    def mean(self) -> Optional[float]:
-        """Return mean of the values."""
-        return pc.mean(self).as_py()
-
-    def stddev(self) -> Optional[float]:
-        """Return standard deviation of the values."""
-        return pc.stddev(self).as_py()
-
-    def variance(self) -> Optional[float]:
-        """Return variance of the values."""
-        return pc.variance(self).as_py()
-
-    def quantile(self, *q: float) -> list:
-        """Return q-th quantiles for values."""
-        if self.null_count:
-            self = self.filter(self.is_valid())
-        if not self:
-            return [None] * len(q)
-        return np.quantile(self, q).tolist()
 
     def min_max(self, reverse=False):
         if not self:
