@@ -413,6 +413,7 @@ class Table(pa.Table):
     applied = {
         'fill_null': Column.fill_null,
         'binary_length': pc.binary_length,
+        'utf8_length': pc.utf8_length,
         'utf8_lower': pc.utf8_lower,
         'utf8_upper': pc.utf8_upper,
         'absolute': Column.absolute,

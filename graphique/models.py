@@ -401,9 +401,13 @@ class StringColumn(Column):
     min = annotate(resolvers.min, Optional[str])
     max = annotate(resolvers.max, Optional[str])
     fill_null = annotate(resolvers.fill_null, 'StringColumn', value=str)
-    binary_length = doc_field(BinaryColumn.binary_length)
     minimum = annotate(resolvers.minimum, 'StringColumn', value=str)
     maximum = annotate(resolvers.maximum, 'StringColumn', value=str)
+
+    @doc_field
+    def utf8_length(self) -> 'IntColumn':
+        """length of bytes or strings"""
+        return IntColumn(pc.utf8_length(self.array))  # type: ignore
 
     @doc_field
     def utf8_lower(self) -> 'StringColumn':

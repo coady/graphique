@@ -102,15 +102,15 @@ def test_strings(client):
     assert data == {'columns': {'state': {'count': 2647}}}
     data = client.execute('{ columns { state { count(utf8Lower: true, equal: "ca") } } }')
     assert data == {'columns': {'state': {'count': 2647}}}
-    data = client.execute('{ columns { state { binaryLength { unique { values } } } } }')
-    assert data['columns']['state']['binaryLength']['unique']['values'] == [2]
+    data = client.execute('{ columns { state { utf8Length { unique { values } } } } }')
+    assert data['columns']['state']['utf8Length']['unique']['values'] == [2]
     data = client.execute('{ columns { state { utf8Lower { values } } } }')
     assert 'ca' in data['columns']['state']['utf8Lower']['values']
     data = client.execute('{ columns { city { utf8Upper { values } } } }')
     assert 'MOUNTAIN VIEW' in data['columns']['city']['utf8Upper']['values']
     data = client.execute(
         '''{ filter(query: {state: {equal: "CA"}}) {
-        apply(string: {name: "city", binaryLength: true, alias: "size"}) {
+        apply(string: {name: "city", utf8Length: true, alias: "size"}) {
         filter(on: {int: {name: "size", greater: 23}}) { length }
         column(name: "size") { ... on IntColumn { max } } } } }'''
     )
