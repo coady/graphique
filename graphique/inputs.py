@@ -300,6 +300,7 @@ class NumericFunction(OrdinalFunction):
     subtract: Optional[str] = undefined
     multiply: Optional[str] = undefined
     divide: Optional[str] = undefined
+    power: Optional[str] = undefined
     absolute: bool = False
 
 

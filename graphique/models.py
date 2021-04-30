@@ -120,22 +120,6 @@ class resolvers:
         """Return values with null elements replaced."""
         return type(self)(C.fill_null(self.array, value))
 
-    def add(self, value):
-        """Return values added to scalar."""
-        return type(self)(pc.add(pa.scalar(value, self.array.type), self.array))
-
-    def subtract(self, value):
-        """Return values subtracted *from* scalar."""
-        return type(self)(pc.subtract(pa.scalar(value, self.array.type), self.array))
-
-    def multiply(self, value):
-        """Return values multiplied by scalar."""
-        return type(self)(pc.multiply(pa.scalar(value, self.array.type), self.array))
-
-    def divide(self, value):
-        """Return values divided *into* scalar."""
-        return type(self)(pc.divide(pa.scalar(value, self.array.type), self.array))
-
     def minimum(self, value):
         """Return element-wise minimum compared to scalar."""
         return type(self)(C.minimum(self.array, value))
@@ -206,6 +190,29 @@ class NumericColumn:
         """maximum value"""
         return self.min_max['max']
 
+    def add(self, value):
+        """Return values added to scalar."""
+        return type(self)(pc.add(pa.scalar(value, self.array.type), self.array))
+
+    def subtract(self, value):
+        """Return values subtracted *from* scalar."""
+        return type(self)(pc.subtract(pa.scalar(value, self.array.type), self.array))
+
+    def multiply(self, value):
+        """Return values multiplied by scalar."""
+        return type(self)(pc.multiply(pa.scalar(value, self.array.type), self.array))
+
+    def divide(self, value):
+        """Return values divided *into* scalar."""
+        return type(self)(pc.divide(pa.scalar(value, self.array.type), self.array))
+
+    def power(self, base=None, exponent=None):
+        """Return values multiplied by scalar."""
+        assert [base, exponent].count(None) == 1, "exactly one of `base` or `exponent` required"
+        if base is None:
+            return type(self)(pc.power(self.array, pa.scalar(exponent, self.array.type)))
+        return type(self)(pc.power(pa.scalar(base, self.array.type), self.array))
+
 
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
@@ -232,10 +239,11 @@ class IntColumn(Column, NumericColumn):
     max = annotate(NumericColumn.max, Optional[int])
     unique = annotate(resolvers.unique, Set)
     fill_null = annotate(resolvers.fill_null, 'IntColumn', value=int)
-    add = annotate(resolvers.add, 'IntColumn', value=int)
-    subtract = annotate(resolvers.subtract, 'IntColumn', value=int)
-    multiply = annotate(resolvers.multiply, 'IntColumn', value=int)
-    divide = annotate(resolvers.divide, 'IntColumn', value=int)
+    add = annotate(NumericColumn.add, 'IntColumn', value=int)
+    subtract = annotate(NumericColumn.subtract, 'IntColumn', value=int)
+    multiply = annotate(NumericColumn.multiply, 'IntColumn', value=int)
+    divide = annotate(NumericColumn.divide, 'IntColumn', value=int)
+    power = annotate(NumericColumn.power, 'IntColumn', base=Optional[int], exponent=Optional[int])
     minimum = annotate(resolvers.minimum, 'IntColumn', value=int)
     maximum = annotate(resolvers.maximum, 'IntColumn', value=int)
     absolute = annotate(resolvers.absolute, 'IntColumn')
@@ -255,10 +263,13 @@ class LongColumn(Column, NumericColumn):
     max = annotate(NumericColumn.max, Optional[Long])
     unique = annotate(resolvers.unique, Set)
     fill_null = annotate(resolvers.fill_null, 'LongColumn', value=Long)
-    add = annotate(resolvers.add, 'LongColumn', value=Long)
-    subtract = annotate(resolvers.subtract, 'LongColumn', value=Long)
-    multiply = annotate(resolvers.multiply, 'LongColumn', value=Long)
-    divide = annotate(resolvers.divide, 'LongColumn', value=Long)
+    add = annotate(NumericColumn.add, 'LongColumn', value=Long)
+    subtract = annotate(NumericColumn.subtract, 'LongColumn', value=Long)
+    multiply = annotate(NumericColumn.multiply, 'LongColumn', value=Long)
+    divide = annotate(NumericColumn.divide, 'LongColumn', value=Long)
+    power = annotate(
+        NumericColumn.power, 'LongColumn', base=Optional[Long], exponent=Optional[Long]
+    )
     minimum = annotate(resolvers.minimum, 'LongColumn', value=Long)
     maximum = annotate(resolvers.maximum, 'LongColumn', value=Long)
     absolute = annotate(resolvers.absolute, 'LongColumn')
@@ -277,10 +288,13 @@ class FloatColumn(Column, NumericColumn):
     min = annotate(NumericColumn.min, Optional[float])
     max = annotate(NumericColumn.max, Optional[float])
     fill_null = annotate(resolvers.fill_null, 'FloatColumn', value=float)
-    add = annotate(resolvers.add, 'FloatColumn', value=float)
-    subtract = annotate(resolvers.subtract, 'FloatColumn', value=float)
-    multiply = annotate(resolvers.multiply, 'FloatColumn', value=float)
-    divide = annotate(resolvers.divide, 'FloatColumn', value=float)
+    add = annotate(NumericColumn.add, 'FloatColumn', value=float)
+    subtract = annotate(NumericColumn.subtract, 'FloatColumn', value=float)
+    multiply = annotate(NumericColumn.multiply, 'FloatColumn', value=float)
+    divide = annotate(NumericColumn.divide, 'FloatColumn', value=float)
+    power = annotate(
+        NumericColumn.power, 'FloatColumn', base=Optional[float], exponent=Optional[float]
+    )
     minimum = annotate(resolvers.minimum, 'FloatColumn', value=float)
     maximum = annotate(resolvers.maximum, 'FloatColumn', value=float)
     absolute = annotate(resolvers.absolute, 'FloatColumn')

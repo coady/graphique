@@ -127,6 +127,14 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'multiply': {'sum': 0}}}}
         with pytest.raises(ValueError):
             executor(f'{{ columns {{ {name} {{ divide(value: 1) {{ sum }} }} }} }}')
+        data = executor(f'{{ columns {{ {name} {{ power(base: 2) {{ values }} }} }} }}')
+        assert data == {'columns': {name: {'power': {'values': [1, None]}}}}
+        data = executor(f'{{ columns {{ {name} {{ power(exponent: 2) {{ values }} }} }} }}')
+        assert data == {'columns': {name: {'power': {'values': [0, None]}}}}
+        with pytest.raises(ValueError):
+            executor(f'{{ columns {{ {name} {{ power {{ values }} }} }} }}')
+        with pytest.raises(ValueError):
+            executor(f'{{ columns {{ {name} {{ power(base: 1, exponent: 1) {{ values }} }} }} }}')
 
         data = executor(f'{{ columns {{ {name} {{ minimum(value: -1) {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'minimum': {'sum': -1}}}}

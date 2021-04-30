@@ -67,6 +67,8 @@ def test_floats(client):
     assert quantile == pytest.approx(39.12054)
     data = client.execute('{ columns { latitude(multiply: "longitude") { min } } }')
     assert data['columns']['latitude']['min'] == pytest.approx(-11389.408478)
+    data = client.execute('{ columns { latitude(power: "longitude") { min } } }')
+    assert 0 < data['columns']['latitude']['min'] < 1
     data = client.execute('{ columns { latitude(minimum: "longitude") { min } } }')
     assert data['columns']['latitude']['min'] == pytest.approx(-174.213333)
     data = client.execute('{ columns { latitude(maximum: "longitude") { max } } }')

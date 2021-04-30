@@ -406,6 +406,7 @@ class Table(pa.Table):
         'subtract': pc.subtract,
         'multiply': pc.multiply,
         'divide': pc.divide,
+        'power': pc.power,
         'minimum': Column.minimum,
         'maximum': Column.maximum,
     }
