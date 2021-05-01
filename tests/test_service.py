@@ -115,6 +115,9 @@ def test_strings(client):
         column(name: "size") { ... on IntColumn { max } } } } }'''
     )
     assert data == {'filter': {'apply': {'filter': {'length': 1}, 'column': {'max': 24}}}}
+
+
+def test_string_methods(client):
     data = client.execute(
         '''{ unique(by: ["city"]) { columns { city { split {
         first { ... on StringColumn { count(equal: "New") } }
@@ -129,6 +132,21 @@ def test_strings(client):
     )
     cities = data['unique']['columns']['city']
     cities['split']['count']['unique'] == {'values': [1, 2], 'counts': [18718, 1]}
+    data = client.execute('{ columns { state { utf8Ltrim { values } utf8Rtrim { values } } } }')
+    states = data['columns']['state']
+    assert 'CA' in states['utf8Ltrim']['values']
+    assert 'CA' in states['utf8Rtrim']['values']
+    data = client.execute(
+        '''{ columns { state {
+        utf8Ltrim(characters: "C") { values } utf8Rtrim(characters: "A") { values } } } }'''
+    )
+    states = data['columns']['state']
+    assert 'A' in states['utf8Ltrim']['values']
+    assert 'C' in states['utf8Rtrim']['values']
+    data = client.execute(
+        '''{ columns { state { replaceSubstring(pattern: "C", replacement: "A") { values } } } }'''
+    )
+    assert 'AA' in data['columns']['state']['replaceSubstring']['values']
 
 
 def test_search(client):

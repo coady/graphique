@@ -427,6 +427,28 @@ class StringColumn(Column):
             return ListColumn(pc.split_pattern(self.array, pattern=pattern, **kwargs))  # type: ignore
         return ListColumn(pc.utf8_split_whitespace(self.array, **kwargs))  # type: ignore
 
+    @doc_field
+    def utf8_ltrim(self, characters: str = '') -> 'StringColumn':
+        """Trim leading characters, by default whitespace."""
+        if characters:
+            return StringColumn(pc.utf8_ltrim(self.array, characters=characters))  # type: ignore
+        return StringColumn(pc.utf8_ltrim_whitespace(self.array))  # type: ignore
+
+    @doc_field
+    def utf8_rtrim(self, characters: str = '') -> 'StringColumn':
+        """Trim trailing characters, by default whitespace."""
+        if characters:
+            return StringColumn(pc.utf8_rtrim(self.array, characters=characters))  # type: ignore
+        return StringColumn(pc.utf8_rtrim_whitespace(self.array))  # type: ignore
+
+    @doc_field
+    def replace_substring(
+        self, pattern: str, replacement: str, max_replacements: int = -1
+    ) -> 'StringColumn':
+        """Replace non-overlapping substrings that match pattern."""
+        kwargs = dict(pattern=pattern, replacement=replacement, max_replacements=max_replacements)
+        return StringColumn(pc.replace_substring(self.array, **kwargs))  # type: ignore
+
 
 @strawberry.type(description="column of lists")
 class ListColumn(Column):
