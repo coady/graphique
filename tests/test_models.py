@@ -100,6 +100,9 @@ def test_columns(executor):
         data = execute(f'{{ {name} {{ fillNull(value: "") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['', '']}}}
 
+    data = execute('{ binary { binaryLength { values } } }')
+    assert data == {'binary': {'binaryLength': {'values': [0, None]}}}
+
     assert execute('{ string { count(stringIsAscii: true) } }') == {'string': {'count': 1}}
     assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
     assert execute('{ string { count(utf8IsAlpha: true) } }') == {'string': {'count': 0}}

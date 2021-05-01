@@ -251,6 +251,7 @@ class BinaryFilter(BinaryQuery, Named):
 class StringFilter(StringQuery, Named):
     __annotations__ = dict(StringQuery.__annotations__)  # used for `count` interface
     match_substring: Optional[str] = undefined
+    match_substring_regex: Optional[str] = undefined
     utf8_lower: bool = False
     utf8_upper: bool = False
     string_is_ascii: bool = False

@@ -221,8 +221,8 @@ class Column(pa.ChunkedArray):
 
     def decode(self, check=False) -> pa.ChunkedArray:
         with contextlib.suppress(ValueError, AttributeError):
-            if not check or self.type.value_type.bit_width <= self.type.index_type.bit_width:
-                return self.cast(self.type.value_type)
+            not check or self.type.value_type.bit_width
+            return self.cast(self.type.value_type)
         return self
 
     def combine_chunks(self) -> pa.Array:
@@ -256,8 +256,9 @@ class Column(pa.ChunkedArray):
 
     def call(self, func: Callable, *args) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
+        self = Column.decode(self, check=True)
         if args:
-            if isinstance(args[0], Scalar) and func is not pc.match_substring:
+            if isinstance(args[0], Scalar) and 'substring' not in func.__name__:
                 args = (pa.scalar(args[0], Column.scalar_type(self)),)
             elif isinstance(args[0], pa.ChunkedArray):
                 return func(self, *args)

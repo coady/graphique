@@ -207,7 +207,7 @@ class NumericColumn:
         return type(self)(pc.divide(pa.scalar(value, self.array.type), self.array))
 
     def power(self, base=None, exponent=None):
-        """Return values multiplied by scalar."""
+        """Return values raised to power."""
         assert [base, exponent].count(None) == 1, "exactly one of `base` or `exponent` required"
         if base is None:
             return type(self)(pc.power(self.array, pa.scalar(exponent, self.array.type)))
