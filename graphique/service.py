@@ -102,7 +102,7 @@ class Table(AbstractTable):
         for name in map(to_snake_case, selections(*info.field_nodes)):
             scalar = self.table[name][index]
             row[name] = (
-                Column.fromlist(scalar) if isinstance(scalar, pa.ListScalar) else scalar.as_py()
+                Column.fromscalar(scalar) if isinstance(scalar, pa.ListScalar) else scalar.as_py()
             )
         return Row(**row)  # type: ignore
 

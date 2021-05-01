@@ -38,6 +38,9 @@ def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField
 
 @strawberry.interface(description="column interface")
 class Column:
+    def __init__(self, array):
+        self.array = array
+
     @doc_field
     def type(self) -> str:
         """array type"""
@@ -53,33 +56,12 @@ class Column:
         """Return typed column based on array type."""
         return cls.type_map[type_map[C.scalar_type(array).id]](array)  # type: ignore
 
-    @classmethod
-    def fromlist(cls, scalar: pa.ListScalar) -> Optional['Column']:
-        array = scalar.values
-        return None if array is None else cls.cast(pa.chunked_array([array]))
-
-
-@strawberry.interface(description="unique values")
-class Set:
-    length = doc_field(Column.length)
-
-    @doc_field
-    def counts(self) -> List[Long]:
-        """list of counts"""
-        return self.count.to_pylist()  # type: ignore
+    def map(self, func: Callable) -> 'Column':
+        return self.cast(pa.chunked_array(C.map(func, self.array)))  # type: ignore
 
     @classmethod
-    def subclass(base, cls, name, description):
-        namespace = {
-            '__init__': resolvers.__init__,
-            'values': annotate(resolvers.values, List[Optional[cls]]),
-        }
-        return strawberry.type(description=description)(type(name, (base,), namespace))
-
-
-class resolvers:
-    def __init__(self, array, count=pa.array([])):
-        self.array, self.count = array, count
+    def fromscalar(cls, scalar: pa.ListScalar) -> Optional['Column']:
+        return None if scalar.values is None else cls.cast(pa.chunked_array([scalar.values]))
 
     def unique(self, info):
         """unique values and counts"""
@@ -99,10 +81,6 @@ class resolvers:
     def values(self):
         """list of values"""
         return self.array.to_pylist()
-
-    def mode(self, length: int = 1):
-        """mode of the values"""
-        return self.Set(*pc.mode(self.array, length).flatten())  # type: ignore
 
     def min(self):
         """minimum value"""
@@ -128,9 +106,26 @@ class resolvers:
         """Return element-wise maximum compared to scalar."""
         return type(self)(C.maximum(self.array, value))
 
-    def absolute(self):
-        """absolute values"""
-        return type(self)(C.absolute(self.array))
+
+@strawberry.interface(description="unique values")
+class Set:
+    length = doc_field(Column.length)
+
+    def __init__(self, array, count=pa.array([])):
+        self.array, self.count = array, count
+
+    @doc_field
+    def counts(self) -> List[Long]:
+        """list of counts"""
+        return self.count.to_pylist()  # type: ignore
+
+    @classmethod
+    def subclass(base, cls, name, description):
+        namespace = {
+            '__init__': Set.__init__,
+            'values': annotate(Column.values, List[Optional[cls]]),
+        }
+        return strawberry.type(description=description)(type(name, (base,), namespace))
 
 
 def annotate(func, return_type, **annotations):
@@ -178,6 +173,10 @@ class NumericColumn:
         """Return list of quantiles for values, defaulting to the median."""
         return pc.quantile(self.array, q=q, interpolation=interpolation).to_pylist()  # type: ignore
 
+    def mode(self, length: int = 1):
+        """mode of the values"""
+        return self.Set(*pc.mode(self.array, length).flatten())  # type: ignore
+
     @cached_property
     def min_max(self):
         return pc.min_max(self.array).as_py()
@@ -213,56 +212,60 @@ class NumericColumn:
             return type(self)(pc.power(self.array, pa.scalar(exponent, self.array.type)))
         return type(self)(pc.power(pa.scalar(base, self.array.type), self.array))
 
+    def absolute(self):
+        """absolute values"""
+        return type(self)(C.absolute(self.array))
+
 
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
-    count = BooleanQuery.resolver(resolvers.count)
+    __init__ = Column.__init__  # type: ignore
+    count = BooleanQuery.resolver(Column.count)
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
-    values = annotate(resolvers.values, List[Optional[bool]])
+    values = annotate(Column.values, List[Optional[bool]])
     Set = Set.subclass(bool, "BooleanSet", "unique booleans")
-    unique = annotate(resolvers.unique, Set)
+    unique = annotate(Column.unique, Set)
 
 
 @strawberry.type(description="column of ints")
 class IntColumn(Column, NumericColumn):
-    __init__ = resolvers.__init__  # type: ignore
-    count = IntQuery.resolver(resolvers.count)
-    values = annotate(resolvers.values, List[Optional[int]])
+    __init__ = Column.__init__  # type: ignore
+    count = IntQuery.resolver(Column.count)
+    values = annotate(Column.values, List[Optional[int]])
     Set = Set.subclass(int, "IntSet", "unique ints")
-    unique = annotate(resolvers.unique, Set)
-    sort = annotate(resolvers.sort, List[Optional[int]])
+    unique = annotate(Column.unique, Set)
+    sort = annotate(Column.sort, List[Optional[int]])
     sum = annotate(NumericColumn.sum, Optional[int])
-    mode = annotate(resolvers.mode, Set)
+    mode = annotate(NumericColumn.mode, Set)
     min = annotate(NumericColumn.min, Optional[int])
     max = annotate(NumericColumn.max, Optional[int])
-    unique = annotate(resolvers.unique, Set)
-    fill_null = annotate(resolvers.fill_null, 'IntColumn', value=int)
+    unique = annotate(Column.unique, Set)
+    fill_null = annotate(Column.fill_null, 'IntColumn', value=int)
     add = annotate(NumericColumn.add, 'IntColumn', value=int)
     subtract = annotate(NumericColumn.subtract, 'IntColumn', value=int)
     multiply = annotate(NumericColumn.multiply, 'IntColumn', value=int)
     divide = annotate(NumericColumn.divide, 'IntColumn', value=int)
     power = annotate(NumericColumn.power, 'IntColumn', base=Optional[int], exponent=Optional[int])
-    minimum = annotate(resolvers.minimum, 'IntColumn', value=int)
-    maximum = annotate(resolvers.maximum, 'IntColumn', value=int)
-    absolute = annotate(resolvers.absolute, 'IntColumn')
+    minimum = annotate(Column.minimum, 'IntColumn', value=int)
+    maximum = annotate(Column.maximum, 'IntColumn', value=int)
+    absolute = annotate(NumericColumn.absolute, 'IntColumn')
 
 
 @strawberry.type(description="column of longs")
 class LongColumn(Column, NumericColumn):
-    __init__ = resolvers.__init__  # type: ignore
-    count = LongQuery.resolver(resolvers.count)
-    values = annotate(resolvers.values, List[Optional[Long]])
+    __init__ = Column.__init__  # type: ignore
+    count = LongQuery.resolver(Column.count)
+    values = annotate(Column.values, List[Optional[Long]])
     Set = Set.subclass(Long, "LongSet", "unique longs")
-    unique = annotate(resolvers.unique, Set)
-    sort = annotate(resolvers.sort, List[Optional[Long]])
+    unique = annotate(Column.unique, Set)
+    sort = annotate(Column.sort, List[Optional[Long]])
     sum = annotate(NumericColumn.sum, Optional[Long])
-    mode = annotate(resolvers.mode, Set)
+    mode = annotate(NumericColumn.mode, Set)
     min = annotate(NumericColumn.min, Optional[Long])
     max = annotate(NumericColumn.max, Optional[Long])
-    unique = annotate(resolvers.unique, Set)
-    fill_null = annotate(resolvers.fill_null, 'LongColumn', value=Long)
+    unique = annotate(Column.unique, Set)
+    fill_null = annotate(Column.fill_null, 'LongColumn', value=Long)
     add = annotate(NumericColumn.add, 'LongColumn', value=Long)
     subtract = annotate(NumericColumn.subtract, 'LongColumn', value=Long)
     multiply = annotate(NumericColumn.multiply, 'LongColumn', value=Long)
@@ -270,24 +273,24 @@ class LongColumn(Column, NumericColumn):
     power = annotate(
         NumericColumn.power, 'LongColumn', base=Optional[Long], exponent=Optional[Long]
     )
-    minimum = annotate(resolvers.minimum, 'LongColumn', value=Long)
-    maximum = annotate(resolvers.maximum, 'LongColumn', value=Long)
-    absolute = annotate(resolvers.absolute, 'LongColumn')
+    minimum = annotate(Column.minimum, 'LongColumn', value=Long)
+    maximum = annotate(Column.maximum, 'LongColumn', value=Long)
+    absolute = annotate(NumericColumn.absolute, 'LongColumn')
 
 
 @strawberry.type(description="column of floats")
 class FloatColumn(Column, NumericColumn):
-    __init__ = resolvers.__init__  # type: ignore
-    count = FloatQuery.resolver(resolvers.count)
-    values = annotate(resolvers.values, List[Optional[float]])
+    __init__ = Column.__init__  # type: ignore
+    count = FloatQuery.resolver(Column.count)
+    values = annotate(Column.values, List[Optional[float]])
     Set = Set.subclass(float, "FloatSet", "unique floats")
-    unique = annotate(resolvers.unique, Set)
-    sort = annotate(resolvers.sort, List[Optional[float]])
+    unique = annotate(Column.unique, Set)
+    sort = annotate(Column.sort, List[Optional[float]])
     sum = annotate(NumericColumn.sum, Optional[float])
-    mode = annotate(resolvers.mode, Set)
+    mode = annotate(NumericColumn.mode, Set)
     min = annotate(NumericColumn.min, Optional[float])
     max = annotate(NumericColumn.max, Optional[float])
-    fill_null = annotate(resolvers.fill_null, 'FloatColumn', value=float)
+    fill_null = annotate(Column.fill_null, 'FloatColumn', value=float)
     add = annotate(NumericColumn.add, 'FloatColumn', value=float)
     subtract = annotate(NumericColumn.subtract, 'FloatColumn', value=float)
     multiply = annotate(NumericColumn.multiply, 'FloatColumn', value=float)
@@ -295,51 +298,51 @@ class FloatColumn(Column, NumericColumn):
     power = annotate(
         NumericColumn.power, 'FloatColumn', base=Optional[float], exponent=Optional[float]
     )
-    minimum = annotate(resolvers.minimum, 'FloatColumn', value=float)
-    maximum = annotate(resolvers.maximum, 'FloatColumn', value=float)
-    absolute = annotate(resolvers.absolute, 'FloatColumn')
+    minimum = annotate(Column.minimum, 'FloatColumn', value=float)
+    maximum = annotate(Column.maximum, 'FloatColumn', value=float)
+    absolute = annotate(NumericColumn.absolute, 'FloatColumn')
 
 
 @strawberry.type(description="column of decimals")
 class DecimalColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
-    count = DecimalQuery.resolver(resolvers.count)
-    values = annotate(resolvers.values, List[Optional[Decimal]])
+    __init__ = Column.__init__  # type: ignore
+    count = DecimalQuery.resolver(Column.count)
+    values = annotate(Column.values, List[Optional[Decimal]])
     Set = Set.subclass(Decimal, "DecimalSet", "unique decimals")
-    unique = annotate(resolvers.unique, Set)
-    min = annotate(resolvers.min, Optional[Decimal])
-    max = annotate(resolvers.max, Optional[Decimal])
-    minimum = annotate(resolvers.minimum, 'DecimalColumn', value=Decimal)
-    maximum = annotate(resolvers.maximum, 'DecimalColumn', value=Decimal)
+    unique = annotate(Column.unique, Set)
+    min = annotate(Column.min, Optional[Decimal])
+    max = annotate(Column.max, Optional[Decimal])
+    minimum = annotate(Column.minimum, 'DecimalColumn', value=Decimal)
+    maximum = annotate(Column.maximum, 'DecimalColumn', value=Decimal)
 
 
 @strawberry.type(description="column of dates")
 class DateColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
-    count = DateQuery.resolver(resolvers.count)
-    values = annotate(resolvers.values, List[Optional[date]])
+    __init__ = Column.__init__  # type: ignore
+    count = DateQuery.resolver(Column.count)
+    values = annotate(Column.values, List[Optional[date]])
     Set = Set.subclass(date, "DateSet", "unique dates")
-    unique = annotate(resolvers.unique, Set)
-    min = annotate(resolvers.min, Optional[date])
-    max = annotate(resolvers.max, Optional[date])
-    unique = annotate(resolvers.unique, Set)
-    fill_null = annotate(resolvers.fill_null, 'DateColumn', value=date)
-    minimum = annotate(resolvers.minimum, 'DateColumn', value=date)
-    maximum = annotate(resolvers.maximum, 'DateColumn', value=date)
+    unique = annotate(Column.unique, Set)
+    min = annotate(Column.min, Optional[date])
+    max = annotate(Column.max, Optional[date])
+    unique = annotate(Column.unique, Set)
+    fill_null = annotate(Column.fill_null, 'DateColumn', value=date)
+    minimum = annotate(Column.minimum, 'DateColumn', value=date)
+    maximum = annotate(Column.maximum, 'DateColumn', value=date)
 
 
 @strawberry.type(description="column of datetimes")
 class DateTimeColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
-    count = DateTimeQuery.resolver(resolvers.count)
-    values = annotate(resolvers.values, List[Optional[datetime]])
+    __init__ = Column.__init__  # type: ignore
+    count = DateTimeQuery.resolver(Column.count)
+    values = annotate(Column.values, List[Optional[datetime]])
     Set = Set.subclass(datetime, "DatetimeSet", "unique datetimes")
-    unique = annotate(resolvers.unique, Set)
-    min = annotate(resolvers.min, Optional[datetime])
-    max = annotate(resolvers.max, Optional[datetime])
-    fill_null = annotate(resolvers.fill_null, 'DateTimeColumn', value=datetime)
-    minimum = annotate(resolvers.minimum, 'DateTimeColumn', value=datetime)
-    maximum = annotate(resolvers.maximum, 'DateTimeColumn', value=datetime)
+    unique = annotate(Column.unique, Set)
+    min = annotate(Column.min, Optional[datetime])
+    max = annotate(Column.max, Optional[datetime])
+    fill_null = annotate(Column.fill_null, 'DateTimeColumn', value=datetime)
+    minimum = annotate(Column.minimum, 'DateTimeColumn', value=datetime)
+    maximum = annotate(Column.maximum, 'DateTimeColumn', value=datetime)
 
     @doc_field
     def subtract(self, value: datetime) -> 'DurationColumn':
@@ -349,38 +352,38 @@ class DateTimeColumn(Column):
 
 @strawberry.type(description="column of times")
 class TimeColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
-    count = TimeQuery.resolver(resolvers.count)
-    values = annotate(resolvers.values, List[Optional[time]])
+    __init__ = Column.__init__  # type: ignore
+    count = TimeQuery.resolver(Column.count)
+    values = annotate(Column.values, List[Optional[time]])
     Set = Set.subclass(time, "TimeSet", "unique times")
-    unique = annotate(resolvers.unique, Set)
-    min = annotate(resolvers.min, Optional[time])
-    max = annotate(resolvers.max, Optional[time])
-    fill_null = annotate(resolvers.fill_null, 'TimeColumn', value=time)
-    minimum = annotate(resolvers.minimum, 'TimeColumn', value=time)
-    maximum = annotate(resolvers.maximum, 'TimeColumn', value=time)
+    unique = annotate(Column.unique, Set)
+    min = annotate(Column.min, Optional[time])
+    max = annotate(Column.max, Optional[time])
+    fill_null = annotate(Column.fill_null, 'TimeColumn', value=time)
+    minimum = annotate(Column.minimum, 'TimeColumn', value=time)
+    maximum = annotate(Column.maximum, 'TimeColumn', value=time)
 
 
 @strawberry.type(description="column of durations")
 class DurationColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
-    count = DurationQuery.resolver(resolvers.count)
-    values = annotate(resolvers.values, List[Optional[timedelta]])
-    minimum = annotate(resolvers.minimum, 'DurationColumn', value=timedelta)
-    maximum = annotate(resolvers.maximum, 'DurationColumn', value=timedelta)
-    absolute = annotate(resolvers.absolute, 'DurationColumn')
+    __init__ = Column.__init__  # type: ignore
+    count = DurationQuery.resolver(Column.count)
+    values = annotate(Column.values, List[Optional[timedelta]])
+    minimum = annotate(Column.minimum, 'DurationColumn', value=timedelta)
+    maximum = annotate(Column.maximum, 'DurationColumn', value=timedelta)
+    absolute = annotate(NumericColumn.absolute, 'DurationColumn')
 
 
 @strawberry.type(description="column of binaries")
 class BinaryColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
-    count = BinaryQuery.resolver(resolvers.count)
+    __init__ = Column.__init__  # type: ignore
+    count = BinaryQuery.resolver(Column.count)
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
-    values = annotate(resolvers.values, List[Optional[bytes]])
+    values = annotate(Column.values, List[Optional[bytes]])
     Set = Set.subclass(bytes, "BinarySet", "unique binaries")
-    unique = annotate(resolvers.unique, Set)
-    fill_null = annotate(resolvers.fill_null, 'BinaryColumn', value=bytes)
+    unique = annotate(Column.unique, Set)
+    fill_null = annotate(Column.fill_null, 'BinaryColumn', value=bytes)
 
     @doc_field
     def binary_length(self) -> 'IntColumn':
@@ -390,19 +393,19 @@ class BinaryColumn(Column):
 
 @strawberry.type(description="column of strings")
 class StringColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
-    count = StringFilter.resolver(resolvers.count)
+    __init__ = Column.__init__  # type: ignore
+    count = StringFilter.resolver(Column.count)
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
-    values = annotate(resolvers.values, List[Optional[str]])
+    values = annotate(Column.values, List[Optional[str]])
     Set = Set.subclass(str, "StringSet", "unique strings")
-    unique = annotate(resolvers.unique, Set)
-    sort = annotate(resolvers.sort, List[Optional[str]])
-    min = annotate(resolvers.min, Optional[str])
-    max = annotate(resolvers.max, Optional[str])
-    fill_null = annotate(resolvers.fill_null, 'StringColumn', value=str)
-    minimum = annotate(resolvers.minimum, 'StringColumn', value=str)
-    maximum = annotate(resolvers.maximum, 'StringColumn', value=str)
+    unique = annotate(Column.unique, Set)
+    sort = annotate(Column.sort, List[Optional[str]])
+    min = annotate(Column.min, Optional[str])
+    max = annotate(Column.max, Optional[str])
+    fill_null = annotate(Column.fill_null, 'StringColumn', value=str)
+    minimum = annotate(Column.minimum, 'StringColumn', value=str)
+    maximum = annotate(Column.maximum, 'StringColumn', value=str)
 
     @doc_field
     def utf8_length(self) -> 'IntColumn':
@@ -452,7 +455,7 @@ class StringColumn(Column):
 
 @strawberry.type(description="column of lists")
 class ListColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
+    __init__ = Column.__init__  # type: ignore
     aggregates = (
         'count',
         'unique',
@@ -482,10 +485,7 @@ class ListColumn(Column):
     @doc_field
     def values(self) -> List[Optional[Column]]:
         """list of columns"""
-        return list(map(self.fromlist, self.array))  # type: ignore
-
-    def map(self, func: Callable) -> Column:
-        return self.cast(pa.chunked_array(C.map(func, self.array)))  # type: ignore
+        return list(map(self.fromscalar, self.array))  # type: ignore
 
     @doc_field
     def count(self) -> IntColumn:
@@ -560,7 +560,7 @@ class ListColumn(Column):
 
 @strawberry.type(description="column of structs")
 class StructColumn(Column):
-    __init__ = resolvers.__init__  # type: ignore
+    __init__ = Column.__init__  # type: ignore
 
     @doc_field
     def names(self) -> List[str]:
@@ -570,7 +570,7 @@ class StructColumn(Column):
     @doc_field
     def column(self, name: str) -> Column:
         """Return struct field as a column."""
-        return ListColumn.map(self, operator.methodcaller('field', name))
+        return self.map(operator.methodcaller('field', name))
 
 
 Column.type_map = {  # type: ignore
