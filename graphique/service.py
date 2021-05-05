@@ -200,7 +200,7 @@ class Table(AbstractTable):
         query="simple queries by column",
         on="extended filters on columns organized by type",
         invert="optionally exclude matching rows",
-        reduce="binary operator to combine filters; within a column all predicates must match",
+        reduce="binary operator to combine filters; within a filter all predicates must match",
     )
     def filter(
         self,
@@ -213,11 +213,11 @@ class Table(AbstractTable):
         """Return table with rows which match all (by default) queries.
         List columns apply their respective filters to their own scalar values."""
         table = self.select(info)
-        filters = query.asdict() if query else {}
+        filters = list((query.asdict() if query else {}).items())
         for value in map(Filters.asdict, itertools.chain(*(on.asdict() if on else {}).values())):
-            filters.setdefault(value.pop('name'), {}).update(value)
+            filters.append((value.pop('name'), value))
         masks = []
-        for name, value in filters.items():
+        for name, value in filters:
             name = to_snake_case(name)
             apply = value.get('apply', {})
             apply.update({key: to_snake_case(apply[key]) for key in apply})
@@ -253,6 +253,8 @@ class Table(AbstractTable):
         At least one list column must be referenced, and all list columns must have the same lengths."""
         table = self.select(info)
         lists = {name for name in table.column_names if isinstance(table[name].type, pa.ListType)}
+        if not lists:
+            raise ValueError(f"no list columns referenced: {table.column_names}")
         columns = {name: table[name] for name in lists}
         # use simplest list column to determine the lengths
         shape = C.combine_chunks(min(columns.values(), key=lambda col: col.type.value_type.id))
