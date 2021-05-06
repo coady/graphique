@@ -4,14 +4,14 @@ Core utilities that add pandas-esque features to arrow arrays and tables.
 Arrow forbids subclassing, so the classes are for logical grouping.
 Their methods are called as functions.
 """
-import abc
 import bisect
 import contextlib
 import functools
 import json
 import operator
 from concurrent import futures
-from typing import Callable, Iterable, Iterator, Sequence
+from datetime import time
+from typing import Callable, Iterator, Sequence
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -31,18 +31,6 @@ class Compare:
 
     def __gt__(self, other):
         return self.value > other.as_py()
-
-
-class Scalar(metaclass=abc.ABCMeta):
-    """Abstract base class to distinguish scalar values from other iterables."""
-
-    @classmethod
-    def __subclasshook__(cls, other):
-        return not issubclass(other, Iterable) or NotImplemented
-
-
-Scalar.register(str)
-Scalar.register(bytes)
 
 
 def rpartial(func, *values):
@@ -257,12 +245,9 @@ class Column(pa.ChunkedArray):
     def call(self, func: Callable, *args) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
         self = Column.decode(self, check=True)
-        if args:
-            if isinstance(args[0], Scalar) and 'substring' not in func.__name__:
-                args = (pa.scalar(args[0], Column.scalar_type(self)),)
-            elif isinstance(args[0], pa.ChunkedArray):
-                return func(self, *args)
-        if not isinstance(self.type, pa.DictionaryType):
+        scalar = Column.scalar_type(self)
+        args = tuple(pa.scalar(arg, scalar) if isinstance(arg, time) else arg for arg in args)
+        if self.type == scalar or any(isinstance(arg, pa.ChunkedArray) for arg in args):
             return func(self, *args)
         chunks = list(Column.map(rpartial(Chunk.call, func, *args), self))
         try:

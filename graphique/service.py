@@ -253,8 +253,7 @@ class Table(AbstractTable):
         At least one list column must be referenced, and all list columns must have the same lengths."""
         table = self.select(info)
         lists = {name for name in table.column_names if isinstance(table[name].type, pa.ListType)}
-        if not lists:
-            raise ValueError(f"no list columns referenced: {table.column_names}")
+        assert lists, f"no list columns referenced: {table.column_names}"
         columns = {name: table[name] for name in lists}
         # use simplest list column to determine the lengths
         shape = C.combine_chunks(min(columns.values(), key=lambda col: col.type.value_type.id))
