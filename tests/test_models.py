@@ -69,13 +69,14 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ min max sort first: sort(length: 1) }} }}')
         assert execute(f'{{ {name} {{ any all }} }}')
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
+    assert execute('{ decimal { min max sort } }')
 
     for name in ('date32', 'date64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['1970-01-01', None]}}
         assert execute(f'{{ {name} {{ count(equal: "1970-01-01") }} }}') == {name: {'count': 1}}
         data = execute(f'{{ {name} {{ fillNull(value: "1970-01-02") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['1970-01-01', '1970-01-02']}}}
-        assert execute(f'{{ {name} {{ min max }} }}')
+        assert execute(f'{{ {name} {{ min max sort }} }}')
 
     data = execute('{ timestamp { values } }')
     assert data == {'timestamp': {'values': ['1970-01-01T00:00:00', None]}}
@@ -84,14 +85,14 @@ def test_columns(executor):
         'timestamp': {'fillNull': {'values': ['1970-01-01T00:00:00', '1970-01-02T00:00:00']}}
     }
     assert execute('{ timestamp { count(equal: "1970-01-01") } }') == {'timestamp': {'count': 1}}
-    assert execute('{ timestamp { min max } }')
+    assert execute('{ timestamp { min max sort } }')
 
     for name in ('time32', 'time64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['00:00:00', None]}}
         assert execute(f'{{ {name} {{ count(equal: "00:00:00") }} }}') == {name: {'count': 1}}
         data = execute(f'{{ {name} {{ fillNull(value: "00:00:01") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['00:00:00', '00:00:01']}}}
-        assert execute(f'{{ {name} {{ min max }} }}')
+        assert execute(f'{{ {name} {{ min max sort }} }}')
 
     for name in ('binary', 'string'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
@@ -99,6 +100,7 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ any all }} }}') == {name: {'any': False, 'all': False}}
         data = execute(f'{{ {name} {{ fillNull(value: "") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['', '']}}}
+        assert execute(f'{{ {name} {{ sort }} }}')
 
     data = execute('{ binary { binaryLength { values } } }')
     assert data == {'binary': {'binaryLength': {'values': [0, None]}}}
@@ -117,7 +119,7 @@ def test_columns(executor):
     assert execute('{ string { type } }') == {
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
     }
-    assert execute('{ string { min max sort first: sort(length: 1) } }')
+    assert execute('{ string { min max sort(length: 1) } }')
 
 
 def test_numeric(executor):
