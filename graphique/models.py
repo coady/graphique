@@ -469,7 +469,7 @@ class ListColumn(Column):
         'max',
         'sum',
         'mean',
-        'mode',
+        # TODO(ARROW-12606): 'mode', 'quantile',
         'stddev',
         'variance',
         'any',
@@ -536,10 +536,15 @@ class ListColumn(Column):
         """mean of each list scalar"""
         return self.map(ListChunk.mean)  # type: ignore
 
-    @doc_field
-    def mode(self, length: int = 1) -> 'ListColumn':
+    # TODO(ARROW-12606): @doc_field
+    def mode(self, length: int = 1) -> 'ListColumn':  # pragma: no cover
         """mode of each list scalar"""
         return self.map(functools.partial(ListChunk.mode, length=length))  # type: ignore
+
+    # TODO(ARROW-12606): @doc_field
+    def quantile(self, q: List[float] = [0.5]) -> 'ListColumn':  # pragma: no cover
+        """quantile of each list scalar"""
+        return self.map(functools.partial(ListChunk.quantile, q=q))  # type: ignore
 
     @doc_field
     def stddev(self) -> FloatColumn:

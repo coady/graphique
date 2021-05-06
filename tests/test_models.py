@@ -198,12 +198,13 @@ def test_list(executor):
     assert data == {'row': {'list': None}}
     data = executor('{ columns { list { unique { flatten { ... on IntColumn { values } } } } } }')
     assert data == {'columns': {'list': {'unique': {'flatten': {'values': [0, 1, 2]}}}}}
-    data = executor('{ columns { list { mode { flatten { ... on IntColumn { values } } } } } }')
-    assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0]}}}}}
-    data = executor(
-        '''{ columns { list { mode(length: 2) { flatten { ... on IntColumn { values } } } } } }'''
-    )
-    assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0, 1]}}}}}
+    # TODO(ARROW-12606)
+    # data = executor('{ columns { list { mode { flatten { ... on IntColumn { values } } } } } }')
+    # assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0]}}}}}
+    # data = executor(
+    #     '''{ columns { list { mode(length: 2) { flatten { ... on IntColumn { values } } } } } }'''
+    # )
+    # assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0, 1]}}}}}
     data = executor(
         '''{ columns { list { values { ... on IntColumn { quantile(q: [0.25, 0.75]) } } } } }'''
     )
@@ -236,11 +237,12 @@ def test_list(executor):
     )
     column = data['filter']['columns']['list']
     assert column == {'values': [{'values': [0, 2]}, {'values': []}]}
-    data = executor(
-        '''{ aggregate(mode: {name: "list"}) {
-        column(name: "list") { ... on IntColumn { values } } } }'''
-    )
-    assert data['aggregate']['column']['values'] == [0, None]
+    # TODO(ARROW-12606)
+    # data = executor(
+    #     '''{ aggregate(mode: {name: "list"}) {
+    #     column(name: "list") { ... on IntColumn { values } } } }'''
+    # )
+    # assert data['aggregate']['column']['values'] == [0, None]
     data = executor(
         '''{ aggregate(stddev: {name: "list"}, variance: {name: "list", alias: "var"}) {
         column(name: "list") { ... on FloatColumn { values } }
