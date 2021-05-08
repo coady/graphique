@@ -115,11 +115,12 @@ class ListChunk(pa.ListArray):
 
     def unique(self) -> pa.ListArray:
         """unique values within each scalar"""
-        empty = Column.decode(pa.array([], self.type.value_type))  # flatten dicts for concatenation
-        values = [
-            empty if scalar.values is None else Column.decode(scalar.values.unique())
-            for scalar in self
-        ]
+        return ListChunk.map_list(self, lambda arr: Column.decode(arr.unique()))
+
+    def map_list(self, func: Callable) -> pa.ListArray:
+        """Return list array by mapping function across scalars, with null handling."""
+        empty = pa.array([], self.type.value_type)
+        values = [func(scalar.values or empty) for scalar in self]
         return split(pa.array(map(len, values)), pa.concat_arrays(values))
 
     def filter_list(self, mask: pa.BooleanArray) -> pa.ListArray:
@@ -134,25 +135,15 @@ class ListChunk(pa.ListArray):
 
     def min(self) -> pa.Array:
         """min value of each list scalar"""
-
-        def func(array):
-            return array[pc.partition_nth_indices(array, pivot=1)[0].as_py()]
-
-        try:
+        with contextlib.suppress(NotImplementedError):
             return ListChunk.reduce(self, lambda arr: pc.min_max(arr)['min'])
-        except NotImplementedError:
-            return ListChunk.reduce(self, func)
+        return ListChunk.reduce(self, lambda arr: Chunk.partition_nth(arr, 1)[0])
 
     def max(self) -> pa.Array:
         """max value of each list scalar"""
-
-        def func(array):
-            return array[pc.partition_nth_indices(array, pivot=len(array) - 1)[-1].as_py()]
-
-        try:
+        with contextlib.suppress(NotImplementedError):
             return ListChunk.reduce(self, lambda arr: pc.min_max(arr)['max'])
-        except NotImplementedError:
-            return ListChunk.reduce(self, func)
+        return ListChunk.reduce(self, lambda arr: Chunk.partition_nth(arr, -1)[-1])
 
     def sum(self) -> pa.Array:
         """sum each list scalar"""
@@ -164,16 +155,12 @@ class ListChunk(pa.ListArray):
 
     def mode(self, length: int = 0) -> pa.Array:
         """modes of each list scalar"""
-        empty = pa.array([], self.type.value_type)
-        values = [pc.mode(scalar.values or empty, length or 1).field(0) for scalar in self]
-        array = split(pa.array(map(len, values)), pa.concat_arrays(values))
+        array = ListChunk.map_list(self, lambda arr: pc.mode(arr, length or 1).field(0))
         return array if length else ListChunk.first(array)
 
     def quantile(self, q: Sequence[float] = ()) -> pa.Array:
         """quantiles of each list scalar"""
-        empty = pa.array([], self.type.value_type)
-        values = [pc.quantile(scalar.values or empty, q=q or 0.5) for scalar in self]
-        array = split(pa.array(map(len, values)), pa.concat_arrays(values))
+        array = ListChunk.map_list(self, functools.partial(pc.quantile, q=q or 0.5))
         return array if q else ListChunk.first(array)
 
     def stddev(self) -> pa.FloatingPointArray:
@@ -230,7 +217,7 @@ class Column(pa.ChunkedArray):
         if isinstance(self.type, pa.ListType):
             self = pa.chunked_array(chunk.values for chunk in self.iterchunks())
         for op, value in query.items():
-            if op in ('equal', 'not_equal', 'is_in'):
+            if hasattr(Column, op):
                 masks.append(getattr(Column, op)(self, value))
             elif '_is_' not in op:
                 masks.append(Column.call(self, getattr(pc, op), value))

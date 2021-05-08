@@ -27,7 +27,7 @@ indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
 case_map = {to_camel_case(name): name for name in types}
 for name in indexed:
-    assert not table[name].null_count  # binary search requires non-null columns
+    assert not table[name].null_count, f"binary search requires non-null columns: {name}"
 
 
 def to_snake_case(name):
