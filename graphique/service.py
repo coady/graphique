@@ -15,7 +15,7 @@ from starlette.middleware import Middleware
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
-from .inputs import Diff, Filters, Function, Input, Query as QueryInput, resolve_annotations
+from .inputs import Diff, Filters, Function, Input, Projections, Query as QueryInput
 from .middleware import AbstractTable, GraphQL, TimingMiddleware, references
 from .models import Column, ListColumn, annotate, doc_field, selections
 from .scalars import Long, Operator, type_map
@@ -34,28 +34,10 @@ def to_snake_case(name):
     return case_map.get(name, name)
 
 
-def resolver(name):
-    cls = Column.type_map[types[name]]
-
-    def method(self, **fields) -> cls:
-        column = self.table[name]
-        for func in fields:
-            column = T.projected[func](column, self.table[to_snake_case(fields[func])])
-        return cls(column)
-
-    method.__name__ = name
-    annotations = [key for key in T.projected if cls.__annotations__.get(key) == cls.__name__]
-    if annotations:
-        method.__doc__ = "Return column with optional projection."
-    return resolve_annotations(method, dict.fromkeys(annotations, Optional[str]))
-
-
 @strawberry.type(description="fields for each column")
 class Columns:
-    locals().update({name: resolver(name) for name in types})
-
-    def __init__(self, table):
-        self.table = table
+    __annotations__ = {name: Column.type_map[types[name]] for name in types}  # type: ignore
+    locals().update(dict.fromkeys(__annotations__))
 
 
 @strawberry.type(description="scalar fields")
@@ -65,13 +47,13 @@ class Row:
         for name in types
         if types[name] is not dict
     }
-    locals().update(dict.fromkeys(types))
+    locals().update(dict.fromkeys(__annotations__))
 
 
 @strawberry.input(description="predicates for each column")
 class Queries(Input):
     __annotations__ = QueryInput.annotations(types)
-    locals().update(dict.fromkeys(types, undefined))
+    locals().update(dict.fromkeys(__annotations__, undefined))
 
 
 @strawberry.type(description="a column-oriented table")
@@ -84,16 +66,22 @@ class Table(AbstractTable):
         return self.table.select(names & set(self.table.column_names))
 
     @doc_field
-    def columns(self) -> Columns:
+    def columns(self, info) -> Columns:
         """fields for each column"""
-        return Columns(self.table)
+        table = self.select(info)
+        columns = {name: Columns.__annotations__[name](table[name]) for name in table.column_names}
+        return Columns(**columns)  # type: ignore
 
     @doc_field
-    def column(self, name: str) -> Column:
-        """Return column of any type by name.
+    @no_type_check
+    def column(self, name: str, apply: Optional[Projections] = ()) -> Column:
+        """Return column of any type by name, with optional projection.
         This is typically only needed for aliased columns added by `apply` or `aggregate`.
         If the column is in the schema, `columns` can be used instead."""
-        return Column.cast(self.table[to_snake_case(name)])
+        column = self.table[to_snake_case(name)]
+        for func, name in dict(apply).items():
+            column = T.projected[func](column, self.table[to_snake_case(name)])
+        return Column.cast(column)
 
     @doc_field
     def row(self, info, index: Long = 0) -> Row:  # type: ignore

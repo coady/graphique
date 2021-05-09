@@ -189,66 +189,77 @@ Query.type_map = {  # type: ignore
 
 
 @strawberry.input
-class Named:
+class Filter(Query):
     name: str
+    is_in = undefined
 
 
 @strawberry.input(description="predicates for booleans")
-class BooleanFilter(BooleanQuery, Named):
+class BooleanFilter(Filter):
+    __annotations__.update(BooleanQuery.__annotations__)  # type: ignore
     apply: Optional[NominalFilter] = undefined
 
 
 @strawberry.input(description="predicates for ints")
-class IntFilter(IntQuery, Named):
+class IntFilter(Filter):
+    __annotations__.update(IntQuery.__annotations__)  # type: ignore
     absolute: bool = False
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for longs")
-class LongFilter(LongQuery, Named):
+class LongFilter(Filter):
+    __annotations__.update(LongQuery.__annotations__)  # type: ignore
     absolute: bool = False
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for floats")
-class FloatFilter(FloatQuery, Named):
+class FloatFilter(Filter):
+    __annotations__.update(FloatQuery.__annotations__)  # type: ignore
     absolute: bool = False
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for decimals")
-class DecimalFilter(DecimalQuery, Named):
+class DecimalFilter(Filter):
+    __annotations__.update(DecimalQuery.__annotations__)  # type: ignore
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for dates")
-class DateFilter(DateQuery, Named):
+class DateFilter(Filter):
+    __annotations__.update(DateQuery.__annotations__)  # type: ignore
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for datetimes")
-class DateTimeFilter(DateTimeQuery, Named):
+class DateTimeFilter(Filter):
+    __annotations__.update(DateTimeQuery.__annotations__)  # type: ignore
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for times")
-class TimeFilter(TimeQuery, Named):
+class TimeFilter(Filter):
+    __annotations__.update(TimeQuery.__annotations__)  # type: ignore
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for durations")
-class DurationFilter(DurationQuery, Named):
+class DurationFilter(Filter):
+    __annotations__.update(DurationQuery.__annotations__)  # type: ignore
     apply: Optional[OrdinalFilter] = undefined
 
 
 @strawberry.input(description="predicates for binaries")
-class BinaryFilter(BinaryQuery, Named):
+class BinaryFilter(Filter):
+    __annotations__.update(BinaryQuery.__annotations__)  # type: ignore
     apply: Optional[NominalFilter] = undefined
 
 
 @strawberry.input(description="predicates for strings")
-class StringFilter(StringQuery, Named):
-    __annotations__ = dict(StringQuery.__annotations__)  # used for `count` interface
+class StringFilter(Filter):
+    __annotations__.update(StringQuery.__annotations__)  # type: ignore
     match_substring: Optional[str] = undefined
     match_substring_regex: Optional[str] = undefined
     utf8_lower: bool = False
@@ -376,3 +387,14 @@ class Diff(Input):
     less_equal: Optional[DiffScalar] = undefined
     greater: Optional[DiffScalar] = undefined
     greater_equal: Optional[DiffScalar] = undefined
+
+
+@strawberry.input(description="functions projected across two columns")
+class Projections(Input):
+    minimum: Optional[str] = undefined
+    maximum: Optional[str] = undefined
+    add: Optional[str] = undefined
+    subtract: Optional[str] = undefined
+    multiply: Optional[str] = undefined
+    divide: Optional[str] = undefined
+    power: Optional[str] = undefined

@@ -42,10 +42,11 @@ def test_ints(client):
     zipcodes = data['columns']['zipcode']
     assert zipcodes['sort'][0] == zipcodes['desc'][-1] == 501
     assert zipcodes['sort'][-1] == zipcodes['desc'][0] == 99950
-    data = client.execute('{ columns { zipcode(add: "zipcode") { min } } }')
-    assert data == {'columns': {'zipcode': {'min': 1002}}}
-    data = client.execute('{ columns { zipcode(subtract: "zipcode") { unique { values } } } }')
-    assert data == {'columns': {'zipcode': {'unique': {'values': [0]}}}}
+    data = client.execute(
+        '''{ column(name: "zipcode", apply: {subtract: "zipcode"})
+        { ... on IntColumn { unique { values } } } }'''
+    )
+    assert data == {'column': {'unique': {'values': [0]}}}
 
 
 def test_floats(client):
@@ -65,14 +66,11 @@ def test_floats(client):
     data = client.execute('{ columns { latitude { quantile(q: [0.5]) } } }')
     (quantile,) = data['columns']['latitude']['quantile']
     assert quantile == pytest.approx(39.12054)
-    data = client.execute('{ columns { latitude(multiply: "longitude") { min } } }')
-    assert data['columns']['latitude']['min'] == pytest.approx(-11389.408478)
-    data = client.execute('{ columns { latitude(power: "longitude") { min } } }')
-    assert 0 < data['columns']['latitude']['min'] < 1
-    data = client.execute('{ columns { latitude(minimum: "longitude") { min } } }')
-    assert data['columns']['latitude']['min'] == pytest.approx(-174.213333)
-    data = client.execute('{ columns { latitude(maximum: "longitude") { max } } }')
-    assert data['columns']['latitude']['max'] == pytest.approx(71.290556)
+    data = client.execute(
+        '''{ column(name: "latitude", apply: {minimum: "longitude"})
+        { ... on FloatColumn { min } } }'''
+    )
+    assert data['column']['min'] == pytest.approx(-174.213333)
     data = client.execute('{ columns { longitude { absolute { min } } } }')
     assert data['columns']['longitude']['absolute']['min'] > 65
 
