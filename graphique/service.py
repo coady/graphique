@@ -15,8 +15,8 @@ from starlette.middleware import Middleware
 from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
-from .inputs import Diff, Filters, Function, Input, Projections, Query as QueryInput
-from .middleware import AbstractTable, GraphQL, TimingMiddleware, references
+from .inputs import Diff, Filters, Function, Input, Query as QueryInput
+from .middleware import AbstractTable, GraphQL, TimingMiddleware
 from .models import Column, ListColumn, annotate, doc_field, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -25,13 +25,8 @@ path = Path(PARQUET_PATH).resolve()
 table = pq.ParquetDataset(path, memory_map=MMAP, read_dictionary=DICTIONARIES).read(COLUMNS)
 indexed = T.index(table) if INDEX is None else list(INDEX)
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
-case_map = {to_camel_case(name): name for name in types}
 for name in indexed:
     assert not table[name].null_count, f"binary search requires non-null columns: {name}"
-
-
-def to_snake_case(name):
-    return case_map.get(name, name)
 
 
 @strawberry.type(description="fields for each column")
@@ -60,11 +55,6 @@ class Queries(Input):
 class Table(AbstractTable):
     __init__ = AbstractTable.__init__
 
-    def select(self, info) -> pa.Table:
-        """Return table with only the columns necessary to proceed."""
-        names = set(map(to_snake_case, references(*info.field_nodes)))
-        return self.table.select(names & set(self.table.column_names))
-
     @doc_field
     def columns(self, info) -> Columns:
         """fields for each column"""
@@ -73,21 +63,10 @@ class Table(AbstractTable):
         return Columns(**columns)  # type: ignore
 
     @doc_field
-    @no_type_check
-    def column(self, name: str, apply: Optional[Projections] = ()) -> Column:
-        """Return column of any type by name, with optional projection.
-        This is typically only needed for aliased columns added by `apply` or `aggregate`.
-        If the column is in the schema, `columns` can be used instead."""
-        column = self.table[to_snake_case(name)]
-        for func, name in dict(apply).items():
-            column = T.projected[func](column, self.table[to_snake_case(name)])
-        return Column.cast(column)
-
-    @doc_field
     def row(self, info, index: Long = 0) -> Row:  # type: ignore
         """Return scalar values at index."""
         row = {}
-        for name in map(to_snake_case, selections(*info.field_nodes)):
+        for name in map(self.to_snake_case, selections(*info.field_nodes)):
             scalar = self.table[name][index]
             row[name] = (
                 Column.fromscalar(scalar) if isinstance(scalar, pa.ListScalar) else scalar.as_py()
@@ -117,7 +96,7 @@ class Table(AbstractTable):
         Other columns can be accessed by the `column` field as a `ListColumn`.
         Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
-        table, counts = T.group(table, *map(to_snake_case, by), reverse=reverse, length=length)
+        table, counts = T.group(table, *map(self.to_snake_case, by), reverse=reverse, length=length)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field(
@@ -132,11 +111,13 @@ class Table(AbstractTable):
         Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
         funcs = {diff.pop('name'): diff for diff in map(dict, diffs)}
-        names = list(map(to_snake_case, itertools.takewhile(lambda name: name not in funcs, by)))
+        names = itertools.takewhile(lambda name: name not in funcs, by)
+        names = list(map(self.to_snake_case, names))
         predicates = {}
         for name in by[len(names) :]:  # noqa: E203
             ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
-            predicates[to_snake_case(name)] = (getattr(pc, func),) + tuple((value or {}).values())
+            predicate = (getattr(pc, func),) + tuple((value or {}).values())
+            predicates[self.to_snake_case(name)] = predicate
         table, counts = T.partition(table, *names, **predicates)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
@@ -156,7 +137,7 @@ class Table(AbstractTable):
         """Return table of first or last occurrences grouped by columns, with stable ordering.
         Faster than `group` when only scalars are needed."""
         table = self.select(info)
-        names = map(to_snake_case, by)
+        names = map(self.to_snake_case, by)
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
             return Table(T.unique_indices(table, *names)[0][:length])
         table, counts = T.unique(table, *names, reverse=reverse, length=length, count=bool(count))
@@ -171,19 +152,19 @@ class Table(AbstractTable):
     ) -> 'Table':
         """Return table slice sorted by specified columns."""
         table = self.select(info)
-        return Table(T.sort(table, *map(to_snake_case, by), reverse=reverse, length=length))
+        return Table(T.sort(table, *map(self.to_snake_case, by), reverse=reverse, length=length))
 
     @doc_field
     def min(self, info, by: List[str]) -> 'Table':
         """Return table with minimum values per column."""
         table = self.select(info)
-        return Table(T.matched(table, C.min, *map(to_snake_case, by)))
+        return Table(T.matched(table, C.min, *map(self.to_snake_case, by)))
 
     @doc_field
     def max(self, info, by: List[str]) -> 'Table':
         """Return table with maximum values per column."""
         table = self.select(info)
-        return Table(T.matched(table, C.max, *map(to_snake_case, by)))
+        return Table(T.matched(table, C.max, *map(self.to_snake_case, by)))
 
     @doc_field(
         query="simple queries by column",
@@ -208,9 +189,9 @@ class Table(AbstractTable):
             filters.append((value.pop('name'), value))
         masks = []
         for name, value in filters:
-            name = to_snake_case(name)
+            name = self.to_snake_case(name)
             apply = value.get('apply', {})
-            apply.update({key: to_snake_case(apply[key]) for key in apply})
+            apply.update({key: self.to_snake_case(apply[key]) for key in apply})
             mask = T.mask(table, name, **value)
             if isinstance(table[name].type, pa.ListType):
                 column = pa.chunked_array(C.map(ListChunk.filter_list, table[name], mask))
@@ -233,8 +214,9 @@ class Table(AbstractTable):
         in filter `predicates`, and in the `by` arguments of grouping and sorting."""
         table = self.select(info)
         for value in map(dict, itertools.chain(*functions.values())):
-            name = to_snake_case(value.pop('name'))
-            value.update({key: to_snake_case(value[key]) for key in value if key in T.projected})
+            name = self.to_snake_case(value.pop('name'))
+            for key in set(value) & set(T.projected):
+                value[key] = self.to_snake_case(value[key])
             table = T.apply(table, name, **value)
         return Table(table)
 
@@ -266,7 +248,7 @@ class Table(AbstractTable):
         for key in fields:
             func = getattr(ListChunk, key)
             for field in fields[key]:
-                name = to_snake_case(field.name)
+                name = self.to_snake_case(field.name)
                 columns[field.alias or name] = pa.chunked_array(C.map(func, table[name]))
         return Table(pa.Table.from_pydict(columns))
 
