@@ -191,26 +191,25 @@ class NumericColumn:
 
     def add(self, value):
         """Return values added to scalar."""
-        return type(self)(pc.add(pa.scalar(value, self.array.type), self.array))
+        return type(self)(pc.add(value, self.array))
 
     def subtract(self, value):
         """Return values subtracted *from* scalar."""
-        return type(self)(pc.subtract(pa.scalar(value, self.array.type), self.array))
+        return type(self)(pc.subtract(value, self.array))
 
     def multiply(self, value):
         """Return values multiplied by scalar."""
-        return type(self)(pc.multiply(pa.scalar(value, self.array.type), self.array))
+        return type(self)(pc.multiply(value, self.array))
 
     def divide(self, value):
         """Return values divided *into* scalar."""
-        return type(self)(pc.divide(pa.scalar(value, self.array.type), self.array))
+        return type(self)(pc.divide(value, self.array))
 
     def power(self, base=None, exponent=None):
         """Return values raised to power."""
         assert [base, exponent].count(None) == 1, "exactly one of `base` or `exponent` required"
-        if base is None:
-            return type(self)(pc.power(self.array, pa.scalar(exponent, self.array.type)))
-        return type(self)(pc.power(pa.scalar(base, self.array.type), self.array))
+        args = (self.array, exponent) if base is None else (base, self.array)
+        return type(self)(pc.power(*args))
 
     def absolute(self):
         """absolute values"""
@@ -349,7 +348,7 @@ class DateTimeColumn(Column):
     @doc_field
     def subtract(self, value: datetime) -> 'DurationColumn':
         """Return values subtracted *from* scalar."""
-        return DurationColumn(pc.subtract(pa.scalar(value, self.array.type), self.array))  # type: ignore
+        return DurationColumn(pc.subtract(value, self.array))
 
 
 @strawberry.type(description="column of times")

@@ -4,7 +4,7 @@ GraphQL service and top-level resolvers.
 import functools
 import itertools
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, no_type_check
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -136,13 +136,14 @@ class Table(AbstractTable):
         diffs="optional inequality predicates; scalars are compared to the adjacent difference",
         count="optionally include counts in an aliased column",
     )
+    @no_type_check
     def partition(self, info, by: List[str], diffs: List[Diff] = [], count: str = '') -> 'Table':
         """Return table partitioned by discrete differences of the values.
         Differs from `group` by relying on adjacency, and is typically faster.
         Other columns can be accessed by the `column` field as a `ListColumn`.
         Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
-        funcs = {diff.pop('name'): diff for diff in map(Diff.asdict, diffs)}
+        funcs = {diff.pop('name'): diff for diff in map(dict, diffs)}
         names = list(map(to_snake_case, itertools.takewhile(lambda name: name not in funcs, by)))
         predicates = {}
         for name in by[len(names) :]:  # noqa: E203
@@ -202,19 +203,20 @@ class Table(AbstractTable):
         invert="optionally exclude matching rows",
         reduce="binary operator to combine filters; within a filter all predicates must match",
     )
+    @no_type_check
     def filter(
         self,
         info,
-        query: Optional[Queries] = None,
-        on: Optional[Filters] = None,
+        query: Optional[Queries] = (),
+        on: Optional[Filters] = (),
         invert: bool = False,
-        reduce: Operator = 'and',  # type: ignore
+        reduce: Operator = 'and',
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
         List columns apply their respective filters to their own scalar values."""
         table = self.select(info)
-        filters = list((query.asdict() if query else {}).items())
-        for value in map(Filters.asdict, itertools.chain(*(on.asdict() if on else {}).values())):
+        filters = list(dict(query).items())
+        for value in map(dict, itertools.chain(*dict(on).values())):
             filters.append((value.pop('name'), value))
         masks = []
         for name, value in filters:
@@ -231,17 +233,18 @@ class Table(AbstractTable):
             return Table(table)
         mask = functools.reduce(getattr(pc, reduce.value), masks)
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
-            return Table(range(C.count(mask, not invert)))  # type: ignore
+            return Table(range(C.count(mask, not invert)))
         return Table(table.filter(pc.invert(mask) if invert else mask))
 
     @Function.resolver
+    @no_type_check
     def apply(self, info, **functions) -> 'Table':
         """Return view of table with functions applied across columns.
         If no alias is provided, the column is replaced and should be of the same type.
         If an alias is provided, a column is added and may be referenced in the `column` field,
         in filter `predicates`, and in the `by` arguments of grouping and sorting."""
         table = self.select(info)
-        for value in map(Function.asdict, itertools.chain(*functions.values())):
+        for value in map(dict, itertools.chain(*functions.values())):
             name = to_snake_case(value.pop('name'))
             value.update({key: to_snake_case(value[key]) for key in value if key in T.projected})
             table = T.apply(table, name, **value)
@@ -299,7 +302,7 @@ class IndexedTable(Table):
         for name in indexed:
             if name not in queries:
                 break
-            query = queries.pop(name).asdict()
+            query = dict(queries.pop(name))
             if 'equal' in query:
                 table = T.is_in(table, name, query.pop('equal'))
             if query and queries:

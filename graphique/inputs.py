@@ -20,13 +20,12 @@ ops = ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal')
 class Input:
     """Common utilities for input types."""
 
-    def asdict(self) -> dict:
-        """Return only present values as a mapping."""
-        return {
-            name: (value.asdict() if hasattr(value, 'asdict') else value)
-            for name, value in self.__dict__.items()
-            if value is not undefined
-        }
+    def keys(self):
+        return [name for name in self.__dict__ if getattr(self, name) is not undefined]
+
+    def __getitem__(self, name):
+        value = getattr(self, name)
+        return dict(value) if hasattr(value, 'keys') else value
 
     @classmethod
     def subclasses(cls) -> Iterator:
