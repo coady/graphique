@@ -73,6 +73,12 @@ def test_floats(client):
     assert data['column']['min'] == pytest.approx(-174.213333)
     data = client.execute('{ columns { longitude { absolute { min } } } }')
     assert data['columns']['longitude']['absolute']['min'] > 65
+    data = client.execute(
+        f'''{{ apply(int: {{name: "latitude", digitize: {list(range(90))}}})
+        {{ columns {{ latitude {{ min max unique {{ length }} }} }} }} }}'''
+    )
+    latitudes = data['apply']['columns']['latitude']
+    assert latitudes == {'min': 18.0, 'max': 72.0, 'unique': {'length': 52}}
 
 
 def test_strings(client):

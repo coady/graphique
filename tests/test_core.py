@@ -1,4 +1,5 @@
 from datetime import date, time, timedelta
+import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 from graphique.core import Chunk, ListChunk, Column as C, Table as T
@@ -211,3 +212,9 @@ def test_duration():
 def test_time():
     array = pa.array([time(), None], pa.time32('s'))
     assert C.equal(array, time()).to_pylist() == [True, None]
+
+
+def test_numeric():
+    array = pa.chunked_array([range(5)])
+    assert C.digitize(array, range(0, 5, 2)).to_pylist() == [1, 1, 2, 2, 3]
+    assert C.digitize(array, np.arange(0, 5, 2), right=True).to_pylist() == [0, 1, 1, 2, 2]

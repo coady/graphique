@@ -11,7 +11,7 @@ import json
 import operator
 from concurrent import futures
 from datetime import time
-from typing import Callable, Iterator, Sequence
+from typing import Callable, Iterable, Iterator, Sequence
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -101,17 +101,18 @@ class Chunk(pa.Array):
 class ListChunk(pa.ListArray):
     count = pa.ListArray.value_lengths
 
+    def getitem(self, index: int) -> pa.Array:
+        mask = np.asarray(self.value_lengths().fill_null(0)) == 0
+        offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
+        return self.values.take(pa.array(offsets + index, mask=mask))
+
     def first(self) -> pa.Array:
         """first value of each list scalar"""
-        mask = np.asarray(self.value_lengths().fill_null(0)) == 0
-        indices = np.asarray(self.offsets[:-1])
-        return self.values.take(pa.array(indices, mask=mask))
+        return ListChunk.getitem(self, 0)
 
     def last(self) -> pa.Array:
         """last value of each list scalar"""
-        mask = np.asarray(self.value_lengths().fill_null(0)) == 0
-        indices = np.asarray(self.offsets[1:]) - 1
-        return self.values.take(pa.array(indices, mask=mask))
+        return ListChunk.getitem(self, -1)
 
     def unique(self) -> pa.ListArray:
         """unique values within each scalar"""
@@ -337,6 +338,13 @@ class Column(pa.ChunkedArray):
         chunks = Column.map(np.absolute, self)
         return pa.chunked_array(map(Chunk.to_null, chunks) if self.null_count else chunks)
 
+    def digitize(self, bins: Iterable, right=False) -> pa.ChunkedArray:
+        """Return the indices of the bins to which each value in input array belongs."""
+        if not isinstance(bins, (pa.Array, np.ndarray)):
+            bins = pa.array(bins, self.type)
+        func = functools.partial(np.digitize, bins=bins, right=bool(right))
+        return pa.chunked_array(Column.map(func, self))
+
     def count(self, value) -> int:
         """Return number of occurrences of value."""
         if value is None:
@@ -390,6 +398,7 @@ class Table(pa.Table):
         'utf8_lower': pc.utf8_lower,
         'utf8_upper': pc.utf8_upper,
         'absolute': Column.absolute,
+        'digitize': Column.digitize,
     }
 
     def index(self) -> list:

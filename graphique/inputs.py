@@ -102,8 +102,7 @@ class Query(Input):
     @classproperty
     def resolver(cls) -> Callable:
         """a decorator which transforms the query's fields into arguments"""
-        annotations = dict(cls.__annotations__)
-        annotations.pop('apply', None)
+        annotations = cls.__annotations__
         defaults = {name: getattr(cls, name) for name in annotations}
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
@@ -318,16 +317,19 @@ class NumericFunction(OrdinalFunction):
 @strawberry.input(description="functions for ints")
 class IntFunction(NumericFunction):
     fill_null: Optional[int] = undefined
+    digitize: Optional[List[int]] = undefined
 
 
 @strawberry.input(description="functions for longs")
 class LongFunction(NumericFunction):
     fill_null: Optional[Long] = undefined
+    digitize: Optional[List[Long]] = undefined
 
 
 @strawberry.input(description="functions for floats")
 class FloatFunction(NumericFunction):
     fill_null: Optional[float] = undefined
+    digitize: Optional[List[float]] = undefined
 
 
 @strawberry.input(description="functions for decimals")
