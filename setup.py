@@ -14,7 +14,7 @@ ext_module = Extension(
 
 setup(
     name='graphique',
-    version='0.3',
+    version='0.4',
     description='GraphQL service for arrow tables and parquet data sets.',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',

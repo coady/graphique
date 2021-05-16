@@ -85,7 +85,7 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables the 
 ```
 
 ## Changes
-dev
+0.4
 
 * Pyarrow >=4 required
 * `sort` updated to use new native routines
