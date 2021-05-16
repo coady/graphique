@@ -12,9 +12,11 @@ from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from strawberry.types.types import undefined
 from typing_extensions import Annotated
+from .core import Column
 from .scalars import Long, classproperty
 
 ops = ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal')
+link = 'https://arrow.apache.org/docs/python/api/compute.html'
 
 
 class Input:
@@ -65,13 +67,17 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     )
 
 
-@strawberry.input(description="nominal predicates projected across two columns")
+@strawberry.input(
+    description=f"nominal [predicates]({link}#comparisons) projected across two columns"
+)
 class NominalFilter(Input):
     equal: Optional[str] = undefined
     not_equal: Optional[str] = undefined
 
 
-@strawberry.input(description="ordinal predicates projected across two columns")
+@strawberry.input(
+    description=f"ordinal [predicates]({link}#comparisons) projected across two columns"
+)
 class OrdinalFilter(NominalFilter):
     less: Optional[str] = undefined
     less_equal: Optional[str] = undefined
@@ -256,7 +262,7 @@ class BinaryFilter(Filter):
     apply: Optional[NominalFilter] = undefined
 
 
-@strawberry.input(description="predicates for strings")
+@strawberry.input(description=f"[predicates]({link}#string-predicates) for strings")
 class StringFilter(Filter):
     __annotations__.update(StringQuery.__annotations__)  # type: ignore
     match_substring: Optional[str] = undefined
@@ -292,6 +298,10 @@ class Filters(Input):
     string: List[StringFilter] = ()  # type: ignore
 
 
+def doc_func(func, default=undefined):
+    return strawberry.field(default=default, description=func.__doc__)
+
+
 @strawberry.input
 class Function(Input):
     name: str
@@ -300,8 +310,8 @@ class Function(Input):
 
 @strawberry.input
 class OrdinalFunction(Function):
-    minimum: Optional[str] = undefined
-    maximum: Optional[str] = undefined
+    minimum: Optional[str] = doc_func(Column.minimum)
+    maximum: Optional[str] = doc_func(Column.maximum)
 
 
 @strawberry.input
@@ -311,25 +321,25 @@ class NumericFunction(OrdinalFunction):
     multiply: Optional[str] = undefined
     divide: Optional[str] = undefined
     power: Optional[str] = undefined
-    absolute: bool = False
+    absolute: bool = doc_func(Column.absolute, default=False)
 
 
-@strawberry.input(description="functions for ints")
+@strawberry.input(description=f"[functions]({link}#arithmetic-functions) for ints")
 class IntFunction(NumericFunction):
     fill_null: Optional[int] = undefined
-    digitize: Optional[List[int]] = undefined
+    digitize: Optional[List[int]] = doc_func(Column.digitize)
 
 
-@strawberry.input(description="functions for longs")
+@strawberry.input(description=f"[functions]({link}#arithmetic-functions) for longs")
 class LongFunction(NumericFunction):
     fill_null: Optional[Long] = undefined
-    digitize: Optional[List[Long]] = undefined
+    digitize: Optional[List[Long]] = doc_func(Column.digitize)
 
 
-@strawberry.input(description="functions for floats")
+@strawberry.input(description=f"[functions]({link}#arithmetic-functions) for floats")
 class FloatFunction(NumericFunction):
     fill_null: Optional[float] = undefined
-    digitize: Optional[List[float]] = undefined
+    digitize: Optional[List[float]] = doc_func(Column.digitize)
 
 
 @strawberry.input(description="functions for decimals")
@@ -367,7 +377,7 @@ class StringFunction(OrdinalFunction):
     utf8_upper: bool = False
 
 
-@strawberry.input(description="names and optional aliases for aggregation")
+@strawberry.input(description=f"names and optional aliases for [aggregation]({link}#aggregations)")
 class Field(Input):
     name: str
     alias: str = ''
@@ -391,10 +401,12 @@ class Diff(Input):
     greater_equal: Optional[DiffScalar] = undefined
 
 
-@strawberry.input(description="functions projected across two columns")
+@strawberry.input(
+    description=f"[functions]({link}#arithmetic-functions) projected across two columns"
+)
 class Projections(Input):
-    minimum: Optional[str] = undefined
-    maximum: Optional[str] = undefined
+    minimum: Optional[str] = doc_func(Column.minimum)
+    maximum: Optional[str] = doc_func(Column.maximum)
     add: Optional[str] = undefined
     subtract: Optional[str] = undefined
     multiply: Optional[str] = undefined

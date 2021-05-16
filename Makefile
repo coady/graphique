@@ -22,8 +22,8 @@ docs/schema.md: docs/schema.graphql
 		--prologue "Generated from a test fixture of zipcodes." \
 		$? > $@
 
-docs/schema.graphql: tests/fixtures/zipcodes.parquet
-	python3 -m graphique.schema $? > $@
+docs/schema.graphql: graphique/*.py
+	python3 -m graphique.schema tests/fixtures/zipcodes.parquet > $@
 
 dist:
 	python3 setup.py sdist bdist_wheel

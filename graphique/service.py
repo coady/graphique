@@ -80,6 +80,7 @@ class Table(AbstractTable):
         return type(self)(table.slice(offset, length))
 
     @doc_field(
+        by="column names",
         reverse="return groups in reversed stable order",
         length="maximum number of groups to return",
         count="optionally include counts in an aliased column",
@@ -100,6 +101,7 @@ class Table(AbstractTable):
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field(
+        by="column names",
         diffs="optional inequality predicates; scalars are compared to the adjacent difference",
         count="optionally include counts in an aliased column",
     )
@@ -122,6 +124,7 @@ class Table(AbstractTable):
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field(
+        by="column names",
         reverse="return last occurrences in reversed order",
         length="maximum number of rows to return",
         count="optionally include counts in an aliased column",
@@ -144,6 +147,7 @@ class Table(AbstractTable):
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field(
+        by="column names",
         reverse="descending stable order",
         length="maximum number of rows to return; may be significantly faster on a single column",
     )
@@ -154,13 +158,13 @@ class Table(AbstractTable):
         table = self.select(info)
         return Table(T.sort(table, *map(self.to_snake_case, by), reverse=reverse, length=length))
 
-    @doc_field
+    @doc_field(by="column names")
     def min(self, info, by: List[str]) -> 'Table':
         """Return table with minimum values per column."""
         table = self.select(info)
         return Table(T.matched(table, C.min, *map(self.to_snake_case, by)))
 
-    @doc_field
+    @doc_field(by="column names")
     def max(self, info, by: List[str]) -> 'Table':
         """Return table with maximum values per column."""
         table = self.select(info)
