@@ -63,7 +63,7 @@ class Table(AbstractTable):
         return Columns(**columns)  # type: ignore
 
     @doc_field
-    def row(self, info, index: Long = 0) -> Row:  # type: ignore
+    def row(self, info, index: Long = 0) -> Row:
         """Return scalar values at index."""
         row = {}
         for name in map(self.to_snake_case, selections(*info.field_nodes)):
@@ -74,7 +74,7 @@ class Table(AbstractTable):
         return Row(**row)  # type: ignore
 
     @doc_field
-    def slice(self, info, offset: Long = 0, length: Optional[Long] = None) -> 'Table':  # type: ignore
+    def slice(self, info, offset: Long = 0, length: Optional[Long] = None) -> 'Table':
         """Return table slice."""
         table = self.select(info)
         return type(self)(table.slice(offset, length))

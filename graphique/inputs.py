@@ -5,7 +5,7 @@ import functools
 import inspect
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, Iterator, List, Optional
+from typing import Callable, Iterator, List, Optional, no_type_check
 import strawberry
 from strawberry.arguments import get_arguments_from_annotations
 from strawberry.field import StrawberryField
@@ -38,13 +38,14 @@ class Input:
             yield from subclass.subclasses()
 
     @classproperty
+    @no_type_check
     def resolver(cls) -> Callable:
         """a decorator which transforms the subclass input types into arguments"""
         annotations = {}
         for subclass in cls.subclasses():
-            name = subclass.__name__.split(cls.__name__)[0].lower()  # type: ignore
+            name = subclass.__name__.split(cls.__name__)[0].lower()
             argument = strawberry.argument(description=subclass._type_definition.description)
-            annotations[name] = Annotated[List[subclass], argument]  # type: ignore
+            annotations[name] = Annotated[List[subclass], argument]
         defaults = dict.fromkeys(annotations, [])  # type: dict
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
@@ -178,7 +179,7 @@ class StringQuery(Query):
     is_in: Optional[List[str]] = undefined
 
 
-Query.type_map = {  # type: ignore
+Query.type_map = {
     bool: BooleanQuery,
     int: IntQuery,
     Long: LongQuery,

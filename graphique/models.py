@@ -44,12 +44,12 @@ class Column:
     @doc_field
     def type(self) -> str:
         """array type"""
-        return str(self.array.type)  # type: ignore
+        return str(self.array.type)
 
     @doc_field
     def length(self) -> Long:
         """number of rows"""
-        return len(self.array)  # type: ignore
+        return len(self.array)
 
     @classmethod
     def cast(cls, array: pa.ChunkedArray) -> 'Column':
@@ -57,7 +57,7 @@ class Column:
         return cls.type_map[type_map[C.scalar_type(array).id]](array)  # type: ignore
 
     def map(self, func: Callable) -> 'Column':
-        return self.cast(pa.chunked_array(C.map(func, self.array)))  # type: ignore
+        return self.cast(pa.chunked_array(C.map(func, self.array)))
 
     @classmethod
     def fromscalar(cls, scalar: pa.ListScalar) -> Optional['Column']:
@@ -76,7 +76,7 @@ class Column:
             return self.array.null_count
         if query == {'not_equal': None}:
             return len(self.array) - self.array.null_count
-        return C.count(C.mask(self.array, **query), True)  # type: ignore
+        return C.count(C.mask(self.array, **query), True)
 
     def values(self):
         """list of values"""
@@ -117,7 +117,7 @@ class Set:
     @doc_field
     def counts(self) -> List[Long]:
         """list of counts"""
-        return self.count.to_pylist()  # type: ignore
+        return self.count.to_pylist()
 
     @classmethod
     def subclass(base, cls, name, description):
@@ -391,7 +391,7 @@ class BinaryColumn(Column):
     @doc_field
     def binary_length(self) -> 'IntColumn':
         """length of bytes or strings"""
-        return IntColumn(pc.binary_length(self.array))  # type: ignore
+        return IntColumn(pc.binary_length(self.array))
 
 
 @strawberry.type(description="column of strings")
@@ -413,39 +413,39 @@ class StringColumn(Column):
     @doc_field
     def utf8_length(self) -> 'IntColumn':
         """length of bytes or strings"""
-        return IntColumn(pc.utf8_length(self.array))  # type: ignore
+        return IntColumn(pc.utf8_length(self.array))
 
     @doc_field
     def utf8_lower(self) -> 'StringColumn':
         """strings converted to lowercase"""
-        return StringColumn(pc.utf8_lower(self.array))  # type: ignore
+        return StringColumn(pc.utf8_lower(self.array))
 
     @doc_field
     def utf8_upper(self) -> 'StringColumn':
         """strings converted to uppercase"""
-        return StringColumn(pc.utf8_upper(self.array))  # type: ignore
+        return StringColumn(pc.utf8_upper(self.array))
 
     @doc_field
     def split(self, pattern: str = '', max_splits: int = -1, reverse: bool = False) -> 'ListColumn':
         """Return strings split on pattern, by default whitespace."""
         kwargs = {'max_splits': max_splits, 'reverse': reverse}
         if pattern:
-            return ListColumn(pc.split_pattern(self.array, pattern=pattern, **kwargs))  # type: ignore
-        return ListColumn(pc.utf8_split_whitespace(self.array, **kwargs))  # type: ignore
+            return ListColumn(pc.split_pattern(self.array, pattern=pattern, **kwargs))
+        return ListColumn(pc.utf8_split_whitespace(self.array, **kwargs))
 
     @doc_field
     def utf8_ltrim(self, characters: str = '') -> 'StringColumn':
         """Trim leading characters, by default whitespace."""
         if characters:
-            return StringColumn(pc.utf8_ltrim(self.array, characters=characters))  # type: ignore
-        return StringColumn(pc.utf8_ltrim_whitespace(self.array))  # type: ignore
+            return StringColumn(pc.utf8_ltrim(self.array, characters=characters))
+        return StringColumn(pc.utf8_ltrim_whitespace(self.array))
 
     @doc_field
     def utf8_rtrim(self, characters: str = '') -> 'StringColumn':
         """Trim trailing characters, by default whitespace."""
         if characters:
-            return StringColumn(pc.utf8_rtrim(self.array, characters=characters))  # type: ignore
-        return StringColumn(pc.utf8_rtrim_whitespace(self.array))  # type: ignore
+            return StringColumn(pc.utf8_rtrim(self.array, characters=characters))
+        return StringColumn(pc.utf8_rtrim_whitespace(self.array))
 
     @doc_field
     def replace_substring(
@@ -453,7 +453,7 @@ class StringColumn(Column):
     ) -> 'StringColumn':
         """Replace non-overlapping substrings that match pattern."""
         kwargs = dict(pattern=pattern, replacement=replacement, max_replacements=max_replacements)
-        return StringColumn(pc.replace_substring(self.array, **kwargs))  # type: ignore
+        return StringColumn(pc.replace_substring(self.array, **kwargs))
 
 
 @strawberry.type(description="column of lists")
@@ -482,13 +482,13 @@ class ListColumn(Column):
         for key in cls.aggregates:
             argument = strawberry.argument(description=getattr(cls, key).__doc__)
             annotations[key] = Annotated[List[Field], argument]
-        defaults = dict.fromkeys(cls.aggregates, [])  # type: ignore
+        defaults = dict.fromkeys(cls.aggregates, [])  # type: dict
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
     @doc_field
     def values(self) -> List[Optional[Column]]:
         """list of columns"""
-        return list(map(self.fromscalar, self.array))  # type: ignore
+        return list(map(self.fromscalar, self.array))
 
     @doc_field
     def count(self) -> IntColumn:
@@ -573,7 +573,7 @@ class StructColumn(Column):
     @doc_field
     def names(self) -> List[str]:
         """field names"""
-        return [field.name for field in self.array.type]  # type: ignore
+        return [field.name for field in self.array.type]
 
     @doc_field
     def column(self, name: str) -> Column:

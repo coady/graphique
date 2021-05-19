@@ -68,7 +68,7 @@ class AbstractTable:
     @doc_field
     def length(self) -> Long:
         """number of rows"""
-        return len(self.table)  # type: ignore
+        return len(self.table)
 
     @doc_field
     @no_type_check
