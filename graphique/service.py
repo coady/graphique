@@ -180,8 +180,8 @@ class Table(AbstractTable):
     def filter(
         self,
         info,
-        query: Optional[Queries] = (),
-        on: Optional[Filters] = (),
+        query: Queries = {},
+        on: Filters = {},
         invert: bool = False,
         reduce: Operator = 'and',
     ) -> 'Table':

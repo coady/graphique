@@ -15,7 +15,7 @@ from typing_extensions import Annotated
 from .core import Column
 from .scalars import Long, classproperty
 
-ops = ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal')
+comparisons = ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal')
 link = 'https://arrow.apache.org/docs/python/api/compute.html'
 
 
@@ -68,6 +68,13 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     )
 
 
+def default_field(default_factory: Callable) -> StrawberryField:
+    """Use dataclass `default_factory` for GraphQL `default_value`."""
+    field = strawberry.field(default_factory=default_factory)
+    field.default_value = default_factory()
+    return field
+
+
 @strawberry.input(
     description=f"nominal [predicates]({link}#comparisons) projected across two columns"
 )
@@ -90,7 +97,7 @@ class Query(Input):
     """base class for predicates"""
 
     type_map: dict
-    locals().update(dict.fromkeys(ops, undefined))
+    locals().update(dict.fromkeys(comparisons, undefined))
 
     @classmethod
     def annotations(cls, types: dict) -> dict:
@@ -109,7 +116,8 @@ class Query(Input):
     @classproperty
     def resolver(cls) -> Callable:
         """a decorator which transforms the query's fields into arguments"""
-        annotations = cls.__annotations__
+        annotations = dict(cls.__annotations__)
+        annotations.pop('apply', None)
         defaults = {name: getattr(cls, name) for name in annotations}
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
@@ -121,49 +129,49 @@ class BooleanQuery(Query):
 
 @strawberry.input(description="predicates for ints")
 class IntQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[int])
+    __annotations__ = dict.fromkeys(comparisons, Optional[int])
     is_in: Optional[List[int]] = undefined
 
 
 @strawberry.input(description="predicates for longs")
 class LongQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[Long])
+    __annotations__ = dict.fromkeys(comparisons, Optional[Long])
     is_in: Optional[List[Long]] = undefined
 
 
 @strawberry.input(description="predicates for floats")
 class FloatQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[float])
+    __annotations__ = dict.fromkeys(comparisons, Optional[float])
     is_in: Optional[List[float]] = undefined
 
 
 @strawberry.input(description="predicates for decimals")
 class DecimalQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[Decimal])
+    __annotations__ = dict.fromkeys(comparisons, Optional[Decimal])
     is_in: Optional[List[Decimal]] = undefined
 
 
 @strawberry.input(description="predicates for dates")
 class DateQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[date])
+    __annotations__ = dict.fromkeys(comparisons, Optional[date])
     is_in: Optional[List[date]] = undefined
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[datetime])
+    __annotations__ = dict.fromkeys(comparisons, Optional[datetime])
     is_in: Optional[List[datetime]] = undefined
 
 
 @strawberry.input(description="predicates for times")
 class TimeQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[time])
+    __annotations__ = dict.fromkeys(comparisons, Optional[time])
     is_in: Optional[List[time]] = undefined
 
 
 @strawberry.input(description="predicates for durations")
 class DurationQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[timedelta])
+    __annotations__ = dict.fromkeys(comparisons, Optional[timedelta])
     is_in: Optional[List[timedelta]] = undefined
 
 
@@ -175,7 +183,7 @@ class BinaryQuery(Query):
 
 @strawberry.input(description="predicates for strings")
 class StringQuery(Query):
-    __annotations__ = dict.fromkeys(ops, Optional[str])
+    __annotations__ = dict.fromkeys(comparisons, Optional[str])
     is_in: Optional[List[str]] = undefined
 
 
@@ -203,64 +211,64 @@ class Filter(Query):
 @strawberry.input(description="predicates for booleans")
 class BooleanFilter(Filter):
     __annotations__.update(BooleanQuery.__annotations__)  # type: ignore
-    apply: Optional[NominalFilter] = undefined
+    apply: NominalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for ints")
 class IntFilter(Filter):
     __annotations__.update(IntQuery.__annotations__)  # type: ignore
     absolute: bool = False
-    apply: Optional[OrdinalFilter] = undefined
+    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for longs")
 class LongFilter(Filter):
     __annotations__.update(LongQuery.__annotations__)  # type: ignore
     absolute: bool = False
-    apply: Optional[OrdinalFilter] = undefined
+    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for floats")
 class FloatFilter(Filter):
     __annotations__.update(FloatQuery.__annotations__)  # type: ignore
     absolute: bool = False
-    apply: Optional[OrdinalFilter] = undefined
+    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for decimals")
 class DecimalFilter(Filter):
     __annotations__.update(DecimalQuery.__annotations__)  # type: ignore
-    apply: Optional[OrdinalFilter] = undefined
+    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for dates")
 class DateFilter(Filter):
     __annotations__.update(DateQuery.__annotations__)  # type: ignore
-    apply: Optional[OrdinalFilter] = undefined
+    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeFilter(Filter):
     __annotations__.update(DateTimeQuery.__annotations__)  # type: ignore
-    apply: Optional[OrdinalFilter] = undefined
+    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for times")
 class TimeFilter(Filter):
     __annotations__.update(TimeQuery.__annotations__)  # type: ignore
-    apply: Optional[OrdinalFilter] = undefined
+    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for durations")
 class DurationFilter(Filter):
     __annotations__.update(DurationQuery.__annotations__)  # type: ignore
-    apply: Optional[OrdinalFilter] = undefined
+    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for binaries")
 class BinaryFilter(Filter):
     __annotations__.update(BinaryQuery.__annotations__)  # type: ignore
-    apply: Optional[NominalFilter] = undefined
+    apply: NominalFilter = default_field(dict)
 
 
 @strawberry.input(description=f"[predicates]({link}#string-predicates) for strings")
@@ -281,22 +289,22 @@ class StringFilter(Filter):
     utf8_is_space: bool = False
     utf8_is_title: bool = False
     utf8_is_upper: bool = False
-    apply: Optional[OrdinalFilter] = undefined
+    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for columns of any type as a tagged union")
 class Filters(Input):
-    boolean: List[BooleanFilter] = ()  # type: ignore
-    int: List[IntFilter] = ()  # type: ignore
-    long: List[LongFilter] = ()  # type: ignore
-    float: List[FloatFilter] = ()  # type: ignore
-    decimal: List[DecimalFilter] = ()  # type: ignore
-    date: List[DateFilter] = ()  # type: ignore
-    datetime: List[DateTimeFilter] = ()  # type: ignore
-    time: List[TimeFilter] = ()  # type: ignore
-    duration: List[DurationFilter] = ()  # type: ignore
-    binary: List[BinaryFilter] = ()  # type: ignore
-    string: List[StringFilter] = ()  # type: ignore
+    boolean: List[BooleanFilter] = default_field(list)
+    int: List[IntFilter] = default_field(list)
+    long: List[LongFilter] = default_field(list)
+    float: List[FloatFilter] = default_field(list)
+    decimal: List[DecimalFilter] = default_field(list)
+    date: List[DateFilter] = default_field(list)
+    datetime: List[DateTimeFilter] = default_field(list)
+    time: List[TimeFilter] = default_field(list)
+    duration: List[DurationFilter] = default_field(list)
+    binary: List[BinaryFilter] = default_field(list)
+    string: List[StringFilter] = default_field(list)
 
 
 def doc_func(func, default=undefined):

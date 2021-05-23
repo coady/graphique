@@ -3,7 +3,6 @@ Service related utilities which don't require knowledge of the schema.
 """
 import itertools
 from datetime import datetime
-from typing import Optional, no_type_check
 import pyarrow as pa
 import strawberry.asgi
 from starlette.middleware import base
@@ -71,8 +70,7 @@ class AbstractTable:
         return len(self.table)
 
     @doc_field
-    @no_type_check
-    def column(self, name: str, apply: Optional[Projections] = ()) -> Column:
+    def column(self, name: str, apply: Projections = {}) -> Column:  # type: ignore
         """Return column of any type by name, with optional projection.
         This is typically only needed for aliased columns added by `apply` or `aggregate`.
         If the column is in the schema, `columns` can be used instead."""
