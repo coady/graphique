@@ -21,7 +21,7 @@ Any column can be accessed by name using `Table.column` and [inline fragments](h
 ```
 
 ### Input
-Input types don't have the equivalent of inline fragments, but GraphQL is converging on the [tagged union pattern](https://github.com/graphql/graphql-spec/blob/main/rfcs/InputUnion.md#-problem-sketch) and [tagged types](https://github.com/graphql/graphql-spec/blob/main/rfcs/InputUnion.md#-7-tagged-type). Effectively the type of the field because the name of the field.
+Input types don't have the equivalent of inline fragments, but GraphQL is converging on the [tagged union pattern](https://github.com/graphql/graphql-spec/blob/main/rfcs/InputUnion.md#-problem-sketch) and [tagged types](https://github.com/graphql/graphql-spec/blob/main/rfcs/InputUnion.md#-7-tagged-type). Effectively the type of the field becomes the name of the field.
 
 `IndexedTable.search` allows simple queries on indexed columns.
 ```

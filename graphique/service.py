@@ -23,7 +23,8 @@ from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
 path = Path(PARQUET_PATH).resolve()
 table = pq.ParquetDataset(path, memory_map=MMAP, read_dictionary=DICTIONARIES).read(COLUMNS)
-indexed = T.index(table) if INDEX is None else list(INDEX)
+indexed = list(map(to_camel_case, T.index(table) if INDEX is None else INDEX))
+table = pa.Table.from_pydict({to_camel_case(name): table[name] for name in table.column_names})
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
 for name in indexed:
     assert not table[name].null_count, f"binary search requires non-null columns: {name}"
@@ -66,7 +67,7 @@ class Table(AbstractTable):
     def row(self, info, index: Long = 0) -> Row:
         """Return scalar values at index."""
         row = {}
-        for name in map(self.to_snake_case, selections(*info.field_nodes)):
+        for name in selections(*info.field_nodes):
             scalar = self.table[name][index]
             row[name] = (
                 Column.fromscalar(scalar) if isinstance(scalar, pa.ListScalar) else scalar.as_py()
@@ -97,7 +98,7 @@ class Table(AbstractTable):
         Other columns can be accessed by the `column` field as a `ListColumn`.
         Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
-        table, counts = T.group(table, *map(self.to_snake_case, by), reverse=reverse, length=length)
+        table, counts = T.group(table, *by, reverse=reverse, length=length)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field(
@@ -113,13 +114,11 @@ class Table(AbstractTable):
         Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
         funcs = {diff.pop('name'): diff for diff in map(dict, diffs)}
-        names = itertools.takewhile(lambda name: name not in funcs, by)
-        names = list(map(self.to_snake_case, names))
+        names = list(itertools.takewhile(lambda name: name not in funcs, by))
         predicates = {}
         for name in by[len(names) :]:  # noqa: E203
             ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
-            predicate = (getattr(pc, func),) + tuple((value or {}).values())
-            predicates[self.to_snake_case(name)] = predicate
+            predicates[name] = (getattr(pc, func),) + tuple((value or {}).values())
         table, counts = T.partition(table, *names, **predicates)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
@@ -140,10 +139,9 @@ class Table(AbstractTable):
         """Return table of first or last occurrences grouped by columns, with stable ordering.
         Faster than `group` when only scalars are needed."""
         table = self.select(info)
-        names = map(self.to_snake_case, by)
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
-            return Table(T.unique_indices(table, *names)[0][:length])
-        table, counts = T.unique(table, *names, reverse=reverse, length=length, count=bool(count))
+            return Table(T.unique_indices(table, *by)[0][:length])
+        table, counts = T.unique(table, *by, reverse=reverse, length=length, count=bool(count))
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 
     @doc_field(
@@ -156,19 +154,19 @@ class Table(AbstractTable):
     ) -> 'Table':
         """Return table slice sorted by specified columns."""
         table = self.select(info)
-        return Table(T.sort(table, *map(self.to_snake_case, by), reverse=reverse, length=length))
+        return Table(T.sort(table, *by, reverse=reverse, length=length))
 
     @doc_field(by="column names")
     def min(self, info, by: List[str]) -> 'Table':
         """Return table with minimum values per column."""
         table = self.select(info)
-        return Table(T.matched(table, C.min, *map(self.to_snake_case, by)))
+        return Table(T.matched(table, C.min, *by))
 
     @doc_field(by="column names")
     def max(self, info, by: List[str]) -> 'Table':
         """Return table with maximum values per column."""
         table = self.select(info)
-        return Table(T.matched(table, C.max, *map(self.to_snake_case, by)))
+        return Table(T.matched(table, C.max, *by))
 
     @doc_field(
         query="simple queries by column",
@@ -193,9 +191,6 @@ class Table(AbstractTable):
             filters.append((value.pop('name'), value))
         masks = []
         for name, value in filters:
-            name = self.to_snake_case(name)
-            apply = value.get('apply', {})
-            apply.update({key: self.to_snake_case(apply[key]) for key in apply})
             mask = T.mask(table, name, **value)
             if isinstance(table[name].type, pa.ListType):
                 column = pa.chunked_array(C.map(ListChunk.filter_list, table[name], mask))
@@ -218,10 +213,7 @@ class Table(AbstractTable):
         in filter `predicates`, and in the `by` arguments of grouping and sorting."""
         table = self.select(info)
         for value in map(dict, itertools.chain(*functions.values())):
-            name = self.to_snake_case(value.pop('name'))
-            for key in set(value) & set(T.projected):
-                value[key] = self.to_snake_case(value[key])
-            table = T.apply(table, name, **value)
+            table = T.apply(table, value.pop('name'), **value)
         return Table(table)
 
     @doc_field
@@ -252,7 +244,7 @@ class Table(AbstractTable):
         for key in fields:
             func = getattr(ListChunk, key)
             for field in fields[key]:
-                name = self.to_snake_case(field.name)
+                name = field.name
                 columns[field.alias or name] = pa.chunked_array(C.map(func, table[name]))
         return Table(pa.Table.from_pydict(columns))
 
@@ -265,7 +257,7 @@ class IndexedTable(Table):
     @doc_field
     def index(self) -> List[str]:
         """the composite index"""
-        return list(map(to_camel_case, indexed))
+        return indexed
 
     @QueryInput.resolve_types({name: types[name] for name in indexed})
     def search(self, info, **queries) -> Table:
