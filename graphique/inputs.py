@@ -7,10 +7,9 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Callable, Iterator, List, Optional, no_type_check
 import strawberry
-from strawberry.arguments import get_arguments_from_annotations
+from strawberry.arguments import UNSET, get_arguments_from_annotations
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
-from strawberry.types.types import undefined
 from typing_extensions import Annotated
 from .core import Column
 from .scalars import Long, classproperty
@@ -23,7 +22,7 @@ class Input:
     """Common utilities for input types."""
 
     def keys(self):
-        return [name for name in self.__dict__ if getattr(self, name) is not undefined]
+        return [name for name in self.__dict__ if getattr(self, name) is not UNSET]
 
     def __getitem__(self, name):
         value = getattr(self, name)
@@ -46,7 +45,7 @@ class Input:
             name = subclass.__name__.split(cls.__name__)[0].lower()
             argument = strawberry.argument(description=subclass._type_definition.description)
             annotations[name] = Annotated[List[subclass], argument]
-        defaults = dict.fromkeys(annotations, [])  # type: dict
+        defaults: dict = dict.fromkeys(annotations, [])
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
@@ -54,7 +53,7 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     """Return field by transforming annotations into function arguments."""
     kind = inspect.Parameter.KEYWORD_ONLY
     parameters = {
-        name: inspect.Parameter(name, kind, default=defaults.get(name, undefined))
+        name: inspect.Parameter(name, kind, default=defaults.get(name, UNSET))
         for name in annotations
     }
     resolver = StrawberryResolver(func)
@@ -68,9 +67,9 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     )
 
 
-def default_field(default_factory: Callable) -> StrawberryField:
+def default_field(default_factory: Callable = lambda: UNSET, **kwargs) -> StrawberryField:
     """Use dataclass `default_factory` for GraphQL `default_value`."""
-    field = strawberry.field(default_factory=default_factory)
+    field = strawberry.field(default_factory=default_factory, **kwargs)
     field.default_value = default_factory()
     return field
 
@@ -79,25 +78,25 @@ def default_field(default_factory: Callable) -> StrawberryField:
     description=f"nominal [predicates]({link}#comparisons) projected across two columns"
 )
 class NominalFilter(Input):
-    equal: Optional[str] = undefined
-    not_equal: Optional[str] = undefined
+    equal: Optional[str] = UNSET
+    not_equal: Optional[str] = UNSET
 
 
 @strawberry.input(
     description=f"ordinal [predicates]({link}#comparisons) projected across two columns"
 )
 class OrdinalFilter(NominalFilter):
-    less: Optional[str] = undefined
-    less_equal: Optional[str] = undefined
-    greater: Optional[str] = undefined
-    greater_equal: Optional[str] = undefined
+    less: Optional[str] = UNSET
+    less_equal: Optional[str] = UNSET
+    greater: Optional[str] = UNSET
+    greater_equal: Optional[str] = UNSET
 
 
 class Query(Input):
     """base class for predicates"""
 
     type_map: dict
-    locals().update(dict.fromkeys(comparisons, undefined))
+    locals().update(dict.fromkeys(comparisons, UNSET))
 
     @classmethod
     def annotations(cls, types: dict) -> dict:
@@ -130,61 +129,61 @@ class BooleanQuery(Query):
 @strawberry.input(description="predicates for ints")
 class IntQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[int])
-    is_in: Optional[List[int]] = undefined
+    is_in: Optional[List[int]] = UNSET
 
 
 @strawberry.input(description="predicates for longs")
 class LongQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[Long])
-    is_in: Optional[List[Long]] = undefined
+    is_in: Optional[List[Long]] = UNSET
 
 
 @strawberry.input(description="predicates for floats")
 class FloatQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[float])
-    is_in: Optional[List[float]] = undefined
+    is_in: Optional[List[float]] = UNSET
 
 
 @strawberry.input(description="predicates for decimals")
 class DecimalQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[Decimal])
-    is_in: Optional[List[Decimal]] = undefined
+    is_in: Optional[List[Decimal]] = UNSET
 
 
 @strawberry.input(description="predicates for dates")
 class DateQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[date])
-    is_in: Optional[List[date]] = undefined
+    is_in: Optional[List[date]] = UNSET
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[datetime])
-    is_in: Optional[List[datetime]] = undefined
+    is_in: Optional[List[datetime]] = UNSET
 
 
 @strawberry.input(description="predicates for times")
 class TimeQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[time])
-    is_in: Optional[List[time]] = undefined
+    is_in: Optional[List[time]] = UNSET
 
 
 @strawberry.input(description="predicates for durations")
 class DurationQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[timedelta])
-    is_in: Optional[List[timedelta]] = undefined
+    is_in: Optional[List[timedelta]] = UNSET
 
 
 @strawberry.input(description="predicates for binaries")
 class BinaryQuery(Query):
     __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bytes])
-    is_in: Optional[List[bytes]] = undefined
+    is_in: Optional[List[bytes]] = UNSET
 
 
 @strawberry.input(description="predicates for strings")
 class StringQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[str])
-    is_in: Optional[List[str]] = undefined
+    is_in: Optional[List[str]] = UNSET
 
 
 Query.type_map = {
@@ -205,7 +204,7 @@ Query.type_map = {
 @strawberry.input
 class Filter(Query):
     name: str
-    is_in = undefined
+    is_in = UNSET
 
 
 @strawberry.input(description="predicates for booleans")
@@ -274,8 +273,8 @@ class BinaryFilter(Filter):
 @strawberry.input(description=f"[predicates]({link}#string-predicates) for strings")
 class StringFilter(Filter):
     __annotations__.update(StringQuery.__annotations__)  # type: ignore
-    match_substring: Optional[str] = undefined
-    match_substring_regex: Optional[str] = undefined
+    match_substring: Optional[str] = UNSET
+    match_substring_regex: Optional[str] = UNSET
     utf8_lower: bool = False
     utf8_upper: bool = False
     string_is_ascii: bool = False
@@ -307,10 +306,6 @@ class Filters(Input):
     string: List[StringFilter] = default_field(list)
 
 
-def doc_func(func, default=undefined):
-    return strawberry.field(default=default, description=func.__doc__)
-
-
 @strawberry.input
 class Function(Input):
     name: str
@@ -319,36 +314,36 @@ class Function(Input):
 
 @strawberry.input
 class OrdinalFunction(Function):
-    minimum: Optional[str] = doc_func(Column.minimum)
-    maximum: Optional[str] = doc_func(Column.maximum)
+    minimum: Optional[str] = default_field(description=Column.minimum.__doc__)
+    maximum: Optional[str] = default_field(description=Column.maximum.__doc__)
 
 
 @strawberry.input
 class NumericFunction(OrdinalFunction):
-    add: Optional[str] = undefined
-    subtract: Optional[str] = undefined
-    multiply: Optional[str] = undefined
-    divide: Optional[str] = undefined
-    power: Optional[str] = undefined
-    absolute: bool = doc_func(Column.absolute, default=False)
+    add: Optional[str] = UNSET
+    subtract: Optional[str] = UNSET
+    multiply: Optional[str] = UNSET
+    divide: Optional[str] = UNSET
+    power: Optional[str] = UNSET
+    absolute: bool = default_field(bool, description=Column.absolute.__doc__)
 
 
 @strawberry.input(description=f"[functions]({link}#arithmetic-functions) for ints")
 class IntFunction(NumericFunction):
-    fill_null: Optional[int] = undefined
-    digitize: Optional[List[int]] = doc_func(Column.digitize)
+    fill_null: Optional[int] = UNSET
+    digitize: Optional[List[int]] = default_field(description=Column.digitize.__doc__)
 
 
 @strawberry.input(description=f"[functions]({link}#arithmetic-functions) for longs")
 class LongFunction(NumericFunction):
-    fill_null: Optional[Long] = undefined
-    digitize: Optional[List[Long]] = doc_func(Column.digitize)
+    fill_null: Optional[Long] = UNSET
+    digitize: Optional[List[Long]] = default_field(description=Column.digitize.__doc__)
 
 
 @strawberry.input(description=f"[functions]({link}#arithmetic-functions) for floats")
 class FloatFunction(NumericFunction):
-    fill_null: Optional[float] = undefined
-    digitize: Optional[List[float]] = doc_func(Column.digitize)
+    fill_null: Optional[float] = UNSET
+    digitize: Optional[List[float]] = default_field(description=Column.digitize.__doc__)
 
 
 @strawberry.input(description="functions for decimals")
@@ -358,29 +353,29 @@ class DecimalFunction(OrdinalFunction):
 
 @strawberry.input(description="functions for dates")
 class DateFunction(OrdinalFunction):
-    fill_null: Optional[date] = undefined
+    fill_null: Optional[date] = UNSET
 
 
 @strawberry.input(description="functions for datetimes")
 class DateTimeFunction(OrdinalFunction):
-    subtract: Optional[str] = undefined
-    fill_null: Optional[datetime] = undefined
+    subtract: Optional[str] = UNSET
+    fill_null: Optional[datetime] = UNSET
 
 
 @strawberry.input(description="functions for times")
 class TimeFunction(OrdinalFunction):
-    fill_null: Optional[time] = undefined
+    fill_null: Optional[time] = UNSET
 
 
 @strawberry.input(description="functions for binaries")
 class BinaryFunction(Function):
-    fill_null: Optional[bytes] = undefined
+    fill_null: Optional[bytes] = UNSET
     binary_length: bool = False
 
 
 @strawberry.input(description="functions for strings")
 class StringFunction(OrdinalFunction):
-    fill_null: Optional[str] = undefined
+    fill_null: Optional[str] = UNSET
     utf8_length: bool = False
     utf8_lower: bool = False
     utf8_upper: bool = False
@@ -397,27 +392,27 @@ class DiffScalar(Input):
     int: Optional[int]
     long: Optional[Long]
     float: Optional[float]
-    datetime: Optional[timedelta] = undefined
-    float = long = int = undefined  # defaults here because of an obscure dataclass bug
+    datetime: Optional[timedelta] = UNSET
+    float = long = int = UNSET  # defaults here because of an obscure dataclass bug
 
 
 @strawberry.input(description="discrete difference predicates")
 class Diff(Input):
     name: str
-    less: Optional[DiffScalar] = undefined
-    less_equal: Optional[DiffScalar] = undefined
-    greater: Optional[DiffScalar] = undefined
-    greater_equal: Optional[DiffScalar] = undefined
+    less: Optional[DiffScalar] = UNSET
+    less_equal: Optional[DiffScalar] = UNSET
+    greater: Optional[DiffScalar] = UNSET
+    greater_equal: Optional[DiffScalar] = UNSET
 
 
 @strawberry.input(
     description=f"[functions]({link}#arithmetic-functions) projected across two columns"
 )
 class Projections(Input):
-    minimum: Optional[str] = doc_func(Column.minimum)
-    maximum: Optional[str] = doc_func(Column.maximum)
-    add: Optional[str] = undefined
-    subtract: Optional[str] = undefined
-    multiply: Optional[str] = undefined
-    divide: Optional[str] = undefined
-    power: Optional[str] = undefined
+    minimum: Optional[str] = default_field(description=Column.minimum.__doc__)
+    maximum: Optional[str] = default_field(description=Column.maximum.__doc__)
+    add: Optional[str] = UNSET
+    subtract: Optional[str] = UNSET
+    multiply: Optional[str] = UNSET
+    divide: Optional[str] = UNSET
+    power: Optional[str] = UNSET

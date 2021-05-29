@@ -27,7 +27,7 @@ setup(
     package_data={'graphique': ['py.typed']},
     zip_safe=False,
     ext_modules=cythonize([ext_module]) if cythonize else [ext_module],
-    install_requires=['pyarrow>=4', 'strawberry-graphql>=0.54'],
+    install_requires=['pyarrow>=4', 'strawberry-graphql>=0.64.4'],
     extras_require={'server': ['uvicorn[standard]']},
     python_requires='>=3.7',
     tests_require=['pytest-cov', 'requests'],

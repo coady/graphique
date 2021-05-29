@@ -11,8 +11,8 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import strawberry
 from starlette.applications import Starlette
+from strawberry.arguments import UNSET
 from starlette.middleware import Middleware
-from strawberry.types.types import undefined
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
 from .inputs import Diff, Filters, Function, Input, Query as QueryInput
@@ -49,7 +49,7 @@ class Row:
 @strawberry.input(description="predicates for each column")
 class Queries(Input):
     __annotations__ = QueryInput.annotations(types)
-    locals().update(dict.fromkeys(__annotations__, undefined))
+    locals().update(dict.fromkeys(__annotations__, UNSET))
 
 
 @strawberry.type(description="a column-oriented table")
