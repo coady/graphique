@@ -21,8 +21,18 @@ link = 'https://arrow.apache.org/docs/python/api/compute.html'
 class Input:
     """Common utilities for input types."""
 
+    nullables: dict = {}
+
+    def __init_subclass__(cls):
+        for name in set(cls.nullables) & set(cls.__annotations__):
+            setattr(cls, name, default_field(description=cls.nullables[name]))
+
     def keys(self):
-        return [name for name in self.__dict__ if getattr(self, name) is not UNSET]
+        for name, value in self.__dict__.items():
+            msg = f"`{self.__class__.__name__}.{name}` is optional, not nullable"
+            assert value is not None or name in self.nullables, msg
+            if value is not UNSET:
+                yield name
 
     def __getitem__(self, name):
         value = getattr(self, name)
@@ -97,6 +107,10 @@ class Query(Input):
 
     type_map: dict
     locals().update(dict.fromkeys(comparisons, UNSET))
+    nullables = {
+        'equal': "`null` is equivalent to arrow `is_null`.",
+        'not_equal': "`null` is equivalent to arrow `is_valid`.",
+    }
 
     @classmethod
     def annotations(cls, types: dict) -> dict:
@@ -118,6 +132,9 @@ class Query(Input):
         annotations = dict(cls.__annotations__)
         annotations.pop('apply', None)
         defaults = {name: getattr(cls, name) for name in annotations}
+        for name in cls.nullables:
+            argument = strawberry.argument(description=cls.nullables[name])
+            annotations[name] = Annotated[annotations[name], argument]
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
@@ -403,6 +420,10 @@ class Diff(Input):
     less_equal: Optional[DiffScalar] = UNSET
     greater: Optional[DiffScalar] = UNSET
     greater_equal: Optional[DiffScalar] = UNSET
+    nullables = dict.fromkeys(
+        ['less', 'less_equal', 'greater', 'greater_equal'],
+        "`null` compares the arrays element-wise. A non-null scalar computes the discrete difference first.",
+    )
 
 
 @strawberry.input(

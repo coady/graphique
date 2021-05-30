@@ -60,3 +60,12 @@ Arrow has dictionary-encoded arrays as a space optimization, but doesn't nativel
 
 ## Chunked Arrays
 Arrow supports conceptually contiguous arrays in chunks, typically as a result of separate parquet files. Operations are parallelized across chunks when possible. However, grouping and sorting may be memory intensive as they inherently have to combine chunks.
+
+## Nulls
+GraphQL continues the long tradition of confusing "optional" with "nullable". Graphique strives to be explicit regarding what may be omitted versus what may be null.
+
+### Output
+Arrow has first-class support for nulls, so array scalars are nullable. Non-null scalars are used where relevant.
+
+### Input
+Default values and non-null types are used wherever possible. When an input is optional and has no natural default, there's still the issue of distinguishing whether an explicit null input is expected or is semantically different. The input's description field will describe null behavior when expected. Otherwise explicit null behavior is undefined, and assume it errors.

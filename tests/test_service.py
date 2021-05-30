@@ -230,6 +230,8 @@ def test_filter(client):
         '{ filter(on: {float: {name: "longitude", absolute: true, less: 66}}) { length } }'
     )
     assert data['filter']['length'] == 30
+    with pytest.raises(ValueError, match="optional, not nullable"):
+        client.execute('{ filter(on: {string: {name: "city", apply: {equal: null}}}) { length } }')
 
 
 def test_apply(client):
