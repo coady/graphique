@@ -29,8 +29,8 @@ class Input:
 
     def keys(self):
         for name, value in self.__dict__.items():
-            msg = f"`{self.__class__.__name__}.{name}` is optional, not nullable"
-            assert value is not None or name in self.nullables, msg
+            if value is None and name not in self.nullables:
+                raise TypeError(f"`{self.__class__.__name__}.{name}` is optional, not nullable")
             if value is not UNSET:
                 yield name
 

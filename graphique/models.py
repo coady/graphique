@@ -207,7 +207,8 @@ class NumericColumn:
 
     def power(self, base=None, exponent=None):
         """Return values raised to power."""
-        assert [base, exponent].count(None) == 1, "exactly one of `base` or `exponent` required"
+        if [base, exponent].count(None) != 1:
+            raise ValueError("exactly one of `base` or `exponent` required")
         args = (self.array, exponent) if base is None else (base, self.array)
         return type(self)(pc.power(*args))
 

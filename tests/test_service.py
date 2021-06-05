@@ -181,6 +181,8 @@ def test_search(client):
         '{ search(zipcode: {isIn: [501, 601]}) { columns { zipcode { values } } } }'
     )
     assert data == {'search': {'columns': {'zipcode': {'values': [501, 601]}}}}
+    with pytest.raises(ValueError, match="optional, not nullable"):
+        client.execute('{ search(zipcode: null) { length } }')
 
 
 def test_filter(client):
