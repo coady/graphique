@@ -35,8 +35,8 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - run: pip install wheel twine cython
-    - run: python setup.py bdist_wheel
+    - run: pip install build twine cython
+    - run: python -m build -nw
     - run: twine upload -u __token__ -p ${{ secrets.PYPI_TOKEN }} dist/*
 
   linux:

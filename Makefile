@@ -6,7 +6,6 @@ check: all
 	python3 -m pytest --cov
 
 lint:
-	python3 setup.py check -ms
 	black --check .
 	flake8
 	flake8 graphique/*.pyx --ignore E999,E211
@@ -26,17 +25,15 @@ docs/schema.graphql: graphique/*.py
 	python3 -m graphique.schema tests/fixtures/zipcodes.parquet > $@
 
 dist:
-	python3 setup.py sdist bdist_wheel
+	python3 -m build -n
 	docker run --rm -v $(PWD):/usr/src -w /usr/src quay.io/pypa/manylinux_2_24_x86_64 make cp37 cp38 cp39
 
 cp37:
 	/opt/python/$@-$@m/bin/pip install cython
-	/opt/python/$@-$@m/bin/python setup.py build
-	/opt/python/$@-$@m/bin/pip wheel . -w dist
+	/opt/python/$@-$@m/bin/python -m build -nw
 	auditwheel repair dist/*$@m-linux_x86_64.whl
 
 cp38 cp39:
 	/opt/python/$@-$@/bin/pip install cython
-	/opt/python/$@-$@/bin/python setup.py build
-	/opt/python/$@-$@/bin/pip wheel . -w dist
+	/opt/python/$@-$@/bin/python -m build -nw
 	auditwheel repair dist/*$@-linux_x86_64.whl
