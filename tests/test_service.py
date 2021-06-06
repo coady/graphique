@@ -261,6 +261,11 @@ def test_apply(client):
         { columns { latitude { max } } } }'''
     )
     assert data['apply']['columns']['latitude']['max'] == pytest.approx(-65.301389)
+    data = client.execute(
+        '''{ apply(int: {name: "zipcode", cast: "float"})
+        { column(name: "zipcode") { type } } }'''
+    )
+    assert data['apply']['column']['type'] == 'float'
 
 
 def test_sort(client):

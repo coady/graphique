@@ -172,6 +172,8 @@ def test_numeric(executor):
         ... on FloatColumn { values } } }'''
     )
     assert data == {'column': {'values': [1.0, None]}}
+    data = executor('{ column(name: "float", cast: "int32") { type } }')
+    assert data == {'column': {'type': 'int32'}}
 
 
 def test_duration(executor):

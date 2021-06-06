@@ -85,8 +85,11 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables the 
 ```
 
 ## Changes
-0.4
+dev
+* Stricter validation of inputs
+* Columns can be cast to another arrow data type
 
+0.4
 * Pyarrow >=4 required
 * `sort` updated to use new native routines
 * `partition` tables by adjacent values and differences
@@ -95,13 +98,11 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables the 
 * Tagged unions used for `filter`, `apply`, and `partition` functions
 
 0.3
-
 * Pyarrow >=3 required
 * `any` and `all` fields
 * String column `split` field
 
 0.2
-
 * `ListColumn` and `StructColumn` types
 * `Groups` type with `aggregate` field
 * `group` and `unique` optimized

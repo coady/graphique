@@ -64,12 +64,15 @@ class AbstractTable:
         """number of rows"""
         return len(self.table)
 
-    @doc_field
-    def column(self, name: str, apply: Projections = {}) -> Column:  # type: ignore
+    @doc_field(
+        cast="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
+        apply="projected functions",
+    )
+    def column(self, name: str, cast: str = '', apply: Projections = {}) -> Column:  # type: ignore
         """Return column of any type by name, with optional projection.
         This is typically only needed for aliased columns added by `apply` or `aggregate`.
         If the column is in the schema, `columns` can be used instead."""
         column = self.table[name]
         for func, name in dict(apply).items():
             column = T.projected[func](column, self.table[name])
-        return Column.cast(column)
+        return Column.cast(column.cast(cast) if cast else column)

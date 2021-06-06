@@ -523,7 +523,7 @@ class Table(pa.Table):
             masks.append(Column.mask(column, **query))
         return functools.reduce(getattr(pc, 'and'), masks)
 
-    def apply(self, name: str, alias: str = '', **partials) -> pa.Table:
+    def apply(self, name: str, alias: str = '', cast: str = '', **partials) -> pa.Table:
         """Return view of table with functions applied across columns."""
         column = self[name]
         for func, arg in partials.items():
@@ -533,6 +533,8 @@ class Table(pa.Table):
                 column = Table.applied[func](column, arg)
             elif arg:
                 column = Table.applied[func](column)
+        if cast:
+            column = column.cast(cast)
         if alias:
             return self.add_column(len(self.column_names), alias, column)
         return self.set_column(self.column_names.index(name), name, column)

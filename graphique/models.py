@@ -43,7 +43,7 @@ class Column:
 
     @doc_field
     def type(self) -> str:
-        """array type"""
+        """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
         return str(self.array.type)
 
     @doc_field
@@ -391,7 +391,7 @@ class BinaryColumn(Column):
 
     @doc_field
     def binary_length(self) -> 'IntColumn':
-        """length of bytes or strings"""
+        """number of bytes for each string"""
         return IntColumn(pc.binary_length(self.array))
 
 
@@ -413,7 +413,7 @@ class StringColumn(Column):
 
     @doc_field
     def utf8_length(self) -> 'IntColumn':
-        """length of bytes or strings"""
+        """number of utf8 characters for each string"""
         return IntColumn(pc.utf8_length(self.array))
 
     @doc_field

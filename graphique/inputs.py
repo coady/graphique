@@ -327,6 +327,10 @@ class Filters(Input):
 class Function(Input):
     name: str
     alias: str = ''
+    cast: str = default_field(
+        str,
+        description="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
+    )
 
 
 @strawberry.input
