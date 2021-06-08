@@ -408,25 +408,16 @@ class Field(Input):
     alias: str = ''
 
 
-@strawberry.input(description="a scalar compared to discrete differences")
-class DiffScalar(Input):
-    int: Optional[int]
-    long: Optional[Long]
-    float: Optional[float]
-    datetime: Optional[timedelta] = UNSET
-    float = long = int = UNSET  # defaults here because of an obscure dataclass bug
-
-
-@strawberry.input(description="discrete difference predicates")
+@strawberry.input(description="discrete difference predicates; durations may be in float seconds")
 class Diff(Input):
     name: str
-    less: Optional[DiffScalar] = UNSET
-    less_equal: Optional[DiffScalar] = UNSET
-    greater: Optional[DiffScalar] = UNSET
-    greater_equal: Optional[DiffScalar] = UNSET
+    less: Optional[float] = UNSET
+    less_equal: Optional[float] = UNSET
+    greater: Optional[float] = UNSET
+    greater_equal: Optional[float] = UNSET
     nullables = dict.fromkeys(
         ['less', 'less_equal', 'greater', 'greater_equal'],
-        "`null` compares the arrays element-wise. A non-null scalar computes the discrete difference first.",
+        "`null` compares the arrays element-wise. A float computes the discrete difference first.",
     )
 
 

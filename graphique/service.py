@@ -3,6 +3,7 @@ GraphQL service and top-level resolvers.
 """
 import functools
 import itertools
+from datetime import timedelta
 from pathlib import Path
 from typing import List, Optional, no_type_check
 import numpy as np
@@ -118,7 +119,11 @@ class Table(AbstractTable):
         predicates = {}
         for name in by[len(names) :]:  # noqa: E203
             ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
-            predicates[name] = (getattr(pc, func),) + tuple((value or {}).values())
+            predicates[name] = (getattr(pc, func),)
+            if value is not None:
+                if pa.types.is_timestamp(C.scalar_type(table[name])):
+                    value = timedelta(seconds=value)
+                predicates[name] += (value,)
         table, counts = T.partition(table, *names, **predicates)
         return Table(table.add_column(len(table.columns), count, counts) if count else table)
 

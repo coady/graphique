@@ -196,6 +196,10 @@ def test_duration(executor):
         { filter(on: {duration: [{name: "elapsed", equal: 0.0}]}) { length } } }'''
     )
     assert data == {'apply': {'filter': {'length': 1}}}
+    data = executor(
+        '''{ partition(by: ["timestamp"] diffs: [{name: "timestamp", greater: 0.0}]) { length } }'''
+    )
+    assert data == {'partition': {'length': 1}}
 
 
 def test_list(executor):

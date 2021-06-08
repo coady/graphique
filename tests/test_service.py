@@ -372,7 +372,7 @@ def test_partition(client):
     assert agg['column']['count']['values'][:3] == [2, 176, 701]
     data = client.execute(
         '''{ sort(by: ["state", "longitude"]) {
-        partition(by: ["state", "longitude"], diffs: [{name: "longitude", greater: {float: 1.0}}]) {
+        partition(by: ["state", "longitude"], diffs: [{name: "longitude", greater: 1.0}]) {
         length columns { state { values } }
         column(name: "longitude") { ... on ListColumn { count { values } } } } } }'''
     )
