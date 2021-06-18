@@ -147,7 +147,7 @@ class ListChunk(pa.ListArray):
         return ListChunk.reduce(self, lambda arr: Chunk.partition_nth(arr, -1)[-1])
 
     def sum(self) -> pa.Array:
-        """sum each list scalar"""
+        """sum of each list scalar"""
         return ListChunk.reduce(self, pc.sum)
 
     def mean(self) -> pa.FloatingPointArray:

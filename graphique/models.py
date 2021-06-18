@@ -528,7 +528,7 @@ class ListColumn(Column):
 
     @doc_field
     def sum(self) -> Column:
-        """sum each list scalar"""
+        """sum of each list scalar"""
         return self.map(ListChunk.sum)
 
     @doc_field

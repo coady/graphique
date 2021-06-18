@@ -1,4 +1,5 @@
 site_name: graphique
+site_url: https://coady.github.io/graphique/
 site_description: GraphQL service for arrow tables and parquet data sets.
 theme: material
 
