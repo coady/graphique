@@ -197,7 +197,7 @@ class Table(AbstractTable):
         masks = []
         for name, value in filters:
             mask = T.mask(table, name, **value)
-            if isinstance(table[name].type, pa.ListType):
+            if C.is_list_type(table[name]):
                 column = pa.chunked_array(C.map(ListChunk.filter_list, table[name], mask))
                 table = table.set_column(table.column_names.index(name), name, column)
             else:
@@ -226,7 +226,7 @@ class Table(AbstractTable):
         """Return a list of tables by splitting list columns, typically used after grouping.
         At least one list column must be referenced, and all list columns must have the same lengths."""
         table = self.select(info)
-        lists = {name for name in table.column_names if isinstance(table[name].type, pa.ListType)}
+        lists = {name for name in table.column_names if C.is_list_type(table[name])}
         if not lists:
             raise ValueError(f"no list columns referenced: {table.column_names}")
         columns = {name: table[name] for name in lists}
@@ -236,7 +236,7 @@ class Table(AbstractTable):
         indices = pa.concat_arrays(pa.array(np.repeat(*pair)) for pair in enumerate(counts))
         for name in set(table.column_names) - lists:
             column = C.combine_chunks(table[name]).take(indices)
-            columns[name] = pa.ListArray.from_arrays(shape.offsets, column)
+            columns[name] = type(shape).from_arrays(shape.offsets, column)
         for index in range(len(table)):
             row = {name: columns[name][index].values for name in columns}
             yield Table(pa.Table.from_pydict(row))

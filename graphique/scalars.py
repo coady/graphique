@@ -50,9 +50,12 @@ type_map = {
     pa.lib.Type_DURATION: timedelta,
     pa.lib.Type_BINARY: bytes,
     pa.lib.Type_FIXED_SIZE_BINARY: bytes,
+    pa.lib.Type_LARGE_BINARY: bytes,
     pa.lib.Type_STRING: str,
+    pa.lib.Type_LARGE_STRING: str,
     pa.lib.Type_LIST: list,
     pa.lib.Type_FIXED_SIZE_LIST: list,
+    pa.lib.Type_LARGE_LIST: list,
     pa.lib.Type_STRUCT: dict,
 }
 

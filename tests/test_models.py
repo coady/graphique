@@ -296,7 +296,7 @@ def test_dictionary(executor):
     data = executor(
         '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string"}) {
         aggregate(count: {name: "string"}) {
-        column(name: "string") { ... on IntColumn { values } } } } } }'''
+        column(name: "string") { ... on LongColumn { values } } } } } }'''
     )
     assert data == {'group': {'aggregate': {'aggregate': {'column': {'values': [1, 1]}}}}}
     data = executor(

@@ -492,14 +492,14 @@ class ListColumn(Column):
         return list(map(self.fromscalar, self.array))
 
     @doc_field
-    def count(self) -> IntColumn:
+    def count(self) -> LongColumn:
         """number of values of each list scalar"""
-        return self.map(pa.ListArray.value_lengths)  # type: ignore
+        return LongColumn(self.map(operator.methodcaller('value_lengths')).array)
 
     @doc_field
     def flatten(self) -> Column:
         """concatenation of all sub-lists"""
-        return self.map(pa.ListArray.flatten)
+        return self.map(operator.methodcaller('flatten'))
 
     @doc_field
     def unique(self) -> 'ListColumn':

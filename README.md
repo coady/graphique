@@ -89,6 +89,7 @@ dev
 
 * Stricter validation of inputs
 * Columns can be cast to another arrow data type
+* Grouping uses large list arrays with 64-bit counts
 
 0.4
 

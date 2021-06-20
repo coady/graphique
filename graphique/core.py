@@ -40,7 +40,7 @@ def rpartial(func, *values):
 
 class Chunk(pa.Array):
     def encode(self):
-        if not isinstance(self, pa.DictionaryArray):
+        if not pa.types.is_dictionary(self.type):
             if not self.null_count and np.can_cast(self.type.to_pandas_dtype(), np.intp):
                 return self
             self = self.dictionary_encode()
@@ -75,9 +75,9 @@ class Chunk(pa.Array):
         func = np.isnat if array.dtype.type in (np.datetime64, np.timedelta64) else np.isnan
         return pa.array(array, mask=func(array))
 
-    def take_list(self, indices: pa.ListArray) -> pa.ListArray:
+    def take_list(self, indices: pa.lib.BaseListArray) -> pa.lib.BaseListArray:
         assert len(self) == len(indices.values)
-        return pa.ListArray.from_arrays(indices.offsets, self.take(indices.values))
+        return type(indices).from_arrays(indices.offsets, self.take(indices.values))
 
     def partition_nth_indices(self, pivot: int) -> pa.IntegerArray:
         if pivot >= 0:
@@ -90,7 +90,7 @@ class Chunk(pa.Array):
         return self.take(Chunk.partition_nth_indices(self, pivot))
 
     def sort_keys(self) -> pa.Array:
-        if not isinstance(self, pa.DictionaryArray):
+        if not pa.types.is_dictionary(self.type):
             return self
         if len(self) <= len(self.dictionary):
             return self.cast(self.type.value_type)
@@ -98,8 +98,8 @@ class Chunk(pa.Array):
         return keys.take(self.indices)
 
 
-class ListChunk(pa.ListArray):
-    count = pa.ListArray.value_lengths
+class ListChunk(pa.lib.BaseListArray):
+    count = operator.methodcaller('value_lengths')
 
     def getitem(self, index: int) -> pa.Array:
         mask = np.asarray(self.value_lengths().fill_null(0)) == 0
@@ -114,19 +114,19 @@ class ListChunk(pa.ListArray):
         """last value of each list scalar"""
         return ListChunk.getitem(self, -1)
 
-    def unique(self) -> pa.ListArray:
+    def unique(self) -> pa.lib.BaseListArray:
         """unique values within each scalar"""
         return ListChunk.map_list(self, lambda arr: Column.decode(arr.unique()))
 
-    def map_list(self, func: Callable) -> pa.ListArray:
+    def map_list(self, func: Callable) -> pa.lib.BaseListArray:
         """Return list array by mapping function across scalars, with null handling."""
         empty = pa.array([], self.type.value_type)
         values = [func(scalar.values or empty) for scalar in self]
         return split(pa.array(map(len, values)), pa.concat_arrays(values))
 
-    def filter_list(self, mask: pa.BooleanArray) -> pa.ListArray:
+    def filter_list(self, mask: pa.BooleanArray) -> pa.lib.BaseListArray:
         """Return list array by selecting true values."""
-        masks = pa.ListArray.from_arrays(self.offsets, mask)
+        masks = type(self).from_arrays(self.offsets, mask)
         counts = pa.array(scalar.values.true_count for scalar in masks)
         return split(counts, self.values.filter(mask))
 
@@ -193,7 +193,10 @@ class Column(pa.ChunkedArray):
         return map_(func, *(arr.iterchunks() for arr in arrays))  # type: ignore
 
     def scalar_type(self):
-        return self.type.value_type if isinstance(self.type, pa.DictionaryType) else self.type
+        return self.type.value_type if pa.types.is_dictionary(self.type) else self.type
+
+    def is_list_type(self):
+        return pa.types.is_list(self.type) or pa.types.is_large_list(self.type)
 
     def decode(self, check=False) -> pa.ChunkedArray:
         with contextlib.suppress(ValueError, AttributeError):
@@ -215,7 +218,7 @@ class Column(pa.ChunkedArray):
             if query.pop(op, False):
                 self = Column.call(self, getattr(pc, op))
         masks = []
-        if isinstance(self.type, pa.ListType):
+        if Column.is_list_type(self):
             self = pa.chunked_array(chunk.values for chunk in self.iterchunks())
         for op, value in query.items():
             if hasattr(Column, op):
@@ -269,7 +272,7 @@ class Column(pa.ChunkedArray):
         """Replace each null element in values with fill_value with dictionary support."""
         if not self.null_count:
             return self
-        if not isinstance(self.type, pa.DictionaryType):
+        if not pa.types.is_dictionary(self.type):
             return self.fill_null(value)
         return pa.chunked_array(Column.map(rpartial(Chunk.fill_null, value), self))
 
@@ -304,7 +307,7 @@ class Column(pa.ChunkedArray):
     def min_max(self, reverse=False):
         if not self:
             return None
-        if isinstance(self.type, pa.DictionaryType):
+        if pa.types.is_dictionary(self.type):
             self = pa.chunked_array([self.unique().cast(self.type.value_type)])
         with contextlib.suppress(NotImplementedError):
             return pc.min_max(self)['max' if reverse else 'min'].as_py()
@@ -433,7 +436,7 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
-    def group_indices(self, *names: str) -> pa.ListArray:
+    def group_indices(self, *names: str) -> pa.LargeListArray:
         arrays = (Chunk.encode(Column.combine_chunks(self[name])) for name in names)
         _, indices = group_indices(next(arrays))
         for array in arrays:
@@ -467,13 +470,14 @@ class Table(pa.Table):
         for name in names[1:]:
             groups = [pa.array([0], pa.int32())]
             predicate = predicates.get(name, default)
-            for scalar in pa.ListArray.from_arrays(offsets, Column.combine_chunks(self[name])):
+            for scalar in pa.LargeListArray.from_arrays(offsets, Column.combine_chunks(self[name])):
                 group = Column.partition_offsets(pa.chunked_array([scalar.values]), *predicate)
                 groups.append(pc.add(group[1:], groups[-1][-1]))
             offsets = pa.concat_arrays(groups)
         columns = {name: self[name].take(offsets[:-1]) for name in set(names) - set(predicates)}
         for name in set(self.column_names) - set(columns):
-            columns[name] = pa.ListArray.from_arrays(offsets, Column.combine_chunks(self[name]))
+            column = Column.combine_chunks(self[name])
+            columns[name] = pa.LargeListArray.from_arrays(offsets, column)
         return pa.Table.from_pydict(columns), Column.diff(offsets)
 
     def unique_indices(self, *names: str, reverse=False, count=False) -> tuple:

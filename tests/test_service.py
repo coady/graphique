@@ -125,7 +125,7 @@ def test_string_methods(client):
     data = client.execute(
         '''{ unique(by: ["city"]) { columns { city { split {
         first { ... on StringColumn { count(equal: "New") } }
-        count { ... on IntColumn { max } } } } } } }'''
+        count { ... on LongColumn { max } } } } } } }'''
     )
     cities = data['unique']['columns']['city']
     assert cities['split'] == {'first': {'count': 177}, 'count': {'max': 6}}
@@ -301,7 +301,7 @@ def test_group(client):
         '''{ group(by: ["state"]) { length tables { length
         columns { state { values } county { min max } } }
         aggregate(count: {name: "county", alias: "c"}) {
-        column(name: "c") { ... on IntColumn { values } } } } }'''
+        column(name: "c") { ... on LongColumn { values } } } } }'''
     )
     assert len(data['group']['tables']) == data['group']['length'] == 52
     table = data['group']['tables'][0]
@@ -395,7 +395,7 @@ def test_partition(client):
     data = client.execute(
         '''{ partition(by: ["state"]) { slice(offset: 2, length: 2) {
         aggregate(count: {name: "zipcode", alias: "c"}) {
-        column(name: "c") { ... on IntColumn { values } } columns { state { values } } } } } }'''
+        column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } } }'''
     )
     agg = data['partition']['slice']['aggregate']
     assert agg['column']['values'] == [701, 91]
@@ -451,7 +451,7 @@ def test_unique(client):
     data = client.execute(
         '''{ group(by: ["state"]) { aggregate(unique: {name: "city"}) {
         aggregate(count: {name: "city"}) {
-        column(name: "city") { ... on IntColumn { values } } } } } }'''
+        column(name: "city") { ... on LongColumn { values } } } } } }'''
     )
     assert data['group']['aggregate']['aggregate']['column']['values'] == counts
 

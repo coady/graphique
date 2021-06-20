@@ -10,10 +10,10 @@ def asiarray(array):
     return np.asarray(array).astype(np.intp, casting='safe', copy=False)
 
 
-def split(counts: pa.IntegerArray, values: pa.Array) -> pa.ListArray:
+def split(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
     """Return list array by converting counts into offsets and splitting the values."""
     offsets = np.concatenate([[0], np.cumsum(counts)])
-    return pa.ListArray.from_arrays(offsets, values)
+    return pa.LargeListArray.from_arrays(offsets, values)
 
 
 def group_indices(array: pa.IntegerArray) -> tuple:
