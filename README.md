@@ -68,12 +68,13 @@ Specifying an `INDEX` of columns indicates the table is sorted, and enables the 
 
 ## Installation
 ```console
-% pip install graphique
+% pip install graphique[server]
 ```
 
 ## Dependencies
 * pyarrow >=4
-* strawberry-graphql >=0.64.4
+* strawberry-graphql >=0.67
+* starlette >=0.14
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 * pytz (optional timestamp support)
 

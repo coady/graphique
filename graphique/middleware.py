@@ -5,7 +5,6 @@ import itertools
 from datetime import datetime
 import pyarrow as pa
 import strawberry.asgi
-from starlette.middleware import base
 from .core import Table as T
 from .inputs import Projections
 from .models import Column, doc_field
@@ -29,20 +28,20 @@ def references(node):
         yield from references(node)
 
 
-class TimingMiddleware(base.BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):  # pragma: no cover
-        start = datetime.now()
-        try:
-            return await call_next(request)
-        finally:
-            end = datetime.now()
-            print(f"[{end.replace(microsecond=0)}]: {end - start}")
+class TimingExtension(strawberry.extensions.Extension):
+    def on_request_start(self):
+        self.start = datetime.now()
+
+    def on_request_end(self):
+        end = datetime.now()
+        print(f"[{end.replace(microsecond=0)}]: {end - self.start}")
 
 
 class GraphQL(strawberry.asgi.GraphQL):
-    def __init__(self, root_value, **kwargs):
-        schema = strawberry.Schema(type(root_value), types=Column.__subclasses__())
-        super().__init__(schema, **kwargs)
+    def __init__(self, root_value, debug=False, **kwargs):
+        options = dict(types=Column.__subclasses__(), extensions=[TimingExtension] * bool(debug))
+        schema = strawberry.Schema(type(root_value), **options)
+        super().__init__(schema, debug=debug, **kwargs)
         self.root_value = root_value
 
     async def get_root_value(self, request):

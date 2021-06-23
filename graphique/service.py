@@ -11,13 +11,11 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import strawberry
-from starlette.applications import Starlette
 from strawberry.arguments import UNSET
-from starlette.middleware import Middleware
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
 from .inputs import Diff, Filters, Function, Input, Query as QueryInput
-from .middleware import AbstractTable, GraphQL, TimingMiddleware
+from .middleware import AbstractTable, GraphQL
 from .models import Column, ListColumn, annotate, doc_field, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
@@ -300,5 +298,4 @@ class IndexedTable(Table):
 
 
 Query = IndexedTable if indexed else Table
-app = Starlette(debug=DEBUG, middleware=[Middleware(TimingMiddleware)] * DEBUG)
-app.add_route('/graphql', GraphQL(Query(table), debug=DEBUG))
+app = GraphQL(Query(table), debug=DEBUG)
