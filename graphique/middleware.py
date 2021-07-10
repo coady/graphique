@@ -28,7 +28,7 @@ def references(node):
         yield from references(node)
 
 
-class TimingExtension(strawberry.extensions.Extension):
+class TimingExtension(strawberry.extensions.Extension):  # pragma: no cover
     def on_request_start(self):
         self.start = datetime.now()
 

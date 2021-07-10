@@ -7,7 +7,6 @@ Their methods are called as functions.
 import bisect
 import contextlib
 import functools
-import json
 import operator
 from concurrent import futures
 from datetime import time
@@ -403,11 +402,6 @@ class Table(pa.Table):
         'absolute': Column.absolute,
         'digitize': Column.digitize,
     }
-
-    def index(self) -> list:
-        """Return index column names from pandas metadata."""
-        metadata = self.schema.metadata or {}
-        return json.loads(metadata.get(b'pandas', b'{}')).get('index_columns', [])
 
     def types(self) -> dict:
         """Return mapping of column types."""

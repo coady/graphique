@@ -37,7 +37,7 @@ def load(path, **vars):
 
 @pytest.fixture(scope='module')
 def table():
-    return load('zipcodes.parquet')
+    return load('zipcodes.parquet', INDEX='zipcode')
 
 
 @pytest.fixture(scope='module')

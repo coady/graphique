@@ -22,7 +22,7 @@ from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
 
 path = Path(PARQUET_PATH).resolve()
 table = pq.ParquetDataset(path, memory_map=MMAP, read_dictionary=DICTIONARIES).read(COLUMNS)
-indexed = list(map(to_camel_case, T.index(table) if INDEX is None else INDEX))
+indexed = list(map(to_camel_case, INDEX))
 table = pa.Table.from_pydict({to_camel_case(name): table[name] for name in table.column_names})
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
 for name in indexed:
@@ -255,13 +255,9 @@ class Table(AbstractTable):
 
 @strawberry.type(description="a table sorted by a composite index")
 class IndexedTable(Table):
+    index: List[str] = strawberry.field(default=tuple(indexed), description="the composite index")
     __init__ = AbstractTable.__init__
     slice = annotate(Table.slice, 'IndexedTable')
-
-    @doc_field
-    def index(self) -> List[str]:
-        """the composite index"""
-        return indexed
 
     @QueryInput.resolve_types({name: types[name] for name in indexed})
     def search(self, info, **queries) -> Table:
@@ -272,7 +268,7 @@ class IndexedTable(Table):
         for name in queries:
             if queries[name] is None:
                 raise TypeError(f"`{name}` is optional, not nullable")
-        for name in indexed:
+        for name in self.index:
             if name not in queries:
                 break
             query = dict(queries.pop(name))
