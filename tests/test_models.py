@@ -193,9 +193,10 @@ def test_duration(executor):
     assert column['count'] == 1
     data = executor(
         '''{ apply(datetime: [{name: "timestamp", subtract: "timestamp", alias: "elapsed"}])
-        { filter(on: {duration: [{name: "elapsed", equal: 0.0}]}) { length } } }'''
+        { filter(on: {duration: [{name: "elapsed", equal: 0.0}]})
+        { apply(duration: {name: "elapsed", cast: "duration[s]"}) { length } } } }'''
     )
-    assert data == {'apply': {'filter': {'length': 1}}}
+    assert data == {'apply': {'filter': {'apply': {'length': 1}}}}
     data = executor(
         '''{ partition(by: ["timestamp"] diffs: [{name: "timestamp", greater: 0.0}]) { length } }'''
     )

@@ -388,6 +388,12 @@ class TimeFunction(OrdinalFunction):
     fill_null: Optional[time] = UNSET
 
 
+@strawberry.input(description="functions for durations")
+class DurationFunction(OrdinalFunction):
+    fill_null: Optional[timedelta] = UNSET
+    absolute: bool = default_field(bool, description=Column.absolute.__doc__)
+
+
 @strawberry.input(description="functions for binaries")
 class BinaryFunction(Function):
     fill_null: Optional[bytes] = UNSET
