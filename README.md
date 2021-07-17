@@ -28,8 +28,9 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * COLUMNS = None
 * DEBUG = False
 * DICTIONARIES = None
+* FILTERS = None
 * INDEX = None
-* MMAP = True
+* MMAP = False
 * PARQUET_PATH
 
 ### API

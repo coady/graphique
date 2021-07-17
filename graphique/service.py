@@ -4,7 +4,6 @@ GraphQL service and top-level resolvers.
 import functools
 import itertools
 from datetime import timedelta
-from pathlib import Path
 from typing import List, Optional, no_type_check
 import numpy as np
 import pyarrow as pa
@@ -18,10 +17,9 @@ from .inputs import Diff, Filters, Function, Input, Query as QueryInput
 from .middleware import AbstractTable, GraphQL
 from .models import Column, ListColumn, annotate, doc_field, selections
 from .scalars import Long, Operator, type_map
-from .settings import COLUMNS, DEBUG, DICTIONARIES, INDEX, MMAP, PARQUET_PATH
+from .settings import COLUMNS, DATASET, DEBUG, INDEX
 
-path = Path(PARQUET_PATH).resolve()
-table = pq.ParquetDataset(path, memory_map=MMAP, read_dictionary=DICTIONARIES).read(COLUMNS)
+table = pq.ParquetDataset(**DATASET).read(COLUMNS)
 indexed = list(map(to_camel_case, INDEX))
 table = pa.Table.from_pydict({to_camel_case(name): table[name] for name in table.column_names})
 types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
