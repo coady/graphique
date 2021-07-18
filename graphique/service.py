@@ -14,17 +14,18 @@ from strawberry.arguments import UNSET
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
 from .inputs import Diff, Filters, Function, Input, Query as QueryInput
-from .middleware import AbstractTable, GraphQL
+from .middleware import AbstractTable, GraphQL, references
 from .models import Column, ListColumn, annotate, doc_field, selections
-from .scalars import Long, Operator, type_map
-from .settings import COLUMNS, DATASET, DEBUG, INDEX
+from .scalars import Long, Operator, comparisons, type_map
+from .settings import COLUMNS, DATASET, DEBUG, INDEX, READ
 
-table = pq.ParquetDataset(**DATASET).read(COLUMNS)
+dataset = pq.ParquetDataset(**DATASET)
 indexed = list(map(to_camel_case, INDEX))
-table = pa.Table.from_pydict({to_camel_case(name): table[name] for name in table.column_names})
-types = {name: type_map[tp.id] for name, tp in T.types(table).items()}
-for name in indexed:
-    assert not table[name].null_count, f"binary search requires non-null columns: {name}"
+case_map = {to_camel_case(name): name for name in dataset.schema.names}
+types = {field.name: type_map[C.scalar_type(field).id] for field in dataset.schema}
+if COLUMNS:
+    types = {name: types[name] for name in COLUMNS}
+types = {to_camel_case(name): types[name] for name in types}
 
 
 @strawberry.type(description="fields for each column")
@@ -63,9 +64,10 @@ class Table(AbstractTable):
     @doc_field
     def row(self, info, index: Long = 0) -> Row:
         """Return scalar values at index."""
+        table = self.select(info)
         row = {}
-        for name in selections(*info.field_nodes):
-            scalar = self.table[name][index]
+        for name in table.column_names:
+            scalar = table[name][index]
             row[name] = (
                 Column.fromscalar(scalar) if isinstance(scalar, pa.ListScalar) else scalar.as_py()
             )
@@ -291,5 +293,41 @@ class IndexedTable(Table):
         return Table(table)
 
 
-Query = IndexedTable if indexed else Table
-app = GraphQL(Query(table), debug=DEBUG)
+@strawberry.type(description="a parquet table read on-demand")
+class Dataset(Table):
+    def __init__(self, dataset: pq.ParquetDataset):
+        self.dataset = dataset
+
+    def select(self, info, dataset=None) -> pa.Table:
+        """Return table with only the columns necessary to proceed."""
+        names = list(map(case_map.get, set(references(*info.field_nodes)) & set(types)))
+        table = (dataset or self.dataset).read(names)
+        return pa.Table.from_pydict({to_camel_case(name): table[name] for name in names})
+
+    @doc_field
+    def length(self) -> Long:
+        """number of rows"""
+        return len(self.dataset.read([]))
+
+    @QueryInput.resolve_types(types)
+    def read(self, info, **queries) -> Table:
+        """Return table from reading filtered rows."""
+        filters = list(DATASET['filters'] or [])
+        for name, query in queries.items():
+            if query is None:
+                raise TypeError(f"`{name}` is optional, not nullable")
+            for op, value in dict(query).items():
+                filters.append((case_map[name], comparisons[op], value))
+        dataset = pq.ParquetDataset(**dict(DATASET, filters=filters))
+        return Table(self.select(info, dataset))
+
+
+root = Dataset(dataset)
+if READ:
+    table = dataset.read(COLUMNS)
+    table = pa.Table.from_pydict({to_camel_case(name): table[name] for name in table.column_names})
+    for name in indexed:
+        assert not table[name].null_count, f"binary search requires non-null columns: {name}"
+    root = (IndexedTable if indexed else Table)(table)
+Query = type(root)
+app = GraphQL(root, debug=DEBUG)

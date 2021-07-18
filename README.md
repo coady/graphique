@@ -25,13 +25,14 @@ outputs the graphql schema for a parquet data set.
 ### Configuration
 Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to [ParquetDataset](https://arrow.apache.org/docs/python/parquet.html#reading-from-partitioned-datasets).
 
-* COLUMNS = None
-* DEBUG = False
-* DICTIONARIES = None
-* FILTERS = None
-* INDEX = None
-* MMAP = False
-* PARQUET_PATH
+* COLUMNS = None: names of columns to read
+* DEBUG = False: run service in debug mode, which includes timing
+* DICTIONARIES = None: names of columns to read as dictionaries
+* FILTERS = None: predicates for which rows to read
+* INDEX = None: names of columns which are represent a sorted composite index
+* MMAP = False: use a memory map to read the files
+* PARQUET_PATH: path to the parquet directory or file
+* READ = True: read the dataset into a table at startup
 
 ### API
 #### types
@@ -43,6 +44,7 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * `slice`: contiguous selection of rows
 * `search`: binary search if the table is sorted, i.e., provides an index
 * `filter`: select rows from predicate functions
+* `read`: filters rows on reading the dataset
 
 #### projection
 * `columns`: provides a field for every `Column` in the schema
@@ -66,6 +68,8 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views. Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
 
 Specifying an `INDEX` of columns indicates the table is sorted, and enables the binary `search` field.
+
+Specifying `READ` to false will lazily load the table, and enables a `read` field to filter rows from the dataset. All table fields are supported and benefit from reading only needed columns. Because graphique is a running service, the default for now is to read on startup. However [parquet is performant](https://duckdb.org/2021/06/25/querying-parquet.html) at reading a subset of data - both rows and columns. So there may be use cases where lower memory usage and more variable latency is worth the trade-off.
 
 ## Installation
 ```console
@@ -92,6 +96,7 @@ dev
 * Stricter validation of inputs
 * Columns can be cast to another arrow data type
 * Grouping uses large list arrays with 64-bit counts
+* Datasets can be read on-demand
 
 0.4
 

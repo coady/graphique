@@ -403,10 +403,6 @@ class Table(pa.Table):
         'digitize': Column.digitize,
     }
 
-    def types(self) -> dict:
-        """Return mapping of column types."""
-        return {name: Column.scalar_type(self[name]) for name in self.column_names}
-
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.
 

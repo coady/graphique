@@ -2,6 +2,7 @@ import os
 import sys
 from pathlib import Path
 import pyarrow as pa
+import pyarrow.parquet as pq
 import strawberry
 import pytest
 from starlette import testclient
@@ -28,35 +29,39 @@ def load(path, **vars):
     os.environ.update(vars)
     sys.modules.pop('graphique.service', None)
     sys.modules.pop('graphique.settings', None)
-    from graphique.service import table
+    from graphique.service import root
 
     for var in vars:
         del os.environ[var]
-    return table
+    return root
 
 
 @pytest.fixture(scope='module')
 def table():
-    return load('zipcodes.parquet', INDEX='zipcode', FILTERS='[["zipcode", ">", 0]]')
+    return pq.read_table(fixtures / 'zipcodes.parquet')
 
 
 @pytest.fixture(scope='module')
-def client(table):
+def client():
+    load('zipcodes.parquet', INDEX='zipcode', FILTERS='[["zipcode", ">", 0]]')
     from graphique.service import app
 
     return TestClient(app)
 
 
 @pytest.fixture(scope='module')
-def service():
-    load('alltypes.parquet', INDEX='snake_id,camelId', DICTIONARIES='string')
-    from graphique import service
+def dsclient():
+    load('zipcodes.parquet', READ='0', COLUMNS='state,county')
+    from graphique.service import app
 
-    return service
+    return TestClient(app)
 
 
 @pytest.fixture(scope='module')
-def executor(service):
+def executor():
+    load('alltypes.parquet', INDEX='snake_id,camelId', DICTIONARIES='string')
+    from graphique import service
+
     schema = strawberry.Schema(query=service.IndexedTable)
 
     def execute(query):
