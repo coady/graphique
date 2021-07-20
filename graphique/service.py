@@ -98,7 +98,7 @@ class Table(AbstractTable):
         Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
         table, counts = T.group(table, *by, reverse=reverse, length=length)
-        return Table(table.add_column(len(table.columns), count, counts) if count else table)
+        return Table(table.append_column(count, counts) if count else table)
 
     @doc_field(
         by="column names",
@@ -123,7 +123,7 @@ class Table(AbstractTable):
                     value = timedelta(seconds=value)
                 predicates[name] += (value,)
         table, counts = T.partition(table, *names, **predicates)
-        return Table(table.add_column(len(table.columns), count, counts) if count else table)
+        return Table(table.append_column(count, counts) if count else table)
 
     @doc_field(
         by="column names",
@@ -145,7 +145,7 @@ class Table(AbstractTable):
         if selections(*info.field_nodes) == {'length'}:  # optimized for count
             return Table(T.unique_indices(table, *by)[0][:length])
         table, counts = T.unique(table, *by, reverse=reverse, length=length, count=bool(count))
-        return Table(table.add_column(len(table.columns), count, counts) if count else table)
+        return Table(table.append_column(count, counts) if count else table)
 
     @doc_field(
         by="column names",
@@ -302,7 +302,7 @@ class Dataset(Table):
         """Return table with only the columns necessary to proceed."""
         names = list(map(case_map.get, set(references(*info.field_nodes)) & set(types)))
         table = (dataset or self.dataset).read(names)
-        return pa.Table.from_pydict({to_camel_case(name): table[name] for name in names})
+        return table.rename_columns(map(to_camel_case, names))
 
     @doc_field
     def length(self) -> Long:
@@ -325,7 +325,7 @@ class Dataset(Table):
 root = Dataset(dataset)
 if READ:
     table = dataset.read(COLUMNS)
-    table = pa.Table.from_pydict({to_camel_case(name): table[name] for name in table.column_names})
+    table = table.rename_columns(map(to_camel_case, table.column_names))
     for name in indexed:
         assert not table[name].null_count, f"binary search requires non-null columns: {name}"
     root = (IndexedTable if indexed else Table)(table)

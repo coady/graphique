@@ -8,5 +8,7 @@ def test_dataset(dsclient):
     assert data == {'length': 41700, 'row': {'state': 'NY'}}
     data = dsclient.execute('{ read(state: {isIn: ["CA", "NY"]}) { length } }')
     assert data == {'read': {'length': 4852}}
+    data = dsclient.execute('{ read(state: {notEqual: "CA"}) { length } }')
+    assert data == {'read': {'length': 39053}}
     with pytest.raises(ValueError, match="optional, not nullable"):
         dsclient.execute('{ read(state: null) { length } }')

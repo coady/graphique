@@ -61,7 +61,7 @@ type_map = {
 
 comparisons = {
     'equal': '==',
-    'not_equal': '=!',
+    'not_equal': '!=',
     'less': '<',
     'less_equal': '<=',
     'greater': '>',

@@ -530,7 +530,7 @@ class Table(pa.Table):
         if cast:
             column = column.cast(cast)
         if alias:
-            return self.add_column(len(self.column_names), alias, column)
+            return self.append_column(alias, column)
         return self.set_column(self.column_names.index(name), name, column)
 
     def matched(self, func: Callable, *names: str) -> pa.Table:

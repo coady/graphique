@@ -29,11 +29,11 @@ def load(path, **vars):
     os.environ.update(vars)
     sys.modules.pop('graphique.service', None)
     sys.modules.pop('graphique.settings', None)
-    from graphique.service import root
+    from graphique.service import app
 
     for var in vars:
         del os.environ[var]
-    return root
+    return app
 
 
 @pytest.fixture(scope='module')
@@ -43,29 +43,23 @@ def table():
 
 @pytest.fixture(scope='module')
 def client():
-    load('zipcodes.parquet', INDEX='zipcode', FILTERS='[["zipcode", ">", 0]]')
-    from graphique.service import app
-
+    app = load('zipcodes.parquet', INDEX='zipcode', FILTERS='[["zipcode", ">", 0]]')
     return TestClient(app)
 
 
 @pytest.fixture(scope='module')
 def dsclient():
-    load('zipcodes.parquet', READ='0', COLUMNS='state,county')
-    from graphique.service import app
-
+    app = load('zipcodes.parquet', READ='0', COLUMNS='state,county')
     return TestClient(app)
 
 
 @pytest.fixture(scope='module')
 def executor():
-    load('alltypes.parquet', INDEX='snake_id,camelId', DICTIONARIES='string')
-    from graphique import service
-
-    schema = strawberry.Schema(query=service.IndexedTable)
+    app = load('alltypes.parquet', INDEX='snake_id,camelId', DICTIONARIES='string')
+    schema = strawberry.Schema(query=type(app.root_value))
 
     def execute(query):
-        result = schema.execute_sync(query, root_value=service.IndexedTable(service.table))
+        result = schema.execute_sync(query, root_value=app.root_value)
         for error in result.errors or ():
             raise ValueError(error)
         return result.data
