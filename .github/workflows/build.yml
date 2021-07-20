@@ -19,7 +19,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - run: pip install cython pyarrow strawberry-graphql starlette pytz requests pytest-cov
     - run: make check
-    - uses: codecov/codecov-action@v1
+    - uses: codecov/codecov-action@v2
+      with:
+        files: .coverage
+
 
   lint:
     runs-on: ubuntu-latest
