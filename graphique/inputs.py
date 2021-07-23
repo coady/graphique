@@ -2,12 +2,12 @@
 GraphQL input types.
 """
 import functools
-import inspect
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Callable, Iterator, List, Optional, no_type_check
 import strawberry
-from strawberry.arguments import UNSET, get_arguments_from_annotations
+from strawberry.annotation import StrawberryAnnotation
+from strawberry.arguments import StrawberryArgument, UNSET
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from typing_extensions import Annotated
@@ -61,17 +61,19 @@ class Input:
 
 def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) -> StrawberryField:
     """Return field by transforming annotations into function arguments."""
-    kind = inspect.Parameter.KEYWORD_ONLY
-    parameters = {
-        name: inspect.Parameter(name, kind, default=defaults.get(name, UNSET))
-        for name in annotations
-    }
     resolver = StrawberryResolver(func)
-    resolver.arguments = get_arguments_from_annotations(annotations, parameters, func)
+    resolver.arguments = [
+        StrawberryArgument(
+            python_name=name,
+            graphql_name=None,
+            type_annotation=StrawberryAnnotation(annotation),
+            default=defaults.get(name, UNSET),
+        )
+        for name, annotation in annotations.items()
+    ]
     return StrawberryField(
         python_name=func.__name__,
-        graphql_name='',
-        type_=func.__annotations__['return'],
+        type_annotation=StrawberryAnnotation(func.__annotations__['return']),
         description=func.__doc__,
         base_resolver=resolver,
     )

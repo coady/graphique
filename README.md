@@ -78,7 +78,7 @@ Specifying `READ` to false will lazily load the table, and enables a `read` fiel
 
 ## Dependencies
 * pyarrow >=4
-* strawberry-graphql >=0.67
+* strawberry-graphql >=0.69.4
 * starlette >=0.14
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 * pytz (optional timestamp support)
