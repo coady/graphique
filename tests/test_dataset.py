@@ -1,4 +1,4 @@
-def test_dataset(dsclient):
+def test_filter(dsclient):
     data = dsclient.execute('{ column(name: "state") { length } }')
     assert data == {'column': {'length': 41700}}
     data = dsclient.execute('{ length row { state } }')
@@ -9,3 +9,8 @@ def test_dataset(dsclient):
     assert data == {'filter': {'length': 39053}}
     data = dsclient.execute('{ filter { length } }')
     assert data == {'filter': {'length': 41700}}
+
+
+def test_search(dsclient):
+    data = dsclient.execute('{ search(zipcode: {less: 10000}) { length } }')
+    assert data == {'search': {'length': 3224}}

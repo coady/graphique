@@ -48,8 +48,8 @@ def client():
 
 
 @pytest.fixture(scope='module')
-def dsclient():
-    app = load('zipcodes.parquet', READ='0', COLUMNS='state,county')
+def dsclient(request):
+    app = load('zipcodes.parquet', COLUMNS='zipcode,state,county', READ='0', INDEX='zipcode')
     return TestClient(app)
 
 

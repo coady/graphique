@@ -29,7 +29,7 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * DEBUG = False: run service in debug mode, which includes timing
 * DICTIONARIES = None: names of columns to read as dictionaries
 * FILTERS = None: predicates for which rows to read
-* INDEX = None: names of columns which are represent a sorted composite index
+* INDEX = None: names of columns which are represent a sorted composite index or partition keys
 * MMAP = False: use a memory map to read the files
 * PARQUET_PATH: path to the parquet directory or file
 * READ = True: read the dataset into a table at startup
@@ -67,9 +67,9 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 ### Performance
 Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views. Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
 
-Specifying an `INDEX` of columns indicates the table is sorted, and enables the binary `search` field.
+Specifying an `INDEX` of columns indicates the table is sorted, and enables the binary `search` field. It may also be used to indicate partition keys.
 
-Specifying `READ` to false will lazily load the table. All table fields are supported and benefit from reading only needed columns. Additionally `filter(query: ...)` is optimized to filter rows while reading the dataset. Because graphique is a running service, the default for now is to read on startup. However [parquet is performant](https://duckdb.org/2021/06/25/querying-parquet.html) at reading a subset of data - both rows and columns. So there may be use cases where lower memory usage and more variable latency is worth the trade-off.
+Specifying `READ` to false will lazily load the table. All table fields are supported and benefit from reading only needed columns. Additionally `filter(query: ...)` and `search(...)` are optimized to filter rows while reading the dataset. Because graphique is a running service, the default for now is to read on startup. However [parquet is performant](https://duckdb.org/2021/06/25/querying-parquet.html) at reading a subset of data - both rows and columns. So there may be use cases where lower memory usage and more variable latency is worth the trade-off.
 
 ## Installation
 ```console

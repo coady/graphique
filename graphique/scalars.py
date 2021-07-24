@@ -70,7 +70,7 @@ comparisons = {
 }
 
 
-@strawberry.enum
+@strawberry.enum(description="boolean operator to combine predicates")
 class Operator(enum.Enum):
     AND = 'and'
     OR = 'or'

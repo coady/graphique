@@ -53,6 +53,16 @@ class Queries(Input):
 class Table(AbstractTable):
     __init__ = AbstractTable.__init__
 
+    def read(self, query: Queries) -> 'Table':
+        """Return table by translating the query into a dataset filter."""
+        filters, case_map = [], self.case_map
+        for name, value in dict(query).items():
+            filters += [(case_map[name], comparisons[op], value[op]) for op in value]
+        if not filters:
+            return self
+        filters += DATASET['filters'] or []
+        return type(self)(pq.ParquetDataset(**dict(DATASET, filters=filters)))
+
     @doc_field
     def columns(self, info) -> Columns:
         """fields for each column"""
@@ -183,18 +193,12 @@ class Table(AbstractTable):
         query: Queries = {},
         on: Filters = {},
         invert: bool = False,
-        reduce: Operator = 'and',
+        reduce: Operator = Operator.AND,
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
         List columns apply their respective filters to their own scalar values."""
         if not isinstance(self.table, pa.Table) and not invert and reduce.value == 'and':
-            filters, case_map = [], self.case_map
-            for name, value in dict(query).items():
-                filters += [(case_map[name], comparisons[op], value[op]) for op in value]
-            query = {}
-            if filters:
-                filters += DATASET['filters'] or []
-                self = Table(pq.ParquetDataset(**dict(DATASET, filters=filters)))
+            query, self = {}, self.read(query)
         table = self.select(info)
         filters = list(dict(query).items())
         for value in map(dict, itertools.chain(*dict(on).values())):
@@ -271,6 +275,8 @@ class IndexedTable(Table):
         """Return table with matching values for composite `index`.
         Queries must be a prefix of the `index`.
         Only one inequality query is allowed, and must be last."""
+        if not isinstance(self.table, pa.Table):
+            queries, self = {}, self.read(Queries(**queries))  # type: ignore
         table = self.select(info)
         for name in queries:
             if queries[name] is None:
@@ -301,7 +307,7 @@ class IndexedTable(Table):
 
 
 if READ:
-    table = dataset.read(COLUMNS)
+    table = dataset.read(None if COLUMNS is None else list(COLUMNS))
     table = table.rename_columns(map(to_camel_case, table.schema.names))
     for name in indexed:
         assert not table[name].null_count, f"binary search requires non-null columns: {name}"
