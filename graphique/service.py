@@ -14,14 +14,13 @@ from strawberry.arguments import UNSET
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
 from .inputs import Diff, Filters, Function, Input, Query as QueryInput
-from .middleware import AbstractTable, GraphQL, references
+from .middleware import AbstractTable, GraphQL
 from .models import Column, ListColumn, annotate, doc_field, selections
 from .scalars import Long, Operator, comparisons, type_map
 from .settings import COLUMNS, DATASET, DEBUG, INDEX, READ
 
-dataset = pq.ParquetDataset(**DATASET)
+table = dataset = pq.ParquetDataset(**DATASET)
 indexed = list(map(to_camel_case, INDEX))
-case_map = {to_camel_case(name): name for name in dataset.schema.names}
 types = {field.name: type_map[C.scalar_type(field).id] for field in dataset.schema}
 if COLUMNS:
     types = {name: types[name] for name in COLUMNS}
@@ -188,6 +187,14 @@ class Table(AbstractTable):
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
         List columns apply their respective filters to their own scalar values."""
+        if not isinstance(self.table, pa.Table) and not invert and reduce.value == 'and':
+            filters, case_map = [], self.case_map
+            for name, value in dict(query).items():
+                filters += [(case_map[name], comparisons[op], value[op]) for op in value]
+            query = {}
+            if filters:
+                filters += DATASET['filters'] or []
+                self = Table(pq.ParquetDataset(**dict(DATASET, filters=filters)))
         table = self.select(info)
         filters = list(dict(query).items())
         for value in map(dict, itertools.chain(*dict(on).values())):
@@ -293,41 +300,10 @@ class IndexedTable(Table):
         return Table(table)
 
 
-@strawberry.type(description="a parquet table read on-demand")
-class Dataset(Table):
-    def __init__(self, dataset: pq.ParquetDataset):
-        self.dataset = dataset
-
-    def select(self, info, dataset=None) -> pa.Table:
-        """Return table with only the columns necessary to proceed."""
-        names = list(map(case_map.get, set(references(*info.field_nodes)) & set(types)))
-        table = (dataset or self.dataset).read(names)
-        return table.rename_columns(map(to_camel_case, names))
-
-    @doc_field
-    def length(self) -> Long:
-        """number of rows"""
-        return len(self.dataset.read([]))
-
-    @QueryInput.resolve_types(types)
-    def read(self, info, **queries) -> Table:
-        """Return table from reading filtered rows."""
-        filters = list(DATASET['filters'] or [])
-        for name, query in queries.items():
-            if query is None:
-                raise TypeError(f"`{name}` is optional, not nullable")
-            for op, value in dict(query).items():
-                filters.append((case_map[name], comparisons[op], value))
-        dataset = pq.ParquetDataset(**dict(DATASET, filters=filters))
-        return Table(self.select(info, dataset))
-
-
-root = Dataset(dataset)
 if READ:
     table = dataset.read(COLUMNS)
-    table = table.rename_columns(map(to_camel_case, table.column_names))
+    table = table.rename_columns(map(to_camel_case, table.schema.names))
     for name in indexed:
         assert not table[name].null_count, f"binary search requires non-null columns: {name}"
-    root = (IndexedTable if indexed else Table)(table)
-Query = type(root)
-app = GraphQL(root, debug=DEBUG)
+Query = IndexedTable if indexed else Table
+app = GraphQL(Query(table), debug=DEBUG)

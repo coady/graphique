@@ -3,8 +3,11 @@ Service related utilities which don't require knowledge of the schema.
 """
 import itertools
 from datetime import datetime
+from typing import Union
 import pyarrow as pa
+import pyarrow.parquet as pq
 import strawberry.asgi
+from strawberry.utils.str_converters import to_camel_case
 from .core import Table as T
 from .inputs import Projections
 from .models import Column, doc_field
@@ -50,18 +53,25 @@ class GraphQL(strawberry.asgi.GraphQL):
 
 @strawberry.interface
 class AbstractTable:
-    def __init__(self, table: pa.Table):
+    def __init__(self, table: Union[pa.Table, pq.ParquetDataset]):
         self.table = table
+
+    @property
+    def case_map(self):
+        return {to_camel_case(name): name for name in self.table.schema.names}
 
     def select(self, info) -> pa.Table:
         """Return table with only the columns necessary to proceed."""
-        names = set(references(*info.field_nodes))
-        return self.table.select(names & set(self.table.column_names))
+        case_map = self.case_map
+        names = set(references(*info.field_nodes)) & set(case_map)
+        if isinstance(self.table, pa.Table):
+            return self.table.select(names)
+        return self.table.read(list(map(case_map.get, names))).rename_columns(names)
 
     @doc_field
     def length(self) -> Long:
         """number of rows"""
-        return len(self.table)
+        return len(self.table if hasattr(self.table, '__len__') else self.table.read([]))
 
     @doc_field(
         cast="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",

@@ -69,7 +69,7 @@ Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.
 
 Specifying an `INDEX` of columns indicates the table is sorted, and enables the binary `search` field.
 
-Specifying `READ` to false will lazily load the table, and enables a `read` field to filter rows from the dataset. All table fields are supported and benefit from reading only needed columns. Because graphique is a running service, the default for now is to read on startup. However [parquet is performant](https://duckdb.org/2021/06/25/querying-parquet.html) at reading a subset of data - both rows and columns. So there may be use cases where lower memory usage and more variable latency is worth the trade-off.
+Specifying `READ` to false will lazily load the table. All table fields are supported and benefit from reading only needed columns. Additionally `filter(query: ...)` is optimized to filter rows while reading the dataset. Because graphique is a running service, the default for now is to read on startup. However [parquet is performant](https://duckdb.org/2021/06/25/querying-parquet.html) at reading a subset of data - both rows and columns. So there may be use cases where lower memory usage and more variable latency is worth the trade-off.
 
 ## Installation
 ```console
