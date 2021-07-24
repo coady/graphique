@@ -43,19 +43,19 @@ def table():
 
 @pytest.fixture(scope='module')
 def client():
-    app = load('zipcodes.parquet', INDEX='zipcode', FILTERS='[["zipcode", ">", 0]]')
+    app = load('zipcodes.parquet', INDEX='zipcode', COLUMNS='*', FILTERS='[["zipcode", ">", 0]]')
     return TestClient(app)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(params=['', 'zipcode,state,county'], scope='module')
 def dsclient(request):
-    app = load('zipcodes.parquet', COLUMNS='zipcode,state,county', READ='0', INDEX='zipcode')
+    app = load('zipcodes.parquet', COLUMNS=request.param, INDEX='zipcode')
     return TestClient(app)
 
 
 @pytest.fixture(scope='module')
 def executor():
-    app = load('alltypes.parquet', INDEX='snake_id,camelId', DICTIONARIES='string')
+    app = load('alltypes.parquet', INDEX='snake_id,camelId', COLUMNS='*', DICTIONARIES='string')
     schema = strawberry.Schema(query=type(app.root_value))
 
     def execute(query):

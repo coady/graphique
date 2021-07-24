@@ -4,10 +4,9 @@ from starlette.config import Config
 from starlette.datastructures import CommaSeparatedStrings
 
 config = Config('.env')
-COLUMNS = config('COLUMNS', cast=CommaSeparatedStrings, default=None)
+COLUMNS = config('COLUMNS', cast=CommaSeparatedStrings, default=[])
 DEBUG = config('DEBUG', cast=bool, default=False)
 INDEX = config('INDEX', cast=CommaSeparatedStrings, default=[])
-READ = config('READ', cast=bool, default=True)
 DATASET = {
     'path_or_paths': Path(config('PARQUET_PATH')).resolve(),
     'filters': config('FILTERS', cast=json.loads, default=None),

@@ -25,14 +25,13 @@ outputs the graphql schema for a parquet data set.
 ### Configuration
 Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to [ParquetDataset](https://arrow.apache.org/docs/python/parquet.html#reading-from-partitioned-datasets).
 
-* COLUMNS = None: names of columns to read
+* COLUMNS = []: names of columns to read at startup; `*` indicates all
 * DEBUG = False: run service in debug mode, which includes timing
 * DICTIONARIES = None: names of columns to read as dictionaries
 * FILTERS = None: predicates for which rows to read
-* INDEX = None: names of columns which are represent a sorted composite index or partition keys
+* INDEX = []: names of columns which are represent a sorted composite index or partition keys
 * MMAP = False: use a memory map to read the files
 * PARQUET_PATH: path to the parquet directory or file
-* READ = True: read the dataset into a table at startup
 
 ### API
 #### types
@@ -67,9 +66,9 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 ### Performance
 Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views. Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
 
-Specifying an `INDEX` of columns indicates the table is sorted, and enables the binary `search` field. It may also be used to indicate partition keys.
+By default, datasets are read on-demand, with only the necessary columns selected. Additionally `filter(query: ...)` is optimized to filter rows while reading the dataset. Although graphique is a running service, [parquet is performant](https://duckdb.org/2021/06/25/querying-parquet.html) at reading a subset of data. Optionally specify `COLUMNS` to read a subset of columns (or `*`) at startup, trading-off memory for latency.
 
-Specifying `READ` to false will lazily load the table. All table fields are supported and benefit from reading only needed columns. Additionally `filter(query: ...)` and `search(...)` are optimized to filter rows while reading the dataset. Because graphique is a running service, the default for now is to read on startup. However [parquet is performant](https://duckdb.org/2021/06/25/querying-parquet.html) at reading a subset of data - both rows and columns. So there may be use cases where lower memory usage and more variable latency is worth the trade-off.
+Specifying an `INDEX` with `COLUMNS` indicates the table is sorted, and enables the binary `search` field. Specifying just `INDEX` is allowed but only recommended if it corresponds to the partition keys; `search(...)` is functionally equivalent to `filter(query: ...)` without `COLUMNS`.
 
 ## Installation
 ```console
@@ -96,7 +95,7 @@ dev
 * Stricter validation of inputs
 * Columns can be cast to another arrow data type
 * Grouping uses large list arrays with 64-bit counts
-* Datasets can be read on-demand
+* Datasets are read on-demand or optionally at startup
 
 0.4
 

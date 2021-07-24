@@ -17,14 +17,11 @@ from .inputs import Diff, Filters, Function, Input, Query as QueryInput
 from .middleware import AbstractTable, GraphQL
 from .models import Column, ListColumn, annotate, doc_field, selections
 from .scalars import Long, Operator, comparisons, type_map
-from .settings import COLUMNS, DATASET, DEBUG, INDEX, READ
+from .settings import COLUMNS, DATASET, DEBUG, INDEX
 
 table = dataset = pq.ParquetDataset(**DATASET)
 indexed = list(map(to_camel_case, INDEX))
-types = {field.name: type_map[C.scalar_type(field).id] for field in dataset.schema}
-if COLUMNS:
-    types = {name: types[name] for name in COLUMNS}
-types = {to_camel_case(name): types[name] for name in types}
+types = {to_camel_case(field.name): type_map[C.scalar_type(field).id] for field in dataset.schema}
 
 
 @strawberry.type(description="fields for each column")
@@ -306,8 +303,8 @@ class IndexedTable(Table):
         return Table(table)
 
 
-if READ:
-    table = dataset.read(None if COLUMNS is None else list(COLUMNS))
+if COLUMNS:
+    table = dataset.read(None if '*' in COLUMNS else list(COLUMNS))
     table = table.rename_columns(map(to_camel_case, table.schema.names))
     for name in indexed:
         assert not table[name].null_count, f"binary search requires non-null columns: {name}"
