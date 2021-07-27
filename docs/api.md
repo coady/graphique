@@ -56,7 +56,7 @@ Fastest of all, is not needing all the values of a list scalar. `Table.unique` a
 Each field resolver transforms a table or array as needed. When working with an embedded library like [pandas](https://pandas.pydata.org), it's common to select a working set of columns for efficiency. Whereas GraphQL has the advantage of knowing the entire query up front, so there is no `Table.select` field because it's done automatically at every level of resolvers.
 
 ## Dictionary Arrays
-Arrow has dictionary-encoded arrays as a space optimization, but doesn't natively support many builtin functions on them. Support for dictionaries is extended, and often faster by only having to apply functions to the unique values.
+Arrow has dictionary-encoded arrays as a space optimization, but doesn't natively support some builtin functions on them. Support for dictionaries is extended, and often faster by only having to apply functions to the unique values.
 
 ## Chunked Arrays
 Arrow supports conceptually contiguous arrays in chunks, typically as a result of separate parquet files. Operations are parallelized across chunks when possible. However, grouping and sorting may be memory intensive as they inherently have to combine chunks.

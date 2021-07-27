@@ -28,6 +28,7 @@ def test_dictionary(table):
     assert C.fill_null(array, "c").to_pylist() == C.fill_null(C.decode(array), "c").to_pylist()
     assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
     assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
+    assert not C.mask(pa.chunked_array([], 'string').dictionary_encode())
 
 
 def test_chunks():

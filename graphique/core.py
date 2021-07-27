@@ -54,19 +54,8 @@ class Chunk(pa.Array):
         indices, counts = unique_indices(array[::-1], count)
         return pc.subtract(len(array) - 1, indices), counts
 
-    def call(self: pa.DictionaryArray, func: Callable, *args, **kwargs) -> pa.Array:
-        if len(self.dictionary) >= len(self):
-            return func(self.cast(self.type.value_type), *args, **kwargs)
-        dictionary = func(self.dictionary, *args, **kwargs)
-        return pa.DictionaryArray.from_arrays(self.indices, dictionary)
-
-    def fill_null(self: pa.DictionaryArray, value) -> pa.DictionaryArray:
-        if not self.null_count:
-            return self
-        if len(self.dictionary) >= len(self):
-            return self.cast(self.type.value_type).fill_null(value)
-        indices = self.indices.fill_null(len(self.dictionary))
-        dictionary = pa.concat_arrays([self.dictionary, pa.array([value], self.dictionary.type)])
+    def fill_null(self: pa.DictionaryArray, dictionary: pa.Array) -> pa.DictionaryArray:
+        indices = self.indices.fill_null(len(dictionary) - 1)
         return pa.DictionaryArray.from_arrays(indices, dictionary)
 
     @staticmethod
@@ -237,13 +226,18 @@ class Column(pa.ChunkedArray):
         self = Column.decode(self, check=True)
         scalar = Column.scalar_type(self)
         args = tuple(pa.scalar(arg, scalar) if isinstance(arg, time) else arg for arg in args)
-        if self.type == scalar or any(isinstance(arg, pa.ChunkedArray) for arg in args):
-            return func(self, *args)
-        chunks = list(Column.map(rpartial(Chunk.call, func, *args), self))
         try:
-            array = pa.chunked_array(chunks)
-        except TypeError:  # mixed dictionary encoding
-            return pa.chunked_array(map(Column.decode, chunks))
+            return func(self, *args)
+        except NotImplementedError:
+            if not pa.types.is_dictionary(self.type):
+                raise
+        if not self:
+            return self
+        self = self.unify_dictionaries()
+        dictionary = func(self.chunk(0).dictionary, *args)
+        array = pa.chunked_array(
+            pa.DictionaryArray.from_arrays(chunk.indices, dictionary) for chunk in self.iterchunks()
+        )
         return Column.decode(array, check=True)
 
     def equal(self, value) -> pa.ChunkedArray:
@@ -271,9 +265,12 @@ class Column(pa.ChunkedArray):
         """Replace each null element in values with fill_value with dictionary support."""
         if not self.null_count:
             return self
-        if not pa.types.is_dictionary(self.type):
+        with contextlib.suppress(NotImplementedError):
             return self.fill_null(value)
-        return pa.chunked_array(Column.map(rpartial(Chunk.fill_null, value), self))
+        self = self.unify_dictionaries()
+        end = pa.array([value], self.type.value_type)
+        dictionary = pa.concat_arrays([self.chunk(0).dictionary, end])
+        return pa.chunked_array(Column.map(rpartial(Chunk.fill_null, dictionary), self))
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
