@@ -304,3 +304,8 @@ def test_dictionary(executor):
         '{ apply(string: [{name: "string", fillNull: ""}]) { columns { string { values } } } }'
     )
     assert data == {'apply': {'columns': {'string': {'values': ['', '']}}}}
+
+
+def test_selections(executor):
+    data = executor('{ slice { length } slice { sort(by: "snakeId") { length } } }')
+    assert data == {'slice': {'length': 2, 'sort': {'length': 2}}}

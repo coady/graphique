@@ -20,10 +20,13 @@ from .inputs import Field, resolve_annotations
 from .scalars import Long, classproperty, type_map
 
 
-def selections(node):
-    """Return tree of field name selections."""
-    nodes = getattr(node.selection_set, 'selections', [])
-    return {node.name.value for node in nodes if hasattr(node, 'name')}
+def selections(*nodes):
+    """Return set of field name selections."""
+    names = set()
+    for node in nodes:
+        selections = getattr(node.selection_set, 'selections', [])
+        names |= {node.name.value for node in selections if hasattr(node, 'name')}
+    return names
 
 
 def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField:

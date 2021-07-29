@@ -63,7 +63,7 @@ class AbstractTable:
     def select(self, info) -> pa.Table:
         """Return table with only the columns necessary to proceed."""
         case_map = self.case_map
-        names = set(references(*info.field_nodes)) & set(case_map)
+        names = set(itertools.chain(*map(references, info.field_nodes))) & set(case_map)
         if isinstance(self.table, pa.Table):
             return self.table.select(names)
         return self.table.read(list(map(case_map.get, names))).rename_columns(names)
