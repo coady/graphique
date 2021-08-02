@@ -235,21 +235,21 @@ class BooleanFilter(Filter):
 @strawberry.input(description="predicates for ints")
 class IntFilter(Filter):
     __annotations__.update(IntQuery.__annotations__)  # type: ignore
-    absolute: bool = False
+    abs: bool = False
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for longs")
 class LongFilter(Filter):
     __annotations__.update(LongQuery.__annotations__)  # type: ignore
-    absolute: bool = False
+    abs: bool = False
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for floats")
 class FloatFilter(Filter):
     __annotations__.update(FloatQuery.__annotations__)  # type: ignore
-    absolute: bool = False
+    abs: bool = False
     apply: OrdinalFilter = default_field(dict)
 
 
@@ -348,7 +348,7 @@ class NumericFunction(OrdinalFunction):
     multiply: Optional[str] = UNSET
     divide: Optional[str] = UNSET
     power: Optional[str] = UNSET
-    absolute: bool = default_field(bool, description=Column.absolute.__doc__)
+    abs: bool = False
 
 
 @strawberry.input(description=f"[functions]({link}#arithmetic-functions) for ints")
@@ -393,7 +393,7 @@ class TimeFunction(OrdinalFunction):
 @strawberry.input(description="functions for durations")
 class DurationFunction(OrdinalFunction):
     fill_null: Optional[timedelta] = UNSET
-    absolute: bool = default_field(bool, description=Column.absolute.__doc__)
+    abs: bool = False
 
 
 @strawberry.input(description="functions for binaries")

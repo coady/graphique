@@ -43,7 +43,6 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * `slice`: contiguous selection of rows
 * `search`: binary search if the table is sorted, i.e., provides an index
 * `filter`: select rows from predicate functions
-* `read`: filters rows on reading the dataset
 
 #### projection
 * `columns`: provides a field for every `Column` in the schema

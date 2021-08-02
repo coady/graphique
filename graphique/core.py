@@ -81,7 +81,7 @@ class Chunk(pa.Array):
         if not pa.types.is_dictionary(self.type):
             return self
         if len(self) <= len(self.dictionary):
-            return self.cast(self.type.value_type)
+            return self.dictionary_decode()
         keys = pc.sort_indices(pc.sort_indices(self.dictionary))
         return keys.take(self.indices)
 
@@ -200,8 +200,8 @@ class Column(pa.ChunkedArray):
 
     def mask(self, func='and', **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
-        if query.pop('absolute', False):
-            self = Column.absolute(self)
+        if query.pop('abs', False):
+            self = pc.abs(self)
         for op in ('utf8_lower', 'utf8_upper'):
             if query.pop(op, False):
                 self = Column.call(self, getattr(pc, op))
@@ -332,11 +332,6 @@ class Column(pa.ChunkedArray):
         """Return element-wise maximum of values."""
         return Column.compare(self, np.maximum, value)
 
-    def absolute(self) -> pa.ChunkedArray:
-        """Return absolute values."""
-        chunks = Column.map(np.absolute, self)
-        return pa.chunked_array(map(Chunk.to_null, chunks) if self.null_count else chunks)
-
     def digitize(self, bins: Iterable, right=False) -> pa.ChunkedArray:
         """Return the indices of the bins to which each value in input array belongs."""
         if not isinstance(bins, (pa.Array, np.ndarray)):
@@ -396,7 +391,7 @@ class Table(pa.Table):
         'utf8_length': pc.utf8_length,
         'utf8_lower': pc.utf8_lower,
         'utf8_upper': pc.utf8_upper,
-        'absolute': Column.absolute,
+        'abs': pc.abs,
         'digitize': Column.digitize,
     }
 

@@ -148,8 +148,8 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'minimum': {'sum': -1}}}}
         data = executor(f'{{ columns {{ {name} {{ maximum(value: 1) {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'maximum': {'sum': 1}}}}
-        data = executor(f'{{ columns {{ {name} {{ absolute {{ sum }} }} }} }}')
-        assert data == {'columns': {name: {'absolute': {'sum': 0}}}}
+        data = executor(f'{{ columns {{ {name} {{ abs {{ sum }} }} }} }}')
+        assert data == {'columns': {name: {'abs': {'sum': 0}}}}
         data = executor(f'{{ columns {{ {name} {{ mean stddev variance }} }} }}')
         assert data == {'columns': {name: {'mean': 0.0, 'stddev': 0.0, 'variance': 0.0}}}
         data = executor(f'{{ columns {{ {name} {{ mode {{ values }} }} }} }}')

@@ -215,9 +215,9 @@ class NumericColumn:
         args = (self.array, exponent) if base is None else (base, self.array)
         return type(self)(pc.power(*args))
 
-    def absolute(self):
+    def abs(self):
         """absolute values"""
-        return type(self)(C.absolute(self.array))
+        return type(self)(pc.abs(self.array))
 
 
 @strawberry.type(description="column of booleans")
@@ -252,7 +252,7 @@ class IntColumn(Column, NumericColumn):
     power = annotate(NumericColumn.power, 'IntColumn', base=Optional[int], exponent=Optional[int])
     minimum = annotate(Column.minimum, 'IntColumn', value=int)
     maximum = annotate(Column.maximum, 'IntColumn', value=int)
-    absolute = annotate(NumericColumn.absolute, 'IntColumn')
+    abs = annotate(NumericColumn.abs, 'IntColumn')
 
 
 @strawberry.type(description="column of longs")
@@ -278,7 +278,7 @@ class LongColumn(Column, NumericColumn):
     )
     minimum = annotate(Column.minimum, 'LongColumn', value=Long)
     maximum = annotate(Column.maximum, 'LongColumn', value=Long)
-    absolute = annotate(NumericColumn.absolute, 'LongColumn')
+    abs = annotate(NumericColumn.abs, 'LongColumn')
 
 
 @strawberry.type(description="column of floats")
@@ -303,7 +303,7 @@ class FloatColumn(Column, NumericColumn):
     )
     minimum = annotate(Column.minimum, 'FloatColumn', value=float)
     maximum = annotate(Column.maximum, 'FloatColumn', value=float)
-    absolute = annotate(NumericColumn.absolute, 'FloatColumn')
+    abs = annotate(NumericColumn.abs, 'FloatColumn')
 
 
 @strawberry.type(description="column of decimals")
@@ -377,7 +377,7 @@ class DurationColumn(Column):
     values = annotate(Column.values, List[Optional[timedelta]])
     minimum = annotate(Column.minimum, 'DurationColumn', value=timedelta)
     maximum = annotate(Column.maximum, 'DurationColumn', value=timedelta)
-    absolute = annotate(NumericColumn.absolute, 'DurationColumn')
+    abs = annotate(NumericColumn.abs, 'DurationColumn')
 
 
 @strawberry.type(description="column of binaries")

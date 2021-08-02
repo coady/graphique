@@ -71,8 +71,8 @@ def test_floats(client):
         { ... on FloatColumn { min } } }'''
     )
     assert data['column']['min'] == pytest.approx(-174.213333)
-    data = client.execute('{ columns { longitude { absolute { min } } } }')
-    assert data['columns']['longitude']['absolute']['min'] > 65
+    data = client.execute('{ columns { longitude { abs { min } } } }')
+    assert data['columns']['longitude']['abs']['min'] > 65
     data = client.execute(
         f'''{{ apply(int: {{name: "latitude", digitize: {list(range(90))}}})
         {{ columns {{ latitude {{ min max unique {{ length }} }} }} }} }}'''
@@ -229,7 +229,7 @@ def test_filter(client):
     data = client.execute('{ filter(on: {string: {name: "city"}}) { length } }')
     assert data['filter']['length'] == 41700
     data = client.execute(
-        '{ filter(on: {float: {name: "longitude", absolute: true, less: 66}}) { length } }'
+        '{ filter(on: {float: {name: "longitude", abs: true, less: 66}}) { length } }'
     )
     assert data['filter']['length'] == 30
     with pytest.raises(ValueError, match="optional, not nullable"):
