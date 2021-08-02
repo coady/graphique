@@ -66,9 +66,8 @@ def test_lists():
     assert ListChunk.mean(array).to_pylist() == [1.5, 0.0, None, None, None]
     assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.mode(array, length=1).to_pylist() == [[1], [0], [], [], []]
-    # TODO(ARROW-12606): test whole array and add to column model
-    assert ListChunk.quantile(array)[0].as_py() == 1.5
-    assert ListChunk.quantile(array, q=[0.75])[0].as_py() == [1.75]
+    assert ListChunk.quantile(array).to_pylist() == [1.5, 0.0, None, None, None]
+    assert ListChunk.quantile(array, q=[0.75]).to_pylist() == [[1.75], [0.0], [], [], []]
     assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
     assert ListChunk.any(array).to_pylist() == [True, False, False, False, None]

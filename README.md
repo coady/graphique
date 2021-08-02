@@ -76,7 +76,7 @@ Specifying an `INDEX` with `COLUMNS` indicates the table is sorted, and enables 
 ```
 
 ## Dependencies
-* pyarrow >=4
+* pyarrow >=5
 * strawberry-graphql >=0.69.4
 * starlette >=0.14
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
@@ -92,6 +92,7 @@ Specifying an `INDEX` with `COLUMNS` indicates the table is sorted, and enables 
 ## Changes
 dev
 
+* Pyarrow >=5 required
 * Stricter validation of inputs
 * Columns can be cast to another arrow data type
 * Grouping uses large list arrays with 64-bit counts
