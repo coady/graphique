@@ -81,6 +81,11 @@ class Column:
             return len(self.array) - self.array.null_count
         return C.count(C.mask(self.array, **query), True)
 
+    def index(self, value, start: Long = 0, end: Optional[Long] = None) -> Long:
+        """Return first index of occurrence of value; -1 indicates not found.
+        May be faster than `count` for membership test."""
+        return C.index(self.array, value, start, end)
+
     def values(self):
         """list of values"""
         return self.array.to_pylist()
@@ -224,6 +229,7 @@ class NumericColumn:
 class BooleanColumn(Column):
     __init__ = Column.__init__  # type: ignore
     count = BooleanQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=bool)
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[bool]])
@@ -235,6 +241,7 @@ class BooleanColumn(Column):
 class IntColumn(Column, NumericColumn):
     __init__ = Column.__init__  # type: ignore
     count = IntQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=int)
     values = annotate(Column.values, List[Optional[int]])
     Set = Set.subclass(int, "IntSet", "unique ints")
     unique = annotate(Column.unique, Set)
@@ -259,6 +266,7 @@ class IntColumn(Column, NumericColumn):
 class LongColumn(Column, NumericColumn):
     __init__ = Column.__init__  # type: ignore
     count = LongQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=Long)
     values = annotate(Column.values, List[Optional[Long]])
     Set = Set.subclass(Long, "LongSet", "unique longs")
     unique = annotate(Column.unique, Set)
@@ -285,6 +293,7 @@ class LongColumn(Column, NumericColumn):
 class FloatColumn(Column, NumericColumn):
     __init__ = Column.__init__  # type: ignore
     count = FloatQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=float)
     values = annotate(Column.values, List[Optional[float]])
     Set = Set.subclass(float, "FloatSet", "unique floats")
     unique = annotate(Column.unique, Set)
@@ -310,6 +319,7 @@ class FloatColumn(Column, NumericColumn):
 class DecimalColumn(Column):
     __init__ = Column.__init__  # type: ignore
     count = DecimalQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=Decimal)
     values = annotate(Column.values, List[Optional[Decimal]])
     Set = Set.subclass(Decimal, "DecimalSet", "unique decimals")
     unique = annotate(Column.unique, Set)
@@ -324,6 +334,7 @@ class DecimalColumn(Column):
 class DateColumn(Column):
     __init__ = Column.__init__  # type: ignore
     count = DateQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=date)
     values = annotate(Column.values, List[Optional[date]])
     Set = Set.subclass(date, "DateSet", "unique dates")
     unique = annotate(Column.unique, Set)
@@ -339,6 +350,7 @@ class DateColumn(Column):
 class DateTimeColumn(Column):
     __init__ = Column.__init__  # type: ignore
     count = DateTimeQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=datetime)
     values = annotate(Column.values, List[Optional[datetime]])
     Set = Set.subclass(datetime, "DatetimeSet", "unique datetimes")
     unique = annotate(Column.unique, Set)
@@ -359,6 +371,7 @@ class DateTimeColumn(Column):
 class TimeColumn(Column):
     __init__ = Column.__init__  # type: ignore
     count = TimeQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=time)
     values = annotate(Column.values, List[Optional[time]])
     Set = Set.subclass(time, "TimeSet", "unique times")
     unique = annotate(Column.unique, Set)
@@ -374,6 +387,7 @@ class TimeColumn(Column):
 class DurationColumn(Column):
     __init__ = Column.__init__  # type: ignore
     count = DurationQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=timedelta)
     values = annotate(Column.values, List[Optional[timedelta]])
     minimum = annotate(Column.minimum, 'DurationColumn', value=timedelta)
     maximum = annotate(Column.maximum, 'DurationColumn', value=timedelta)
@@ -384,6 +398,7 @@ class DurationColumn(Column):
 class BinaryColumn(Column):
     __init__ = Column.__init__  # type: ignore
     count = BinaryQuery.resolver(Column.count)
+    index = annotate(Column.index, Long, value=bytes)
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[bytes]])
@@ -402,6 +417,7 @@ class BinaryColumn(Column):
 class StringColumn(Column):
     __init__ = Column.__init__  # type: ignore
     count = StringFilter.resolver(Column.count)
+    index = annotate(Column.index, Long, value=str)
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[str]])

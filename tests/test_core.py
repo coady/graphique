@@ -50,9 +50,12 @@ def test_chunks():
     assert ''.join(T.unique(table, 'col', reverse=True)[0]['col'].to_pylist()) == 'bca'
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(T.unique(table, 'col')[0]) == 3
-    array = pa.chunked_array([list('aba'), list('a')]).dictionary_encode()
-    assert C.equal(array, 'a').to_pylist() == [True, False, True, True]
-    assert C.equal(array[-1:], 'a').to_pylist() == [True]
+    array = pa.chunked_array([list('aba'), list('ca')]).dictionary_encode()
+    assert C.equal(array, 'a').to_pylist() == [True, False, True, False, True]
+    assert C.index(array, 'a') == 0
+    assert C.index(array, 'c') == 3
+    assert C.index(array, 'a', start=3) == 4
+    assert C.index(array, 'b', start=2) == -1
 
 
 def test_lists():
@@ -103,6 +106,9 @@ def test_membership():
     assert C.count(array, False) == C.count(array, None) == 0
     assert C.count(array, 0) == 0 and C.count(array, 1) == 2
     assert C.all(array)
+    assert C.index(array, 1) == C.index(array, 1, end=1) == 0
+    assert C.index(array, 1, start=1) == 1
+    assert C.index(array, 1, start=2) == -1
 
 
 def test_functional(table):

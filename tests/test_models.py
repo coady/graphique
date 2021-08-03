@@ -45,12 +45,15 @@ def test_columns(executor):
 
     assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
     assert execute('{ bool { count(equal: false) } }') == {'bool': {'count': 1}}
+    assert execute('{ bool { index(value: false) } }') == {'bool': {'index': 0}}
+    assert execute('{ bool { index(value: false, start: 1, end: 2) } }') == {'bool': {'index': -1}}
     assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
     assert execute('{ bool { unique { length } } }') == {'bool': {'unique': {'length': 2}}}
 
     for name in ('uint8', 'int8', 'uint16', 'int16', 'int32'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
+        assert execute(f'{{ {name} {{ index(value: 0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0, 1]}}}
         assert execute(f'{{ {name} {{ type }} }}') == {name: {'type': name}}
@@ -59,6 +62,7 @@ def test_columns(executor):
     for name in ('uint32', 'uint64', 'int64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
+        assert execute(f'{{ {name} {{ index(value: 0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0, 1]}}}
         assert execute(f'{{ {name} {{ min max sort first: sort(length: 1) }} }}')
@@ -67,6 +71,7 @@ def test_columns(executor):
     for name in ('float', 'double'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0.0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0.0) }} }}') == {name: {'count': 1}}
+        assert execute(f'{{ {name} {{ index(value: 0.0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ fillNull(value: 1.0) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0.0, 1.0]}}}
         assert execute(f'{{ {name} {{ min max sort first: sort(length: 1) }} }}')
@@ -77,6 +82,7 @@ def test_columns(executor):
     for name in ('date32', 'date64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['1970-01-01', None]}}
         assert execute(f'{{ {name} {{ count(equal: "1970-01-01") }} }}') == {name: {'count': 1}}
+        assert execute(f'{{ {name} {{ index(value: "1970-01-01") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ fillNull(value: "1970-01-02") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['1970-01-01', '1970-01-02']}}}
         assert execute(f'{{ {name} {{ min max sort }} }}')
@@ -88,11 +94,13 @@ def test_columns(executor):
         'timestamp': {'fillNull': {'values': ['1970-01-01T00:00:00', '1970-01-02T00:00:00']}}
     }
     assert execute('{ timestamp { count(equal: "1970-01-01") } }') == {'timestamp': {'count': 1}}
+    assert execute('{ timestamp { index(value: "1970-01-01") } }') == {'timestamp': {'index': 0}}
     assert execute('{ timestamp { min max sort } }')
 
     for name in ('time32', 'time64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['00:00:00', None]}}
         assert execute(f'{{ {name} {{ count(equal: "00:00:00") }} }}') == {name: {'count': 1}}
+        assert execute(f'{{ {name} {{ index(value: "00:00:00") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ fillNull(value: "00:00:01") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['00:00:00', '00:00:01']}}}
         assert execute(f'{{ {name} {{ min max sort }} }}')
@@ -100,6 +108,7 @@ def test_columns(executor):
     for name in ('binary', 'string'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
         assert execute(f'{{ {name} {{ count(equal: "") }} }}') == {name: {'count': 1}}
+        assert execute(f'{{ {name} {{ index(value: "") }} }}') == {name: {'index': 0}}
         assert execute(f'{{ {name} {{ any all }} }}') == {name: {'any': False, 'all': False}}
         data = execute(f'{{ {name} {{ fillNull(value: "") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['', '']}}}

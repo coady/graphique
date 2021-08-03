@@ -85,6 +85,10 @@ class Chunk(pa.Array):
         keys = pc.sort_indices(pc.sort_indices(self.dictionary))
         return keys.take(self.indices)
 
+    def index(self: pa.DictionaryArray, value) -> int:
+        index = self.dictionary.index(value).as_py()
+        return index if index < 0 else self.indices.index(index).as_py()
+
 
 class ListChunk(pa.lib.BaseListArray):
     count = operator.methodcaller('value_lengths')
@@ -347,6 +351,18 @@ class Column(pa.ChunkedArray):
             self, value = Column.equal(self, value), True
         getter = operator.attrgetter('true_count' if value else 'false_count')
         return sum(map(getter, Column.mask(self).iterchunks()))
+
+    def index(self, value, start=0, end=None) -> int:
+        """Return number of occurrences of value."""
+        if not pa.types.is_dictionary(self.type):
+            return self.index(value, start, end).as_py()  # type: ignore
+        offset = start
+        for chunk in self[start:end].iterchunks():
+            index = Chunk.index(chunk, value)
+            if index >= 0:
+                return offset + index
+            offset += len(chunk)
+        return -1
 
     def any(self) -> bool:
         """Return whether any values evaluate to true."""
