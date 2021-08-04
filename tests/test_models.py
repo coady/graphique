@@ -157,8 +157,6 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'minElementWise': {'sum': -2}}}}
         data = executor(f'{{ columns {{ {name} {{ maxElementWise(value: 1) {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'maxElementWise': {'sum': 2}}}}
-        data = executor(f'{{ columns {{ {name} {{ abs {{ sum }} }} }} }}')
-        assert data == {'columns': {name: {'abs': {'sum': 0}}}}
         data = executor(f'{{ columns {{ {name} {{ mean stddev variance }} }} }}')
         assert data == {'columns': {name: {'mean': 0.0, 'stddev': 0.0, 'variance': 0.0}}}
         data = executor(f'{{ columns {{ {name} {{ mode {{ values }} }} }} }}')
@@ -183,6 +181,11 @@ def test_numeric(executor):
     assert data == {'column': {'values': [1.0, None]}}
     data = executor('{ column(name: "float", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
+    data = executor(
+        '''{ apply(int: {name: "int32", negate: true, checked: true})
+        { columns { int32 { values } } } }'''
+    )
+    assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
 
 
 def test_duration(executor):

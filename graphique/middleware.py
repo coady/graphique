@@ -5,10 +5,10 @@ import itertools
 from datetime import datetime
 from typing import Union
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
-from .core import Table as T
 from .inputs import Projections
 from .models import Column, doc_field
 from .scalars import Long
@@ -84,5 +84,5 @@ class AbstractTable:
         table = self.select(info)
         column = table[name]
         for func, name in dict(apply).items():
-            column = T.projected[func](column, table[name])
+            column = getattr(pc, func)(column, table[name])
         return Column.cast(column.cast(cast) if cast else column)

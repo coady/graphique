@@ -372,23 +372,15 @@ class Column(pa.ChunkedArray):
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
+    applied = {'fill_null', 'digitize'}
     projected = {
-        'add': pc.add,
-        'subtract': pc.subtract,
-        'multiply': pc.multiply,
-        'divide': pc.divide,
-        'power': pc.power,
-        'min_element_wise': pc.min_element_wise,
-        'max_element_wise': pc.max_element_wise,
-    }
-    applied = {
-        'fill_null': Column.fill_null,
-        'binary_length': pc.binary_length,
-        'utf8_length': pc.utf8_length,
-        'utf8_lower': pc.utf8_lower,
-        'utf8_upper': pc.utf8_upper,
-        'abs': pc.abs,
-        'digitize': Column.digitize,
+        'add',
+        'subtract',
+        'multiply',
+        'divide',
+        'power',
+        'min_element_wise',
+        'max_element_wise',
     }
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
@@ -494,27 +486,24 @@ class Table(pa.Table):
         indices = pc.sort_indices(table, sort_keys=[(name, order) for name in names])
         return self and self.take(indices[:length])
 
-    def mask(self, name: str, **query: dict) -> pa.Array:
+    def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.Array:
         """Return mask array which matches query."""
-        column = self[name]
-        partials = dict(query.pop('apply', {}))
-        for func in set(Table.projected) & set(partials):
-            column = Table.projected[func](column, self[partials.pop(func)])
-        masks = [getattr(pc, op)(column, self[partials[op]]) for op in partials]
+        masks = [getattr(pc, op)(self[name], self[apply[op]]) for op in apply]
         if query:
-            masks.append(Column.mask(column, **query))
+            masks.append(Column.mask(self[name], **query))
         return functools.reduce(getattr(pc, 'and'), masks)
 
     def apply(self, name: str, alias: str = '', cast: str = '', **partials) -> pa.Table:
         """Return view of table with functions applied across columns."""
         column = self[name]
+        checked = partials.pop('checked', False)
         for func, arg in partials.items():
             if func in Table.projected:
-                column = Table.projected[func](column, self[arg])
-            elif not isinstance(arg, bool):
-                column = Table.applied[func](column, arg)
+                column = getattr(pc, func + '_checked' * checked)(column, self[arg])
+            elif func in Table.applied:
+                column = getattr(Column, func)(column, arg)
             elif arg:
-                column = Table.applied[func](column)
+                column = getattr(pc, func + '_checked' * checked)(column)
         if cast:
             column = column.cast(cast)
         if alias:

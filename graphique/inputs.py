@@ -343,12 +343,28 @@ class OrdinalFunction(Function):
 
 @strawberry.input
 class NumericFunction(OrdinalFunction):
+    checked: bool = strawberry.field(default=False, description="check math functions for overlow")
     add: Optional[str] = UNSET
     subtract: Optional[str] = UNSET
     multiply: Optional[str] = UNSET
     divide: Optional[str] = UNSET
     power: Optional[str] = UNSET
     abs: bool = False
+    negate: bool = False
+    sign: bool = False
+    ln: bool = False
+    log1p: bool = False
+    log10: bool = False
+    log2: bool = False
+    floor: bool = False
+    ceil: bool = False
+    trunc: bool = False
+    sin: bool = False
+    asin: bool = False
+    cos: bool = False
+    acos: bool = False
+    tan: bool = False
+    atan: bool = False
 
 
 @strawberry.input(description=f"[functions]({link}#arithmetic-functions) for ints")
