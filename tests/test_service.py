@@ -67,7 +67,7 @@ def test_floats(client):
     (quantile,) = data['columns']['latitude']['quantile']
     assert quantile == pytest.approx(39.12054)
     data = client.execute(
-        '''{ column(name: "latitude", apply: {minimum: "longitude"})
+        '''{ column(name: "latitude", apply: {minElementWise: "longitude"})
         { ... on FloatColumn { min } } }'''
     )
     assert data['column']['min'] == pytest.approx(-174.213333)
@@ -252,12 +252,12 @@ def test_apply(client):
     )
     assert data['apply']['filter']['length'] == 0
     data = client.execute(
-        '''{ apply(float: {name: "longitude", maximum: "latitude"})
+        '''{ apply(float: {name: "longitude", maxElementWise: "latitude"})
         { columns { longitude { min } } } }'''
     )
     assert data['apply']['columns']['longitude']['min'] == pytest.approx(17.963333)
     data = client.execute(
-        '''{ apply(float: {name: "latitude", minimum: "longitude"})
+        '''{ apply(float: {name: "latitude", minElementWise: "longitude"})
         { columns { latitude { max } } } }'''
     )
     assert data['apply']['columns']['latitude']['max'] == pytest.approx(-65.301389)

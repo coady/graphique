@@ -58,11 +58,6 @@ class Chunk(pa.Array):
         indices = self.indices.fill_null(len(dictionary) - 1)
         return pa.DictionaryArray.from_arrays(indices, dictionary)
 
-    @staticmethod
-    def to_null(array: np.ndarray) -> pa.Array:
-        func = np.isnat if array.dtype.type in (np.datetime64, np.timedelta64) else np.isnan
-        return pa.array(array, mask=func(array))
-
     def take_list(self, indices: pa.lib.BaseListArray) -> pa.lib.BaseListArray:
         assert len(self) == len(indices.values)
         return type(indices).from_arrays(indices.offsets, self.take(indices.values))
@@ -321,21 +316,6 @@ class Column(pa.ChunkedArray):
         """Return max of the values."""
         return Column.min_max(self, reverse=True)
 
-    def compare(self, func, value):
-        if isinstance(value, pa.ChunkedArray):
-            chunks = Column.map(func, self, value)
-        else:
-            chunks = Column.map(rpartial(func, value), self)
-        return pa.chunked_array(map(Chunk.to_null, chunks) if self.null_count else chunks)
-
-    def minimum(self, value) -> pa.ChunkedArray:
-        """Return element-wise minimum of values."""
-        return Column.compare(self, np.minimum, value)
-
-    def maximum(self, value) -> pa.ChunkedArray:
-        """Return element-wise maximum of values."""
-        return Column.compare(self, np.maximum, value)
-
     def digitize(self, bins: Iterable, right=False) -> pa.ChunkedArray:
         """Return the indices of the bins to which each value in input array belongs."""
         if not isinstance(bins, (pa.Array, np.ndarray)):
@@ -398,8 +378,8 @@ class Table(pa.Table):
         'multiply': pc.multiply,
         'divide': pc.divide,
         'power': pc.power,
-        'minimum': Column.minimum,
-        'maximum': Column.maximum,
+        'min_element_wise': pc.min_element_wise,
+        'max_element_wise': pc.max_element_wise,
     }
     applied = {
         'fill_null': Column.fill_null,

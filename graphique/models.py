@@ -106,13 +106,13 @@ class Column:
         """Return values with null elements replaced."""
         return type(self)(C.fill_null(self.array, value))
 
-    def minimum(self, value):
+    def min_element_wise(self, value, skip_nulls: bool = True):
         """Return element-wise minimum compared to scalar."""
-        return type(self)(C.minimum(self.array, value))
+        return type(self)(pc.min_element_wise(self.array, value, skip_nulls=skip_nulls))
 
-    def maximum(self, value):
+    def max_element_wise(self, value, skip_nulls: bool = True):
         """Return element-wise maximum compared to scalar."""
-        return type(self)(C.maximum(self.array, value))
+        return type(self)(pc.max_element_wise(self.array, value, skip_nulls=skip_nulls))
 
 
 @strawberry.interface(description="unique values")
@@ -257,8 +257,8 @@ class IntColumn(Column, NumericColumn):
     multiply = annotate(NumericColumn.multiply, 'IntColumn', value=int)
     divide = annotate(NumericColumn.divide, 'IntColumn', value=int)
     power = annotate(NumericColumn.power, 'IntColumn', base=Optional[int], exponent=Optional[int])
-    minimum = annotate(Column.minimum, 'IntColumn', value=int)
-    maximum = annotate(Column.maximum, 'IntColumn', value=int)
+    min_element_wise = annotate(Column.min_element_wise, 'IntColumn', value=int)
+    max_element_wise = annotate(Column.max_element_wise, 'IntColumn', value=int)
     abs = annotate(NumericColumn.abs, 'IntColumn')
 
 
@@ -284,8 +284,8 @@ class LongColumn(Column, NumericColumn):
     power = annotate(
         NumericColumn.power, 'LongColumn', base=Optional[Long], exponent=Optional[Long]
     )
-    minimum = annotate(Column.minimum, 'LongColumn', value=Long)
-    maximum = annotate(Column.maximum, 'LongColumn', value=Long)
+    min_element_wise = annotate(Column.min_element_wise, 'LongColumn', value=Long)
+    max_element_wise = annotate(Column.max_element_wise, 'LongColumn', value=Long)
     abs = annotate(NumericColumn.abs, 'LongColumn')
 
 
@@ -310,8 +310,8 @@ class FloatColumn(Column, NumericColumn):
     power = annotate(
         NumericColumn.power, 'FloatColumn', base=Optional[float], exponent=Optional[float]
     )
-    minimum = annotate(Column.minimum, 'FloatColumn', value=float)
-    maximum = annotate(Column.maximum, 'FloatColumn', value=float)
+    min_element_wise = annotate(Column.min_element_wise, 'FloatColumn', value=float)
+    max_element_wise = annotate(Column.max_element_wise, 'FloatColumn', value=float)
     abs = annotate(NumericColumn.abs, 'FloatColumn')
 
 
@@ -319,15 +319,12 @@ class FloatColumn(Column, NumericColumn):
 class DecimalColumn(Column):
     __init__ = Column.__init__  # type: ignore
     count = DecimalQuery.resolver(Column.count)
-    index = annotate(Column.index, Long, value=Decimal)
     values = annotate(Column.values, List[Optional[Decimal]])
     Set = Set.subclass(Decimal, "DecimalSet", "unique decimals")
     unique = annotate(Column.unique, Set)
     sort = annotate(Column.sort, List[Optional[Decimal]])
     min = annotate(Column.min, Optional[Decimal])
     max = annotate(Column.max, Optional[Decimal])
-    minimum = annotate(Column.minimum, 'DecimalColumn', value=Decimal)
-    maximum = annotate(Column.maximum, 'DecimalColumn', value=Decimal)
 
 
 @strawberry.type(description="column of dates")
@@ -342,8 +339,8 @@ class DateColumn(Column):
     min = annotate(Column.min, Optional[date])
     max = annotate(Column.max, Optional[date])
     fill_null = annotate(Column.fill_null, 'DateColumn', value=date)
-    minimum = annotate(Column.minimum, 'DateColumn', value=date)
-    maximum = annotate(Column.maximum, 'DateColumn', value=date)
+    min_element_wise = annotate(Column.min_element_wise, 'DateColumn', value=date)
+    max_element_wise = annotate(Column.max_element_wise, 'DateColumn', value=date)
 
 
 @strawberry.type(description="column of datetimes")
@@ -358,8 +355,8 @@ class DateTimeColumn(Column):
     min = annotate(Column.min, Optional[datetime])
     max = annotate(Column.max, Optional[datetime])
     fill_null = annotate(Column.fill_null, 'DateTimeColumn', value=datetime)
-    minimum = annotate(Column.minimum, 'DateTimeColumn', value=datetime)
-    maximum = annotate(Column.maximum, 'DateTimeColumn', value=datetime)
+    min_element_wise = annotate(Column.min_element_wise, 'DateTimeColumn', value=datetime)
+    max_element_wise = annotate(Column.max_element_wise, 'DateTimeColumn', value=datetime)
 
     @doc_field
     def subtract(self, value: datetime) -> 'DurationColumn':
@@ -379,8 +376,8 @@ class TimeColumn(Column):
     min = annotate(Column.min, Optional[time])
     max = annotate(Column.max, Optional[time])
     fill_null = annotate(Column.fill_null, 'TimeColumn', value=time)
-    minimum = annotate(Column.minimum, 'TimeColumn', value=time)
-    maximum = annotate(Column.maximum, 'TimeColumn', value=time)
+    min_element_wise = annotate(Column.min_element_wise, 'TimeColumn', value=time)
+    max_element_wise = annotate(Column.max_element_wise, 'TimeColumn', value=time)
 
 
 @strawberry.type(description="column of durations")
@@ -389,9 +386,6 @@ class DurationColumn(Column):
     count = DurationQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=timedelta)
     values = annotate(Column.values, List[Optional[timedelta]])
-    minimum = annotate(Column.minimum, 'DurationColumn', value=timedelta)
-    maximum = annotate(Column.maximum, 'DurationColumn', value=timedelta)
-    abs = annotate(NumericColumn.abs, 'DurationColumn')
 
 
 @strawberry.type(description="column of binaries")
@@ -427,8 +421,6 @@ class StringColumn(Column):
     min = annotate(Column.min, Optional[str])
     max = annotate(Column.max, Optional[str])
     fill_null = annotate(Column.fill_null, 'StringColumn', value=str)
-    minimum = annotate(Column.minimum, 'StringColumn', value=str)
-    maximum = annotate(Column.maximum, 'StringColumn', value=str)
 
     @doc_field
     def utf8_length(self) -> 'IntColumn':

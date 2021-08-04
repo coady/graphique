@@ -5,7 +5,7 @@ def test_case(executor):
     data = executor('{ columns { snakeId { values } camelId { values } } }')
     assert data == {'columns': {'snakeId': {'values': [1, 2]}, 'camelId': {'values': [1, 2]}}}
     data = executor(
-        '''{ column(name: "camelId", apply: {minimum: "snakeId"})
+        '''{ column(name: "camelId", apply: {minElementWise: "snakeId"})
         { ... on LongColumn { values } } }'''
     )
     assert data == {'column': {'values': [1, 2]}}
@@ -153,10 +153,10 @@ def test_numeric(executor):
         with pytest.raises(ValueError):
             executor(f'{{ columns {{ {name} {{ power(base: 1, exponent: 1) {{ values }} }} }} }}')
 
-        data = executor(f'{{ columns {{ {name} {{ minimum(value: -1) {{ sum }} }} }} }}')
-        assert data == {'columns': {name: {'minimum': {'sum': -1}}}}
-        data = executor(f'{{ columns {{ {name} {{ maximum(value: 1) {{ sum }} }} }} }}')
-        assert data == {'columns': {name: {'maximum': {'sum': 1}}}}
+        data = executor(f'{{ columns {{ {name} {{ minElementWise(value: -1) {{ sum }} }} }} }}')
+        assert data == {'columns': {name: {'minElementWise': {'sum': -2}}}}
+        data = executor(f'{{ columns {{ {name} {{ maxElementWise(value: 1) {{ sum }} }} }} }}')
+        assert data == {'columns': {name: {'maxElementWise': {'sum': 2}}}}
         data = executor(f'{{ columns {{ {name} {{ abs {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'abs': {'sum': 0}}}}
         data = executor(f'{{ columns {{ {name} {{ mean stddev variance }} }} }}')
@@ -176,7 +176,7 @@ def test_numeric(executor):
     data = executor('{ columns { float { add(value: 2.0) { divide(value: 1.0) { sum } } } } }')
     assert data == {'columns': {'float': {'add': {'divide': {'sum': 0.5}}}}}
     data = executor(
-        '''{ column(name: "float", apply: {minimum: "int32", maximum: "int32", add: "int32"
+        '''{ column(name: "float", apply: {minElementWise: "int32", maxElementWise: "int32", add: "int32"
         subtract: "int32", multiply: "int32", divide: "int32", power: "int32"}) {
         ... on FloatColumn { values } } }'''
     )

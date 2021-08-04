@@ -33,8 +33,6 @@ def test_dictionary(table):
 
 def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
-    assert C.minimum(array, array).equals(array)
-    assert C.maximum(array, array).equals(array)
     table = pa.Table.from_pydict({'col': array})
     assert T.unique(table, 'col', count=True)[1].to_pylist() == [2, 3, 1]
     groups, counts = T.group(table, 'col')
@@ -125,8 +123,8 @@ def test_functional(table):
     assert sum(C.mask(array, utf8_is_upper=True).to_pylist()) == 41700
     assert sum(C.mask(array, utf8_is_upper=False).to_pylist()) == 41700
     assert sum(C.mask(table['longitude'], abs=True, less=0).to_pylist()) == 0
-    mask = T.mask(table, 'state', equal='CA', apply={'minimum': 'state'})
-    assert sum(mask.to_pylist()) == 2647
+    mask = T.mask(table, 'zipcode', equal=99950, apply={'min_element_wise': 'zipcode'})
+    assert sum(mask.to_pylist()) == 1
     mask = T.mask(table, 'city', apply={'equal': 'county'})
     assert sum(mask.to_pylist()) == 2805
     table = T.apply(table, 'latitude', alias='diff', subtract='longitude')

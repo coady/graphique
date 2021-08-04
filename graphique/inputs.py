@@ -337,8 +337,8 @@ class Function(Input):
 
 @strawberry.input
 class OrdinalFunction(Function):
-    minimum: Optional[str] = default_field(description=Column.minimum.__doc__)
-    maximum: Optional[str] = default_field(description=Column.maximum.__doc__)
+    min_element_wise: Optional[str] = UNSET
+    max_element_wise: Optional[str] = UNSET
 
 
 @strawberry.input
@@ -370,7 +370,7 @@ class FloatFunction(NumericFunction):
 
 
 @strawberry.input(description="functions for decimals")
-class DecimalFunction(OrdinalFunction):
+class DecimalFunction(Function):
     pass
 
 
@@ -391,7 +391,7 @@ class TimeFunction(OrdinalFunction):
 
 
 @strawberry.input(description="functions for durations")
-class DurationFunction(OrdinalFunction):
+class DurationFunction(Function):
     fill_null: Optional[timedelta] = UNSET
     abs: bool = False
 
@@ -403,7 +403,7 @@ class BinaryFunction(Function):
 
 
 @strawberry.input(description="functions for strings")
-class StringFunction(OrdinalFunction):
+class StringFunction(Function):
     fill_null: Optional[str] = UNSET
     utf8_length: bool = False
     utf8_lower: bool = False
@@ -433,8 +433,8 @@ class Diff(Input):
     description=f"[functions]({link}#arithmetic-functions) projected across two columns"
 )
 class Projections(Input):
-    minimum: Optional[str] = default_field(description=Column.minimum.__doc__)
-    maximum: Optional[str] = default_field(description=Column.maximum.__doc__)
+    min_element_wise: Optional[str] = UNSET
+    max_element_wise: Optional[str] = UNSET
     add: Optional[str] = UNSET
     subtract: Optional[str] = UNSET
     multiply: Optional[str] = UNSET
