@@ -114,8 +114,10 @@ def test_columns(executor):
         assert data == {name: {'fillNull': {'values': ['', '']}}}
         assert execute(f'{{ {name} {{ sort }} }}')
 
-    data = execute('{ binary { binaryLength { values } } }')
-    assert data == {'binary': {'binaryLength': {'values': [0, None]}}}
+    data = execute(
+        '{ binary { binaryReplaceSlice(start: 0, stop: 1, replacement: "") { values } } }'
+    )
+    assert data == {'binary': {'binaryReplaceSlice': {'values': ['', None]}}}
 
     assert execute('{ string { count(stringIsAscii: true) } }') == {'string': {'count': 1}}
     assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
@@ -253,9 +255,10 @@ def test_list(executor):
     )
     assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0, 1]}}}}}
     data = executor(
-        '''{ columns { list { values { ... on IntColumn { quantile(q: [0.25, 0.75]) } } } } }'''
+        '''{ columns { list { quantile(q: [0.25, 0.75]) { flatten { ... on FloatColumn
+        { values } } } } } }'''
     )
-    assert data == {'columns': {'list': {'values': [{'quantile': [0.5, 1.5]}, None]}}}
+    assert data == {'columns': {'list': {'quantile': {'flatten': {'values': [0.5, 1.5]}}}}}
 
     data = executor(
         '''{ columns { list { count { values }
@@ -296,6 +299,11 @@ def test_list(executor):
     )
     assert data['aggregate']['column']['values'] == [pytest.approx((2 / 3) ** 0.5), None]
     assert data['aggregate']['var']['values'] == [pytest.approx((2 / 3)), None]
+    data = executor(
+        '''{ partition(by: "int32") { column(name: "binary") { ... on ListColumn
+        { binaryJoin(separator: " ") { ... on BinaryColumn { values } } } } } }'''
+    )
+    assert data == {'partition': {'column': {'binaryJoin': {'values': [None]}}}}
 
 
 def test_struct(executor):

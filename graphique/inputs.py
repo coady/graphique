@@ -423,12 +423,14 @@ class DurationFunction(Function):
 
 @strawberry.input(description="functions for binaries")
 class BinaryFunction(Function):
+    binary_join_element_wise: Optional[List[str]] = UNSET
     fill_null: Optional[bytes] = UNSET
     binary_length: bool = False
 
 
 @strawberry.input(description="functions for strings")
 class StringFunction(Function):
+    binary_join_element_wise: Optional[List[str]] = UNSET
     find_substring: Optional[str] = UNSET
     count_substring: Optional[str] = UNSET
     ignore_case: bool = strawberry.field(default=False, description="case option for substrings")
@@ -464,6 +466,7 @@ class Diff(Input):
 )
 class Projections(Input):
     coalesce: Optional[List[str]] = UNSET
+    binary_join_element_wise: Optional[List[str]] = UNSET
     min_element_wise: Optional[str] = UNSET
     max_element_wise: Optional[str] = UNSET
     add: Optional[str] = UNSET

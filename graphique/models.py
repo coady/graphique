@@ -395,9 +395,10 @@ class BinaryColumn(Column):
     fill_null = annotate(Column.fill_null, 'BinaryColumn', value=bytes)
 
     @doc_field
-    def binary_length(self) -> 'IntColumn':
-        """number of bytes for each string"""
-        return IntColumn(pc.binary_length(self.array))
+    def binary_replace_slice(self, start: int, stop: int, replacement: str) -> 'BinaryColumn':
+        """Replace a slice of a binary string with `replacement`."""
+        kwargs = dict(start=start, stop=stop, replacement=replacement)
+        return BinaryColumn(pc.binary_replace_slice(self.array, **kwargs))
 
 
 @strawberry.type(description="column of strings")
@@ -558,12 +559,12 @@ class ListColumn(Column):
         return self.map(ListChunk.mean)  # type: ignore
 
     @doc_field
-    def mode(self, length: int = 1) -> 'ListColumn':  # pragma: no cover
+    def mode(self, length: int = 1) -> 'ListColumn':
         """mode of each list scalar"""
         return self.map(functools.partial(ListChunk.mode, length=length))  # type: ignore
 
     @doc_field
-    def quantile(self, q: List[float] = [0.5]) -> 'ListColumn':  # pragma: no cover
+    def quantile(self, q: List[float] = [0.5]) -> 'ListColumn':
         """quantile of each list scalar"""
         return self.map(functools.partial(ListChunk.quantile, q=q))  # type: ignore
 
@@ -586,6 +587,16 @@ class ListColumn(Column):
     def all(self) -> BooleanColumn:
         """all true of each list scalar"""
         return self.map(ListChunk.all)  # type: ignore
+
+    @doc_field
+    def binary_join(self, separator: bytes) -> BinaryColumn:
+        """Join a list of binary strings together with a `separator` to form a single string."""
+        return BinaryColumn(pc.binary_join(self.array, separator))
+
+    @doc_field
+    def string_join(self, separator: str) -> StringColumn:
+        """Join a list of strings together with a `separator` to form a single string."""
+        return StringColumn(pc.binary_join(self.array, separator))
 
 
 @strawberry.type(description="column of structs")

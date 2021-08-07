@@ -163,6 +163,11 @@ def test_string_methods(client):
         '''{ columns { state { replaceSubstring(pattern: "C", replacement: "A") { values } } } }'''
     )
     assert 'AA' in data['columns']['state']['replaceSubstring']['values']
+    data = client.execute(
+        '''{ group(by: "state") { column(name: "city") { ... on ListColumn
+        { stringJoin(separator: ",") { ... on StringColumn { values } } } } } }'''
+    )
+    assert ','.join(['New York'] * 3) in data['group']['column']['stringJoin']['values'][0]
 
 
 def test_search(client):
@@ -289,6 +294,11 @@ def test_apply(client):
         { column(name: "city") { ... on IntColumn { unique { values } } } } }'''
     )
     assert data['apply']['column']['unique']['values'] == [0, 1]
+    data = client.execute(
+        '''{ apply(string: {name: "state", binaryJoinElementWise: ["county", "city"]})
+        { columns { state { values } } } }'''
+    )
+    assert data['apply']['columns']['state']['values'][0] == 'NYHoltsvilleSuffolk'
 
 
 def test_sort(client):

@@ -379,6 +379,7 @@ class Table(pa.Table):
         'power',
         'min_element_wise',
         'max_element_wise',
+        'binary_join_element_wise',
     }
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
