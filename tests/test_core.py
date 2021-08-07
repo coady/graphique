@@ -122,7 +122,6 @@ def test_functional(table):
     assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
     assert sum(C.mask(array, utf8_is_upper=True).to_pylist()) == 41700
     assert sum(C.mask(array, utf8_is_upper=False).to_pylist()) == 41700
-    assert sum(C.mask(table['longitude'], abs=True, less=0).to_pylist()) == 0
     mask = T.mask(table, 'city', apply={'equal': 'county'})
     assert sum(mask.to_pylist()) == 2805
     table = T.apply(table, 'latitude', alias='diff', subtract='longitude')

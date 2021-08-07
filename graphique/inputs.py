@@ -235,21 +235,18 @@ class BooleanFilter(Filter):
 @strawberry.input(description="predicates for ints")
 class IntFilter(Filter):
     __annotations__.update(IntQuery.__annotations__)  # type: ignore
-    abs: bool = False
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for longs")
 class LongFilter(Filter):
     __annotations__.update(LongQuery.__annotations__)  # type: ignore
-    abs: bool = False
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for floats")
 class FloatFilter(Filter):
     __annotations__.update(FloatQuery.__annotations__)  # type: ignore
-    abs: bool = False
     apply: OrdinalFilter = default_field(dict)
 
 
@@ -399,6 +396,17 @@ class DateFunction(OrdinalFunction):
 class DateTimeFunction(OrdinalFunction):
     subtract: Optional[str] = UNSET
     fill_null: Optional[datetime] = UNSET
+    year: bool = False
+    month: bool = False
+    day: bool = False
+    day_of_week: bool = False
+    day_of_year: bool = False
+    hour: bool = False
+    minute: bool = False
+    second: bool = False
+    millisecond: bool = False
+    microsecond: bool = False
+    nanosecond: bool = False
 
 
 @strawberry.input(description="functions for times")

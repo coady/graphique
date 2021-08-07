@@ -188,6 +188,19 @@ def test_numeric(executor):
     assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
 
 
+def test_datetime(executor):
+    data = executor(
+        '''{ apply(datetime: {name: "timestamp", year: true, alias: "year"})
+        { column(name: "year") { ... on LongColumn { values } } } }'''
+    )
+    assert data == {'apply': {'column': {'values': [1970, None]}}}
+    data = executor(
+        '''{ apply(datetime: {name: "timestamp", hour: true, alias: "hour"})
+        { column(name: "hour") { ... on LongColumn { values } } } }'''
+    )
+    assert data == {'apply': {'column': {'values': [0, None]}}}
+
+
 def test_duration(executor):
     data = executor(
         '''{ apply(datetime: [{name: "timestamp", fillNull: "0001-01-01"}])

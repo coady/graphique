@@ -199,8 +199,6 @@ class Column(pa.ChunkedArray):
 
     def mask(self, func='and', **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
-        if query.pop('abs', False):
-            self = pc.abs(self)
         for op in ('utf8_lower', 'utf8_upper'):
             if query.pop(op, False):
                 self = Column.call(self, getattr(pc, op))
