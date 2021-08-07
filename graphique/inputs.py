@@ -290,9 +290,9 @@ class BinaryFilter(Filter):
 class StringFilter(Filter):
     __annotations__.update(StringQuery.__annotations__)  # type: ignore
     match_substring: Optional[str] = UNSET
-    match_substring_regex: Optional[str] = UNSET
-    utf8_lower: bool = False
-    utf8_upper: bool = False
+    match_like: Optional[str] = UNSET
+    ignore_case: bool = strawberry.field(default=False, description="case option for substrings")
+    regex: bool = strawberry.field(default=False, description="regex option for substrings")
     string_is_ascii: bool = False
     utf8_is_alnum: bool = False
     utf8_is_alpha: bool = False
@@ -429,6 +429,10 @@ class BinaryFunction(Function):
 
 @strawberry.input(description="functions for strings")
 class StringFunction(Function):
+    find_substring: Optional[str] = UNSET
+    count_substring: Optional[str] = UNSET
+    ignore_case: bool = strawberry.field(default=False, description="case option for substrings")
+    regex: bool = strawberry.field(default=False, description="regex option for substrings")
     fill_null: Optional[str] = UNSET
     utf8_length: bool = False
     utf8_lower: bool = False

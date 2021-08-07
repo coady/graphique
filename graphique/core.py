@@ -197,19 +197,18 @@ class Column(pa.ChunkedArray):
             return self.combine_chunks()
         return self.chunk(0) if self.num_chunks else pa.array([], self.type)
 
-    def mask(self, func='and', **query) -> pa.ChunkedArray:
+    def mask(self, func='and', ignore_case=False, regex=False, **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
-        for op in ('utf8_lower', 'utf8_upper'):
-            if query.pop(op, False):
-                self = Column.call(self, getattr(pc, op))
         masks = []
         if Column.is_list_type(self):
             self = pa.chunked_array(chunk.values for chunk in self.iterchunks())
+        options = {'ignore_case': True} if ignore_case else {}
         for op, value in query.items():
             if hasattr(Column, op):
                 masks.append(getattr(Column, op)(self, value))
             elif '_is_' not in op:
-                masks.append(Column.call(self, getattr(pc, op), value))
+                op += '_regex' * regex
+                masks.append(Column.call(self, getattr(pc, op), value, **options))
             elif value:
                 masks.append(Column.call(self, getattr(pc, op)))
         if masks:
@@ -492,16 +491,27 @@ class Table(pa.Table):
             masks.append(Column.mask(self[name], **query))
         return functools.reduce(getattr(pc, 'and'), masks)
 
-    def apply(self, name: str, alias: str = '', cast: str = '', **partials) -> pa.Table:
+    def apply(
+        self,
+        name: str,
+        alias: str = '',
+        cast: str = '',
+        checked=False,
+        ignore_case=False,
+        regex=False,
+        **partials
+    ) -> pa.Table:
         """Return view of table with functions applied across columns."""
         column = self[name]
-        checked = partials.pop('checked', False)
+        options = {'ignore_case': True} if ignore_case else {}
         for func, arg in partials.items():
             if func in Table.projected:
                 others = (self[name] for name in (arg if isinstance(arg, list) else [arg]))
                 column = getattr(pc, func + '_checked' * checked)(column, *others)
             elif func in Table.applied:
                 column = getattr(Column, func)(column, arg)
+            elif not isinstance(arg, bool):
+                column = getattr(pc, func + '_regex' * regex)(column, arg, **options)
             elif arg:
                 column = getattr(pc, func + '_checked' * checked)(column)
         if cast:

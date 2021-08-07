@@ -102,8 +102,6 @@ def test_strings(client):
     assert states['count'] == 0
     data = client.execute('{ columns { state { count(equal: "CA") } } }')
     assert data == {'columns': {'state': {'count': 2647}}}
-    data = client.execute('{ columns { state { count(utf8Lower: true, equal: "ca") } } }')
-    assert data == {'columns': {'state': {'count': 2647}}}
     data = client.execute('{ columns { state { utf8Length { unique { values } } } } }')
     assert data['columns']['state']['utf8Length']['unique']['values'] == [2]
     data = client.execute('{ columns { state { utf8Lower { values } } } }')
@@ -207,15 +205,15 @@ def test_filter(client):
     )
     assert data['filter']['length'] == 88
     data = client.execute(
-        '''{ filter(on: {string: {name: "city", utf8Lower: true, matchSubstring: "mountain"}})
+        '''{ filter(on: {string: {name: "city", matchSubstring: "mountain", ignoreCase: true}})
         { length } }'''
     )
     assert data['filter']['length'] == 88
     data = client.execute(
-        '''{ filter(on: {string: {name: "city", utf8Upper: true, matchSubstring: "MOUNTAIN"}})
-        { length } }'''
+        '''{ filter(on: {string: {name: "city", matchSubstring: "^mountain",
+        ignoreCase: true, regex: true}}) { length } }'''
     )
-    assert data['filter']['length'] == 88
+    assert data['filter']['length'] == 42
     data = client.execute(
         '{ filter(on: {string: {name: "county", apply: {equal: "city"}}}) { length } }'
     )
@@ -265,6 +263,16 @@ def test_apply(client):
         { column(name: "zipcode") { type } } }'''
     )
     assert data['apply']['column']['type'] == 'float'
+    data = client.execute(
+        '''{ apply(string: {name: "city", findSubstring: "mountain"})
+        { column(name: "city") { ... on IntColumn { unique { values } } } } }'''
+    )
+    assert data['apply']['column']['unique']['values'] == [-1]
+    data = client.execute(
+        '''{ apply(string: {name: "city", countSubstring: "mountain", ignoreCase: true})
+        { column(name: "city") { ... on IntColumn { unique { values } } } } }'''
+    )
+    assert data['apply']['column']['unique']['values'] == [0, 1]
 
 
 def test_sort(client):
