@@ -416,26 +416,14 @@ class StringColumn(Column):
     fill_null = annotate(Column.fill_null, 'StringColumn', value=str)
 
     @doc_field
-    def utf8_length(self) -> 'IntColumn':
-        """number of utf8 characters for each string"""
-        return IntColumn(pc.utf8_length(self.array))
-
-    @doc_field
-    def utf8_lower(self) -> 'StringColumn':
-        """strings converted to lowercase"""
-        return StringColumn(pc.utf8_lower(self.array))
-
-    @doc_field
-    def utf8_upper(self) -> 'StringColumn':
-        """strings converted to uppercase"""
-        return StringColumn(pc.utf8_upper(self.array))
-
-    @doc_field
-    def split(self, pattern: str = '', max_splits: int = -1, reverse: bool = False) -> 'ListColumn':
+    def split(
+        self, pattern: str = '', max_splits: int = -1, reverse: bool = False, regex: bool = False
+    ) -> 'ListColumn':
         """Return strings split on pattern, by default whitespace."""
         kwargs = {'max_splits': max_splits, 'reverse': reverse}
         if pattern:
-            return ListColumn(pc.split_pattern(self.array, pattern=pattern, **kwargs))
+            func = pc.split_pattern_regex if regex else pc.split_pattern
+            return ListColumn(func(self.array, pattern=pattern, **kwargs))
         return ListColumn(pc.utf8_split_whitespace(self.array, **kwargs))
 
     @doc_field
@@ -451,6 +439,34 @@ class StringColumn(Column):
         if characters:
             return StringColumn(pc.utf8_rtrim(self.array, characters=characters))
         return StringColumn(pc.utf8_rtrim_whitespace(self.array))
+
+    @doc_field
+    def utf8_trim(self, characters: str = '') -> 'StringColumn':
+        """Trim trailing characters, by default whitespace."""
+        if characters:
+            return StringColumn(pc.utf8_trim(self.array, characters=characters))
+        return StringColumn(pc.utf8_trim_whitespace(self.array))
+
+    @doc_field
+    def utf8_lpad(self, width: int, padding: str = ' ') -> 'StringColumn':
+        """Right-align strings by padding with a given character."""
+        return StringColumn(pc.utf8_lpad(self.array, width=width, padding=padding))
+
+    @doc_field
+    def utf8_rpad(self, width: int, padding: str = ' ') -> 'StringColumn':
+        """Left-align strings by padding with a given character."""
+        return StringColumn(pc.utf8_rpad(self.array, width=width, padding=padding))
+
+    @doc_field
+    def utf8_center(self, width: int, padding: str = ' ') -> 'StringColumn':
+        """Center strings by padding with a given character."""
+        return StringColumn(pc.utf8_center(self.array, width=width, padding=padding))
+
+    @doc_field
+    def utf8_replace_slice(self, start: int, stop: int, replacement: str) -> 'StringColumn':
+        """Replace a slice of a string with `replacement`."""
+        kwargs = dict(start=start, stop=stop, replacement=replacement)
+        return StringColumn(pc.utf8_replace_slice(self.array, **kwargs))
 
     @doc_field
     def replace_substring(

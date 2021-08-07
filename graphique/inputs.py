@@ -437,6 +437,7 @@ class StringFunction(Function):
     utf8_length: bool = False
     utf8_lower: bool = False
     utf8_upper: bool = False
+    utf8_reverse: bool = False
 
 
 @strawberry.input(description=f"names and optional aliases for [aggregation]({link}#aggregations)")

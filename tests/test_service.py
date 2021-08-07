@@ -102,12 +102,6 @@ def test_strings(client):
     assert states['count'] == 0
     data = client.execute('{ columns { state { count(equal: "CA") } } }')
     assert data == {'columns': {'state': {'count': 2647}}}
-    data = client.execute('{ columns { state { utf8Length { unique { values } } } } }')
-    assert data['columns']['state']['utf8Length']['unique']['values'] == [2]
-    data = client.execute('{ columns { state { utf8Lower { values } } } }')
-    assert 'ca' in data['columns']['state']['utf8Lower']['values']
-    data = client.execute('{ columns { city { utf8Upper { values } } } }')
-    assert 'MOUNTAIN VIEW' in data['columns']['city']['utf8Upper']['values']
     data = client.execute(
         '''{ filter(query: {state: {equal: "CA"}}) {
         apply(string: {name: "city", utf8Length: true, alias: "size"}) {
@@ -132,17 +126,39 @@ def test_string_methods(client):
     )
     cities = data['unique']['columns']['city']
     cities['split']['count']['unique'] == {'values': [1, 2], 'counts': [18718, 1]}
-    data = client.execute('{ columns { state { utf8Ltrim { values } utf8Rtrim { values } } } }')
+    data = client.execute(
+        '''{ columns { city { split(pattern: "-", maxSplits: 1, regex: true)
+        { count { values } } } } }'''
+    )
+    assert all(count > 0 for count in data['columns']['city']['split']['count']['values'])
+    data = client.execute(
+        '{ columns { state { utf8Trim { values } utf8Ltrim { values } utf8Rtrim { values } } } }'
+    )
     states = data['columns']['state']
+    assert 'CA' in states['utf8Trim']['values']
     assert 'CA' in states['utf8Ltrim']['values']
     assert 'CA' in states['utf8Rtrim']['values']
     data = client.execute(
-        '''{ columns { state {
+        '''{ columns { state { utf8Trim(characters: "C") { values }
         utf8Ltrim(characters: "C") { values } utf8Rtrim(characters: "A") { values } } } }'''
     )
     states = data['columns']['state']
+    assert 'A' in states['utf8Trim']['values']
     assert 'A' in states['utf8Ltrim']['values']
     assert states['utf8Rtrim']['values']  # TODO(ARROW-13522) check values
+    data = client.execute(
+        '''{ columns { state { utf8Center(width: 4, padding: "_") { values }
+        utf8Lpad(width: 3) { values } utf8Rpad(width: 3) { values } } } }'''
+    )
+    states = data['columns']['state']
+    assert all(len(state.split('_')) == 3 for state in states['utf8Center']['values'])
+    assert all(state.startswith(' ') for state in states['utf8Lpad']['values'])
+    assert all(state.endswith(' ') for state in states['utf8Rpad']['values'])
+    data = client.execute(
+        '''{ columns { state { utf8ReplaceSlice(start: 0, stop: 2, replacement: "")
+        { unique { values } } } } }'''
+    )
+    assert data['columns']['state']['utf8ReplaceSlice']['unique']['values'] == ['']
     data = client.execute(
         '''{ columns { state { replaceSubstring(pattern: "C", replacement: "A") { values } } } }'''
     )
