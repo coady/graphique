@@ -186,6 +186,13 @@ def test_numeric(executor):
         { columns { int32 { values } } } }'''
     )
     assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
+    data = executor(
+        '''{ apply(float: {name: "float", coalesce: "int32"})
+        { columns { float { count(equal: null) } } } }'''
+    )
+    assert data == {'apply': {'columns': {'float': {'count': 1}}}}
+    data = executor('{ column(name: "float", apply: {coalesce: "int32"}) { type } }')
+    assert data == {'column': {'type': 'float'}}
 
 
 def test_datetime(executor):

@@ -218,20 +218,20 @@ class Column(pa.ChunkedArray):
             self = Column.call(self, pc.binary_length)
         return self.cast(pa.bool_())
 
-    def call(self, func: Callable, *args) -> pa.ChunkedArray:
+    def call(self, func: Callable, *args, **kwargs) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
         self = Column.decode(self, check=True)
         scalar = Column.scalar_type(self)
         args = tuple(pa.scalar(arg, scalar) if isinstance(arg, time) else arg for arg in args)
         try:
-            return func(self, *args)
+            return func(self, *args, **kwargs)
         except NotImplementedError:
             if not pa.types.is_dictionary(self.type):
                 raise
         if not self:
             return self
         self = self.unify_dictionaries()
-        dictionary = func(self.chunk(0).dictionary, *args)
+        dictionary = func(self.chunk(0).dictionary, *args, **kwargs)
         array = pa.chunked_array(
             pa.DictionaryArray.from_arrays(chunk.indices, dictionary) for chunk in self.iterchunks()
         )
@@ -372,6 +372,7 @@ class Table(pa.Table):
 
     applied = {'fill_null', 'digitize'}
     projected = {
+        'coalesce',
         'add',
         'subtract',
         'multiply',
@@ -497,7 +498,8 @@ class Table(pa.Table):
         checked = partials.pop('checked', False)
         for func, arg in partials.items():
             if func in Table.projected:
-                column = getattr(pc, func + '_checked' * checked)(column, self[arg])
+                others = (self[name] for name in (arg if isinstance(arg, list) else [arg]))
+                column = getattr(pc, func + '_checked' * checked)(column, *others)
             elif func in Table.applied:
                 column = getattr(Column, func)(column, arg)
             elif arg:

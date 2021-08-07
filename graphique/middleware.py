@@ -84,5 +84,6 @@ class AbstractTable:
         table = self.select(info)
         column = table[name]
         for func, name in dict(apply).items():
-            column = getattr(pc, func)(column, table[name])
+            others = (table[name] for name in (name if isinstance(name, list) else [name]))
+            column = getattr(pc, func)(column, *others)
         return Column.cast(column.cast(cast) if cast else column)

@@ -326,6 +326,7 @@ class Filters(Input):
 class Function(Input):
     name: str
     alias: str = ''
+    coalesce: Optional[List[str]] = UNSET
     cast: str = default_field(
         str,
         description="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
@@ -457,6 +458,7 @@ class Diff(Input):
     description=f"[functions]({link}#arithmetic-functions) projected across two columns"
 )
 class Projections(Input):
+    coalesce: Optional[List[str]] = UNSET
     min_element_wise: Optional[str] = UNSET
     max_element_wise: Optional[str] = UNSET
     add: Optional[str] = UNSET
