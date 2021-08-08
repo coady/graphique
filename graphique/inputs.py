@@ -366,6 +366,11 @@ class NumericFunction(OrdinalFunction):
     atan: bool = False
 
 
+@strawberry.input(description=f"[functions]({link}) for booleans")
+class BooleanFunction(Function):
+    if_else: Optional[List[str]] = UNSET
+
+
 @strawberry.input(description=f"[functions]({link}#arithmetic-functions) for ints")
 class IntFunction(NumericFunction):
     bit_wise_or: Optional[str] = UNSET
@@ -449,6 +454,11 @@ class StringFunction(Function):
     utf8_reverse: bool = False
 
 
+@strawberry.input(description=f"[functions]({link}) for structs")
+class StructFunction(Function):
+    case_when: Optional[List[str]] = UNSET
+
+
 @strawberry.input(description=f"names and optional aliases for [aggregation]({link}#aggregations)")
 class Field(Input):
     name: str
@@ -474,6 +484,8 @@ class Diff(Input):
 class Projections(Input):
     coalesce: Optional[List[str]] = UNSET
     binary_join_element_wise: Optional[List[str]] = UNSET
+    if_else: Optional[List[str]] = UNSET
+    case_when: Optional[List[str]] = UNSET
     min_element_wise: Optional[str] = UNSET
     max_element_wise: Optional[str] = UNSET
     add: Optional[str] = UNSET

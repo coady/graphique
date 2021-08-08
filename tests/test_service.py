@@ -252,6 +252,11 @@ def test_filter(client):
     assert data['apply']['filter']['length'] == 30
     with pytest.raises(ValueError, match="optional, not nullable"):
         client.execute('{ filter(on: {string: {name: "city", apply: {equal: null}}}) { length } }')
+    data = client.execute(
+        '''{ filter(on: {string: [{name: "state", apply: {equal: "county"}},
+        {name: "county", apply: {equal: "city"}}]}, reduce: OR) { length } }'''
+    )
+    assert data['filter']['length'] == 2805
 
 
 def test_apply(client):

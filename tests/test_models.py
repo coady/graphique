@@ -359,3 +359,10 @@ def test_dictionary(executor):
 def test_selections(executor):
     data = executor('{ slice { length } slice { sort(by: "snakeId") { length } } }')
     assert data == {'slice': {'length': 2, 'sort': {'length': 2}}}
+
+
+def test_conditions(executor):
+    data = executor('{ column(name: "bool", apply: {ifElse: ["int32", "float"]}) { type } }')
+    assert data == {'column': {'type': 'float'}}
+    with pytest.raises(ValueError, match="must be BOOL"):
+        executor('{ column(name: "struct", apply: {caseWhen: ["int32", "float"]}) { type } }')
