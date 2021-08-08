@@ -19,7 +19,7 @@ jobs:
     - run: npm install
     - run: make html
     - run: python -m mkdocs gh-deploy --force
-    - uses: pypa/gh-action-pypi-publish@v1.4.2
+    - uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_TOKEN }}
         verbose: true
@@ -29,7 +29,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
-        python-version: ['3.7', '3.8', '3.9', '3.10.0-beta - 3.10']
+        python-version: ['3.7', '3.8', '3.9', '3.10.0-rc - 3.10']
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
@@ -44,8 +44,8 @@ jobs:
     container: quay.io/pypa/manylinux_2_24_x86_64
     steps:
     - uses: actions/checkout@v2
-    - run: make cp37 cp38 cp39
-    - uses: pypa/gh-action-pypi-publish@v1.4.2
+    - run: make cp37 cp38 cp39 cp310
+    - uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_TOKEN }}
         packages_dir: wheelhouse/

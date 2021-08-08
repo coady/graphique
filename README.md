@@ -89,7 +89,7 @@ Specifying an `INDEX` with `COLUMNS` indicates the table is sorted, and enables 
 ```
 
 ## Changes
-dev
+0.5
 
 * Pyarrow >=5 required
 * Stricter validation of inputs
