@@ -380,6 +380,12 @@ class Table(pa.Table):
         'min_element_wise',
         'max_element_wise',
         'binary_join_element_wise',
+        'atan2',
+        'bit_wise_or',
+        'bit_wise_and',
+        'bit_wise_xor',
+        'shift_left',
+        'shift_right',
     }
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:

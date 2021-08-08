@@ -195,6 +195,18 @@ def test_numeric(executor):
     assert data == {'apply': {'columns': {'float': {'count': 1}}}}
     data = executor('{ column(name: "float", apply: {coalesce: "int32"}) { type } }')
     assert data == {'column': {'type': 'float'}}
+    data = executor(
+        '{ apply(int: {name: "int32", bitWiseNot: true}) { columns { int32 { values } } } }'
+    )
+    assert data == {'apply': {'columns': {'int32': {'values': [-1, None]}}}}
+    data = executor(
+        '{ apply(int: {name: "int32", bitWiseOr: "int64"}) { columns { int32 { values } } } }'
+    )
+    assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
+    data = executor(
+        '{ column(name: "int32", apply: {atan2: "float"}) { ... on FloatColumn { values } } }'
+    )
+    assert data == {'column': {'values': [0.0, None]}}
 
 
 def test_datetime(executor):

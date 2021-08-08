@@ -347,6 +347,7 @@ class NumericFunction(OrdinalFunction):
     multiply: Optional[str] = UNSET
     divide: Optional[str] = UNSET
     power: Optional[str] = UNSET
+    atan2: Optional[str] = UNSET
     abs: bool = False
     negate: bool = False
     sign: bool = False
@@ -367,6 +368,12 @@ class NumericFunction(OrdinalFunction):
 
 @strawberry.input(description=f"[functions]({link}#arithmetic-functions) for ints")
 class IntFunction(NumericFunction):
+    bit_wise_or: Optional[str] = UNSET
+    bit_wise_and: Optional[str] = UNSET
+    bit_wise_xor: Optional[str] = UNSET
+    shift_left: Optional[str] = UNSET
+    shift_right: Optional[str] = UNSET
+    bit_wise_not: bool = False
     fill_null: Optional[int] = UNSET
     digitize: Optional[List[int]] = default_field(description=Column.digitize.__doc__)
 
@@ -474,3 +481,9 @@ class Projections(Input):
     multiply: Optional[str] = UNSET
     divide: Optional[str] = UNSET
     power: Optional[str] = UNSET
+    atan2: Optional[str] = UNSET
+    bit_wise_or: Optional[str] = UNSET
+    bit_wise_and: Optional[str] = UNSET
+    bit_wise_xor: Optional[str] = UNSET
+    shift_left: Optional[str] = UNSET
+    shift_right: Optional[str] = UNSET
