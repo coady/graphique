@@ -3,7 +3,7 @@ Service related utilities which don't require knowledge of the schema.
 """
 import itertools
 from datetime import datetime
-from typing import Union
+from typing import Iterable, Iterator, Mapping, Union
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
@@ -14,21 +14,19 @@ from .models import Column, doc_field
 from .scalars import Long
 
 
-def references(node):
-    """Generate every possible column reference."""
-    if hasattr(node, 'name'):
-        yield node.name.value
-    value = getattr(node, 'value', None)
-    yield getattr(value, 'value', value)
-    nodes = itertools.chain(
-        getattr(node, 'arguments', []),
-        getattr(node, 'fields', []),
-        getattr(value, 'fields', []),
-        getattr(value, 'values', []),
-        getattr(getattr(node, 'selection_set', None), 'selections', []),
-    )
-    for node in nodes:
-        yield from references(node)
+def references(field) -> Iterator:
+    """Generate every possible column reference from strawberry `SelectedField`."""
+    if isinstance(field, str):
+        yield field
+    elif isinstance(field, Iterable):
+        for value in field:
+            yield from references(value)
+        if isinstance(field, Mapping):
+            for value in field.values():
+                yield from references(value)
+    else:
+        for name in ('name', 'arguments', 'selections'):
+            yield from references(getattr(field, name, []))
 
 
 class TimingExtension(strawberry.extensions.Extension):  # pragma: no cover
@@ -63,7 +61,7 @@ class AbstractTable:
     def select(self, info) -> pa.Table:
         """Return table with only the columns necessary to proceed."""
         case_map = self.case_map
-        names = set(itertools.chain(*map(references, info.field_nodes))) & set(case_map)
+        names = set(itertools.chain(*map(references, info.selected_fields))) & set(case_map)
         if isinstance(self.table, pa.Table):
             return self.table.select(names)
         return self.table.read(list(map(case_map.get, names))).rename_columns(names)

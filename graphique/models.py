@@ -20,13 +20,9 @@ from .inputs import Field, resolve_annotations
 from .scalars import Long, classproperty, type_map
 
 
-def selections(*nodes):
-    """Return set of field name selections."""
-    names = set()
-    for node in nodes:
-        selections = getattr(node.selection_set, 'selections', [])
-        names |= {node.name.value for node in selections if hasattr(node, 'name')}
-    return names
+def selections(*fields) -> set:
+    """Return set of field name selections from strawberry `SelectedField`."""
+    return {selection.name for field in fields for selection in field.selections}
 
 
 def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField:
@@ -68,7 +64,7 @@ class Column:
 
     def unique(self, info):
         """unique values and counts"""
-        if 'counts' in selections(*info.field_nodes):
+        if 'counts' in selections(*info.selected_fields):
             return self.Set(*self.array.value_counts().flatten())
         return self.Set(self.array.unique())
 

@@ -148,7 +148,7 @@ class Table(AbstractTable):
         """Return table of first or last occurrences grouped by columns, with stable ordering.
         Faster than `group` when only scalars are needed."""
         table = self.select(info)
-        if selections(*info.field_nodes) == {'length'}:  # optimized for count
+        if selections(*info.selected_fields) == {'length'}:  # optimized for count
             return Table(T.unique_indices(table, *by)[0][:length])
         table, counts = T.unique(table, *by, reverse=reverse, length=length, count=bool(count))
         return Table(table.append_column(count, counts) if count else table)
@@ -211,7 +211,7 @@ class Table(AbstractTable):
         if not masks:
             return Table(table)
         mask = functools.reduce(getattr(pc, reduce.value), masks)
-        if selections(*info.field_nodes) == {'length'}:  # optimized for count
+        if selections(*info.selected_fields) == {'length'}:  # optimized for count
             return Table(range(C.count(mask, not invert)))
         return Table(table.filter(pc.invert(mask) if invert else mask))
 
