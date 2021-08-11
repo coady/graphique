@@ -1,6 +1,5 @@
 pyarrow
 cython
-strawberry-graphql
-starlette
+strawberry-graphql[asgi]
 mkdocs-material
 mkdocstrings
