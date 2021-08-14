@@ -186,11 +186,9 @@ class Column(pa.ChunkedArray):
     def is_list_type(self):
         return pa.types.is_list(self.type) or pa.types.is_large_list(self.type)
 
-    def decode(self, check=False) -> pa.ChunkedArray:
-        with contextlib.suppress(ValueError, AttributeError):
-            not check or self.type.value_type.bit_width
-            return self.cast(self.type.value_type)
-        return self
+    def decode(self) -> pa.ChunkedArray:
+        """Native `dictionary_decode` is only on `DictionaryArray`."""
+        return self.cast(self.type.value_type) if pa.types.is_dictionary(self.type) else self
 
     def combine_chunks(self) -> pa.Array:
         """Native `combine_chunks` doesn't support empty chunks."""
@@ -220,7 +218,6 @@ class Column(pa.ChunkedArray):
 
     def call(self, func: Callable, *args, **kwargs) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
-        self = Column.decode(self, check=True)
         scalar = Column.scalar_type(self)
         args = tuple(pa.scalar(arg, scalar) if isinstance(arg, time) else arg for arg in args)
         try:
@@ -232,10 +229,7 @@ class Column(pa.ChunkedArray):
             return self
         self = self.unify_dictionaries()
         dictionary = func(self.chunk(0).dictionary, *args, **kwargs)
-        array = pa.chunked_array(
-            pa.DictionaryArray.from_arrays(chunk.indices, dictionary) for chunk in self.iterchunks()
-        )
-        return Column.decode(array, check=True)
+        return dictionary.take(pa.chunked_array(chunk.indices for chunk in self.iterchunks()))
 
     def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
