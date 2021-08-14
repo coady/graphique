@@ -34,23 +34,3 @@ def group_indices(array: pa.IntegerArray) -> tuple:
         for i in range(array_view.shape[0]):
             indices_view[postincrement(offsets[array_view[i]])] = i
     return values, split(counts, indices)
-
-
-def unique_indices(array: pa.IntegerArray, count=False) -> tuple:
-    """Return index array of first occurrences, optionally with counts.
-
-    Relies on `Array.unique` having stable ordering.
-    """
-    cdef const Py_ssize_t [:] array_view = asiarray(array)
-    values, counts = array.value_counts().flatten() if count else (array.unique(), None)
-    cdef const Py_ssize_t [:] values_view = asiarray(values)
-    indices = np.empty(values_view.size, np.intp)
-    cdef Py_ssize_t [:] indices_view = indices
-    cdef Py_ssize_t j = 0
-    with nogil:
-        for i in range(values_view.shape[0]):
-            for j in range(j, array_view.shape[0]):
-                if values_view[i] == array_view[j]:
-                    break
-            indices_view[i] = postincrement(j)
-    return pa.array(indices), counts

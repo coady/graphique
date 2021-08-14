@@ -2,7 +2,7 @@ from datetime import date, time
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
-from graphique.core import Chunk, ListChunk, Column as C, Table as T
+from graphique.core import ListChunk, Column as C, Table as T
 
 
 def eq(left, right):
@@ -172,7 +172,7 @@ def test_unique(table):
     assert len(zipcodes) == 52
     assert zipcodes[0] == 99950
     assert zipcodes[-1] == 988
-    indices, _ = Chunk.unique_indices(pa.array([1, None, 1]))
+    indices, _ = C.unique_indices(pa.array([1, None, 1]))
     assert indices.to_pylist() == [0, 1]
     tbl, counts = T.unique(table, 'state', 'county', 'city', reverse=True, count=True)
     assert len(tbl) == 29865

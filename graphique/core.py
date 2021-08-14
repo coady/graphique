@@ -14,7 +14,7 @@ from typing import Callable, Iterable, Iterator, Sequence
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
-from .arrayed import group_indices, split, unique_indices  # type: ignore
+from .arrayed import group_indices, split  # type: ignore
 
 
 class Compare:
@@ -38,22 +38,6 @@ def rpartial(func, *values):
 
 
 class Chunk(pa.Array):
-    def encode(self):
-        if not pa.types.is_dictionary(self.type):
-            if not self.null_count and np.can_cast(self.type.to_pandas_dtype(), np.intp):
-                return self
-            self = self.dictionary_encode()
-        if not self.indices.null_count:
-            return self.indices
-        return self.indices.fill_null(len(self.dictionary))
-
-    def unique_indices(self, reverse=False, count=False) -> tuple:
-        array = Chunk.encode(self)
-        if not reverse:
-            return unique_indices(array, count)
-        indices, counts = unique_indices(array[::-1], count)
-        return pc.subtract(len(array) - 1, indices), counts
-
     def fill_null(self: pa.DictionaryArray, dictionary: pa.Array) -> pa.DictionaryArray:
         indices = self.indices.fill_null(len(dictionary) - 1)
         return pa.DictionaryArray.from_arrays(indices, dictionary)
@@ -189,6 +173,28 @@ class Column(pa.ChunkedArray):
     def decode(self) -> pa.ChunkedArray:
         """Native `dictionary_decode` is only on `DictionaryArray`."""
         return self.cast(self.type.value_type) if pa.types.is_dictionary(self.type) else self
+
+    def encode(self) -> pa.IntegerArray:
+        """Convert scalars to integers suitable for grouping."""
+        if not pa.types.is_dictionary(self.type):
+            if not self.null_count and np.can_cast(self.type.to_pandas_dtype(), np.intp):
+                return self
+            self = self.dictionary_encode()
+        array = Column.combine_chunks(self)
+        return array.indices.fill_null(len(array.dictionary))
+
+    def unique_indices(self, reverse=False, count=False) -> tuple:
+        """Return index array of first or last occurrences, optionally with counts.
+
+        Relies on `unique` having stable ordering.
+        """
+        if pa.types.is_dictionary(self.type):  # optimized for dictionaries
+            self = pa.chunked_array(chunk.indices for chunk in self.unify_dictionaries().chunks)
+        if reverse:
+            self = self[::-1]
+        values, counts = self.value_counts().flatten() if count else (self.unique(), None)
+        indices = pc.index_in(values, value_set=self)
+        return (pc.subtract(len(self) - 1, indices) if reverse else indices), counts
 
     def combine_chunks(self) -> pa.Array:
         """Native `combine_chunks` doesn't support empty chunks."""
@@ -398,7 +404,7 @@ class Table(pa.Table):
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
     def group_indices(self, *names: str) -> pa.LargeListArray:
-        arrays = (Chunk.encode(Column.combine_chunks(self[name])) for name in names)
+        arrays = (Column.encode(self[name]) for name in names)
         _, indices = group_indices(next(arrays))
         for array in arrays:
             groups = [group_indices(scalar.values)[1] for scalar in Chunk.take_list(array, indices)]
@@ -442,15 +448,15 @@ class Table(pa.Table):
         return pa.Table.from_pydict(columns), Column.diff(offsets)
 
     def unique_indices(self, *names: str, reverse=False, count=False) -> tuple:
-        array = Chunk.encode(Column.combine_chunks(self[names[-1]]))
+        column = self[names[-1]]
         if len(names) == 1:
-            return Chunk.unique_indices(array, reverse, count)
+            return Column.unique_indices(column, reverse, count)
         indices = Table.group_indices(self, *names[:-1])
         if reverse:
             indices = indices[::-1]
         items = [
-            Chunk.unique_indices(scalar.values, reverse, count)
-            for scalar in Chunk.take_list(array, indices)
+            Column.unique_indices(scalar.values, reverse, count)
+            for scalar in Chunk.take_list(Column.combine_chunks(column), indices)
         ]
         indices = pa.concat_arrays(
             scalar.values.take(group) for scalar, (group, _) in zip(indices, items)
