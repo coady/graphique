@@ -190,7 +190,6 @@ class TimeQuery(Query):
 @strawberry.input(description="predicates for durations")
 class DurationQuery(Query):
     __annotations__ = dict.fromkeys(comparisons, Optional[timedelta])
-    is_in: Optional[List[timedelta]] = UNSET
 
 
 @strawberry.input(description="predicates for binaries")

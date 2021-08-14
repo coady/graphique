@@ -1,4 +1,4 @@
-from datetime import date, time, timedelta
+from datetime import date, time
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -203,12 +203,6 @@ def test_sort(table):
     mask = [False] * len(table)
     assert not C.sort(table['state'].filter(mask))
     assert not T.sort(table.filter(mask), 'state')
-
-
-def test_duration():
-    array = pa.array([timedelta(), None])
-    assert C.is_in(array, array[:0]).to_pylist() == [False, False]
-    assert C.is_in(array, array[:1]).to_pylist() == [True, False]
 
 
 def test_time():

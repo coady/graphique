@@ -1,7 +1,6 @@
 __pycache__/
 .coverage
 site/
-.mypy_cache/
 *.cpp
 *.so
 *.o
@@ -9,4 +8,3 @@ site/
 .venv/
 docs/schema.*
 node_modules/
-package-lock.json

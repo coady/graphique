@@ -174,6 +174,7 @@ class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 
     threader = futures.ThreadPoolExecutor(pa.cpu_count())
+    is_in = pc.is_in_meta_binary
 
     def map(func: Callable, *arrays: pa.ChunkedArray) -> Iterator:
         map_ = Column.threader.map if arrays[0].num_chunks > 1 else map
@@ -247,15 +248,6 @@ class Column(pa.ChunkedArray):
         if value is None:
             return pc.is_valid(self)
         return Column.call(self, pc.not_equal, value)
-
-    def is_in(self, values) -> pa.ChunkedArray:
-        """Return boolean mask array which matches any value."""
-        with contextlib.suppress(NotImplementedError):
-            return Column.call(self, pc.is_in_meta_binary, values)
-        if not values:
-            return pa.array(np.full(len(self), False))
-        masks = (pc.equal(self, value) for value in values)
-        return functools.reduce(pc.or_, masks).fill_null(False)
 
     def fill_null(self, value) -> pa.ChunkedArray:
         """Replace each null element in values with fill_value with dictionary support."""
