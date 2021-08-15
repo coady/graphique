@@ -458,7 +458,7 @@ def test_partition(client):
 def test_unique(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ unique { length } }')
-    with pytest.raises(ValueError, match="out of range"):
+    with pytest.raises(ValueError, match="not enough values"):
         client.execute('{ unique(by: []) { length } }')
     assert client.execute('{ unique(by: ["state"]) { length } }') == {'unique': {'length': 52}}
     data = client.execute('{ unique(by: ["state"], length: 3) { length } }')

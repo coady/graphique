@@ -149,7 +149,7 @@ class Table(AbstractTable):
         Faster than `group` when only scalars are needed."""
         table = self.select(info)
         if selections(*info.selected_fields) == {'length'}:  # optimized for count
-            return Table(T.unique_indices(table, *by)[0][:length])
+            return Table(T.encode(table, *by).unique()[:length])
         table, counts = T.unique(table, *by, reverse=reverse, length=length, count=bool(count))
         return Table(table.append_column(count, counts) if count else table)
 

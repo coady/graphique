@@ -21,8 +21,10 @@ def test_dictionary(table):
     assert sum(C.mask(array, is_in=['CA']).to_pylist()) == 2647
     assert "ca" in C.call(array, pc.utf8_lower).unique().to_pylist()
     assert C.sort(array)[0].as_py() == "AK"
+    assert len(C.unique_indices(array)[0]) == 52
     table = pa.Table.from_pydict({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
+    assert len(T.unique(table, 'state', 'state')[0]) == 52
     array = C.call(pa.chunked_array([[0, 0]]).dictionary_encode(), pc.add, 1)
     assert array.to_pylist() == [1, 1]
     array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()
@@ -176,8 +178,8 @@ def test_unique(table):
     assert indices.to_pylist() == [0, 1]
     tbl, counts = T.unique(table, 'state', 'county', 'city', reverse=True, count=True)
     assert len(tbl) == 29865
-    assert tbl['zipcode'][0].as_py() == 99927
-    assert counts[0].as_py() == 1
+    assert tbl['zipcode'][0].as_py() == 99950
+    assert counts[0].as_py() == 2
     tbl, counts = T.unique(table, 'state', length=3, count=True)
     assert tbl['state'].to_pylist() == ['NY', 'PR', 'MA']
     assert counts.to_pylist() == [2205, 176, 703]

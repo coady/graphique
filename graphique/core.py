@@ -177,8 +177,6 @@ class Column(pa.ChunkedArray):
     def encode(self) -> pa.IntegerArray:
         """Convert scalars to integers suitable for grouping."""
         if not pa.types.is_dictionary(self.type):
-            if not self.null_count and np.can_cast(self.type.to_pandas_dtype(), np.intp):
-                return self
             self = self.dictionary_encode()
         array = Column.combine_chunks(self)
         return array.indices.fill_null(len(array.dictionary))
@@ -292,7 +290,7 @@ class Column(pa.ChunkedArray):
         if not self:
             return None
         if pa.types.is_dictionary(self.type):
-            self = pa.chunked_array([self.unique().cast(self.type.value_type)])
+            self = pa.chunked_array([self.unique().dictionary_decode()])
         with contextlib.suppress(NotImplementedError):
             return pc.min_max(self)['max' if reverse else 'min'].as_py()
         return Column.sort(self, reverse, length=1)[0].as_py()
@@ -403,19 +401,20 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
-    def group_indices(self, *names: str) -> pa.LargeListArray:
-        arrays = (Column.encode(self[name]) for name in names)
-        _, indices = group_indices(next(arrays))
+    def encode(self, *names: str) -> pa.IntegerArray:
+        """Return unique integer keys for multiple columns, suitable for grouping.
+
+        TODO(ARROW-3978): replace this when struct arrays can be dictionary encoded.
+        """
+        keys, *arrays = (Column.encode(self[name]).cast('int64') for name in names)
         for array in arrays:
-            groups = [group_indices(scalar.values)[1] for scalar in Chunk.take_list(array, indices)]
-            indices = pa.concat_arrays(
-                Chunk.take_list(scalar.values, group) for scalar, group in zip(indices, groups)
-            )
-        return indices
+            size = pc.min_max(array)['max'].as_py() + 1
+            keys = pc.add_checked(pc.multiply_checked(keys, size), array)
+        return keys
 
     def group(self, *names: str, reverse=False, length: int = None) -> tuple:
         """Return table grouped by columns and corresponding counts."""
-        indices = Table.group_indices(self, *names)
+        _, indices = group_indices(Table.encode(self, *names))
         indices = (indices[::-1] if reverse else indices)[:length]
         scalars = ListChunk.first(indices)
         columns = {name: self[name].take(scalars) for name in names}
@@ -447,29 +446,13 @@ class Table(pa.Table):
             columns[name] = pa.LargeListArray.from_arrays(offsets, column)
         return pa.Table.from_pydict(columns), Column.diff(offsets)
 
-    def unique_indices(self, *names: str, reverse=False, count=False) -> tuple:
-        column = self[names[-1]]
-        if len(names) == 1:
-            return Column.unique_indices(column, reverse, count)
-        indices = Table.group_indices(self, *names[:-1])
-        if reverse:
-            indices = indices[::-1]
-        items = [
-            Column.unique_indices(scalar.values, reverse, count)
-            for scalar in Chunk.take_list(Column.combine_chunks(column), indices)
-        ]
-        indices = pa.concat_arrays(
-            scalar.values.take(group) for scalar, (group, _) in zip(indices, items)
-        )
-        return indices, (pa.concat_arrays(c for _, c in items) if count else None)
-
     def unique(self, *names: str, reverse=False, length: int = None, count=False) -> tuple:
         """Return table with first or last occurrences from grouping by columns.
 
         Optionally compute corresponding counts.
         Faster than [group][graphique.core.Table.group] when only scalars are needed.
         """
-        indices, counts = Table.unique_indices(self, *names, reverse=reverse, count=count)
+        indices, counts = Column.unique_indices(Table.encode(self, *names), reverse, count)
         return self.take(indices[:length]), (counts and counts[:length])
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
