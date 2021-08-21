@@ -1,5 +1,0 @@
-pyarrow
-cython
-strawberry-graphql[asgi]
-mkdocs-material
-mkdocstrings

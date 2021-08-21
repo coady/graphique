@@ -1,0 +1,4 @@
+-r ../requirements.in
+pytz
+requests
+pytest-cov

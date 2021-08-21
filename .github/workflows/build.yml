@@ -17,7 +17,7 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - run: pip install cython pyarrow 'strawberry-graphql[asgi]' pytz requests pytest-cov
+    - run: pip install -r tests/requirements.in
     - run: make check
     - run: coverage xml
     - uses: codecov/codecov-action@v2
@@ -40,6 +40,6 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: 3.x
-    - run: pip install -r docs/requirements.txt
+    - run: pip install -r docs/requirements.in
     - run: npm install
     - run: make html

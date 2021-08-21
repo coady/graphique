@@ -50,7 +50,7 @@ Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partitio
 
 Fastest of all, is not needing all the values of a list scalar. `Table.unique` also groups but only returns scalars: the keys, first value, last value, and count. When only `min` and `max` values are needed, it may be faster to `sort` first, just to use `unique`.
 
-`Table.group` and `Table.unique` have optimized C++ implementations at the array level.
+`Table.group` has an optimized C++ implementation at the array level.
 
 ## Column selection
 Each field resolver transforms a table or array as needed. When working with an embedded library like [pandas](https://pandas.pydata.org), it's common to select a working set of columns for efficiency. Whereas GraphQL has the advantage of knowing the entire query up front, so there is no `Table.select` field because it's done automatically at every level of resolvers.
