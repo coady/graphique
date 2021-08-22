@@ -174,20 +174,19 @@ class Column(pa.ChunkedArray):
         """Native `dictionary_decode` is only on `DictionaryArray`."""
         return self.cast(self.type.value_type) if pa.types.is_dictionary(self.type) else self
 
-    def encode(self) -> pa.IntegerArray:
+    def encode(self) -> pa.ChunkedArray:
         """Convert scalars to integers suitable for grouping."""
         if not pa.types.is_dictionary(self.type):
             self = self.dictionary_encode()
-        array = Column.combine_chunks(self)
-        return array.indices.fill_null(len(array.dictionary))
+        self = self.unify_dictionaries()
+        indices = pa.chunked_array(chunk.indices for chunk in self.iterchunks())
+        return indices.fill_null(self.num_chunks and len(self.chunk(0).dictionary))
 
     def unique_indices(self, reverse=False, count=False) -> tuple:
         """Return index array of first or last occurrences, optionally with counts.
 
         Relies on `unique` having stable ordering.
         """
-        if pa.types.is_dictionary(self.type):  # optimized for dictionaries
-            self = pa.chunked_array(chunk.indices for chunk in self.unify_dictionaries().chunks)
         if reverse:
             self = self[::-1]
         values, counts = self.value_counts().flatten() if count else (self.unique(), None)
@@ -320,8 +319,8 @@ class Column(pa.ChunkedArray):
         return sum(map(getter, Column.mask(self).iterchunks()))
 
     def index(self, value, start=0, end=None) -> int:
-        """Return number of occurrences of value."""
-        if not pa.types.is_dictionary(self.type):
+        """Return the first index of a value."""
+        with contextlib.suppress(NotImplementedError):
             return self.index(value, start, end).as_py()  # type: ignore
         offset = start
         for chunk in self[start:end].iterchunks():
@@ -401,13 +400,15 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
-    def encode(self, *names: str) -> pa.IntegerArray:
+    def encode(self, *names: str) -> pa.ChunkedArray:
         """Return unique integer keys for multiple columns, suitable for grouping.
 
         TODO(ARROW-3978): replace this when struct arrays can be dictionary encoded.
         """
-        keys, *arrays = (Column.encode(self[name]).cast('int64') for name in names)
-        for array in arrays:
+        keys, *arrays = (self[name] for name in names)
+        if arrays or keys.null_count or not pa.types.is_integer(keys.type):
+            keys = Column.encode(keys).cast('int64')
+        for array in map(Column.encode, arrays):
             size = pc.min_max(array)['max'].as_py() + 1
             keys = pc.add_checked(pc.multiply_checked(keys, size), array)
         return keys
