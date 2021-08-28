@@ -2,6 +2,7 @@ from datetime import date, time
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
+import pytest
 from graphique.core import ListChunk, Column as C, Table as T
 
 
@@ -36,6 +37,7 @@ def test_dictionary(table):
 
 def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
+    assert C.combine_chunks(array) == pa.array(list('ababcb'))
     table = pa.Table.from_pydict({'col': array})
     assert T.unique(table, 'col', count=True)[1].to_pylist() == [2, 3, 1]
     groups, counts = T.group(table, 'col')
@@ -216,3 +218,15 @@ def test_numeric():
     array = pa.chunked_array([range(5)])
     assert C.digitize(array, range(0, 5, 2)).to_pylist() == [1, 1, 2, 2, 3]
     assert C.digitize(array, np.arange(0, 5, 2), right=True).to_pylist() == [0, 1, 1, 2, 2]
+
+
+def test_not_implemented():
+    with pytest.raises(NotImplementedError):
+        pa.chunked_array([[0]]).take([]).combine_chunks()
+    dictionary = pa.array(['']).dictionary_encode()
+    with pytest.raises(NotImplementedError):
+        pc.sort_indices(dictionary)
+    with pytest.raises(NotImplementedError):
+        dictionary.fill_null('')
+    with pytest.raises(NotImplementedError):
+        dictionary.index('')

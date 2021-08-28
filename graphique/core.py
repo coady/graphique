@@ -56,14 +56,6 @@ class Chunk(pa.Array):
             return self
         return self.take(Chunk.partition_nth_indices(self, pivot))
 
-    def sort_keys(self) -> pa.Array:
-        if not pa.types.is_dictionary(self.type):
-            return self
-        if len(self) <= len(self.dictionary):
-            return self.dictionary_decode()
-        keys = pc.sort_indices(pc.sort_indices(self.dictionary))
-        return keys.take(self.indices)
-
     def index(self: pa.DictionaryArray, value) -> int:
         index = self.dictionary.index(value).as_py()
         return index if index < 0 else self.indices.index(index).as_py()
@@ -257,14 +249,23 @@ class Column(pa.ChunkedArray):
         dictionary = pa.concat_arrays([self.chunk(0).dictionary, end])
         return pa.chunked_array(Column.map(rpartial(Chunk.fill_null, dictionary), self))
 
+    def sort_keys(self) -> pa.Array:
+        if not pa.types.is_dictionary(self.type):
+            return self
+        if not self or len(self) <= max(len(chunk.dictionary) for chunk in self.iterchunks()):
+            return Column.decode(self)
+        self = self.unify_dictionaries()
+        keys = pc.sort_indices(pc.sort_indices(self.chunk(0).dictionary))
+        return keys.take(pa.chunked_array(chunk.indices for chunk in self.iterchunks()))
+
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
         if len(self[:length]) < len(self):
             func = rpartial(Chunk.partition_nth, (-length if reverse else length))  # type: ignore
             self = pa.chunked_array(Column.map(func, Column.decode(self)))
         order = 'descending' if reverse else 'ascending'
-        array = Column.combine_chunks(self)
-        return array.take(pc.array_sort_indices(Chunk.sort_keys(array), order=order)[:length])
+        indices = pc.sort_indices(Column.sort_keys(self), sort_keys=[('', order)])
+        return self and self.take(indices[:length])
 
     def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
         """Return discrete differences between adjacent values."""
@@ -462,8 +463,7 @@ class Table(pa.Table):
             array = Column.decode(Column.combine_chunks(self[names[-1]]))
             self = self.take(Chunk.partition_nth_indices(array, (-length if reverse else length)))  # type: ignore
         order = 'descending' if reverse else 'ascending'
-        columns = {name: Chunk.sort_keys(Column.combine_chunks(self[name])) for name in names}
-        table = pa.Table.from_pydict(columns)
+        table = pa.Table.from_pydict({name: Column.sort_keys(self[name]) for name in names})
         indices = pc.sort_indices(table, sort_keys=[(name, order) for name in names])
         return self and self.take(indices[:length])
 
