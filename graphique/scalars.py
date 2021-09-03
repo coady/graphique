@@ -10,22 +10,22 @@ import pyarrow as pa
 import strawberry
 
 Long = strawberry.scalar(NewType('Long', int), description="64-bit int")
-
-strawberry.scalar(
+Binary = strawberry.scalar(
     bytes,
     name='Binary',
     description="base64 encoded bytes",
     serialize=lambda b: base64.b64encode(b).decode('utf8'),
     parse_value=base64.b64decode,
 )
-
-strawberry.scalar(
+Duration = strawberry.scalar(
     timedelta,
     name='Duration',
     description="duration float (in seconds)",
     serialize=timedelta.total_seconds,
     parse_value=lambda s: timedelta(seconds=s),
 )
+scalar_map = {bytes: Binary, timedelta: Duration}
+strawberry.scalars.SCALAR_TYPES.append(timedelta)  # TODO(#1204) hack to register global scalar
 
 type_map = {
     pa.lib.Type_BOOL: bool,

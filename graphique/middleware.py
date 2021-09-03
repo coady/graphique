@@ -11,7 +11,7 @@ import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
 from .inputs import Projections
 from .models import Column, doc_field
-from .scalars import Long
+from .scalars import Long, scalar_map
 
 
 def references(field) -> Iterator:
@@ -40,8 +40,12 @@ class TimingExtension(strawberry.extensions.Extension):  # pragma: no cover
 
 class GraphQL(strawberry.asgi.GraphQL):
     def __init__(self, root_value, debug=False, **kwargs):
-        options = dict(types=Column.__subclasses__(), extensions=[TimingExtension] * bool(debug))
-        schema = strawberry.Schema(type(root_value), **options)
+        schema = strawberry.Schema(
+            type(root_value),
+            types=Column.__subclasses__(),
+            extensions=[TimingExtension] * bool(debug),
+            scalar_overrides=scalar_map,
+        )
         super().__init__(schema, debug=debug, **kwargs)
         self.root_value = root_value
 

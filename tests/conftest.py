@@ -6,6 +6,7 @@ import pyarrow.parquet as pq
 import strawberry
 import pytest
 from starlette import testclient
+from graphique.scalars import scalar_map
 
 fixtures = Path(__file__).parent / 'fixtures'
 
@@ -56,7 +57,7 @@ def dsclient(request):
 @pytest.fixture(scope='module')
 def executor():
     app = load('alltypes.parquet', INDEX='snake_id,camelId', COLUMNS='*', DICTIONARIES='string')
-    schema = strawberry.Schema(query=type(app.root_value))
+    schema = strawberry.Schema(query=type(app.root_value), scalar_overrides=scalar_map)
 
     def execute(query):
         result = schema.execute_sync(query, root_value=app.root_value)
