@@ -499,7 +499,7 @@ class ListColumn(Column):
         """a decorator which transforms aggregate functions into arguments"""
         annotations = {}
         for key in cls.aggregates:
-            argument = strawberry.argument(description=getattr(cls, key).__doc__)
+            argument = strawberry.argument(description=getattr(ListChunk, key).__doc__)
             annotations[key] = Annotated[List[Field], argument]
         defaults = dict.fromkeys(cls.aggregates, [])  # type: dict
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
@@ -525,14 +525,9 @@ class ListColumn(Column):
         return self.map(ListChunk.unique)  # type: ignore
 
     @doc_field
-    def first(self) -> Column:
-        """first value of each list scalar"""
-        return self.map(ListChunk.first)
-
-    @doc_field
-    def last(self) -> Column:
-        """last value of each list scalar"""
-        return self.map(ListChunk.last)
+    def value(self, index: Long = 0) -> Column:
+        """value at index of each list scalar"""
+        return self.map(functools.partial(ListChunk.value, index=index))
 
     @doc_field
     def min(self) -> Column:

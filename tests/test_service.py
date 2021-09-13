@@ -114,11 +114,11 @@ def test_strings(client):
 def test_string_methods(client):
     data = client.execute(
         '''{ unique(by: ["city"]) { columns { city { split {
-        first { ... on StringColumn { count(equal: "New") } }
+        value { ... on StringColumn { count(equal: "New") } }
         count { ... on LongColumn { max } } } } } } }'''
     )
     cities = data['unique']['columns']['city']
-    assert cities['split'] == {'first': {'count': 177}, 'count': {'max': 6}}
+    assert cities['split'] == {'value': {'count': 177}, 'count': {'max': 6}}
     data = client.execute(
         '''{ unique(by: ["city"]) { columns { city {
         split(pattern: "-", maxSplits: 1, reverse: true) {
