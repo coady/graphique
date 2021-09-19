@@ -169,20 +169,27 @@ class Column(pa.ChunkedArray):
         return self.cast(self.type.value_type) if pa.types.is_dictionary(self.type) else self
 
     def unify_dictionaries(self) -> pa.ChunkedArray:
-        """Native `unify_dictionaries` is inefficient if the dictionary is too large."""
+        """Native `unify_dictionaries` is inefficient if the dictionary is too large or unified."""
         if not pa.types.is_dictionary(self.type):
             return self
         if not self or len(self) <= max(len(chunk.dictionary) for chunk in self.iterchunks()):
-            return Column.decode(self)
+            return self.cast(self.type.value_type)
+        dictionary = self.chunk(0).dictionary
+        if all(chunk.dictionary == dictionary for chunk in self.iterchunks()):
+            return self
         return self.unify_dictionaries()
+
+    def dict_flatten(self):
+        indices = pa.chunked_array(chunk.indices for chunk in self.iterchunks())
+        return self.chunk(0).dictionary, indices
 
     def encode(self) -> pa.ChunkedArray:
         """Convert scalars to integers suitable for grouping."""
         self = Column.unify_dictionaries(self)
         if not pa.types.is_dictionary(self.type):
             self = self.dictionary_encode()
-        indices = pa.chunked_array(chunk.indices for chunk in self.iterchunks())
-        return Column.fill_null(indices, len(self.chunk(0).dictionary))
+        dictionary, indices = Column.dict_flatten(self)
+        return Column.fill_null(indices, len(dictionary))
 
     def unique_indices(self, reverse=False, count=False) -> tuple:
         """Return index array of first or last occurrences, optionally with counts.
@@ -231,8 +238,8 @@ class Column(pa.ChunkedArray):
         except NotImplementedError:
             if not pa.types.is_dictionary(self.type):
                 raise
-        dictionary = self and func(self.chunk(0).dictionary, *args, **kwargs)
-        return dictionary.take(pa.chunked_array(chunk.indices for chunk in self.iterchunks()))
+        dictionary, indices = Column.dict_flatten(self)
+        return func(dictionary, *args, **kwargs).take(indices)
 
     def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
@@ -257,25 +264,24 @@ class Column(pa.ChunkedArray):
         dictionary = pa.concat_arrays([self.chunk(0).dictionary, end])
         return pa.chunked_array(Column.map(rpartial(Chunk.fill_null, dictionary), self))
 
-    def sort_keys(self) -> pa.Array:
+    def sort_values(self) -> pa.Array:
         self = Column.unify_dictionaries(self)
         if not pa.types.is_dictionary(self.type):
             return self
-        keys = pc.sort_indices(pc.sort_indices(self.chunk(0).dictionary))
-        return keys.take(pa.chunked_array(chunk.indices for chunk in self.iterchunks()))
+        dictionary, indices = Column.dict_flatten(self)
+        return pc.sort_indices(pc.sort_indices(dictionary)).take(indices)
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
         if len(self[:length]) < len(self):
             func = rpartial(Chunk.partition_nth, (-length if reverse else length))  # type: ignore
             self = pa.chunked_array(Column.map(func, Column.decode(self)))
-        order = 'descending' if reverse else 'ascending'
-        indices = pc.sort_indices(Column.sort_keys(self), sort_keys=[('', order)])
+        keys = {'': 'descending' if reverse else 'ascending'}
+        indices = pc.sort_indices(Column.sort_values(self), sort_keys=keys.items())
         return self and self.take(indices[:length])
 
     def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
         """Return discrete differences between adjacent values."""
-        self = Column.decode(self)
         return func(self[1:], self[:-1])
 
     def partition_offsets(self, predicate: Callable = pc.not_equal, *args) -> pa.IntegerArray:
@@ -468,9 +474,9 @@ class Table(pa.Table):
         if len(names) == 1 and len(self[:length]) < len(self):
             array = Column.decode(Column.combine_chunks(self[names[-1]]))
             self = self.take(Chunk.partition_nth_indices(array, (-length if reverse else length)))  # type: ignore
-        order = 'descending' if reverse else 'ascending'
-        table = pa.Table.from_pydict({name: Column.sort_keys(self[name]) for name in names})
-        indices = pc.sort_indices(table, sort_keys=[(name, order) for name in names])
+        keys = dict.fromkeys(names, 'descending' if reverse else 'ascending')
+        table = pa.Table.from_pydict({name: Column.sort_values(self[name]) for name in names})
+        indices = pc.sort_indices(table, sort_keys=keys.items())
         return self and self.take(indices[:length])
 
     def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.Array:

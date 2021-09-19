@@ -53,7 +53,8 @@ def test_chunks():
     assert ''.join(T.unique(table, 'col', reverse=True)[0]['col'].to_pylist()) == 'bca'
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(T.unique(table, 'col')[0]) == 3
-    array = pa.chunked_array([list('aba'), list('ca')]).dictionary_encode()
+    array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
+    assert pa.Array.equals(*(chunk.dictionary for chunk in C.unify_dictionaries(array).chunks))
     assert C.equal(array, 'a').to_pylist() == [True, False, True, False, True]
     assert C.index(array, 'a') == 0
     assert C.index(array, 'c') == 3
