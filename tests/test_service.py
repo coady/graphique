@@ -4,18 +4,18 @@ import pytest
 def test_slice(client):
     data = client.execute('{ length slice(length: 3) { columns { zipcode { values } } } }')
     assert data == {'length': 41700, 'slice': {'columns': {'zipcode': {'values': [501, 544, 601]}}}}
-    data = client.execute('{ slice(offset: 1) { columns { zipcode { values } } }}')
+    data = client.execute('{ slice(offset: 1) { columns { zipcode { values } } } }')
     zipcodes = data['slice']['columns']['zipcode']['values']
     assert zipcodes[0] == 544
     assert len(zipcodes) == 41699
+    data = client.execute('{ slice(offset: -1, reverse: true) { columns { zipcode { values } } } }')
+    assert data['slice']['columns']['zipcode']['values'] == [99950]
     data = client.execute('{ columns { zipcode { count(notEqual: null) } } }')
     assert data['columns']['zipcode']['count'] == 41700
     data = client.execute('{ columns { zipcode { count(equal: null) } } }')
     assert data['columns']['zipcode']['count'] == 0
     data = client.execute('{ slice(length: 0) { columns { zipcode { any all } } } }')
     assert data['slice']['columns']['zipcode'] == {'any': False, 'all': True}
-    data = client.execute('{ slice { __typename } }')
-    assert data['slice']['__typename'] == 'IndexedTable'
 
 
 def test_ints(client):

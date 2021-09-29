@@ -15,7 +15,7 @@ from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
 from .inputs import Diff, Filters, Function, Input, Query as QueryInput
 from .middleware import AbstractTable, GraphQL
-from .models import Column, ListColumn, annotate, doc_field, selections
+from .models import Column, ListColumn, doc_field, selections
 from .scalars import Long, Operator, comparisons, type_map
 from .settings import COLUMNS, DATASET, DEBUG, INDEX
 
@@ -79,11 +79,18 @@ class Table(AbstractTable):
             )
         return Row(**row)  # type: ignore
 
-    @doc_field
-    def slice(self, info, offset: Long = 0, length: Optional[Long] = None) -> 'Table':
-        """Return table slice."""
+    @doc_field(
+        offset="number of rows to skip; negative value skips from the end",
+        length="maximum number of rows to return",
+        reverse="reverse order after slicing; forces a copy",
+    )
+    def slice(
+        self, info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
+    ) -> 'Table':
+        """Return zero-copy slice of table."""
         table = self.select(info)
-        return type(self)(table.slice(offset, length))
+        table = table.slice(len(table) + offset if offset < 0 else offset, length)
+        return Table(table[::-1] if reverse else table)
 
     @doc_field(
         by="column names",
@@ -265,7 +272,6 @@ class Table(AbstractTable):
 class IndexedTable(Table):
     index: List[str] = strawberry.field(default=tuple(indexed), description="the composite index")
     __init__ = AbstractTable.__init__
-    slice = annotate(Table.slice, 'IndexedTable')
 
     @QueryInput.resolve_types({name: types[name] for name in indexed})
     def search(self, info, **queries) -> Table:
