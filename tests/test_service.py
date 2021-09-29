@@ -448,7 +448,7 @@ def test_partition(client):
     data = client.execute(
         '''{ partition(by: ["state"], count: "c") {
         filter(on: {string: {name: "state", equal: "NY"}}) {
-        column(name: "c") { ... on IntColumn { values } } columns { state { values } } } } }'''
+        column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }'''
     )
     agg = data['partition']['filter']
     assert agg['column']['values'] == [2, 1, 2202]

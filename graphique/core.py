@@ -62,14 +62,16 @@ class Chunk(pa.Array):
 
 
 class ListChunk(pa.lib.BaseListArray):
-    count = operator.methodcaller('value_lengths')
-
     def value(self, index: int) -> pa.Array:
         """value at index of each list scalar"""
         size = -index if index < 0 else index + 1
         mask = np.asarray(self.value_lengths().fill_null(0)) < size
         offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
         return self.values.take(pa.array(offsets + index, mask=mask))
+
+    def count(self) -> pa.Array:
+        """length of each list scalar"""
+        return self.value_lengths()
 
     def first(self) -> pa.Array:
         """first value of each list scalar"""
@@ -117,7 +119,7 @@ class ListChunk(pa.lib.BaseListArray):
 
     def mean(self) -> pa.FloatingPointArray:
         """mean of each list scalar"""
-        return ListChunk.reduce(self, pc.mean, pa.float64())
+        return ListChunk.reduce(self, pc.mean, 'float64')
 
     def mode(self, length: int = 0) -> pa.Array:
         """modes of each list scalar"""
@@ -131,21 +133,21 @@ class ListChunk(pa.lib.BaseListArray):
 
     def stddev(self) -> pa.FloatingPointArray:
         """stddev of each list scalar"""
-        return ListChunk.reduce(self, pc.stddev, pa.float64())
+        return ListChunk.reduce(self, pc.stddev, 'float64')
 
     def variance(self) -> pa.FloatingPointArray:
         """variance of each list scalar"""
-        return ListChunk.reduce(self, pc.variance, pa.float64())
+        return ListChunk.reduce(self, pc.variance, 'float64')
 
     def any(self) -> pa.BooleanArray:
         """any true of each list scalar"""
         values = (None if scalar.values is None else Column.any(scalar.values) for scalar in self)
-        return pa.array(values, pa.bool_())
+        return pa.array(values, 'bool')
 
     def all(self) -> pa.BooleanArray:
         """all true of each list scalar"""
         values = (None if scalar.values is None else Column.all(scalar.values) for scalar in self)
-        return pa.array(values, pa.bool_())
+        return pa.array(values, 'bool')
 
 
 class Column(pa.ChunkedArray):
@@ -226,7 +228,7 @@ class Column(pa.ChunkedArray):
             return functools.reduce(getattr(pc, func), masks)
         with contextlib.suppress(NotImplementedError):
             self = Column.call(self, pc.binary_length)
-        return self.cast(pa.bool_())
+        return self.cast('bool')
 
     def call(self, func: Callable, *args, **kwargs) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
@@ -296,7 +298,7 @@ class Column(pa.ChunkedArray):
             mask = Column.call(Column.diff(self), predicate, *args)
         else:
             mask = Column.diff(self, predicate)
-        return pa.array(*np.nonzero(pa.concat_arrays(ends + mask.chunks + ends)), pa.int32())
+        return pa.array(*np.nonzero(pa.concat_arrays(ends + mask.chunks + ends)))
 
     def min_max(self, reverse=False):
         if not self:
@@ -448,7 +450,7 @@ class Table(pa.Table):
         default = (pc.not_equal,)
         offsets = Column.partition_offsets(self[names[0]], *predicates.get(names[0], default))
         for name in names[1:]:
-            groups = [pa.array([0], pa.int32())]
+            groups = [pa.array([0])]
             predicate = predicates.get(name, default)
             for scalar in pa.LargeListArray.from_arrays(offsets, Column.combine_chunks(self[name])):
                 group = Column.partition_offsets(pa.chunked_array([scalar.values]), *predicate)
