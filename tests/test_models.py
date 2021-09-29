@@ -167,6 +167,8 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'mode': {'counts': [1]}}}}
         data = executor(f'{{ columns {{ {name} {{ quantile }} }} }}')
         assert data == {'columns': {name: {'quantile': [0.0]}}}
+        data = executor(f'{{ columns {{ {name} {{ tdigest }} }} }}')
+        assert data == {'columns': {name: {'tdigest': [0.0]}}}
 
     data = executor(
         '''{ apply(int: [{name: "int32", fillNull: -1, alias: "i"}])
@@ -271,6 +273,11 @@ def test_list(executor):
         { values } } } } } }'''
     )
     assert data == {'columns': {'list': {'quantile': {'flatten': {'values': [0.5, 1.5]}}}}}
+    data = executor(
+        '''{ columns { list { tdigest(q: [0.25, 0.75]) { flatten { ... on FloatColumn
+        { values } } } } } }'''
+    )
+    assert data == {'columns': {'list': {'tdigest': {'flatten': {'values': [0.0, 2.0]}}}}}
 
     data = executor(
         '''{ columns { list { count { values }

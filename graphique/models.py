@@ -177,6 +177,13 @@ class NumericColumn:
         """Return list of quantiles for values, defaulting to the median."""
         return pc.quantile(self.array, q=q, interpolation=interpolation).to_pylist()  # type: ignore
 
+    @doc_field
+    def tdigest(
+        self, q: List[float] = [0.5], delta: int = 100, buffer_size: int = 500
+    ) -> List[float]:
+        """Return list of approximate quantiles for values, defaulting to the median."""
+        return pc.tdigest(self.array, q=q, delta=delta, buffer_size=buffer_size).to_pylist()  # type: ignore
+
     def mode(self, length: int = 1):
         """mode of the values"""
         return self.Set(*pc.mode(self.array, length).flatten())  # type: ignore
@@ -558,6 +565,11 @@ class ListColumn(Column):
     def quantile(self, q: List[float] = [0.5]) -> 'ListColumn':
         """quantile of each list scalar"""
         return self.map(functools.partial(ListChunk.quantile, q=q))  # type: ignore
+
+    @doc_field
+    def tdigest(self, q: List[float] = [0.5]) -> 'ListColumn':
+        """approximate quantile of each list scalar"""
+        return self.map(functools.partial(ListChunk.tdigest, q=q))  # type: ignore
 
     @doc_field
     def stddev(self) -> FloatColumn:

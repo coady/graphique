@@ -131,6 +131,11 @@ class ListChunk(pa.lib.BaseListArray):
         array = ListChunk.map_list(self, functools.partial(pc.quantile, q=q or 0.5))
         return array if q else ListChunk.first(array)
 
+    def tdigest(self, q: Sequence[float] = ()) -> pa.Array:
+        """approximate quantiles of each list scalar"""
+        array = ListChunk.map_list(self, functools.partial(pc.tdigest, q=q or 0.5))
+        return array if q else ListChunk.first(array)
+
     def stddev(self) -> pa.FloatingPointArray:
         """stddev of each list scalar"""
         return ListChunk.reduce(self, pc.stddev, 'float64')

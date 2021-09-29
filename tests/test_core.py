@@ -77,6 +77,8 @@ def test_lists():
     assert ListChunk.mode(array, length=1).to_pylist() == [[1], [0], [], [], []]
     assert ListChunk.quantile(array).to_pylist() == [1.5, 0.0, None, None, None]
     assert ListChunk.quantile(array, q=[0.75]).to_pylist() == [[1.75], [0.0], [], [], []]
+    assert ListChunk.tdigest(array).to_pylist() == [1.0, 0.0, None, None, None]
+    assert ListChunk.tdigest(array, q=[0.75]).to_pylist() == [[2.0], [0.0], [], [], []]
     assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
     assert ListChunk.any(array).to_pylist() == [True, False, False, False, None]
