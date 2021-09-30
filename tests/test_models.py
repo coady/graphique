@@ -281,8 +281,8 @@ def test_list(executor):
 
     data = executor(
         '''{ columns { list { count { values }
-        first: value { ... on IntColumn { values } }
-        last: value(index: -1) { ... on IntColumn { values } }
+        first: element { ... on IntColumn { values } }
+        last: element(index: -1) { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
         sum { ... on IntColumn { values } } mean { values }
         stddev { values } variance { values }

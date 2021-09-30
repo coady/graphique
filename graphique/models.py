@@ -495,6 +495,7 @@ class ListColumn(Column):
         'mean',
         'mode',
         'quantile',
+        'tdigest',
         'stddev',
         'variance',
         'any',
@@ -532,9 +533,9 @@ class ListColumn(Column):
         return self.map(ListChunk.unique)  # type: ignore
 
     @doc_field
-    def value(self, index: Long = 0) -> Column:
-        """value at index of each list scalar"""
-        return self.map(functools.partial(ListChunk.value, index=index))
+    def element(self, index: Long = 0) -> Column:
+        """element at index of each list scalar; defaults to null"""
+        return self.map(functools.partial(ListChunk.element, index=index))
 
     @doc_field
     def min(self) -> Column:

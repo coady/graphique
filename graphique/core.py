@@ -62,24 +62,24 @@ class Chunk(pa.Array):
 
 
 class ListChunk(pa.lib.BaseListArray):
-    def value(self, index: int) -> pa.Array:
-        """value at index of each list scalar"""
+    def element(self, index: int) -> pa.Array:
+        """element at index of each list scalar; defaults to null"""
         size = -index if index < 0 else index + 1
         mask = np.asarray(self.value_lengths().fill_null(0)) < size
         offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
         return self.values.take(pa.array(offsets + index, mask=mask))
 
-    def count(self) -> pa.Array:
+    def count(self) -> pa.IntegerArray:
         """length of each list scalar"""
         return self.value_lengths()
 
     def first(self) -> pa.Array:
         """first value of each list scalar"""
-        return ListChunk.value(self, 0)
+        return ListChunk.element(self, 0)
 
     def last(self) -> pa.Array:
         """last value of each list scalar"""
-        return ListChunk.value(self, -1)
+        return ListChunk.element(self, -1)
 
     def unique(self) -> pa.lib.BaseListArray:
         """unique values within each scalar"""
