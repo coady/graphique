@@ -5,7 +5,6 @@ import functools
 import itertools
 from datetime import timedelta
 from typing import List, Optional, no_type_check
-import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
@@ -242,16 +241,12 @@ class Table(AbstractTable):
         lists = {name for name in table.column_names if C.is_list_type(table[name])}
         if not lists:
             raise ValueError(f"no list columns referenced: {table.column_names}")
-        columns = {name: table[name] for name in lists}
+        scalars = set(table.column_names) - lists
         # use simplest list column to determine the lengths
-        shape = C.combine_chunks(min(columns.values(), key=lambda col: col.type.value_type.id))
-        counts = shape.value_lengths().to_pylist()
-        indices = pa.concat_arrays(pa.array(np.repeat(*pair)) for pair in enumerate(counts))
-        for name in set(table.column_names) - lists:
-            column = C.combine_chunks(table[name]).take(indices)
-            columns[name] = type(shape).from_arrays(shape.offsets, column)
-        for index in range(len(table)):
-            row = {name: columns[name][index].values for name in columns}
+        column = table[min(lists, key=lambda name: table[name].type.value_type.id)]
+        for index, count in enumerate(C.combine_chunks(column).value_lengths().to_pylist()):
+            row = {name: pa.repeat(table[name][index], count) for name in scalars}
+            row.update({name: table[name][index].values for name in lists})
             yield Table(pa.Table.from_pydict(row))
 
     @ListColumn.resolver
