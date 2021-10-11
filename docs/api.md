@@ -46,11 +46,13 @@ on($type: {name: $name, ...}, ...)
 ```
 
 ## Aggregation
-Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partition` leverage that feature to transform the ungrouped columns into ListColumns, which can be accessed via inline fragments. `Table.tables` returns a list of tables based on the list scalars; it's flexible but the slowest option. `Table.aggregate` applies reduce functions to the ListColumns, which is faster.
+Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partition` leverage that feature to transform un-grouped columns into ListColumns, which can be accessed via inline fragments. `Table.group` uses an optimized C++ implementation at the array level, and several shortcuts based on sub-fields. From slowest to fastest:
 
-Fastest of all, is not needing all the values of a list scalar. `Table.unique` also groups but only returns scalars: the keys, first value, last value, and count. When only `min` and `max` values are needed, it may be faster to `sort` first, just to use `unique`.
-
-`Table.group` has an optimized C++ implementation at the array level.
+* `Table.tables` returns a list of tables based on the list scalars. 
+* `Table.aggregate` applies reduce functions to the ListColumns.
+* `Table.aggregate` with only `first` and `last` functions is faster because not all of the scalar values are needed. For example, when only `min` and `max` values are needed, it may be faster to `sort` first instead.
+* Only accessing grouped keys and counts uses builtin unique functions.
+* Only accessing `length` computes an optimized count.
 
 ## Column selection
 Each field resolver transforms a table or array as needed. When working with an embedded library like [pandas](https://pandas.pydata.org), it's common to select a working set of columns for efficiency. Whereas GraphQL has the advantage of knowing the entire query up front, so there is no `Table.select` field because it's done automatically at every level of resolvers.

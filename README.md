@@ -52,7 +52,6 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 
 #### aggregation
 * `group`: group by given columns, transforming the others into list columns
-* `unique`: group by given columns, only retaining one scalar per group
 * `partition`: partition on adjacent values in given columns, transforming the others into list columns
 * `aggregate`: apply reduce functions to list columns
 * `tables`: return a list of tables by splitting on the scalars in list columns

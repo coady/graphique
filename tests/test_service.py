@@ -113,18 +113,18 @@ def test_strings(client):
 
 def test_string_methods(client):
     data = client.execute(
-        '''{ unique(by: ["city"]) { columns { city { split {
+        '''{ group(by: ["city"]) { columns { city { split {
         element { ... on StringColumn { count(equal: "New") } }
         count { ... on LongColumn { max } } } } } } }'''
     )
-    cities = data['unique']['columns']['city']
+    cities = data['group']['columns']['city']
     assert cities['split'] == {'element': {'count': 177}, 'count': {'max': 6}}
     data = client.execute(
-        '''{ unique(by: ["city"]) { columns { city {
+        '''{ group(by: ["city"]) { columns { city {
         split(pattern: "-", maxSplits: 1, reverse: true) {
         count { unique { values counts } } } } } } }'''
     )
-    cities = data['unique']['columns']['city']
+    cities = data['group']['columns']['city']
     cities['split']['count']['unique'] == {'values': [1, 2], 'counts': [18718, 1]}
     data = client.execute(
         '''{ columns { city { split(pattern: "-", maxSplits: 1, regex: true)
@@ -453,45 +453,6 @@ def test_partition(client):
     agg = data['partition']['filter']
     assert agg['column']['values'] == [2, 1, 2202]
     assert agg['columns']['state']['values'] == ['NY'] * 3
-
-
-def test_unique(client):
-    with pytest.raises(ValueError, match="is required"):
-        client.execute('{ unique { length } }')
-    with pytest.raises(ValueError, match="not enough values"):
-        client.execute('{ unique(by: []) { length } }')
-    assert client.execute('{ unique(by: ["state"]) { length } }') == {'unique': {'length': 52}}
-    data = client.execute('{ unique(by: ["state"], length: 3) { length } }')
-    assert data == {'unique': {'length': 3}}
-    data = client.execute('{ unique(by: ["state"], length: 3) { columns { state { values } } } }')
-    assert data == {'unique': {'columns': {'state': {'values': ['NY', 'PR', 'MA']}}}}
-    data = client.execute('{ unique(by: ["state"]) { length columns { zipcode { min max } } } }')
-    assert data == {'unique': {'length': 52, 'columns': {'zipcode': {'min': 501, 'max': 99501}}}}
-    data = client.execute(
-        '{ unique(by: ["state"], reverse: true) { length columns { zipcode { min max } } } }'
-    )
-    assert data == {'unique': {'length': 52, 'columns': {'zipcode': {'min': 988, 'max': 99950}}}}
-    data = client.execute(
-        '{ unique(by: ["state", "county"]) { length columns { zipcode { min max } } } }'
-    )
-    assert data == {'unique': {'length': 3216, 'columns': {'zipcode': {'min': 501, 'max': 99903}}}}
-    data = client.execute(
-        '''{ unique(by: ["state"], count: "counts")
-        { column(name: "counts") { ... on LongColumn { mean } } } }'''
-    )
-    assert data['unique']['column']['mean'] == pytest.approx(801.923076)
-    data = client.execute(
-        '''{ group(by: ["state"]) { aggregate(unique: {name: "city"}) {
-        column(name: "city") { ... on ListColumn { count { values } } } } } } '''
-    )
-    counts = data['group']['aggregate']['column']['count']['values']
-    assert sum(counts) == 29734
-    data = client.execute(
-        '''{ group(by: ["state"]) { aggregate(unique: {name: "city"}) {
-        aggregate(count: {name: "city"}) {
-        column(name: "city") { ... on LongColumn { values } } } } } }'''
-    )
-    assert data['group']['aggregate']['aggregate']['column']['values'] == counts
 
 
 def test_rows(client):

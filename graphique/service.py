@@ -109,7 +109,12 @@ class Table(AbstractTable):
         Other columns can be accessed by the `column` field as a `ListColumn`.
         Typically used in conjunction with `aggregate` or `tables`."""
         table = self.select(info)
-        table, counts = T.group(table, *by, reverse=reverse, length=length)
+        if selections(*info.selected_fields) == {'length'}:  # optimized for count
+            return Table(T.encode(table, *by).unique()[:length])
+        if set(table.column_names) <= set(by):
+            table, counts = T.unique(table, *by, reverse=reverse, length=length, count=bool(count))
+        else:
+            table, counts = T.group(table, *by, reverse=reverse, length=length)
         return Table(table.append_column(count, counts) if count else table)
 
     @doc_field(
@@ -135,28 +140,6 @@ class Table(AbstractTable):
                     value = timedelta(seconds=value)
                 predicates[name] += (value,)
         table, counts = T.partition(table, *names, **predicates)
-        return Table(table.append_column(count, counts) if count else table)
-
-    @doc_field(
-        by="column names",
-        reverse="return last occurrences in reversed order",
-        length="maximum number of rows to return",
-        count="optionally include counts in an aliased column",
-    )
-    def unique(
-        self,
-        info,
-        by: List[str],
-        reverse: bool = False,
-        length: Optional[Long] = None,
-        count: str = '',
-    ) -> 'Table':
-        """Return table of first or last occurrences grouped by columns, with stable ordering.
-        Faster than `group` when only scalars are needed."""
-        table = self.select(info)
-        if selections(*info.selected_fields) == {'length'}:  # optimized for count
-            return Table(T.encode(table, *by).unique()[:length])
-        table, counts = T.unique(table, *by, reverse=reverse, length=length, count=bool(count))
         return Table(table.append_column(count, counts) if count else table)
 
     @doc_field(
