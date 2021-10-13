@@ -5,11 +5,10 @@ import base64
 import enum
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import NewType
 import pyarrow as pa
 import strawberry
 
-Long = strawberry.scalar(NewType('Long', int), description="64-bit int")
+Long = strawberry.scalar(int, name='Long', description="64-bit int")
 Binary = strawberry.scalar(
     bytes,
     name='Binary',
@@ -25,7 +24,6 @@ Duration = strawberry.scalar(
     parse_value=lambda s: timedelta(seconds=s),
 )
 scalar_map = {bytes: Binary, timedelta: Duration}
-strawberry.scalars.SCALAR_TYPES.append(timedelta)  # TODO(#1204) hack to register global scalar
 
 type_map = {
     pa.lib.Type_BOOL: bool,
