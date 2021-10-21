@@ -2,6 +2,7 @@
 GraphQL output types and resolvers.
 """
 import functools
+import inspect
 import operator
 import types
 from datetime import date, datetime, time, timedelta
@@ -32,7 +33,7 @@ def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField
     for name in kwargs:
         argument = strawberry.argument(description=kwargs[name])
         func.__annotations__[name] = Annotated[func.__annotations__[name], argument]
-    return strawberry.field(func, description=func.__doc__)
+    return strawberry.field(func, description=inspect.getdoc(func))
 
 
 @strawberry.interface(description="column interface")
@@ -70,7 +71,9 @@ class Column:
 
     def count(self, **query) -> Long:
         """Return number of matching values.
-        Optimized for `null`, and empty queries will attempt boolean conversion."""
+
+        Optimized for `null`, and empty queries will attempt boolean conversion.
+        """
         if query == {'equal': None}:
             return self.array.null_count
         if query == {'not_equal': None}:
@@ -79,7 +82,9 @@ class Column:
 
     def index(self, value, start: Long = 0, end: Optional[Long] = None) -> Long:
         """Return first index of occurrence of value; -1 indicates not found.
-        May be faster than `count` for membership test."""
+
+        May be faster than `count` for membership test.
+        """
         return C.index(self.array, value, start, end)
 
     def values(self):
@@ -138,7 +143,7 @@ def annotate(func, return_type, **annotations):
     annotations['return'] = return_type
     clone.__annotations__.update(func.__annotations__, **annotations)
     clone.__defaults__ = func.__defaults__
-    return strawberry.field(clone, description=func.__doc__)
+    return strawberry.field(clone, description=inspect.getdoc(func))
 
 
 @strawberry.interface(description="numeric column interface")
@@ -507,7 +512,7 @@ class ListColumn(Column):
         """a decorator which transforms aggregate functions into arguments"""
         annotations = {}
         for key in cls.aggregates:
-            argument = strawberry.argument(description=getattr(ListChunk, key).__doc__)
+            argument = strawberry.argument(description=inspect.getdoc(getattr(ListChunk, key)))
             annotations[key] = Annotated[List[Field], argument]
         defaults = dict.fromkeys(cls.aggregates, [])  # type: dict
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)

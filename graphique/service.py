@@ -106,8 +106,10 @@ class Table(AbstractTable):
         count: str = '',
     ) -> 'Table':
         """Return table grouped by columns, with stable ordering.
+
         Other columns can be accessed by the `column` field as a `ListColumn`.
-        Typically used in conjunction with `aggregate` or `tables`."""
+        Typically used in conjunction with `aggregate` or `tables`.
+        """
         table = self.select(info)
         if selections(*info.selected_fields) == {'length'}:  # optimized for count
             return Table(T.encode(table, *by).unique()[:length])
@@ -125,9 +127,11 @@ class Table(AbstractTable):
     @no_type_check
     def partition(self, info, by: List[str], diffs: List[Diff] = [], count: str = '') -> 'Table':
         """Return table partitioned by discrete differences of the values.
+
         Differs from `group` by relying on adjacency, and is typically faster.
         Other columns can be accessed by the `column` field as a `ListColumn`.
-        Typically used in conjunction with `aggregate` or `tables`."""
+        Typically used in conjunction with `aggregate` or `tables`.
+        """
         table = self.select(info)
         funcs = {diff.pop('name'): diff for diff in map(dict, diffs)}
         names = list(itertools.takewhile(lambda name: name not in funcs, by))
@@ -182,7 +186,9 @@ class Table(AbstractTable):
         reduce: Operator = Operator.AND,
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
-        List columns apply their respective filters to their own scalar values."""
+
+        List columns apply their respective filters to their own scalar values.
+        """
         if not isinstance(self.table, pa.Table) and not invert and reduce.value == 'and':
             query, self = {}, self.read(query)
         table = self.select(info)
@@ -208,9 +214,11 @@ class Table(AbstractTable):
     @no_type_check
     def apply(self, info, **functions) -> 'Table':
         """Return view of table with functions applied across columns.
+
         If no alias is provided, the column is replaced and should be of the same type.
         If an alias is provided, a column is added and may be referenced in the `column` field,
-        in filter `predicates`, and in the `by` arguments of grouping and sorting."""
+        in filter `predicates`, and in the `by` arguments of grouping and sorting.
+        """
         table = self.select(info)
         for value in map(dict, itertools.chain(*functions.values())):
             table = T.apply(table, value.pop('name'), **value)
@@ -219,7 +227,9 @@ class Table(AbstractTable):
     @doc_field
     def tables(self, info) -> List['Table']:  # type: ignore
         """Return a list of tables by splitting list columns, typically used after grouping.
-        At least one list column must be referenced, and all list columns must have the same lengths."""
+
+        At least one list column must be referenced, and all list columns must have the same lengths.
+        """
         table = self.select(info)
         lists = {name for name in table.column_names if C.is_list_type(table[name])}
         if not lists:
@@ -235,7 +245,9 @@ class Table(AbstractTable):
     @ListColumn.resolver
     def aggregate(self, info, **fields) -> 'Table':
         """Return table with aggregate functions applied to list columns, typically used after grouping.
-        Columns which are aliased or change type can be accessed by the `column` field."""
+
+        Columns which are aliased or change type can be accessed by the `column` field.
+        """
         table = self.select(info)
         columns = {name: table[name] for name in table.column_names}
         for key in fields:
@@ -254,8 +266,10 @@ class IndexedTable(Table):
     @QueryInput.resolve_types({name: types[name] for name in indexed})
     def search(self, info, **queries) -> Table:
         """Return table with matching values for composite `index`.
+
         Queries must be a prefix of the `index`.
-        Only one inequality query is allowed, and must be last."""
+        Only one inequality query is allowed, and must be last.
+        """
         if not isinstance(self.table, pa.Table):
             queries, self = {}, self.read(Queries(**queries))  # type: ignore
         table = self.select(info)

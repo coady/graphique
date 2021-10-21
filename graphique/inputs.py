@@ -2,6 +2,7 @@
 GraphQL input types.
 """
 import functools
+import inspect
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Callable, Iterator, List, Optional, no_type_check
@@ -74,7 +75,7 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     return StrawberryField(
         python_name=func.__name__,
         type_annotation=StrawberryAnnotation(func.__annotations__['return']),
-        description=func.__doc__,
+        description=inspect.getdoc(func),
         base_resolver=resolver,
     )
 
@@ -379,19 +380,19 @@ class IntFunction(NumericFunction):
     shift_right: Optional[str] = UNSET
     bit_wise_not: bool = False
     fill_null: Optional[int] = UNSET
-    digitize: Optional[List[int]] = default_field(description=Column.digitize.__doc__)
+    digitize: Optional[List[int]] = default_field(description=inspect.getdoc(Column.digitize))
 
 
 @strawberry.input(description=f"[functions]({link}#arithmetic-functions) for longs")
 class LongFunction(NumericFunction):
     fill_null: Optional[Long] = UNSET
-    digitize: Optional[List[Long]] = default_field(description=Column.digitize.__doc__)
+    digitize: Optional[List[Long]] = default_field(description=inspect.getdoc(Column.digitize))
 
 
 @strawberry.input(description=f"[functions]({link}#arithmetic-functions) for floats")
 class FloatFunction(NumericFunction):
     fill_null: Optional[float] = UNSET
-    digitize: Optional[List[float]] = default_field(description=Column.digitize.__doc__)
+    digitize: Optional[List[float]] = default_field(description=inspect.getdoc(Column.digitize))
 
 
 @strawberry.input(description="functions for decimals")

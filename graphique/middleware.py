@@ -81,8 +81,10 @@ class AbstractTable:
     )
     def column(self, info, name: str, cast: str = '', apply: Projections = {}) -> Column:  # type: ignore
         """Return column of any type by name, with optional projection.
+
         This is typically only needed for aliased columns added by `apply` or `aggregate`.
-        If the column is in the schema, `columns` can be used instead."""
+        If the column is in the schema, `columns` can be used instead.
+        """
         table = self.select(info)
         column = table[name]
         for func, name in dict(apply).items():
