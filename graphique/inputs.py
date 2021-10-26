@@ -81,10 +81,8 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
 
 
 def default_field(default_factory: Callable = lambda: UNSET, **kwargs) -> StrawberryField:
-    """Use dataclass `default_factory` for GraphQL `default_value`."""
-    field = strawberry.field(default_factory=default_factory, **kwargs)
-    field.default_value = default_factory()
-    return field
+    """Use dataclass `default_factory` for `UNSET` or mutables."""
+    return strawberry.field(default_factory=default_factory, **kwargs)
 
 
 @strawberry.input(
@@ -327,8 +325,8 @@ class Function(Input):
     name: str
     alias: str = ''
     coalesce: Optional[List[str]] = UNSET
-    cast: str = default_field(
-        str,
+    cast: str = strawberry.field(
+        default='',
         description="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
     )
 
