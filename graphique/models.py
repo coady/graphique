@@ -174,6 +174,10 @@ class NumericColumn:
         """sum of the values"""
         return pc.sum(self.array).as_py()
 
+    def product(self):
+        """product of the values"""
+        return pc.product(self.array).as_py()
+
     @doc_field
     def mean(self) -> Optional[float]:
         """mean of the values"""
@@ -251,6 +255,7 @@ class IntColumn(Column, NumericColumn):
     unique = annotate(Column.unique, Set)
     sort = annotate(Column.sort, List[Optional[int]])
     sum = annotate(NumericColumn.sum, Optional[int])
+    product = annotate(NumericColumn.product, Optional[int])
     mode = annotate(NumericColumn.mode, Set)
     min = annotate(Column.min, Optional[int])
     max = annotate(Column.max, Optional[int])
@@ -274,6 +279,7 @@ class LongColumn(Column, NumericColumn):
     unique = annotate(Column.unique, Set)
     sort = annotate(Column.sort, List[Optional[Long]])
     sum = annotate(NumericColumn.sum, Optional[Long])
+    product = annotate(NumericColumn.product, Optional[Long])
     mode = annotate(NumericColumn.mode, Set)
     min = annotate(Column.min, Optional[Long])
     max = annotate(Column.max, Optional[Long])
@@ -299,6 +305,7 @@ class FloatColumn(Column, NumericColumn):
     unique = annotate(Column.unique, Set)
     sort = annotate(Column.sort, List[Optional[float]])
     sum = annotate(NumericColumn.sum, Optional[float])
+    product = annotate(NumericColumn.product, Optional[float])
     mode = annotate(NumericColumn.mode, Set)
     min = annotate(Column.min, Optional[float])
     max = annotate(Column.max, Optional[float])
@@ -498,6 +505,7 @@ class ListColumn(Column):
         'min',
         'max',
         'sum',
+        'product',
         'mean',
         'mode',
         'quantile',
@@ -557,6 +565,11 @@ class ListColumn(Column):
     def sum(self) -> Column:
         """sum of each list scalar"""
         return self.map(ListChunk.sum)
+
+    @doc_field
+    def product(self) -> Column:
+        """product of each list scalar"""
+        return self.map(ListChunk.product)
 
     @doc_field
     def mean(self) -> FloatColumn:

@@ -96,6 +96,10 @@ class ListChunk(pa.lib.BaseListArray):
         """sum of each list scalar"""
         return ListChunk.reduce(self, pc.sum)
 
+    def product(self) -> pa.Array:
+        """product of each list scalar"""
+        return ListChunk.reduce(self, pc.product)
+
     def mean(self) -> pa.FloatingPointArray:
         """mean of each list scalar"""
         return ListChunk.reduce(self, pc.mean, 'float64')

@@ -138,8 +138,8 @@ def test_columns(executor):
 
 def test_numeric(executor):
     for name in ('int32', 'int64', 'float'):
-        data = executor(f'{{ columns {{ {name} {{ add(value: 1) {{ sum }} }} }} }}')
-        assert data == {'columns': {name: {'add': {'sum': 1}}}}
+        data = executor(f'{{ columns {{ {name} {{ add(value: 1) {{ sum product }} }} }} }}')
+        assert data == {'columns': {name: {'add': {'sum': 1, 'product': 1}}}}
         data = executor(f'{{ columns {{ {name} {{ subtract(value: 1) {{ sum }} }} }} }}')
         assert data == {'columns': {name: {'subtract': {'sum': 1}}}}
         data = executor(f'{{ columns {{ {name} {{ multiply(value: 1) {{ sum }} }} }} }}')
@@ -307,7 +307,7 @@ def test_list(executor):
         first: element { ... on IntColumn { values } }
         last: element(index: -1) { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
-        sum { ... on IntColumn { values } } mean { values }
+        sum { ... on IntColumn { values } } product { ... on IntColumn { values } } mean { values }
         stddev { values } variance { values }
         any { values } all { values } } } }'''
     )
@@ -318,6 +318,7 @@ def test_list(executor):
         'min': {'values': [0, None]},
         'max': {'values': [2, None]},
         'sum': {'values': [3, None]},
+        'product': {'values': [0, None]},
         'mean': {'values': [1.0, None]},
         'stddev': {'values': [pytest.approx((2 / 3) ** 0.5), None]},
         'variance': {'values': [pytest.approx(2 / 3), None]},
