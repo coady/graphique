@@ -212,16 +212,37 @@ def test_numeric(executor):
 
 
 def test_datetime(executor):
-    data = executor(
-        '''{ apply(datetime: {name: "timestamp", year: true, alias: "year"})
-        { column(name: "year") { ... on LongColumn { values } } } }'''
-    )
-    assert data == {'apply': {'column': {'values': [1970, None]}}}
-    data = executor(
-        '''{ apply(datetime: {name: "timestamp", hour: true, alias: "hour"})
-        { column(name: "hour") { ... on LongColumn { values } } } }'''
-    )
-    assert data == {'apply': {'column': {'values': [0, None]}}}
+    for name in ('timestamp', 'date32'):
+        data = executor(
+            f'''{{ apply(datetime: {{name: "{name}", year: true, alias: "year"}})
+            {{ column(name: "year") {{ ... on LongColumn {{ values }} }} }} }}'''
+        )
+        assert data == {'apply': {'column': {'values': [1970, None]}}}
+        data = executor(
+            f'''{{ column(name: "{name}", apply: {{yearsBetween: "{name}"}})
+            {{ ... on LongColumn {{ values }} }} }}'''
+        )
+        assert data == {'column': {'values': [0, None]}}
+        data = executor(
+            f'''{{ columns {{ {name}
+            {{ between(unit: "years", start: "1969-01-01") {{ values }} }} }} }}'''
+        )
+        assert data == {'columns': {name: {'between': {'values': [1, None]}}}}
+    for name in ('timestamp', 'time32'):
+        data = executor(
+            f'''{{ apply(datetime: {{name: "{name}", hour: true, alias: "hour"}})
+            {{ column(name: "hour") {{ ... on LongColumn {{ values }} }} }} }}'''
+        )
+        assert data == {'apply': {'column': {'values': [0, None]}}}
+        data = executor(
+            f'''{{ column(name: "{name}", apply: {{hoursBetween: "{name}"}})
+            {{ ... on LongColumn {{ values }} }} }}'''
+        )
+        assert data == {'column': {'values': [0, None]}}
+    data = executor('{ columns { time32 { between(unit: "hours", end: "01:00:00") { values } } } }')
+    assert data == {'columns': {'time32': {'between': {'values': [1, None]}}}}
+    with pytest.raises(ValueError):
+        executor('{ columns { time64 { between(unit: "hours") { values } } } }')
 
 
 def test_duration(executor):

@@ -119,6 +119,14 @@ class Column:
         """Return element-wise maximum compared to scalar."""
         return type(self)(pc.max_element_wise(self.array, value, skip_nulls=skip_nulls))
 
+    def between(self, unit: str, start=None, end=None) -> 'LongColumn':
+        """Return duration between start and end."""
+        if [start, end].count(None) != 1:
+            raise ValueError("exactly one of `start` or `end` required")
+        convert = functools.partial(pa.scalar, type=self.array.type)
+        args = (self.array, convert(end)) if start is None else (convert(start), self.array)
+        return LongColumn(getattr(pc, f'{unit}_between')(*args))
+
 
 @strawberry.interface(description="unique values")
 class Set:
@@ -332,6 +340,7 @@ class DateColumn(Column):
     fill_null = annotate(Column.fill_null, 'DateColumn', value=date)
     min_element_wise = annotate(Column.min_element_wise, 'DateColumn', value=date)
     max_element_wise = annotate(Column.max_element_wise, 'DateColumn', value=date)
+    between = annotate(Column.between, LongColumn, start=Optional[date], end=Optional[date])
 
 
 @strawberry.type(description="column of datetimes")
@@ -348,6 +357,7 @@ class DateTimeColumn(Column):
     fill_null = annotate(Column.fill_null, 'DateTimeColumn', value=datetime)
     min_element_wise = annotate(Column.min_element_wise, 'DateTimeColumn', value=datetime)
     max_element_wise = annotate(Column.max_element_wise, 'DateTimeColumn', value=datetime)
+    between = annotate(Column.between, LongColumn, start=Optional[datetime], end=Optional[datetime])
 
     @doc_field
     def subtract(self, value: datetime) -> 'DurationColumn':
@@ -369,6 +379,7 @@ class TimeColumn(Column):
     fill_null = annotate(Column.fill_null, 'TimeColumn', value=time)
     min_element_wise = annotate(Column.min_element_wise, 'TimeColumn', value=time)
     max_element_wise = annotate(Column.max_element_wise, 'TimeColumn', value=time)
+    between = annotate(Column.between, LongColumn, start=Optional[time], end=Optional[time])
 
 
 @strawberry.type(description="column of durations")

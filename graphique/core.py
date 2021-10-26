@@ -362,6 +362,16 @@ class Table(pa.Table):
         'bit_wise_xor',
         'shift_left',
         'shift_right',
+        'years_between',
+        'quarters_between',
+        'weeks_between',
+        'days_between',
+        'hours_between',
+        'minutes_between',
+        'seconds_between',
+        'milliseconds_between',
+        'microseconds_between',
+        'nanoseconds_between',
     }
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:

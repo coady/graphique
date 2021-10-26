@@ -401,12 +401,37 @@ class DecimalFunction(Function):
 @strawberry.input(description="functions for dates")
 class DateFunction(OrdinalFunction):
     fill_null: Optional[date] = UNSET
+    years_between: Optional[str] = UNSET
+    quarters_between: Optional[str] = UNSET
+    weeks_between: Optional[str] = UNSET
+    days_between: Optional[str] = UNSET
+    hours_between: Optional[str] = UNSET
+    minutes_between: Optional[str] = UNSET
+    seconds_between: Optional[str] = UNSET
+    milliseconds_between: Optional[str] = UNSET
+    microseconds_between: Optional[str] = UNSET
+    nanoseconds_between: Optional[str] = UNSET
+    year: bool = False
+    month: bool = False
+    day: bool = False
+    day_of_week: bool = False
+    day_of_year: bool = False
 
 
 @strawberry.input(description="functions for datetimes")
 class DateTimeFunction(OrdinalFunction):
     subtract: Optional[str] = UNSET
     fill_null: Optional[datetime] = UNSET
+    years_between: Optional[str] = UNSET
+    quarters_between: Optional[str] = UNSET
+    weeks_between: Optional[str] = UNSET
+    days_between: Optional[str] = UNSET
+    hours_between: Optional[str] = UNSET
+    minutes_between: Optional[str] = UNSET
+    seconds_between: Optional[str] = UNSET
+    milliseconds_between: Optional[str] = UNSET
+    microseconds_between: Optional[str] = UNSET
+    nanoseconds_between: Optional[str] = UNSET
     year: bool = False
     month: bool = False
     day: bool = False
@@ -423,6 +448,18 @@ class DateTimeFunction(OrdinalFunction):
 @strawberry.input(description="functions for times")
 class TimeFunction(OrdinalFunction):
     fill_null: Optional[time] = UNSET
+    hours_between: Optional[str] = UNSET
+    minutes_between: Optional[str] = UNSET
+    seconds_between: Optional[str] = UNSET
+    milliseconds_between: Optional[str] = UNSET
+    microseconds_between: Optional[str] = UNSET
+    nanoseconds_between: Optional[str] = UNSET
+    hour: bool = False
+    minute: bool = False
+    second: bool = False
+    millisecond: bool = False
+    microsecond: bool = False
+    nanosecond: bool = False
 
 
 @strawberry.input(description="functions for durations")
@@ -497,3 +534,13 @@ class Projections(Input):
     bit_wise_xor: Optional[str] = UNSET
     shift_left: Optional[str] = UNSET
     shift_right: Optional[str] = UNSET
+    years_between: Optional[str] = UNSET
+    quarters_between: Optional[str] = UNSET
+    weeks_between: Optional[str] = UNSET
+    days_between: Optional[str] = UNSET
+    hours_between: Optional[str] = UNSET
+    minutes_between: Optional[str] = UNSET
+    seconds_between: Optional[str] = UNSET
+    milliseconds_between: Optional[str] = UNSET
+    microseconds_between: Optional[str] = UNSET
+    nanoseconds_between: Optional[str] = UNSET
