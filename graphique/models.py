@@ -107,6 +107,10 @@ class Column:
         """Return sorted values. Optimized for fixed length."""
         return C.sort(self.array, reverse, length).to_pylist()
 
+    def drop_null(self):
+        """remove missing values from an array"""
+        return type(self)(self.array.drop_null())
+
     def fill_null(self, value):
         """Return values with null elements replaced."""
         return type(self)(C.fill_null(self.array, value))
@@ -259,6 +263,7 @@ class IntColumn(Column, NumericColumn):
     mode = annotate(NumericColumn.mode, Set)
     min = annotate(Column.min, Optional[int])
     max = annotate(Column.max, Optional[int])
+    drop_null = annotate(Column.drop_null, 'IntColumn')
     fill_null = annotate(Column.fill_null, 'IntColumn', value=int)
     add = annotate(NumericColumn.add, 'IntColumn', value=int)
     subtract = annotate(NumericColumn.subtract, 'IntColumn', value=int)
@@ -283,6 +288,7 @@ class LongColumn(Column, NumericColumn):
     mode = annotate(NumericColumn.mode, Set)
     min = annotate(Column.min, Optional[Long])
     max = annotate(Column.max, Optional[Long])
+    drop_null = annotate(Column.drop_null, 'LongColumn')
     fill_null = annotate(Column.fill_null, 'LongColumn', value=Long)
     add = annotate(NumericColumn.add, 'LongColumn', value=Long)
     subtract = annotate(NumericColumn.subtract, 'LongColumn', value=Long)
@@ -309,6 +315,7 @@ class FloatColumn(Column, NumericColumn):
     mode = annotate(NumericColumn.mode, Set)
     min = annotate(Column.min, Optional[float])
     max = annotate(Column.max, Optional[float])
+    drop_null = annotate(Column.drop_null, 'FloatColumn')
     fill_null = annotate(Column.fill_null, 'FloatColumn', value=float)
     add = annotate(NumericColumn.add, 'FloatColumn', value=float)
     subtract = annotate(NumericColumn.subtract, 'FloatColumn', value=float)
@@ -344,6 +351,7 @@ class DateColumn(Column):
     sort = annotate(Column.sort, List[Optional[date]])
     min = annotate(Column.min, Optional[date])
     max = annotate(Column.max, Optional[date])
+    drop_null = annotate(Column.drop_null, 'DateColumn')
     fill_null = annotate(Column.fill_null, 'DateColumn', value=date)
     min_element_wise = annotate(Column.min_element_wise, 'DateColumn', value=date)
     max_element_wise = annotate(Column.max_element_wise, 'DateColumn', value=date)
@@ -361,6 +369,7 @@ class DateTimeColumn(Column):
     sort = annotate(Column.sort, List[Optional[datetime]])
     min = annotate(Column.min, Optional[datetime])
     max = annotate(Column.max, Optional[datetime])
+    drop_null = annotate(Column.drop_null, 'DateTimeColumn')
     fill_null = annotate(Column.fill_null, 'DateTimeColumn', value=datetime)
     min_element_wise = annotate(Column.min_element_wise, 'DateTimeColumn', value=datetime)
     max_element_wise = annotate(Column.max_element_wise, 'DateTimeColumn', value=datetime)
@@ -383,6 +392,7 @@ class TimeColumn(Column):
     sort = annotate(Column.sort, List[Optional[time]])
     min = annotate(Column.min, Optional[time])
     max = annotate(Column.max, Optional[time])
+    drop_null = annotate(Column.drop_null, 'TimeColumn')
     fill_null = annotate(Column.fill_null, 'TimeColumn', value=time)
     min_element_wise = annotate(Column.min_element_wise, 'TimeColumn', value=time)
     max_element_wise = annotate(Column.max_element_wise, 'TimeColumn', value=time)
@@ -408,6 +418,7 @@ class BinaryColumn(Column):
     Set = Set.subclass(bytes, "BinarySet", "unique binaries")
     unique = annotate(Column.unique, Set)
     sort = annotate(Column.sort, List[Optional[bytes]])
+    drop_null = annotate(Column.drop_null, 'BinaryColumn')
     fill_null = annotate(Column.fill_null, 'BinaryColumn', value=bytes)
 
     @doc_field
@@ -430,6 +441,7 @@ class StringColumn(Column):
     sort = annotate(Column.sort, List[Optional[str]])
     min = annotate(Column.min, Optional[str])
     max = annotate(Column.max, Optional[str])
+    drop_null = annotate(Column.drop_null, 'StringColumn')
     fill_null = annotate(Column.fill_null, 'StringColumn', value=str)
 
     @doc_field
