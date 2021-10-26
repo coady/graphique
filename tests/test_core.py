@@ -76,13 +76,15 @@ def test_lists():
     assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.mode(array, length=1).to_pylist() == [[1], [0], [], [], []]
     assert ListChunk.quantile(array).to_pylist() == [1.5, 0.0, None, None, None]
-    assert ListChunk.quantile(array, q=[0.75]).to_pylist() == [[1.75], [0.0], [], [], []]
+    quantile = ListChunk.quantile(array, q=[0.75])
+    assert quantile.to_pylist() == [[1.75], [0.0], [None], [None], [None]]
     assert ListChunk.tdigest(array).to_pylist() == [1.0, 0.0, None, None, None]
-    assert ListChunk.tdigest(array, q=[0.75]).to_pylist() == [[2.0], [0.0], [], [], []]
+    tdigest = ListChunk.tdigest(array, q=[0.75])
+    assert tdigest.to_pylist() == [[2.0], [0.0], [None], [None], [None]]
     assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
-    assert ListChunk.any(array).to_pylist() == [True, False, False, False, None]
-    assert ListChunk.all(array).to_pylist() == [True, False, True, True, None]
+    assert ListChunk.any(array).to_pylist() == [True, False, None, None, None]
+    assert ListChunk.all(array).to_pylist() == [True, False, None, None, None]
     array = pa.array([["a", "b"], [None]])
     assert ListChunk.min(array).to_pylist() == ["a", None]
     assert ListChunk.max(array).to_pylist() == ["b", None]
@@ -232,6 +234,6 @@ def test_not_implemented():
     with pytest.raises(NotImplementedError):
         pc.sort_indices(dictionary)
     with pytest.raises(NotImplementedError):
-        dictionary.fill_null('')
-    with pytest.raises(NotImplementedError):
         dictionary.index('')
+    with pytest.raises(NotImplementedError):
+        pc.min_max(dictionary)

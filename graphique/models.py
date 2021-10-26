@@ -91,13 +91,17 @@ class Column:
         """list of values"""
         return self.array.to_pylist()
 
+    @cached_property
+    def min_max(self):
+        return C.min_max(self.array)
+
     def min(self):
         """minimum value"""
-        return C.min(self.array)
+        return self.min_max['min']
 
     def max(self):
         """maximum value"""
-        return C.max(self.array)
+        return self.min_max['max']
 
     def sort(self, reverse: bool = False, length: Optional[Long] = None):
         """Return sorted values. Optimized for fixed length."""
@@ -149,12 +153,12 @@ def annotate(func, return_type, **annotations):
 @strawberry.interface(description="numeric column interface")
 class NumericColumn:
     @doc_field
-    def any(self) -> bool:
+    def any(self) -> Optional[bool]:
         """whether any values evaluate to true"""
         return C.any(self.array)  # type: ignore
 
     @doc_field
-    def all(self) -> bool:
+    def all(self) -> Optional[bool]:
         """whether all values evaluate to true"""
         return C.all(self.array)  # type: ignore
 
@@ -192,18 +196,6 @@ class NumericColumn:
     def mode(self, length: int = 1):
         """mode of the values"""
         return self.Set(*pc.mode(self.array, length).flatten())  # type: ignore
-
-    @cached_property
-    def min_max(self):
-        return pc.min_max(self.array).as_py()
-
-    def min(self):
-        """minimum value"""
-        return self.min_max['min']
-
-    def max(self):
-        """maximum value"""
-        return self.min_max['max']
 
     def add(self, value):
         """Return values added to scalar."""
@@ -252,9 +244,8 @@ class IntColumn(Column, NumericColumn):
     sort = annotate(Column.sort, List[Optional[int]])
     sum = annotate(NumericColumn.sum, Optional[int])
     mode = annotate(NumericColumn.mode, Set)
-    min = annotate(NumericColumn.min, Optional[int])
-    max = annotate(NumericColumn.max, Optional[int])
-    unique = annotate(Column.unique, Set)
+    min = annotate(Column.min, Optional[int])
+    max = annotate(Column.max, Optional[int])
     fill_null = annotate(Column.fill_null, 'IntColumn', value=int)
     add = annotate(NumericColumn.add, 'IntColumn', value=int)
     subtract = annotate(NumericColumn.subtract, 'IntColumn', value=int)
@@ -276,9 +267,8 @@ class LongColumn(Column, NumericColumn):
     sort = annotate(Column.sort, List[Optional[Long]])
     sum = annotate(NumericColumn.sum, Optional[Long])
     mode = annotate(NumericColumn.mode, Set)
-    min = annotate(NumericColumn.min, Optional[Long])
-    max = annotate(NumericColumn.max, Optional[Long])
-    unique = annotate(Column.unique, Set)
+    min = annotate(Column.min, Optional[Long])
+    max = annotate(Column.max, Optional[Long])
     fill_null = annotate(Column.fill_null, 'LongColumn', value=Long)
     add = annotate(NumericColumn.add, 'LongColumn', value=Long)
     subtract = annotate(NumericColumn.subtract, 'LongColumn', value=Long)
@@ -302,8 +292,8 @@ class FloatColumn(Column, NumericColumn):
     sort = annotate(Column.sort, List[Optional[float]])
     sum = annotate(NumericColumn.sum, Optional[float])
     mode = annotate(NumericColumn.mode, Set)
-    min = annotate(NumericColumn.min, Optional[float])
-    max = annotate(NumericColumn.max, Optional[float])
+    min = annotate(Column.min, Optional[float])
+    max = annotate(Column.max, Optional[float])
     fill_null = annotate(Column.fill_null, 'FloatColumn', value=float)
     add = annotate(NumericColumn.add, 'FloatColumn', value=float)
     subtract = annotate(NumericColumn.subtract, 'FloatColumn', value=float)

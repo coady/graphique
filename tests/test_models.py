@@ -272,12 +272,14 @@ def test_list(executor):
         '''{ columns { list { quantile(q: [0.25, 0.75]) { flatten { ... on FloatColumn
         { values } } } } } }'''
     )
-    assert data == {'columns': {'list': {'quantile': {'flatten': {'values': [0.5, 1.5]}}}}}
+    column = data['columns']['list']
+    assert column == {'quantile': {'flatten': {'values': [0.5, 1.5, None, None]}}}
     data = executor(
         '''{ columns { list { tdigest(q: [0.25, 0.75]) { flatten { ... on FloatColumn
         { values } } } } } }'''
     )
-    assert data == {'columns': {'list': {'tdigest': {'flatten': {'values': [0.0, 2.0]}}}}}
+    column = data['columns']['list']
+    assert column == {'tdigest': {'flatten': {'values': [0.0, 2.0, None, None]}}}
 
     data = executor(
         '''{ columns { list { count { values }

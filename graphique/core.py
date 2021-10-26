@@ -10,7 +10,7 @@ import functools
 import operator
 from concurrent import futures
 from datetime import time
-from typing import Callable, Iterable, Iterator, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -32,29 +32,10 @@ class Compare:
         return self.value > other.as_py()
 
 
-def rpartial(func, *values):
-    """Return function with right arguments partially bound."""
-    return lambda arg: func(arg, *values)
-
-
 class Chunk(pa.Array):
-    def fill_null(self: pa.DictionaryArray, dictionary: pa.Array) -> pa.DictionaryArray:
-        indices = self.indices.fill_null(len(dictionary) - 1)
-        return pa.DictionaryArray.from_arrays(indices, dictionary)
-
     def take_list(self, indices: pa.lib.BaseListArray) -> pa.lib.BaseListArray:
         assert len(self) == len(indices.values)
         return type(indices).from_arrays(indices.offsets, self.take(indices.values))
-
-    def partition_nth_indices(self, pivot: int) -> pa.IntegerArray:
-        if pivot >= 0:
-            return pc.partition_nth_indices(self, pivot=pivot)[:pivot]
-        return pc.partition_nth_indices(self, pivot=len(self) + pivot)[pivot:]
-
-    def partition_nth(self, pivot: int) -> pa.Array:
-        if len(self) <= abs(pivot):
-            return self
-        return self.take(Chunk.partition_nth_indices(self, pivot))
 
     def index(self: pa.DictionaryArray, value) -> int:
         index = self.dictionary.index(value).as_py()
@@ -64,6 +45,8 @@ class Chunk(pa.Array):
 class ListChunk(pa.lib.BaseListArray):
     def element(self, index: int) -> pa.Array:
         """element at index of each list scalar; defaults to null"""
+        with contextlib.suppress(ValueError):
+            return pc.list_element(self, index)
         size = -index if index < 0 else index + 1
         mask = np.asarray(self.value_lengths().fill_null(0)) < size
         offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
@@ -103,15 +86,11 @@ class ListChunk(pa.lib.BaseListArray):
 
     def min(self) -> pa.Array:
         """min value of each list scalar"""
-        with contextlib.suppress(NotImplementedError):
-            return ListChunk.reduce(self, lambda arr: pc.min_max(arr)['min'])
-        return ListChunk.reduce(self, lambda arr: Chunk.partition_nth(arr, 1)[0])
+        return ListChunk.reduce(self, pc.min)
 
     def max(self) -> pa.Array:
         """max value of each list scalar"""
-        with contextlib.suppress(NotImplementedError):
-            return ListChunk.reduce(self, lambda arr: pc.min_max(arr)['max'])
-        return ListChunk.reduce(self, lambda arr: Chunk.partition_nth(arr, -1)[-1])
+        return ListChunk.reduce(self, pc.max)
 
     def sum(self) -> pa.Array:
         """sum of each list scalar"""
@@ -261,15 +240,8 @@ class Column(pa.ChunkedArray):
         return Column.call(self, pc.not_equal, value)
 
     def fill_null(self, value) -> pa.ChunkedArray:
-        """Replace each null element in values with fill_value with dictionary support."""
-        if not self.null_count:
-            return self
-        self = Column.unify_dictionaries(self)
-        with contextlib.suppress(NotImplementedError):
-            return self.fill_null(value)
-        end = pa.array([value], self.type.value_type)
-        dictionary = pa.concat_arrays([self.chunk(0).dictionary, end])
-        return pa.chunked_array(Column.map(rpartial(Chunk.fill_null, dictionary), self))
+        """Optimized `fill_null` to check `null_count`."""
+        return self.fill_null(value) if self.null_count else self
 
     def sort_values(self) -> pa.Array:
         self = Column.unify_dictionaries(self)
@@ -280,12 +252,11 @@ class Column(pa.ChunkedArray):
 
     def sort(self, reverse=False, length: int = None) -> pa.Array:
         """Return sorted values, optimized for fixed length."""
-        if len(self[:length]) < len(self):
-            func = rpartial(Chunk.partition_nth, (-length if reverse else length))  # type: ignore
-            self = pa.chunked_array(Column.map(func, Column.decode(self)))
+        func = pc.sort_indices
+        if length is not None:
+            func = functools.partial(pc.select_k_unstable, k=length)
         keys = {'': 'descending' if reverse else 'ascending'}
-        indices = pc.sort_indices(Column.sort_values(self), sort_keys=keys.items())
-        return self and self.take(indices[:length])
+        return self and self.take(func(Column.sort_values(self), sort_keys=keys.items()))
 
     def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
         """Return discrete differences between adjacent values."""
@@ -305,22 +276,18 @@ class Column(pa.ChunkedArray):
             mask = Column.diff(self, predicate)
         return pa.array(*np.nonzero(pa.concat_arrays(ends + mask.chunks + ends)))
 
-    def min_max(self, reverse=False):
-        if not self:
-            return None
+    def min_max(self):
         if pa.types.is_dictionary(self.type):
-            self = pa.chunked_array([self.unique().dictionary_decode()])
-        with contextlib.suppress(NotImplementedError):
-            return pc.min_max(self)['max' if reverse else 'min'].as_py()
-        return Column.sort(self, reverse, length=1)[0].as_py()
+            self = self.unique().dictionary_decode()
+        return pc.min_max(self).as_py()
 
     def min(self):
         """Return min of the values."""
-        return Column.min_max(self, reverse=False)
+        return Column.min_max(self)['min']
 
     def max(self):
         """Return max of the values."""
-        return Column.min_max(self, reverse=True)
+        return Column.min_max(self)['max']
 
     def digitize(self, bins: Iterable, right=False) -> pa.ChunkedArray:
         """Return the indices of the bins to which each value in input array belongs."""
@@ -350,11 +317,11 @@ class Column(pa.ChunkedArray):
             offset += len(chunk)
         return -1
 
-    def any(self) -> bool:
+    def any(self) -> Optional[bool]:
         """Return whether any values evaluate to true."""
         return pc.any(Column.mask(self)).as_py()
 
-    def all(self) -> bool:
+    def all(self) -> Optional[bool]:
         """Return whether all values evaluate to true."""
         return pc.all(Column.mask(self)).as_py()
 
@@ -429,7 +396,7 @@ class Table(pa.Table):
         if arrays or keys.null_count or not pa.types.is_integer(keys.type):
             keys = Column.encode(keys).cast('int64')
         for array in map(Column.encode, arrays):
-            size = pc.min_max(array)['max'].as_py() + 1
+            size = pc.max(array).as_py() + 1
             keys = pc.add_checked(pc.multiply_checked(keys, size), array)
         return keys
 
@@ -478,13 +445,12 @@ class Table(pa.Table):
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns, optimized for single column with fixed length."""
-        if len(names) == 1 and len(self[:length]) < len(self):
-            array = Column.decode(Column.combine_chunks(self[names[-1]]))
-            self = self.take(Chunk.partition_nth_indices(array, (-length if reverse else length)))  # type: ignore
+        func = pc.sort_indices
+        if length is not None:
+            func = functools.partial(pc.select_k_unstable, k=length)
         keys = dict.fromkeys(names, 'descending' if reverse else 'ascending')
         table = pa.Table.from_pydict({name: Column.sort_values(self[name]) for name in names})
-        indices = pc.sort_indices(table, sort_keys=keys.items())
-        return self and self.take(indices[:length])
+        return self and self.take(func(table, sort_keys=keys.items()))
 
     def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.Array:
         """Return mask array which matches query."""

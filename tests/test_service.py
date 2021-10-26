@@ -15,7 +15,7 @@ def test_slice(client):
     data = client.execute('{ columns { zipcode { count(equal: null) } } }')
     assert data['columns']['zipcode']['count'] == 0
     data = client.execute('{ slice(length: 0) { columns { zipcode { any all } } } }')
-    assert data['slice']['columns']['zipcode'] == {'any': False, 'all': True}
+    assert data['slice']['columns']['zipcode'] == {'any': None, 'all': None}
 
 
 def test_ints(client):
@@ -145,7 +145,7 @@ def test_string_methods(client):
     states = data['columns']['state']
     assert 'A' in states['utf8Trim']['values']
     assert 'A' in states['utf8Ltrim']['values']
-    assert states['utf8Rtrim']['values']  # TODO(ARROW-13522) check values
+    assert 'C' in states['utf8Rtrim']['values']
     data = client.execute(
         '''{ columns { state { utf8Center(width: 4, padding: "_") { values }
         utf8Lpad(width: 3) { values } utf8Rpad(width: 3) { values } } } }'''

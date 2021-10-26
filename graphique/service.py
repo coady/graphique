@@ -149,7 +149,7 @@ class Table(AbstractTable):
     @doc_field(
         by="column names",
         reverse="descending stable order",
-        length="maximum number of rows to return; may be significantly faster on a single column",
+        length="maximum number of rows to return; may be significantly faster but is unstable",
     )
     def sort(
         self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
