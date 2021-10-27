@@ -77,6 +77,25 @@ def test_floats(client):
     )
     latitudes = data['apply']['columns']['latitude']
     assert latitudes == {'min': 18.0, 'max': 72.0, 'unique': {'length': 52}}
+    data = client.execute(
+        '''{ slice(length: 1) { columns { latitude { logb(base: 3) { values } } } } }'''
+    )
+    assert data['slice']['columns']['latitude']['logb']['values'] == [pytest.approx(3.376188)]
+    data = client.execute(
+        '''{ filter(on: {float: {name: "latitude", isFinite: true}})
+        { apply(float: {name: "latitude", round: true}) { row { latitude } } } }'''
+    )
+    assert data == {'filter': {'apply': {'row': {'latitude': 41.0}}}}
+    data = client.execute(
+        '''{ slice(length: 1) { columns { latitude { round(ndigits: 1) { values } } } } }'''
+    )
+    assert data == {'slice': {'columns': {'latitude': {'round': {'values': [40.8]}}}}}
+    data = client.execute(
+        '''{ slice(length: 1) { columns { latitude { round(multiple: 10) { values } } } } }'''
+    )
+    assert data == {'slice': {'columns': {'latitude': {'round': {'values': [40.0]}}}}}
+    with pytest.raises(ValueError, match="only one"):
+        client.execute('{ columns { latitude { round(ndigits: 1, multiple: 10) { length } } } }')
 
 
 def test_strings(client):
@@ -109,6 +128,8 @@ def test_strings(client):
         column(name: "size") { ... on IntColumn { max } } } } }'''
     )
     assert data == {'filter': {'apply': {'filter': {'length': 1}, 'column': {'max': 24}}}}
+    data = client.execute('{ apply(string: {name: "city", utf8Swapcase: true}) { row { city } } }')
+    assert data == {'apply': {'row': {'city': 'hOLTSVILLE'}}}
 
 
 def test_string_methods(client):

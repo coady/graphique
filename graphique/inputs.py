@@ -245,6 +245,9 @@ class LongFilter(Filter):
 @strawberry.input(description="predicates for floats")
 class FloatFilter(Filter):
     __annotations__.update(FloatQuery.__annotations__)  # type: ignore
+    is_finite: bool = False
+    is_inf: bool = False
+    is_nan: bool = False
     apply: OrdinalFilter = default_field(dict)
 
 
@@ -356,6 +359,7 @@ class NumericFunction(OrdinalFunction):
     floor: bool = False
     ceil: bool = False
     trunc: bool = False
+    round: bool = False
     sin: bool = False
     asin: bool = False
     cos: bool = False
@@ -412,7 +416,10 @@ class DateFunction(OrdinalFunction):
     microseconds_between: Optional[str] = UNSET
     nanoseconds_between: Optional[str] = UNSET
     year: bool = False
+    quarter: bool = False
     month: bool = False
+    week: bool = False
+    us_week: bool = False
     day: bool = False
     day_of_week: bool = False
     day_of_year: bool = False
@@ -433,13 +440,17 @@ class DateTimeFunction(OrdinalFunction):
     microseconds_between: Optional[str] = UNSET
     nanoseconds_between: Optional[str] = UNSET
     year: bool = False
+    quarter: bool = False
     month: bool = False
+    week: bool = False
+    us_week: bool = False
     day: bool = False
     day_of_week: bool = False
     day_of_year: bool = False
     hour: bool = False
     minute: bool = False
     second: bool = False
+    subsecond: bool = False
     millisecond: bool = False
     microsecond: bool = False
     nanosecond: bool = False
@@ -457,6 +468,7 @@ class TimeFunction(OrdinalFunction):
     hour: bool = False
     minute: bool = False
     second: bool = False
+    subsecond: bool = False
     millisecond: bool = False
     microsecond: bool = False
     nanosecond: bool = False
@@ -486,6 +498,7 @@ class StringFunction(Function):
     utf8_length: bool = False
     utf8_lower: bool = False
     utf8_upper: bool = False
+    utf8_swapcase: bool = False
     utf8_reverse: bool = False
 
 

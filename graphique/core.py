@@ -212,7 +212,7 @@ class Column(pa.ChunkedArray):
         for op, value in query.items():
             if hasattr(Column, op):
                 masks.append(getattr(Column, op)(self, value))
-            elif '_is_' not in op:
+            elif 'is_' not in op:
                 op += '_regex' * regex
                 masks.append(Column.call(self, getattr(pc, op), value, **options))
             elif value:

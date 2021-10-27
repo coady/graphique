@@ -209,6 +209,11 @@ class NumericColumn:
         """Return list of approximate quantiles for values, defaulting to the median."""
         return pc.tdigest(self.array, q=q, delta=delta, buffer_size=buffer_size).to_pylist()  # type: ignore
 
+    @doc_field
+    def logb(self, base: float) -> 'FloatColumn':
+        """Return log of values to base."""
+        return FloatColumn(pc.logb(self.array, base))  # type: ignore
+
     def mode(self, length: int = 1):
         """mode of the values"""
         return self.Set(*pc.mode(self.array, length).flatten())  # type: ignore
@@ -326,6 +331,19 @@ class FloatColumn(Column, NumericColumn):
     )
     min_element_wise = annotate(Column.min_element_wise, 'FloatColumn', value=float)
     max_element_wise = annotate(Column.max_element_wise, 'FloatColumn', value=float)
+
+    @doc_field
+    def round(
+        self, ndigits: int = 0, multiple: float = 1.0, round_mode: str = 'half_to_even'
+    ) -> 'FloatColumn':
+        """Return log of values to base."""
+        if ndigits != 0 and multiple != 1.0:
+            raise ValueError("only one of `ndigits` or `multiple` allowed")
+        if multiple == 1:
+            array = pc.round(self.array, ndigits=ndigits, round_mode=round_mode)
+        else:
+            array = pc.round_to_multiple(self.array, multiple=multiple, round_mode=round_mode)
+        return FloatColumn(array)
 
 
 @strawberry.type(description="column of decimals")

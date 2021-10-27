@@ -233,6 +233,11 @@ def test_datetime(executor):
         )
         assert data == {'apply': {'column': {'values': [1970, None]}}}
         data = executor(
+            f'''{{ apply(datetime: {{name: "{name}", quarter: true, alias: "quarter"}})
+            {{ column(name: "quarter") {{ ... on LongColumn {{ values }} }} }} }}'''
+        )
+        assert data == {'apply': {'column': {'values': [1, None]}}}
+        data = executor(
             f'''{{ column(name: "{name}", apply: {{yearsBetween: "{name}"}})
             {{ ... on LongColumn {{ values }} }} }}'''
         )
@@ -248,6 +253,11 @@ def test_datetime(executor):
             {{ column(name: "hour") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
         assert data == {'apply': {'column': {'values': [0, None]}}}
+        data = executor(
+            f'''{{ apply(datetime: {{name: "{name}", subsecond: true, alias: "subsecond"}})
+            {{ column(name: "subsecond") {{ ... on FloatColumn {{ values }} }} }} }}'''
+        )
+        assert data == {'apply': {'column': {'values': [0.0, None]}}}
         data = executor(
             f'''{{ column(name: "{name}", apply: {{hoursBetween: "{name}"}})
             {{ ... on LongColumn {{ values }} }} }}'''
