@@ -14,7 +14,7 @@ from typing import Callable, Iterable, Iterator, Optional, Sequence
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
-from .arrayed import group_indices, split  # type: ignore
+from .arrayed import group_indices  # type: ignore
 
 
 class Compare:
@@ -43,6 +43,11 @@ class Chunk(pa.Array):
 
 
 class ListChunk(pa.lib.BaseListArray):
+    def from_counts(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
+        """Return list array by converting counts into offsets."""
+        offsets = np.concatenate([[0], np.cumsum(counts)])
+        return pa.LargeListArray.from_arrays(offsets, values)
+
     def element(self, index: int) -> pa.Array:
         """element at index of each list scalar; defaults to null"""
         with contextlib.suppress(ValueError):
@@ -72,13 +77,13 @@ class ListChunk(pa.lib.BaseListArray):
         """Return list array by mapping function across scalars, with null handling."""
         empty = pa.array([], self.type.value_type)
         values = [func(scalar.values or empty) for scalar in self]
-        return split(pa.array(map(len, values)), pa.concat_arrays(values))
+        return ListChunk.from_counts(pa.array(map(len, values)), pa.concat_arrays(values))
 
     def filter_list(self, mask: pa.BooleanArray) -> pa.lib.BaseListArray:
         """Return list array by selecting true values."""
         masks = type(self).from_arrays(self.offsets, mask)
         counts = pa.array(scalar.values.true_count for scalar in masks)
-        return split(counts, self.values.filter(mask))
+        return ListChunk.from_counts(counts, self.values.filter(mask))
 
     def reduce(self, func: Callable, tp=None) -> pa.Array:
         values = (func(scalar.values).as_py() if scalar.values else None for scalar in self)
@@ -416,7 +421,7 @@ class Table(pa.Table):
 
     def group(self, *names: str, reverse=False, length: int = None) -> tuple:
         """Return table grouped by columns and corresponding counts."""
-        _, indices = group_indices(Table.encode(self, *names))
+        indices = ListChunk.from_counts(*group_indices(Table.encode(self, *names)))
         indices = (indices[::-1] if reverse else indices)[:length]
         scalars = ListChunk.first(indices)
         columns = {name: self[name].take(scalars) for name in names}
@@ -454,7 +459,8 @@ class Table(pa.Table):
         Optionally compute corresponding counts.
         Faster than [group][graphique.core.Table.group] when only scalars are needed.
         """
-        indices, counts = Column.unique_indices(Table.encode(self, *names), reverse, count)
+        column = Table.encode(self, *names) if len(names) > 1 else self.column(*names)
+        indices, counts = Column.unique_indices(column, reverse, count)
         return self.take(indices[:length]), (counts and counts[:length])
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:

@@ -1,7 +1,6 @@
 # distutils: language=c++
 # cython: language_level=3, boundscheck=False, wraparound=False
 import numpy as np
-import pyarrow as pa
 from cython.operator cimport postincrement
 from libcpp.unordered_map cimport unordered_map
 
@@ -10,22 +9,17 @@ def asiarray(array):
     return np.asarray(array).astype(np.intp, casting='safe', copy=False)
 
 
-def split(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
-    """Return list array by converting counts into offsets and splitting the values."""
-    offsets = np.concatenate([[0], np.cumsum(counts)])
-    return pa.LargeListArray.from_arrays(offsets, values)
-
-
-def group_indices(array: pa.IntegerArray) -> tuple:
-    """Return unique keys with corresponding index arrays."""
-    cdef const Py_ssize_t [:] array_view = asiarray(array)
+def group_indices(array):
+    """Return unique counts and grouped index array."""
     indices = np.empty(len(array), np.intp)
-    cdef Py_ssize_t [:] indices_view = indices
     values, counts = array.value_counts().flatten()
-    cdef const Py_ssize_t [:] values_view = asiarray(values)
-    cdef const Py_ssize_t [:] counts_view = asiarray(counts)
-    cdef unordered_map[Py_ssize_t, Py_ssize_t] offsets
-    cdef Py_ssize_t offset = 0
+    cdef:
+        Py_ssize_t [:] indices_view = indices
+        const Py_ssize_t [:] array_view = asiarray(array)
+        const Py_ssize_t [:] values_view = asiarray(values)
+        const Py_ssize_t [:] counts_view = asiarray(counts)
+        unordered_map[Py_ssize_t, Py_ssize_t] offsets
+        Py_ssize_t offset = 0
     with nogil:
         offsets.reserve(values_view.shape[0])
         for i in range(values_view.shape[0]):
@@ -33,4 +27,4 @@ def group_indices(array: pa.IntegerArray) -> tuple:
             offset += counts_view[i]
         for i in range(array_view.shape[0]):
             indices_view[postincrement(offsets[array_view[i]])] = i
-    return values, split(counts, indices)
+    return counts, indices
