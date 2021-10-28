@@ -423,6 +423,7 @@ class DateFunction(OrdinalFunction):
     day: bool = False
     day_of_week: bool = False
     day_of_year: bool = False
+    strftime: bool = False
 
 
 @strawberry.input(description="functions for datetimes")
@@ -454,6 +455,7 @@ class DateTimeFunction(OrdinalFunction):
     millisecond: bool = False
     microsecond: bool = False
     nanosecond: bool = False
+    strftime: bool = False
 
 
 @strawberry.input(description="functions for times")

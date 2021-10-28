@@ -375,6 +375,11 @@ class DateColumn(Column):
     max_element_wise = annotate(Column.max_element_wise, 'DateColumn', value=date)
     between = annotate(Column.between, LongColumn, start=Optional[date], end=Optional[date])
 
+    @doc_field
+    def strftime(self, format: str = '%Y-%m-%dT%H:%M:%S', locale: str = 'C') -> 'StringColumn':
+        """Return formatted temporal values according to a format string."""
+        return StringColumn(pc.strftime(self.array, format=format, locale=locale))
+
 
 @strawberry.type(description="column of datetimes")
 class DateTimeColumn(Column):
@@ -392,6 +397,7 @@ class DateTimeColumn(Column):
     min_element_wise = annotate(Column.min_element_wise, 'DateTimeColumn', value=datetime)
     max_element_wise = annotate(Column.max_element_wise, 'DateTimeColumn', value=datetime)
     between = annotate(Column.between, LongColumn, start=Optional[datetime], end=Optional[datetime])
+    strftime = doc_field(DateColumn.strftime)
 
     @doc_field
     def subtract(self, value: datetime) -> 'DurationColumn':
@@ -522,6 +528,11 @@ class StringColumn(Column):
         """Replace non-overlapping substrings that match pattern."""
         kwargs = dict(pattern=pattern, replacement=replacement, max_replacements=max_replacements)
         return StringColumn(pc.replace_substring(self.array, **kwargs))
+
+    @doc_field
+    def strptime(self, format: str = '%Y-%m-%dT%H:%M:%S', unit: str = 'ms') -> DateTimeColumn:
+        """Return parsed timestamps."""
+        return DateTimeColumn(pc.strptime(self.array, format=format, unit=unit))
 
 
 @strawberry.type(description="column of lists")

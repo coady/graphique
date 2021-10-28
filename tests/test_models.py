@@ -248,6 +248,9 @@ def test_datetime(executor):
             {{ between(unit: "years", start: "1969-01-01") {{ values }} }} }} }}'''
         )
         assert data == {'columns': {name: {'between': {'values': [1, None]}}}}
+    data = executor('{ columns { date32 { strftime { strptime { values } } } } }')
+    dates = data['columns']['date32']['strftime']['strptime']['values']
+    assert dates == ['1970-01-01T00:00:00', None]
     for name in ('timestamp', 'time32'):
         data = executor(
             f'''{{ apply(datetime: {{name: "{name}", hour: true, alias: "hour"}})
