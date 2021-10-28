@@ -45,6 +45,7 @@ def test_columns(executor):
 
     assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
     assert execute('{ bool { count(equal: false) } }') == {'bool': {'count': 1}}
+    assert execute('{ bool { count } }') == {'bool': {'count': 1}}
     assert execute('{ bool { index(value: false) } }') == {'bool': {'index': 0}}
     assert execute('{ bool { index(value: false, start: 1, end: 2) } }') == {'bool': {'index': -1}}
     assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
@@ -327,7 +328,7 @@ def test_list(executor):
     assert column == {'tdigest': {'flatten': {'values': [0.0, 2.0, None, None]}}}
 
     data = executor(
-        '''{ columns { list { count { values }
+        '''{ columns { list { count { values } countDistinct { values } valueLengths { values }
         first: element { ... on IntColumn { values } }
         last: element(index: -1) { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
@@ -337,6 +338,8 @@ def test_list(executor):
     )
     assert data['columns']['list'] == {
         'count': {'values': [3, None]},
+        'countDistinct': {'values': [3, None]},
+        'valueLengths': {'values': [3, None]},
         'first': {'values': [0, None]},
         'last': {'values': [2, None]},
         'min': {'values': [0, None]},
@@ -386,7 +389,7 @@ def test_dictionary(executor):
         '''{ group(by: ["camelId"]) { column(name: "string") {
         ... on ListColumn { unique { count { values } } } } } }'''
     )
-    assert data == {'group': {'column': {'unique': {'count': {'values': [1, 1]}}}}}
+    assert data == {'group': {'column': {'unique': {'count': {'values': [1, 0]}}}}}
     data = executor(
         '''{ group(by: ["string"]) { tables {
         columns { string { values } } column(name: "camelId") { length } } } }'''
@@ -399,13 +402,18 @@ def test_dictionary(executor):
         '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string"}) { column(name: "string") {
         ... on ListColumn { count { values } } } } } }'''
     )
-    assert data == {'group': {'aggregate': {'column': {'count': {'values': [1, 1]}}}}}
+    assert data == {'group': {'aggregate': {'column': {'count': {'values': [1, 0]}}}}}
     data = executor(
         '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string"}) {
         aggregate(count: {name: "string"}) {
         column(name: "string") { ... on LongColumn { values } } } } } }'''
     )
-    assert data == {'group': {'aggregate': {'aggregate': {'column': {'values': [1, 1]}}}}}
+    assert data == {'group': {'aggregate': {'aggregate': {'column': {'values': [1, 0]}}}}}
+    data = executor(
+        '''{ group(by: ["camelId"]) { aggregate(countDistinct: {name: "string"}) {
+        column(name: "string") { ... on LongColumn { values } } } } }'''
+    )
+    assert data == {'group': {'aggregate': {'column': {'values': [1, 0]}}}}
     data = executor(
         '{ apply(string: [{name: "string", fillNull: ""}]) { columns { string { values } } } }'
     )

@@ -58,6 +58,16 @@ class ListChunk(pa.lib.BaseListArray):
         return self.values.take(pa.array(offsets + index, mask=mask))
 
     def count(self) -> pa.IntegerArray:
+        """non-null count of each list scalar"""
+        return ListChunk.reduce(self, pc.count, 'int64')
+
+    def count_distinct(self) -> pa.IntegerArray:
+        """non-null distinct count of each list scalar"""
+        if pa.types.is_dictionary(self.values.type):
+            self = pa.LargeListArray.from_arrays(self.offsets, self.values.indices)
+        return ListChunk.reduce(self, pc.count_distinct, 'int64')
+
+    def value_lengths(self) -> pa.IntegerArray:
         """length of each list scalar"""
         return self.value_lengths()
 
@@ -86,7 +96,7 @@ class ListChunk(pa.lib.BaseListArray):
         return ListChunk.from_counts(counts, self.values.filter(mask))
 
     def reduce(self, func: Callable, tp=None) -> pa.Array:
-        values = (func(scalar.values).as_py() if scalar.values else None for scalar in self)
+        values = (None if scalar.values is None else func(scalar.values).as_py() for scalar in self)
         return pa.array(values, tp or self.type.value_type)
 
     def min(self) -> pa.Array:
@@ -186,14 +196,14 @@ class Column(pa.ChunkedArray):
         dictionary, indices = Column.dict_flatten(self)
         return Column.fill_null(indices, len(dictionary))
 
-    def unique_indices(self, reverse=False, count=False) -> tuple:
+    def unique_indices(self, reverse=False, counts=False) -> tuple:
         """Return index array of first or last occurrences, optionally with counts.
 
         Relies on `unique` having stable ordering.
         """
         if reverse:
             self = self[::-1]
-        values, counts = self.value_counts().flatten() if count else (self.unique(), None)
+        values, counts = self.value_counts().flatten() if counts else (self.unique(), None)
         indices = pc.index_in(values, value_set=self)
         return (pc.subtract(len(self) - 1, indices) if reverse else indices), counts
 
@@ -453,15 +463,15 @@ class Table(pa.Table):
             columns[name] = pa.LargeListArray.from_arrays(offsets, column)
         return pa.Table.from_pydict(columns), Column.diff(offsets)
 
-    def unique(self, *names: str, reverse=False, length: int = None, count=False) -> tuple:
+    def unique(self, *names: str, reverse=False, length: int = None, counts=False) -> tuple:
         """Return table with first or last occurrences from grouping by columns.
 
         Optionally compute corresponding counts.
         Faster than [group][graphique.core.Table.group] when only scalars are needed.
         """
         column = Table.encode(self, *names) if len(names) > 1 else self.column(*names)
-        indices, counts = Column.unique_indices(column, reverse, count)
-        return self.take(indices[:length]), (counts and counts[:length])
+        indices, counts_ = Column.unique_indices(column, reverse, counts)
+        return self.take(indices[:length]), (counts and counts_[:length])
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns, optimized for single column with fixed length."""

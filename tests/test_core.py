@@ -39,7 +39,7 @@ def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
     assert C.combine_chunks(array) == pa.array(list('ababcb'))
     table = pa.Table.from_pydict({'col': array})
-    assert T.unique(table, 'col', count=True)[1].to_pylist() == [2, 3, 1]
+    assert T.unique(table, 'col', counts=True)[1].to_pylist() == [2, 3, 1]
     groups, counts = T.group(table, 'col')
     assert groups['col'].to_pylist() == list('abc')
     assert counts.to_pylist() == [2, 3, 1]
@@ -186,11 +186,11 @@ def test_unique(table):
     assert zipcodes[-1] == 988
     indices, _ = C.unique_indices(pa.array([1, None, 1]))
     assert indices.to_pylist() == [0, 1]
-    tbl, counts = T.unique(table, 'state', 'county', 'city', reverse=True, count=True)
+    tbl, counts = T.unique(table, 'state', 'county', 'city', reverse=True, counts=True)
     assert len(tbl) == 29865
     assert tbl['zipcode'][0].as_py() == 99950
     assert counts[0].as_py() == 2
-    tbl, counts = T.unique(table, 'state', length=3, count=True)
+    tbl, counts = T.unique(table, 'state', length=3, counts=True)
     assert tbl['state'].to_pylist() == ['NY', 'PR', 'MA']
     assert counts.to_pylist() == [2205, 176, 703]
 
@@ -238,3 +238,5 @@ def test_not_implemented():
         dictionary.index('')
     with pytest.raises(NotImplementedError):
         pc.min_max(dictionary)
+    with pytest.raises(NotImplementedError):
+        pc.count_distinct(dictionary)

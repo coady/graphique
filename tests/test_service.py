@@ -359,7 +359,7 @@ def test_group(client):
     data = client.execute(
         '''{ group(by: ["state"]) { length tables { length
         columns { state { values } county { min max } } }
-        aggregate(count: {name: "county", alias: "c"}) {
+        aggregate(valueLengths: {name: "county", alias: "c"}) {
         column(name: "c") { ... on LongColumn { values } } } } }'''
     )
     assert len(data['group']['tables']) == data['group']['length'] == 52
@@ -376,7 +376,7 @@ def test_group(client):
     assert data['group']['aggregate']['f']['values'] == ['Meyers Chuck', 'Ketchikan', 'Sitka']
     assert data['group']['aggregate']['l']['values'] == ['Point Baker', 'Ketchikan', 'Sitka']
     data = client.execute(
-        '''{ group(by: ["state", "county"], reverse: true, count: "counts") {
+        '''{ group(by: ["state", "county"], reverse: true, counts: "counts") {
         filter(on: {int: {name: "counts", greaterEqual: 200}}) {
         aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
         min: column(name: "min") { ... on StringColumn { values } }
@@ -386,7 +386,7 @@ def test_group(client):
     assert agg['min']['values'] == ['Acton', 'Alief', 'Alsip', 'Naval Anacost Annex']
     assert agg['max']['values'] == ['Woodland Hills', 'Webster', 'Worth', 'Washington Navy Yard']
     data = client.execute(
-        '''{ group(by: ["state", "county"], count: "c") {
+        '''{ group(by: ["state", "county"], counts: "c") {
         sort(by: ["c"], reverse: true, length: 4) {
         aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
         columns { latitude { values } longitude { values } }
@@ -467,7 +467,7 @@ def test_partition(client):
     assert len(counts) == 66
     assert counts.count(0) == 61
     data = client.execute(
-        '''{ partition(by: ["state"], count: "c") {
+        '''{ partition(by: ["state"], counts: "c") {
         filter(on: {string: {name: "state", equal: "NY"}}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }'''
     )

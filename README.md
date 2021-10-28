@@ -92,6 +92,7 @@ dev
 * Pyarrow >=6 required
 * Group by optimized and replaced `unique` field
 * Dictionary related optimizations
+* Null consistency with arrow `count` functions
 
 0.5
 

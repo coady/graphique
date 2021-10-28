@@ -72,11 +72,11 @@ class Column:
     def count(self, **query) -> Long:
         """Return number of matching values.
 
-        Optimized for `null`, and empty queries will attempt boolean conversion.
+        Optimized for `null`, and an empty query is equivalent to not `null`.
         """
         if query == {'equal': None}:
             return self.array.null_count
-        if query == {'not_equal': None}:
+        if query in ({}, {'not_equal': None}):
             return len(self.array) - self.array.null_count
         return C.count(C.mask(self.array, **query), True)
 
@@ -529,6 +529,8 @@ class ListColumn(Column):
     __init__ = Column.__init__  # type: ignore
     aggregates = (
         'count',
+        'count_distinct',
+        'value_lengths',
         'unique',
         'first',
         'last',
@@ -563,8 +565,18 @@ class ListColumn(Column):
 
     @doc_field
     def count(self) -> LongColumn:
-        """number of values of each list scalar"""
-        return LongColumn(self.map(operator.methodcaller('value_lengths')).array)
+        """non-null count of each list scalar"""
+        return LongColumn(self.map(ListChunk.count).array)
+
+    @doc_field
+    def count_distinct(self) -> LongColumn:
+        """non-null distinct count of each list scalar"""
+        return LongColumn(self.map(ListChunk.count_distinct).array)
+
+    @doc_field
+    def value_lengths(self) -> LongColumn:
+        """length of each list scalar"""
+        return LongColumn(self.map(ListChunk.value_lengths).array)
 
     @doc_field
     def flatten(self) -> Column:

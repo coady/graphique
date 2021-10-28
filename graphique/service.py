@@ -95,7 +95,7 @@ class Table(AbstractTable):
         by="column names",
         reverse="return groups in reversed stable order",
         length="maximum number of groups to return",
-        count="optionally include counts in an aliased column",
+        counts="optionally include counts in an aliased column",
     )
     def group(
         self,
@@ -103,7 +103,7 @@ class Table(AbstractTable):
         by: List[str],
         reverse: bool = False,
         length: Optional[Long] = None,
-        count: str = '',
+        counts: str = '',
     ) -> 'Table':
         """Return table grouped by columns, with stable ordering.
 
@@ -114,18 +114,18 @@ class Table(AbstractTable):
         if selections(*info.selected_fields) == {'length'}:  # optimized for count
             return Table(T.encode(table, *by).unique()[:length])
         if set(table.column_names) <= set(by):
-            table, counts = T.unique(table, *by, reverse=reverse, length=length, count=bool(count))
+            table, counts_ = T.unique(table, *by, reverse=reverse, length=length, counts=counts)
         else:
-            table, counts = T.group(table, *by, reverse=reverse, length=length)
-        return Table(table.append_column(count, counts) if count else table)
+            table, counts_ = T.group(table, *by, reverse=reverse, length=length)
+        return Table(table.append_column(counts, counts_) if counts else table)
 
     @doc_field(
         by="column names",
         diffs="optional inequality predicates; scalars are compared to the adjacent difference",
-        count="optionally include counts in an aliased column",
+        counts="optionally include counts in an aliased column",
     )
     @no_type_check
-    def partition(self, info, by: List[str], diffs: List[Diff] = [], count: str = '') -> 'Table':
+    def partition(self, info, by: List[str], diffs: List[Diff] = [], counts: str = '') -> 'Table':
         """Return table partitioned by discrete differences of the values.
 
         Differs from `group` by relying on adjacency, and is typically faster.
@@ -143,8 +143,8 @@ class Table(AbstractTable):
                 if pa.types.is_timestamp(C.scalar_type(table[name])):
                     value = timedelta(seconds=value)
                 predicates[name] += (value,)
-        table, counts = T.partition(table, *names, **predicates)
-        return Table(table.append_column(count, counts) if count else table)
+        table, counts_ = T.partition(table, *names, **predicates)
+        return Table(table.append_column(counts, counts_) if counts else table)
 
     @doc_field(
         by="column names",
