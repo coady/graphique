@@ -64,7 +64,7 @@ Arrow has dictionary-encoded arrays as a space optimization, but doesn't nativel
 Arrow supports conceptually contiguous arrays in chunks, typically as a result of separate parquet files. Operations are parallelized across chunks when possible. However, grouping and sorting may be memory intensive as they inherently have to combine chunks.
 
 ## Nulls
-GraphQL continues the long tradition of confusing "optional" with "nullable". Graphique strives to be explicit regarding what may be omitted versus what may be null.
+GraphQL continues the long tradition of confusing ["optional" with "nullable"](https://github.com/graphql/graphql-spec/issues/872). Graphique strives to be explicit regarding what may be omitted versus what may be null.
 
 ### Output
 Arrow has first-class support for nulls, so array scalars are nullable. Non-null scalars are used where relevant.

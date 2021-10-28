@@ -87,7 +87,7 @@ Specifying an `INDEX` with `COLUMNS` indicates the table is sorted, and enables 
 ```
 
 ## Changes
-dev
+0.6
 
 * Pyarrow >=6 required
 * Group by optimized and replaced `unique` field
