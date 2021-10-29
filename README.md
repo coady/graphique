@@ -23,14 +23,13 @@ Open http://localhost:8000/graphql to try out the API in [GraphiQL](https://gith
 outputs the graphql schema for a parquet data set.
 
 ### Configuration
-Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to [ParquetDataset](https://arrow.apache.org/docs/python/parquet.html#reading-from-partitioned-datasets).
+Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to [parquet dataset](https://arrow.apache.org/docs/python/dataset.html).
 
 * COLUMNS = []: names of columns to read at startup; `*` indicates all
 * DEBUG = False: run service in debug mode, which includes timing
-* DICTIONARIES = None: names of columns to read as dictionaries
-* FILTERS = None: predicates for which rows to read
+* DICTIONARIES = []: names of columns to read as dictionaries
+* FILTERS = {}: `Query` predicates for which rows to read at startup
 * INDEX = []: names of columns which are represent a sorted composite index or partition keys
-* MMAP = False: use a memory map to read the files
 * PARQUET_PATH: path to the parquet directory or file
 
 ### API
@@ -64,9 +63,9 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 ### Performance
 Graphique relies on native [pyarrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), with zero-copy views. Graphique also has custom optimizations for grouping, dictionary-encoded arrays, and chunked arrays.
 
-By default, datasets are read on-demand, with only the necessary columns selected. Additionally `filter(query: ...)` is optimized to filter rows while reading the dataset. Although graphique is a running service, [parquet is performant](https://duckdb.org/2021/06/25/querying-parquet.html) at reading a subset of data. Optionally specify `COLUMNS` to read a subset of columns (or `*`) at startup, trading-off memory for latency.
+By default, datasets are read on-demand, with only the necessary columns selected. Additionally `filter(query: ...)` is optimized to filter rows while reading the dataset. Although graphique is a running service, [parquet is performant](https://duckdb.org/2021/06/25/querying-parquet.html) at reading a subset of data. Optionally specify `COLUMNS` to read a subset of columns (or `*`) at startup, trading-off memory for latency. Similarly specify `FILTERS` in the json format of the `Query` input type to read a subset of rows at startup.
 
-Specifying an `INDEX` with `COLUMNS` indicates the table is sorted, and enables the binary `search` field. Specifying just `INDEX` is allowed but only recommended if it corresponds to the partition keys; `search(...)` is functionally equivalent to `filter(query: ...)` without `COLUMNS`.
+Specifying an `INDEX` indicates the table is sorted, and enables the binary `search` field. Specifying just `INDEX` without reading (`FILTERS` or `COLUMNS`) is allowed but only recommended if it corresponds to the partition keys. In that case, `search(...)` is functionally equivalent to `filter(query: ...)`.
 
 ## Installation
 ```console
@@ -87,6 +86,10 @@ Specifying an `INDEX` with `COLUMNS` indicates the table is sorted, and enables 
 ```
 
 ## Changes
+dev
+
+* `FILTERS` use query syntax and trigger reading the dataset
+
 0.6
 
 * Pyarrow >=6 required

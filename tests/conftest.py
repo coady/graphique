@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from pathlib import Path
@@ -44,7 +45,8 @@ def table():
 
 @pytest.fixture(scope='module')
 def client():
-    app = load('zipcodes.parquet', INDEX='zipcode', COLUMNS='*', FILTERS='[["zipcode", ">", 0]]')
+    filters = json.dumps({'zipcode': {'greater': 0}})
+    app = load('zipcodes.parquet', INDEX='zipcode', COLUMNS='*', FILTERS=filters)
     return TestClient(app)
 
 

@@ -1,17 +1,34 @@
 """
 Service related utilities which don't require knowledge of the schema.
 """
+import functools
 import itertools
+import operator
 from datetime import datetime
-from typing import Iterable, Iterator, Mapping, Union
+from typing import Iterable, Iterator, Mapping, Optional, Union
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
 from .inputs import Projections
 from .models import Column, doc_field
 from .scalars import Long, scalar_map
+
+comparisons = {
+    'equal': operator.eq,
+    'not_equal': operator.ne,
+    'less': operator.lt,
+    'less_equal': operator.le,
+    'greater': operator.gt,
+    'greater_equal': operator.ge,
+    'is_in': ds.Expression.isin,
+}
+nulls = {
+    'equal': ds.Expression.is_null,
+    'not_equal': ds.Expression.is_valid,
+}
 
 
 def references(field) -> Iterator:
@@ -27,6 +44,18 @@ def references(field) -> Iterator:
     else:
         for name in ('name', 'arguments', 'selections'):
             yield from references(getattr(field, name, []))
+
+
+def filter_expression(**queries: dict) -> Optional[ds.Expression]:
+    """Translate query format `field={predicate: value}` into dataset filter expression."""
+    exprs: list = []
+    for name, query in queries.items():
+        field = ds.field(name)
+        exprs += (
+            nulls[predicate](field) if value is None else comparisons[predicate](field, value)
+            for predicate, value in query.items()
+        )
+    return functools.reduce(operator.and_, exprs) if exprs else None
 
 
 class TimingExtension(strawberry.extensions.Extension):  # pragma: no cover
@@ -62,18 +91,21 @@ class AbstractTable:
     def case_map(self):
         return {to_camel_case(name): name for name in self.table.schema.names}
 
-    def select(self, info) -> pa.Table:
-        """Return table with only the columns necessary to proceed."""
+    def select(self, info, queries: dict = {}) -> pa.Table:
+        """Return table with only the rows and columns necessary to proceed."""
         case_map = self.case_map
         names = set(itertools.chain(*map(references, info.selected_fields))) & set(case_map)
         if isinstance(self.table, pa.Table):
             return self.table.select(names)
-        return self.table.read(list(map(case_map.get, names))).rename_columns(names)
+        columns = {name: ds.field(case_map[name]) for name in names}
+        return self.table.to_table(columns=columns, filter=filter_expression(**queries))
 
     @doc_field
     def length(self) -> Long:
         """number of rows"""
-        return len(self.table if hasattr(self.table, '__len__') else self.table.read([]))
+        if hasattr(self.table, '__len__'):
+            return len(self.table)
+        return len(self.table.to_table(columns=[]))
 
     @doc_field(
         cast="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",

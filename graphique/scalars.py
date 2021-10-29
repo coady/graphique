@@ -57,16 +57,6 @@ type_map = {
     pa.lib.Type_STRUCT: dict,
 }
 
-comparisons = {
-    'equal': '==',
-    'not_equal': '!=',
-    'less': '<',
-    'less_equal': '<=',
-    'greater': '>',
-    'greater_equal': '>=',
-    'is_in': 'in',
-}
-
 
 @strawberry.enum(description="boolean operator to combine predicates")
 class Operator(enum.Enum):

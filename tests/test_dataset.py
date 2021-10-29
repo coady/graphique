@@ -9,6 +9,8 @@ def test_filter(dsclient):
     assert data == {'filter': {'length': 39053}}
     data = dsclient.execute('{ filter { length } }')
     assert data == {'filter': {'length': 41700}}
+    data = dsclient.execute('{ filter(query: {state: {notEqual: null}}) { length } }')
+    assert data == {'filter': {'length': 41700}}
 
 
 def test_search(dsclient):

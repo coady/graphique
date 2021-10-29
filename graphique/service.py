@@ -7,18 +7,19 @@ from datetime import timedelta
 from typing import List, Optional, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
-import pyarrow.parquet as pq
+import pyarrow.dataset as ds
 import strawberry
 from strawberry.arguments import UNSET
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
 from .inputs import Diff, Filters, Function, Input, Query as QueryInput
-from .middleware import AbstractTable, GraphQL
+from .middleware import AbstractTable, GraphQL, filter_expression
 from .models import Column, ListColumn, doc_field, selections
-from .scalars import Long, Operator, comparisons, type_map
-from .settings import COLUMNS, DATASET, DEBUG, INDEX
+from .scalars import Long, Operator, type_map
+from .settings import COLUMNS, DEBUG, FILTERS, DICTIONARIES, INDEX, PARQUET_PATH
 
-table = dataset = pq.ParquetDataset(**DATASET)
+format = ds.ParquetFileFormat(read_options={'dictionary_columns': DICTIONARIES})
+table = dataset = ds.dataset(PARQUET_PATH, format=format, partitioning=INDEX)
 indexed = list(map(to_camel_case, INDEX))
 types = {to_camel_case(field.name): type_map[C.scalar_type(field).id] for field in dataset.schema}
 
@@ -48,16 +49,6 @@ class Queries(Input):
 @strawberry.type(description="a column-oriented table")
 class Table(AbstractTable):
     __init__ = AbstractTable.__init__
-
-    def read(self, query: Queries) -> 'Table':
-        """Return table by translating the query into a dataset filter."""
-        filters, case_map = [], self.case_map
-        for name, value in dict(query).items():
-            filters += [(case_map[name], comparisons[op], value[op]) for op in value]
-        if not filters:
-            return self
-        filters += DATASET['filters'] or []
-        return type(self)(pq.ParquetDataset(**dict(DATASET, filters=filters)))
 
     @doc_field
     def columns(self, info) -> Columns:
@@ -190,8 +181,9 @@ class Table(AbstractTable):
         List columns apply their respective filters to their own scalar values.
         """
         if not isinstance(self.table, pa.Table) and not invert and reduce.value == 'and':
-            query, self = {}, self.read(query)
-        table = self.select(info)
+            query, table = {}, self.select(info, dict(query))
+        else:
+            table = self.select(info)
         filters = list(dict(query).items())
         for value in map(dict, itertools.chain(*dict(on).values())):
             filters.append((value.pop('name'), value))
@@ -270,16 +262,17 @@ class IndexedTable(Table):
         Queries must be a prefix of the `index`.
         Only one inequality query is allowed, and must be last.
         """
-        if not isinstance(self.table, pa.Table):
-            queries, self = {}, self.read(Queries(**queries))  # type: ignore
-        table = self.select(info)
         for name in queries:
             if queries[name] is None:
                 raise TypeError(f"`{name}` is optional, not nullable")
+        queries = {name: dict(queries[name]) for name in queries}
+        table = self.select(info, queries)
+        if not isinstance(self.table, pa.Table):
+            return Table(table)
         for name in self.index:
             if name not in queries:
                 break
-            query = dict(queries.pop(name))
+            query = queries.pop(name)
             if 'equal' in query:
                 table = T.is_in(table, name, query.pop('equal'))
             if query and queries:
@@ -301,9 +294,10 @@ class IndexedTable(Table):
         return Table(table)
 
 
-if COLUMNS:
-    table = dataset.read(None if '*' in COLUMNS else list(COLUMNS))
-    table = table.rename_columns(map(to_camel_case, table.schema.names))
+if COLUMNS or FILTERS:
+    names = dataset.schema.names if ('*' in COLUMNS or not COLUMNS) else COLUMNS
+    columns = {to_camel_case(name): ds.field(name) for name in names}
+    table = dataset.to_table(columns=columns, filter=filter_expression(**FILTERS))
     for name in indexed:
         assert not table[name].null_count, f"binary search requires non-null columns: {name}"
 Query = IndexedTable if indexed else Table
