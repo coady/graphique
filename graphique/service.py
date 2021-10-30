@@ -19,7 +19,7 @@ from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, FILTERS, DICTIONARIES, INDEX, PARQUET_PATH
 
 format = ds.ParquetFileFormat(read_options={'dictionary_columns': DICTIONARIES})
-table = dataset = ds.dataset(PARQUET_PATH, format=format, partitioning=INDEX)
+table = dataset = ds.dataset(PARQUET_PATH, format=format, partitioning='hive')
 indexed = list(map(to_camel_case, INDEX))
 types = {to_camel_case(field.name): type_map[C.scalar_type(field).id] for field in dataset.schema}
 
@@ -180,8 +180,8 @@ class Table(AbstractTable):
 
         List columns apply their respective filters to their own scalar values.
         """
-        if not isinstance(self.table, pa.Table) and not invert and reduce.value == 'and':
-            query, table = {}, self.select(info, dict(query))
+        if not isinstance(self.table, pa.Table) and reduce.value in ('and', 'or'):
+            query, table = {}, self.select(info, dict(query), invert=invert, reduce=reduce.value)
         else:
             table = self.select(info)
         filters = list(dict(query).items())
@@ -297,7 +297,7 @@ class IndexedTable(Table):
 if COLUMNS or FILTERS:
     names = dataset.schema.names if ('*' in COLUMNS or not COLUMNS) else COLUMNS
     columns = {to_camel_case(name): ds.field(name) for name in names}
-    table = dataset.to_table(columns=columns, filter=filter_expression(**FILTERS))
+    table = dataset.to_table(columns=columns, filter=filter_expression(FILTERS))
     for name in indexed:
         assert not table[name].null_count, f"binary search requires non-null columns: {name}"
 Query = IndexedTable if indexed else Table

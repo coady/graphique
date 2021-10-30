@@ -46,16 +46,23 @@ def references(field) -> Iterator:
             yield from references(getattr(field, name, []))
 
 
-def filter_expression(**queries: dict) -> Optional[ds.Expression]:
+def filter_expression(
+    queries: dict, invert: bool = False, reduce: str = 'and'
+) -> Optional[ds.Expression]:
     """Translate query format `field={predicate: value}` into dataset filter expression."""
     exprs: list = []
     for name, query in queries.items():
         field = ds.field(name)
-        exprs += (
+        group = [
             nulls[predicate](field) if value is None else comparisons[predicate](field, value)
             for predicate, value in query.items()
-        )
-    return functools.reduce(operator.and_, exprs) if exprs else None
+        ]
+        if group:
+            exprs.append(functools.reduce(operator.and_, group))
+    if not exprs:
+        return None
+    expr = functools.reduce(getattr(operator, f'{reduce}_'), exprs)
+    return ~expr if invert else expr
 
 
 class TimingExtension(strawberry.extensions.Extension):  # pragma: no cover
@@ -91,14 +98,17 @@ class AbstractTable:
     def case_map(self):
         return {to_camel_case(name): name for name in self.table.schema.names}
 
-    def select(self, info, queries: dict = {}) -> pa.Table:
+    def select(
+        self, info, queries: dict = {}, invert: bool = False, reduce: str = 'and'
+    ) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
         case_map = self.case_map
         names = set(itertools.chain(*map(references, info.selected_fields))) & set(case_map)
         if isinstance(self.table, pa.Table):
             return self.table.select(names)
         columns = {name: ds.field(case_map[name]) for name in names}
-        return self.table.to_table(columns=columns, filter=filter_expression(**queries))
+        expr = filter_expression(queries, invert=invert, reduce=reduce)
+        return self.table.to_table(columns=columns, filter=expr)
 
     @doc_field
     def length(self) -> Long:

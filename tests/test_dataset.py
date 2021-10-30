@@ -11,8 +11,17 @@ def test_filter(dsclient):
     assert data == {'filter': {'length': 41700}}
     data = dsclient.execute('{ filter(query: {state: {notEqual: null}}) { length } }')
     assert data == {'filter': {'length': 41700}}
+    data = dsclient.execute('{ filter(query: {state: {equal: "CA"}}, invert: true) { length } }')
+    assert data == {'filter': {'length': 39053}}
+    data = dsclient.execute(
+        '''{ filter(query: {state: {equal: "CA"}, county: {equal: "Santa Clara"}}, reduce: OR)
+        { length } }'''
+    )
+    assert data == {'filter': {'length': 2647}}
 
 
 def test_search(dsclient):
     data = dsclient.execute('{ search(zipcode: {less: 10000}) { length } }')
     assert data == {'search': {'length': 3224}}
+    data = dsclient.execute('{ search(zipcode: {}) { length } }')
+    assert data == {'search': {'length': 41700}}
