@@ -196,16 +196,13 @@ class Column(pa.ChunkedArray):
         dictionary, indices = Column.dict_flatten(self)
         return Column.fill_null(indices, len(dictionary))
 
-    def unique_indices(self, reverse=False, counts=False) -> tuple:
-        """Return index array of first or last occurrences, optionally with counts.
+    def unique_indices(self, counts=False) -> tuple:
+        """Return index array of first occurrences, optionally with counts.
 
         Relies on `unique` having stable ordering.
         """
-        if reverse:
-            self = self[::-1]
         values, counts = self.value_counts().flatten() if counts else (self.unique(), None)
-        indices = pc.index_in(values, value_set=self)
-        return (pc.subtract(len(self) - 1, indices) if reverse else indices), counts
+        return pc.index_in(values, value_set=self), counts
 
     def combine_chunks(self) -> pa.Array:
         """Native `combine_chunks` doesn't support empty chunks."""
@@ -464,14 +461,16 @@ class Table(pa.Table):
         return pa.Table.from_pydict(columns), Column.diff(offsets)
 
     def unique(self, *names: str, reverse=False, length: int = None, counts=False) -> tuple:
-        """Return table with first or last occurrences from grouping by columns.
+        """Return table with first occurrences from grouping by columns.
 
         Optionally compute corresponding counts.
         Faster than [group][graphique.core.Table.group] when only scalars are needed.
         """
         column = Table.encode(self, *names) if len(names) > 1 else self.column(*names)
-        indices, counts_ = Column.unique_indices(column, reverse, counts)
-        return self.take(indices[:length]), (counts and counts_[:length])
+        indices, counts = Column.unique_indices(column, counts=counts)
+        if reverse:
+            indices, counts = indices[::-1], (counts and counts[::-1])
+        return self.take(indices[:length]), (counts and counts[:length])
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns, optimized for single column with fixed length."""

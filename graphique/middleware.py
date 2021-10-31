@@ -94,19 +94,16 @@ class AbstractTable:
     def __init__(self, table: Union[pa.Table, pq.ParquetDataset]):
         self.table = table
 
-    @property
-    def case_map(self):
-        return {to_camel_case(name): name for name in self.table.schema.names}
-
     def select(
         self, info, queries: dict = {}, invert: bool = False, reduce: str = 'and'
     ) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
-        case_map = self.case_map
+        case_map = {to_camel_case(name): name for name in self.table.schema.names}
         names = set(itertools.chain(*map(references, info.selected_fields))) & set(case_map)
         if isinstance(self.table, pa.Table):
             return self.table.select(names)
         columns = {name: ds.field(case_map[name]) for name in names}
+        queries = {case_map[name]: queries[name] for name in queries}
         expr = filter_expression(queries, invert=invert, reduce=reduce)
         return self.table.to_table(columns=columns, filter=expr)
 

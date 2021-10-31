@@ -135,14 +135,10 @@ class Column:
 @strawberry.interface(description="unique values")
 class Set:
     length = doc_field(Column.length)
+    counts: List[Long] = strawberry.field(description="list of counts")
 
-    def __init__(self, array, count=pa.array([])):
-        self.array, self.count = array, count
-
-    @doc_field
-    def counts(self) -> List[Long]:
-        """list of counts"""
-        return self.count.to_pylist()
+    def __init__(self, array, counts=pa.array([])):
+        self.array, self.counts = array, counts.to_pylist()
 
     @classmethod
     def subclass(base, cls, name, description):

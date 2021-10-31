@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import time
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -6,16 +6,11 @@ import pytest
 from graphique.core import ListChunk, Column as C, Table as T
 
 
-def eq(left, right):
-    return left == right and type(left) is type(right)
-
-
 def test_dictionary(table):
     array = table['state'].dictionary_encode()
     assert C.min(array) == 'AK'
     assert C.max(array) == 'WY'
-    assert C.min(array[:0]) is None
-    assert C.max(array[:0]) is None
+    assert C.min_max(array[:0]) == {'min': None, 'max': None}
     assert sum(C.mask(array, match_substring="CA").to_pylist()) == 2647
     assert sum(C.call(array, pc.match_substring, "ca", ignore_case=True).to_pylist()) == 2647
     assert sum(C.mask(array, match_substring='CA', regex=True).to_pylist()) == 2647
@@ -50,7 +45,7 @@ def test_chunks():
     assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
     assert ''.join(T.unique(table, 'col')[0]['col'].to_pylist()) == 'abc'
     table = pa.Table.from_pydict({'col': array.dictionary_encode()})
-    assert ''.join(T.unique(table, 'col', reverse=True)[0]['col'].to_pylist()) == 'bca'
+    assert ''.join(T.unique(table, 'col', reverse=True)[0]['col'].to_pylist()) == 'cba'
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(T.unique(table, 'col')[0]) == 3
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
@@ -89,19 +84,6 @@ def test_lists():
     array = pa.array([["a", "b"], [None]])
     assert ListChunk.min(array).to_pylist() == ["a", None]
     assert ListChunk.max(array).to_pylist() == ["b", None]
-
-
-def test_reduce():
-    array = pa.chunked_array([[0, 1], [2, 3]])
-    assert eq(C.min(array), 0)
-    assert eq(C.max(array), 3)
-    array = pa.chunked_array([[None, 1]])
-    assert eq(C.min(array), 1)
-    assert eq(C.max(array), 1)
-    array = pa.chunked_array([[0, 3, 0]])
-    array = pa.chunked_array([[date.today(), None]])
-    assert C.min(array) == C.max(array[:1])
-    assert C.min(array[1:]) is C.max(array[1:]) is None
 
 
 def test_membership():
@@ -182,14 +164,14 @@ def test_unique(table):
     assert zipcodes[-1] == 99501
     zipcodes = T.unique(table, 'state', reverse=True)[0]['zipcode'].to_pylist()
     assert len(zipcodes) == 52
-    assert zipcodes[0] == 99950
-    assert zipcodes[-1] == 988
+    assert zipcodes[0] == 99501
+    assert zipcodes[-1] == 501
     indices, _ = C.unique_indices(pa.array([1, None, 1]))
     assert indices.to_pylist() == [0, 1]
     tbl, counts = T.unique(table, 'state', 'county', 'city', reverse=True, counts=True)
     assert len(tbl) == 29865
-    assert tbl['zipcode'][0].as_py() == 99950
-    assert counts[0].as_py() == 2
+    assert tbl['zipcode'][0].as_py() == 99929
+    assert counts[0].as_py() == 1
     tbl, counts = T.unique(table, 'state', length=3, counts=True)
     assert tbl['state'].to_pylist() == ['NY', 'PR', 'MA']
     assert counts.to_pylist() == [2205, 176, 703]
