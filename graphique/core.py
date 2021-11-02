@@ -64,7 +64,7 @@ class ListChunk(pa.lib.BaseListArray):
     def count_distinct(self) -> pa.IntegerArray:
         """non-null distinct count of each list scalar"""
         if pa.types.is_dictionary(self.values.type):
-            self = pa.LargeListArray.from_arrays(self.offsets, self.values.indices)
+            self = type(self).from_arrays(self.offsets, self.values.indices)
         return ListChunk.reduce(self, pc.count_distinct, 'int64')
 
     def value_lengths(self) -> pa.IntegerArray:
@@ -174,14 +174,11 @@ class Column(pa.ChunkedArray):
         return self.cast(self.type.value_type) if pa.types.is_dictionary(self.type) else self
 
     def unify_dictionaries(self) -> pa.ChunkedArray:
-        """Native `unify_dictionaries` is inefficient if the dictionary is too large or unified."""
+        """Native `unify_dictionaries` is inefficient if the dictionary is too large."""
         if not pa.types.is_dictionary(self.type):
             return self
         if not self or len(self) <= max(len(chunk.dictionary) for chunk in self.iterchunks()):
             return self.cast(self.type.value_type)
-        dictionary = self.chunk(0).dictionary
-        if all(chunk.dictionary == dictionary for chunk in self.iterchunks()):
-            return self
         return self.unify_dictionaries()
 
     def dict_flatten(self):
@@ -234,12 +231,11 @@ class Column(pa.ChunkedArray):
         """Call compute function on array with support for dictionaries."""
         scalar = Column.scalar_type(self)
         args = tuple(pa.scalar(arg, scalar) if isinstance(arg, time) else arg for arg in args)
-        self = Column.unify_dictionaries(self)
-        try:
+        with contextlib.suppress(NotImplementedError):
             return func(self, *args, **kwargs)
-        except NotImplementedError:
-            if not pa.types.is_dictionary(self.type):
-                raise
+        self = Column.unify_dictionaries(self)
+        if not pa.types.is_dictionary(self.type):
+            return func(self, *args, **kwargs)
         dictionary, indices = Column.dict_flatten(self)
         return func(dictionary, *args, **kwargs).take(indices)
 
