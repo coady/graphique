@@ -16,7 +16,7 @@ from .inputs import Diff, Filters, Function, Input, Query as QueryInput
 from .middleware import AbstractTable, GraphQL, filter_expression
 from .models import Column, ListColumn, doc_field, selections
 from .scalars import Long, Operator, type_map
-from .settings import COLUMNS, DEBUG, FILTERS, DICTIONARIES, INDEX, PARQUET_PATH
+from .settings import COLUMNS, DEBUG, DICTIONARIES, FEDERATED, FILTERS, INDEX, PARQUET_PATH
 
 format = ds.ParquetFileFormat(read_options={'dictionary_columns': DICTIONARIES})
 table = dataset = ds.dataset(PARQUET_PATH, format=format, partitioning='hive')
@@ -295,10 +295,10 @@ class IndexedTable(Table):
 
 
 if COLUMNS or FILTERS:
-    names = dataset.schema.names if ('*' in COLUMNS or not COLUMNS) else COLUMNS
+    names = dataset.schema.names if ''.join(COLUMNS) in '*' else COLUMNS
     columns = {to_camel_case(name): ds.field(name) for name in names}
     table = dataset.to_table(columns=columns, filter=filter_expression(FILTERS))
     for name in indexed:
         assert not table[name].null_count, f"binary search requires non-null columns: {name}"
 Query = IndexedTable if indexed else Table
-app = GraphQL(Query(table), debug=DEBUG)
+app = GraphQL(Query(table), debug=DEBUG, federated=FEDERATED)

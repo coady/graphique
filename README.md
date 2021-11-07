@@ -25,12 +25,13 @@ outputs the graphql schema for a parquet data set.
 ### Configuration
 Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to [parquet dataset](https://arrow.apache.org/docs/python/dataset.html).
 
-* COLUMNS = []: names of columns to read at startup; `*` indicates all
+* PARQUET_PATH: path to the parquet directory or file
+* INDEX = []: partition keys or names of columns which represent a sorted composite index 
+* FEDERATED = '': field name to extend type `Query` with a federated `Table` 
 * DEBUG = False: run service in debug mode, which includes timing
 * DICTIONARIES = []: names of columns to read as dictionaries
-* FILTERS = {}: `Query` predicates for which rows to read at startup
-* INDEX = []: names of columns which are represent a sorted composite index or partition keys
-* PARQUET_PATH: path to the parquet directory or file
+* COLUMNS = []: names of columns to read at startup; `*` indicates all
+* FILTERS = {}: json `Queries` for which rows to read at startup
 
 ### API
 #### types

@@ -25,3 +25,9 @@ def test_search(dsclient):
     assert data == {'search': {'length': 3224}}
     data = dsclient.execute('{ search(zipcode: {}) { length } }')
     assert data == {'search': {'length': 41700}}
+
+
+def test_federation(fedclient):
+    data = fedclient.execute('{ _service { sdl } aTable { length } }')
+    assert data['aTable']['length'] == 2
+    assert data['_service']['sdl']

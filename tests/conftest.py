@@ -3,11 +3,9 @@ import os
 import sys
 from pathlib import Path
 import pyarrow as pa
-import pyarrow.parquet as pq
-import strawberry
+import pyarrow.dataset as ds
 import pytest
 from starlette import testclient
-from graphique.scalars import scalar_map
 
 fixtures = Path(__file__).parent / 'fixtures'
 
@@ -27,8 +25,7 @@ class TestClient(testclient.TestClient):
 
 
 def load(path, **vars):
-    os.environ['PARQUET_PATH'] = str(fixtures / path)
-    os.environ.update(vars)
+    os.environ.update(vars, PARQUET_PATH=str(fixtures / path))
     sys.modules.pop('graphique.service', None)
     sys.modules.pop('graphique.settings', None)
     from graphique.service import app
@@ -40,7 +37,7 @@ def load(path, **vars):
 
 @pytest.fixture(scope='module')
 def table():
-    return pq.read_table(fixtures / 'zipcodes.parquet')
+    return ds.dataset(fixtures / 'zipcodes.parquet').to_table()
 
 
 @pytest.fixture(scope='module')
@@ -57,12 +54,17 @@ def dsclient(request):
 
 
 @pytest.fixture(scope='module')
+def fedclient(request):
+    app = load('alltypes.parquet', FEDERATED='a_table')
+    return TestClient(app)
+
+
+@pytest.fixture(scope='module')
 def executor():
     app = load('alltypes.parquet', INDEX='snake_id,camelId', COLUMNS='*', DICTIONARIES='string')
-    schema = strawberry.Schema(query=type(app.root_value), scalar_overrides=scalar_map)
 
     def execute(query):
-        result = schema.execute_sync(query, root_value=app.root_value)
+        result = app.schema.execute_sync(query, root_value=app.root_value)
         for error in result.errors or ():
             raise ValueError(error)
         return result.data

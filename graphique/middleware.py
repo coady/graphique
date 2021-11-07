@@ -9,7 +9,6 @@ from typing import Iterable, Iterator, Mapping, Optional, Union
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
-import pyarrow.parquet as pq
 import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
 from .inputs import Projections
@@ -75,8 +74,13 @@ class TimingExtension(strawberry.extensions.Extension):  # pragma: no cover
 
 
 class GraphQL(strawberry.asgi.GraphQL):
-    def __init__(self, root_value, debug=False, **kwargs):
-        schema = strawberry.Schema(
+    def __init__(self, root_value, debug=False, federated='', **kwargs):
+        Schema = strawberry.Schema
+        if federated:
+            Schema = strawberry.federation.Schema
+            Query = type('Query', (), {'__annotations__': {federated: type(root_value)}})
+            root_value = strawberry.type(Query)(root_value)
+        schema = Schema(
             type(root_value),
             types=Column.__subclasses__(),
             extensions=[TimingExtension] * bool(debug),
@@ -91,7 +95,7 @@ class GraphQL(strawberry.asgi.GraphQL):
 
 @strawberry.interface
 class AbstractTable:
-    def __init__(self, table: Union[pa.Table, pq.ParquetDataset]):
+    def __init__(self, table: Union[pa.Table, ds.dataset]):
         self.table = table
 
     def select(
