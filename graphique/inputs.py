@@ -479,7 +479,6 @@ class TimeFunction(OrdinalFunction):
 @strawberry.input(description="functions for durations")
 class DurationFunction(Function):
     fill_null: Optional[timedelta] = UNSET
-    abs: bool = False
 
 
 @strawberry.input(description="functions for binaries")

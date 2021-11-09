@@ -81,7 +81,8 @@ def test_lists():
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
     assert ListChunk.any(array).to_pylist() == [True, False, None, None, None]
     assert ListChunk.all(array).to_pylist() == [True, False, None, None, None]
-    array = pa.array([["a", "b"], [None]])
+    array = pa.ListArray.from_arrays([0, 2, 3], pa.array(["a", "b", None]).dictionary_encode())
+    assert ListChunk.count_distinct(array).to_pylist() == [2, 0]
     assert ListChunk.min(array).to_pylist() == ["a", None]
     assert ListChunk.max(array).to_pylist() == ["b", None]
 

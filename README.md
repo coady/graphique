@@ -90,6 +90,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 dev
 
 * `FILTERS` use query syntax and trigger reading the dataset
+* `FEDERATED` field configuration
 
 0.6
 

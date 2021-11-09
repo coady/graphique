@@ -96,16 +96,18 @@ class ListChunk(pa.lib.BaseListArray):
         return ListChunk.from_counts(counts, self.values.filter(mask))
 
     def reduce(self, func: Callable, tp=None) -> pa.Array:
-        values = (None if scalar.values is None else func(scalar.values).as_py() for scalar in self)
+        values = (None if scalar.values is None else func(scalar.values) for scalar in self)
+        if hasattr(func, '__arrow_compute_function__'):  # scalars must be converted
+            values = (value and value.as_py() for value in values)
         return pa.array(values, tp or self.type.value_type)
 
     def min(self) -> pa.Array:
         """min value of each list scalar"""
-        return ListChunk.reduce(self, pc.min)
+        return ListChunk.reduce(self, Column.min)
 
     def max(self) -> pa.Array:
         """max value of each list scalar"""
-        return ListChunk.reduce(self, pc.max)
+        return ListChunk.reduce(self, Column.max)
 
     def sum(self) -> pa.Array:
         """sum of each list scalar"""
@@ -144,13 +146,11 @@ class ListChunk(pa.lib.BaseListArray):
 
     def any(self) -> pa.BooleanArray:
         """any true of each list scalar"""
-        values = (None if scalar.values is None else Column.any(scalar.values) for scalar in self)
-        return pa.array(values, 'bool')
+        return ListChunk.reduce(self, Column.any, 'bool')
 
     def all(self) -> pa.BooleanArray:
         """all true of each list scalar"""
-        values = (None if scalar.values is None else Column.all(scalar.values) for scalar in self)
-        return pa.array(values, 'bool')
+        return ListChunk.reduce(self, Column.all, 'bool')
 
 
 class Column(pa.ChunkedArray):
