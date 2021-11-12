@@ -227,9 +227,8 @@ class Table(AbstractTable):
         if not lists:
             raise ValueError(f"no list columns referenced: {table.column_names}")
         scalars = set(table.column_names) - lists
-        # use simplest list column to determine the lengths
-        column = table[min(lists, key=lambda name: table[name].type.value_type.id)]
-        for index, count in enumerate(C.combine_chunks(column).value_lengths().to_pylist()):
+        counts = pc.list_value_length(table[next(iter(lists))])
+        for index, count in enumerate(counts.to_pylist()):
             row = {name: pa.repeat(table[name][index], count) for name in scalars}
             row.update({name: table[name][index].values for name in lists})
             yield Table(pa.Table.from_pydict(row))

@@ -359,7 +359,7 @@ def test_group(client):
     data = client.execute(
         '''{ group(by: ["state"]) { length tables { length
         columns { state { values } county { min max } } }
-        aggregate(valueLengths: {name: "county", alias: "c"}) {
+        aggregate(valueLength: {name: "county", alias: "c"}) {
         column(name: "c") { ... on LongColumn { values } } } } }'''
     )
     assert len(data['group']['tables']) == data['group']['length'] == 52

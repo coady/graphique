@@ -331,7 +331,7 @@ def test_list(executor):
     assert column == {'tdigest': {'flatten': {'values': [0.0, 2.0, None, None]}}}
 
     data = executor(
-        '''{ columns { list { count { values } countDistinct { values } valueLengths { values }
+        '''{ columns { list { count { values } countDistinct { values } valueLength { values }
         first: element { ... on IntColumn { values } }
         last: element(index: -1) { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
@@ -342,7 +342,7 @@ def test_list(executor):
     assert data['columns']['list'] == {
         'count': {'values': [3, None]},
         'countDistinct': {'values': [3, None]},
-        'valueLengths': {'values': [3, None]},
+        'valueLength': {'values': [3, None]},
         'first': {'values': [0, None]},
         'last': {'values': [2, None]},
         'min': {'values': [0, None]},

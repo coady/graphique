@@ -67,9 +67,9 @@ class ListChunk(pa.lib.BaseListArray):
             self = type(self).from_arrays(self.offsets, self.values.indices)
         return ListChunk.reduce(self, pc.count_distinct, 'int64')
 
-    def value_lengths(self) -> pa.IntegerArray:
+    def value_length(self) -> pa.IntegerArray:
         """length of each list scalar"""
-        return self.value_lengths()
+        return pc.list_value_length(self)
 
     def first(self) -> pa.Array:
         """first value of each list scalar"""

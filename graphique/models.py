@@ -1,6 +1,7 @@
 """
 GraphQL output types and resolvers.
 """
+import contextlib
 import functools
 import inspect
 import operator
@@ -537,7 +538,7 @@ class ListColumn(Column):
     aggregates = (
         'count',
         'count_distinct',
-        'value_lengths',
+        'value_length',
         'unique',
         'first',
         'last',
@@ -581,14 +582,14 @@ class ListColumn(Column):
         return LongColumn(self.map(ListChunk.count_distinct).array)
 
     @doc_field
-    def value_lengths(self) -> LongColumn:
+    def value_length(self) -> LongColumn:
         """length of each list scalar"""
-        return LongColumn(self.map(ListChunk.value_lengths).array)
+        return LongColumn(pc.list_value_length(self.array))
 
     @doc_field
     def flatten(self) -> Column:
         """concatenation of all sub-lists"""
-        return self.map(operator.methodcaller('flatten'))
+        return self.cast(pc.list_flatten(self.array))
 
     @doc_field
     def unique(self) -> 'ListColumn':
@@ -598,6 +599,8 @@ class ListColumn(Column):
     @doc_field
     def element(self, index: Long = 0) -> Column:
         """element at index of each list scalar; defaults to null"""
+        with contextlib.suppress(ValueError):
+            return self.cast(pc.list_element(self.array, index))
         return self.map(functools.partial(ListChunk.element, index=index))
 
     @doc_field
