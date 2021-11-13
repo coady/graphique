@@ -349,6 +349,18 @@ def test_sort(client):
     assert data['sort']['columns']['county']['values'] == ['Weston']
     data = client.execute('{ sort(by: ["state"], length: 2) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'] == ['AK', 'AK']
+    data = client.execute(
+        '''{ group(by: ["state"]) { sort(by: ["county"])
+        { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
+    )
+    assert data['group']['sort']['aggregate']['row'] == {'state': 'NY', 'county': 'Albany'}
+    data = client.execute(
+        '''{ group(by: ["state"]) { sort(by: ["county"], reverse: true, length: 1)
+        { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
+    )
+    assert data['group']['sort']['aggregate']['row'] == {'state': 'NY', 'county': 'Yates'}
+    with pytest.raises(ValueError, match="Unsupported"):
+        client.execute('{ group(by: ["state"]) { sort(by: ["state", "county"]) { length } } }')
 
 
 def test_group(client):

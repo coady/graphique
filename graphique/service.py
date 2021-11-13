@@ -145,9 +145,13 @@ class Table(AbstractTable):
     def sort(
         self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
     ) -> 'Table':
-        """Return table slice sorted by specified columns."""
+        """Return table slice sorted by specified columns.
+
+        Sorting on list columns will sort within scalars, all of which must have the same lengths.
+        """
         table = self.select(info)
-        return Table(T.sort(table, *by, reverse=reverse, length=length))
+        func = T.sort_list if all(C.is_list_type(table[name]) for name in by) else T.sort
+        return Table(func(table, *by, reverse=reverse, length=length))
 
     @doc_field(by="column names")
     def min(self, info, by: List[str]) -> 'Table':
@@ -224,11 +228,8 @@ class Table(AbstractTable):
         """
         table = self.select(info)
         lists = {name for name in table.column_names if C.is_list_type(table[name])}
-        if not lists:
-            raise ValueError(f"no list columns referenced: {table.column_names}")
         scalars = set(table.column_names) - lists
-        counts = pc.list_value_length(table[next(iter(lists))])
-        for index, count in enumerate(counts.to_pylist()):
+        for index, count in enumerate(T.list_value_length(table).to_pylist()):
             row = {name: pa.repeat(table[name][index], count) for name in scalars}
             row.update({name: table[name][index].values for name in lists})
             yield Table(pa.Table.from_pydict(row))

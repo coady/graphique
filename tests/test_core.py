@@ -135,6 +135,14 @@ def test_group(table):
     groups, counts = T.group(table, 'state', reverse=True, length=2)
     assert groups['state'].to_pylist() == ['AK', 'WA']
     assert counts.to_pylist() == [273, 732]
+    groups = T.sort_list(groups, 'county')
+    assert groups['county'][0].values[0].as_py() == 'Aleutians East'
+    groups = T.sort_list(groups, 'county', 'city', reverse=True, length=1)
+    assert groups['county'][0].values.to_pylist() == ['Yukon Koyukuk']
+    assert groups['city'][0].values.to_pylist() == ['Venetie']
+    groups = groups.append_column('other', pa.array([[0]] * len(groups)))
+    with pytest.raises(ValueError):
+        T.sort_list(groups, 'county')
 
 
 def test_partition(table):

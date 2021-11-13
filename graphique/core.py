@@ -211,7 +211,7 @@ class Column(pa.ChunkedArray):
         """Return boolean mask array which matches query predicates."""
         masks = []
         if Column.is_list_type(self):
-            self = pa.chunked_array(chunk.values for chunk in self.iterchunks())
+            self = pc.list_flatten(self)
         options = {'ignore_case': True} if ignore_case else {}
         for op, value in query.items():
             if hasattr(Column, op):
@@ -468,8 +468,36 @@ class Table(pa.Table):
             indices, counts = indices[::-1], (counts and counts[::-1])
         return self.take(indices[:length]), (counts and counts[:length])
 
+    def list_value_length(self) -> pa.ChunkedArray:
+        lists = {name for name in self.column_names if Column.is_list_type(self[name])}
+        if not lists:
+            raise ValueError(f"no list columns available: {self.column_names}")
+        counts, *others = (pc.list_value_length(self[name]) for name in lists)
+        if any(counts != other for other in others):
+            raise ValueError(f"list columns have different value lengths: {lists}")
+        return counts
+
+    def sort_list(self, *names: str, reverse=False, length: int = None) -> pa.Table:
+        """Return table with list columns sorted within scalars."""
+        keys = {'': 'ascending'}
+        keys.update(dict.fromkeys(names, 'descending' if reverse else 'ascending'))
+        columns = {name: Column.sort_values(pc.list_flatten(self[name])) for name in names}
+        columns[''] = pc.list_parent_indices(self[names[0]])
+        indices = pc.sort_indices(pa.Table.from_pydict(columns), sort_keys=keys.items())
+        counts = Table.list_value_length(self)
+        if length is not None:
+            indices = pa.concat_arrays(
+                scalar.values[:length] for scalar in ListChunk.from_counts(counts, indices)
+            )
+            counts = pc.min_element_wise(counts, length)
+        for index, name in enumerate(self.column_names):
+            if Column.is_list_type(self[name]):
+                column = Column.combine_chunks(pc.list_flatten(self[name]).take(indices))
+                self = self.set_column(index, name, ListChunk.from_counts(counts, column))
+        return self
+
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
-        """Return table sorted by columns, optimized for single column with fixed length."""
+        """Return table sorted by columns, optimized for fixed length."""
         func = pc.sort_indices
         if length is not None:
             func = functools.partial(pc.select_k_unstable, k=length)
@@ -492,7 +520,7 @@ class Table(pa.Table):
         checked=False,
         ignore_case=False,
         regex=False,
-        **partials
+        **partials,
     ) -> pa.Table:
         """Return view of table with functions applied across columns."""
         column = self[name]
