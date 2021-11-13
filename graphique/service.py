@@ -182,7 +182,8 @@ class Table(AbstractTable):
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
 
-        List columns apply their respective filters to their own scalar values.
+        List columns apply their respective filters to the scalar values within lists.
+        All referenced list columns must have the same lengths.
         """
         if not isinstance(self.table, pa.Table) and reduce.value in ('and', 'or'):
             query, table = {}, self.select(info, dict(query), invert=invert, reduce=reduce.value)
@@ -191,14 +192,15 @@ class Table(AbstractTable):
         filters = list(dict(query).items())
         for value in map(dict, itertools.chain(*dict(on).values())):
             filters.append((value.pop('name'), value))
-        masks = []
+        masks, list_masks = [], []
+        lists = {name for name in table.column_names if C.is_list_type(table[name])}
         for name, value in filters:
-            mask = T.mask(table, name, **value)
-            if C.is_list_type(table[name]):
+            (list_masks if name in lists else masks).append(T.mask(table, name, **value))
+        if list_masks:
+            mask = functools.reduce(getattr(pc, reduce.value), list_masks)
+            for name in lists:
                 column = pa.chunked_array(C.map(ListChunk.filter_list, table[name], mask))
                 table = table.set_column(table.column_names.index(name), name, column)
-            else:
-                masks.append(mask)
         if not masks:
             return Table(table)
         mask = functools.reduce(getattr(pc, reduce.value), masks)

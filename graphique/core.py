@@ -83,10 +83,13 @@ class ListChunk(pa.lib.BaseListArray):
         """unique values within each scalar"""
         return ListChunk.map_list(self, lambda arr: Column.decode(arr.unique()))
 
+    def scalars(self) -> Iterable:
+        empty = pa.array([], self.type.value_type)
+        return (scalar.values or empty for scalar in self)
+
     def map_list(self, func: Callable) -> pa.lib.BaseListArray:
         """Return list array by mapping function across scalars, with null handling."""
-        empty = pa.array([], self.type.value_type)
-        values = [func(scalar.values or empty) for scalar in self]
+        values = list(map(func, ListChunk.scalars(self)))
         return ListChunk.from_counts(pa.array(map(len, values)), pa.concat_arrays(values))
 
     def filter_list(self, mask: pa.BooleanArray) -> pa.lib.BaseListArray:
@@ -507,7 +510,17 @@ class Table(pa.Table):
 
     def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.Array:
         """Return mask array which matches query."""
-        masks = [getattr(pc, op)(self[name], self[apply[op]]) for op in apply]
+        masks = []
+        for op, column in apply.items():
+            column = self[apply[op]]
+            func = getattr(pc, op)
+            if not Column.is_list_type(self[name]):
+                mask = func(self[name], column)
+            elif Column.is_list_type(column):
+                mask = func(pc.list_flatten(self[name]), pc.list_flatten(column))
+            else:
+                mask = pa.concat_arrays(map(func, ListChunk.scalars(self[name]), column))
+            masks.append(mask)
         if query:
             masks.append(Column.mask(self[name], **query))
         return functools.reduce(getattr(pc, 'and'), masks)

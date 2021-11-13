@@ -132,6 +132,8 @@ def test_group(table):
     groups, counts = T.group(table, 'state')
     assert len(groups) == len(counts) == 52
     assert groups['state'][0].as_py() == 'NY'
+    assert sum(T.mask(groups, 'county', apply={'equal': 'city'}).to_pylist()) == 2805
+    assert sum(T.mask(groups, 'county', apply={'equal': 'state'}).to_pylist()) == 0
     groups, counts = T.group(table, 'state', reverse=True, length=2)
     assert groups['state'].to_pylist() == ['AK', 'WA']
     assert counts.to_pylist() == [273, 732]
