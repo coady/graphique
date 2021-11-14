@@ -197,9 +197,9 @@ class Table(AbstractTable):
         for name, value in filters:
             (list_masks if name in lists else masks).append(T.mask(table, name, **value))
         if list_masks:
-            mask = functools.reduce(getattr(pc, reduce.value), list_masks)
+            mask = C.combine_chunks(functools.reduce(getattr(pc, reduce.value), list_masks))
             for name in lists:
-                column = pa.chunked_array(C.map(ListChunk.filter_list, table[name], mask))
+                column = ListChunk.filter_list(C.combine_chunks(table[name]), mask)
                 table = table.set_column(table.column_names.index(name), name, column)
         if not masks:
             return Table(table)
@@ -247,8 +247,7 @@ class Table(AbstractTable):
         for key in fields:
             func = getattr(ListChunk, key)
             for field in fields[key]:
-                name = field.name
-                columns[field.alias or name] = pa.chunked_array(C.map(func, table[name]))
+                columns[field.alias or field.name] = C.map(table[field.name], func)
         return Table(pa.Table.from_pydict(columns))
 
 

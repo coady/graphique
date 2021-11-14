@@ -499,3 +499,9 @@ def test_rows(client):
     assert data == {'min': {'row': {'state': 'PR'}}}
     data = client.execute('{ max(by: ["latitude", "longitude"]) { row { state } } }')
     assert data == {'max': {'row': {'state': 'AK'}}}
+    data = client.execute(
+        '''{ group(by: ["state"]) { min(by: ["state", "longitude"]) {
+        aggregate(first: [{name: "city"}]) { row { state } columns { city { values } } } } } }'''
+    )
+    agg = data['group']['min']['aggregate']
+    assert agg == {'row': {'state': 'AK'}, 'columns': {'city': {'values': ['Atka']}}}

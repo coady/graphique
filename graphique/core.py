@@ -162,9 +162,9 @@ class Column(pa.ChunkedArray):
     threader = futures.ThreadPoolExecutor(pa.cpu_count())
     is_in = pc.is_in_meta_binary
 
-    def map(func: Callable, *arrays: pa.ChunkedArray) -> Iterator:
-        map_ = Column.threader.map if arrays[0].num_chunks > 1 else map
-        return map_(func, *(arr.iterchunks() for arr in arrays))  # type: ignore
+    def map(self, func: Callable) -> pa.ChunkedArray:
+        map_ = Column.threader.map if self.num_chunks > 1 else map
+        return pa.chunked_array(map_(func, self.iterchunks()))  # type: ignore
 
     def scalar_type(self):
         return self.type.value_type if pa.types.is_dictionary(self.type) else self.type
@@ -308,8 +308,7 @@ class Column(pa.ChunkedArray):
         """Return the indices of the bins to which each value in input array belongs."""
         if not isinstance(bins, (pa.Array, np.ndarray)):
             bins = pa.array(bins, self.type)
-        func = functools.partial(np.digitize, bins=bins, right=bool(right))
-        return pa.chunked_array(Column.map(func, self))
+        return Column.map(self, functools.partial(np.digitize, bins=bins, right=bool(right)))
 
     def count(self, value) -> int:
         """Return number of occurrences of value."""
@@ -508,7 +507,7 @@ class Table(pa.Table):
         table = pa.Table.from_pydict({name: Column.sort_values(self[name]) for name in names})
         return self and self.take(func(table, sort_keys=keys.items()))
 
-    def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.Array:
+    def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.ChunkedArray:
         """Return mask array which matches query."""
         masks = []
         for op, column in apply.items():
@@ -519,7 +518,7 @@ class Table(pa.Table):
             elif Column.is_list_type(column):
                 mask = func(pc.list_flatten(self[name]), pc.list_flatten(column))
             else:
-                mask = pa.concat_arrays(map(func, ListChunk.scalars(self[name]), column))
+                mask = pa.chunked_array(map(func, ListChunk.scalars(self[name]), column))
             masks.append(mask)
         if query:
             masks.append(Column.mask(self[name], **query))
@@ -554,7 +553,20 @@ class Table(pa.Table):
             return self.append_column(alias, column)
         return self.set_column(self.column_names.index(name), name, column)
 
+    def filter_list(self, mask: pa.BooleanArray):
+        """Return table with list columns filtered within scalars."""
+        for index, name in enumerate(self.column_names):
+            if Column.is_list_type(self[name]):
+                column = ListChunk.filter_list(Column.combine_chunks(self[name]), mask)
+                self = self.set_column(index, name, column)
+        return self
+
     def matched(self, func: Callable, *names: str) -> pa.Table:
         for name in names:
-            self = self.filter(Column.equal(self[name], func(self[name])))
+            if Column.is_list_type(self[name]):
+                scalars = list(ListChunk.scalars(self[name]))
+                column = pa.array(map(func, scalars), self[name].type.value_type)
+                self = Table.filter_list(self, pa.concat_arrays(map(Column.equal, scalars, column)))
+            else:
+                self = self.filter(Column.equal(self[name], func(self[name])))
         return self

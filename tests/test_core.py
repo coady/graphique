@@ -134,6 +134,10 @@ def test_group(table):
     assert groups['state'][0].as_py() == 'NY'
     assert sum(T.mask(groups, 'county', apply={'equal': 'city'}).to_pylist()) == 2805
     assert sum(T.mask(groups, 'county', apply={'equal': 'state'}).to_pylist()) == 0
+    mins = T.matched(groups, C.min, 'state', 'county')
+    assert mins['state'].to_pylist() == ['AK']
+    assert mins['county'].to_pylist() == [['Aleutians East'] * 5]
+    assert mins['city'][0].values[0].as_py() == 'Akutan'
     groups, counts = T.group(table, 'state', reverse=True, length=2)
     assert groups['state'].to_pylist() == ['AK', 'WA']
     assert counts.to_pylist() == [273, 732]

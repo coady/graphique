@@ -58,7 +58,7 @@ class Column:
         return cls.type_map[type_map[C.scalar_type(array).id]](array)  # type: ignore
 
     def map(self, func: Callable) -> 'Column':
-        return self.cast(pa.chunked_array(C.map(func, self.array)))
+        return self.cast(C.map(self.array, func))
 
     @classmethod
     def fromscalar(cls, scalar: pa.ListScalar) -> Optional['Column']:
