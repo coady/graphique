@@ -237,3 +237,6 @@ def test_not_implemented():
         pc.min_max(dictionary)
     with pytest.raises(NotImplementedError):
         pc.count_distinct(dictionary)
+    if pa.__version__ >= '7':
+        with pytest.raises(ValueError, match="string vs dictionary"):
+            pc.index_in(dictionary.unique(), value_set=dictionary)

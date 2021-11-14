@@ -89,6 +89,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 ## Changes
 dev
 
+* Pyarrow >=7.0.0.dev supported
 * `FILTERS` use query syntax and trigger reading the dataset
 * `FEDERATED` field configuration
 * List columns support sorting and filtering
