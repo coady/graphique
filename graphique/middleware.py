@@ -45,9 +45,7 @@ def references(field) -> Iterator:
             yield from references(getattr(field, name, []))
 
 
-def filter_expression(
-    queries: dict, invert: bool = False, reduce: str = 'and'
-) -> Optional[ds.Expression]:
+def filter_expression(queries: dict, invert=False, reduce: str = 'and') -> Optional[ds.Expression]:
     """Translate query format `field={predicate: value}` into dataset filter expression."""
     exprs: list = []
     for name, query in queries.items():
@@ -64,7 +62,7 @@ def filter_expression(
     return ~expr if invert else expr
 
 
-class TimingExtension(strawberry.extensions.Extension):  # pragma: no cover
+class TimingExtension(strawberry.extensions.Extension):
     def on_request_start(self):
         self.start = datetime.now()
 
@@ -98,9 +96,7 @@ class AbstractTable:
     def __init__(self, table: Union[pa.Table, ds.dataset]):
         self.table = table
 
-    def select(
-        self, info, queries: dict = {}, invert: bool = False, reduce: str = 'and'
-    ) -> pa.Table:
+    def select(self, info, queries: dict = {}, invert=False, reduce: str = 'and') -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
         case_map = {to_camel_case(name): name for name in self.table.schema.names}
         names = set(itertools.chain(*map(references, info.selected_fields))) & set(case_map)

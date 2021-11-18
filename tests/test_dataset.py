@@ -1,3 +1,13 @@
+from graphique import middleware
+
+
+def test_extension(capsys):
+    ext = middleware.TimingExtension(execution_context=None)
+    assert ext.on_request_start() is None
+    assert ext.on_request_end() is None
+    assert capsys.readouterr().out.startswith('[')
+
+
 def test_filter(dsclient):
     data = dsclient.execute('{ column(name: "state") { length } }')
     assert data == {'column': {'length': 41700}}
