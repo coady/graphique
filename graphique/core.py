@@ -201,8 +201,9 @@ class Column(pa.ChunkedArray):
 
         Relies on `unique` having stable ordering.
         """
+        self = Column.unify_dictionaries(self)
         if pa.types.is_dictionary(self.type):
-            _, self = Column.dict_flatten(Column.unify_dictionaries(self))
+            _, self = Column.dict_flatten(self)
         values, counts = self.value_counts().flatten() if counts else (self.unique(), None)
         return pc.index_in(values, value_set=self), counts
 

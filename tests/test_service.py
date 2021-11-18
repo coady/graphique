@@ -359,8 +359,8 @@ def test_sort(client):
         { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
     )
     assert data['group']['sort']['aggregate']['row'] == {'state': 'NY', 'county': 'Yates'}
-    with pytest.raises(ValueError, match="Unsupported"):
-        client.execute('{ group(by: ["state"]) { sort(by: ["state", "county"]) { length } } }')
+    data = client.execute('{ group(by: ["state"]) { sort(by: ["state", "county"]) { length } } }')
+    assert data['group']['sort']['length']
 
 
 def test_group(client):

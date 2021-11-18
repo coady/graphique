@@ -150,8 +150,13 @@ class Table(AbstractTable):
         Sorting on list columns will sort within scalars, all of which must have the same lengths.
         """
         table = self.select(info)
-        func = T.sort_list if all(C.is_list_type(table[name]) for name in by) else T.sort
-        return Table(func(table, *by, reverse=reverse, length=length))
+        lists = dict.fromkeys(name for name in by if C.is_list_type(table[name]))
+        scalars = [name for name in by if name not in lists]
+        if scalars:
+            table = T.sort(table, *scalars, reverse=reverse, length=length)
+        if lists:
+            table = T.sort_list(table, *lists, reverse=reverse, length=length)
+        return Table(table)
 
     @doc_field(by="column names")
     def min(self, info, by: List[str]) -> 'Table':
@@ -192,21 +197,18 @@ class Table(AbstractTable):
         filters = list(dict(query).items())
         for value in map(dict, itertools.chain(*dict(on).values())):
             filters.append((value.pop('name'), value))
-        masks, list_masks = [], []
         lists = {name for name in table.column_names if C.is_list_type(table[name])}
-        for name, value in filters:
-            (list_masks if name in lists else masks).append(T.mask(table, name, **value))
-        if list_masks:
-            mask = C.combine_chunks(functools.reduce(getattr(pc, reduce.value), list_masks))
-            for name in lists:
-                column = ListChunk.filter_list(C.combine_chunks(table[name]), mask)
-                table = table.set_column(table.column_names.index(name), name, column)
-        if not masks:
-            return Table(table)
-        mask = functools.reduce(getattr(pc, reduce.value), masks)
-        if selections(*info.selected_fields) == {'length'}:  # optimized for count
-            return Table(range(C.count(mask, not invert)))
-        return Table(table.filter(pc.invert(mask) if invert else mask))
+        masks = [T.mask(table, name, **value) for name, value in filters if name not in lists]
+        if masks:
+            mask = functools.reduce(getattr(pc, reduce.value), masks)
+            if selections(*info.selected_fields) == {'length'}:  # optimized for count
+                return Table(range(C.count(mask, not invert)))
+            table = table.filter(pc.invert(mask) if invert else mask)
+        masks = [T.mask(table, name, **value) for name, value in filters if name in lists]
+        if masks:
+            mask = C.combine_chunks(functools.reduce(getattr(pc, reduce.value), masks))
+            table = T.filter_list(table, pc.invert(mask) if invert else mask)
+        return Table(table)
 
     @Function.resolver
     @no_type_check
