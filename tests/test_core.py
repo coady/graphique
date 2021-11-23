@@ -240,3 +240,9 @@ def test_not_implemented():
     if pa.__version__ >= '7':
         with pytest.raises(ValueError, match="string vs dictionary"):
             pc.index_in(dictionary.unique(), value_set=dictionary)
+    with pytest.raises(NotImplementedError):
+        pa.StructArray.from_arrays([], []).dictionary_encode()
+    for index in (-1, 1):
+        with pytest.raises(ValueError):
+            pc.list_element(pa.array([[0]]), index)
+    assert pc.equal([0, None], None).to_pylist() == [None] * 2

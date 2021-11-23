@@ -3,7 +3,6 @@ GraphQL service and top-level resolvers.
 """
 import functools
 import itertools
-from datetime import timedelta
 from typing import List, Optional, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -11,10 +10,10 @@ import pyarrow.dataset as ds
 import strawberry
 from strawberry.arguments import UNSET
 from strawberry.utils.str_converters import to_camel_case
-from .core import Column as C, ListChunk, Table as T
-from .inputs import Diff, Filters, Function, Input, Query as QueryInput
+from .core import Column as C, Table as T
+from .inputs import Filters, Input, Query as QueryInput
 from .middleware import AbstractTable, GraphQL, filter_expression
-from .models import Column, ListColumn, doc_field, selections
+from .models import Column, doc_field, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, FEDERATED, FILTERS, INDEX, PARQUET_PATH
 
@@ -48,8 +47,6 @@ class Queries(Input):
 
 @strawberry.type(description="a column-oriented table")
 class Table(AbstractTable):
-    __init__ = AbstractTable.__init__
-
     @doc_field
     def columns(self, info) -> Columns:
         """fields for each column"""
@@ -68,107 +65,6 @@ class Table(AbstractTable):
                 Column.fromscalar(scalar) if isinstance(scalar, pa.ListScalar) else scalar.as_py()
             )
         return Row(**row)  # type: ignore
-
-    @doc_field(
-        offset="number of rows to skip; negative value skips from the end",
-        length="maximum number of rows to return",
-        reverse="reverse order after slicing; forces a copy",
-    )
-    def slice(
-        self, info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
-    ) -> 'Table':
-        """Return zero-copy slice of table."""
-        table = self.select(info)
-        table = table.slice(len(table) + offset if offset < 0 else offset, length)
-        return Table(table[::-1] if reverse else table)
-
-    @doc_field(
-        by="column names",
-        reverse="return groups in reversed stable order",
-        length="maximum number of groups to return",
-        counts="optionally include counts in an aliased column",
-    )
-    def group(
-        self,
-        info,
-        by: List[str],
-        reverse: bool = False,
-        length: Optional[Long] = None,
-        counts: str = '',
-    ) -> 'Table':
-        """Return table grouped by columns, with stable ordering.
-
-        Other columns can be accessed by the `column` field as a `ListColumn`.
-        Typically used in conjunction with `aggregate` or `tables`.
-        """
-        table = self.select(info)
-        if selections(*info.selected_fields) == {'length'}:  # optimized for count
-            return Table(T.encode(table, *by).unique()[:length])
-        if set(table.column_names) <= set(by):
-            table, counts_ = T.unique(table, *by, reverse=reverse, length=length, counts=counts)
-        else:
-            table, counts_ = T.group(table, *by, reverse=reverse, length=length)
-        return Table(table.append_column(counts, counts_) if counts else table)
-
-    @doc_field(
-        by="column names",
-        diffs="optional inequality predicates; scalars are compared to the adjacent difference",
-        counts="optionally include counts in an aliased column",
-    )
-    @no_type_check
-    def partition(self, info, by: List[str], diffs: List[Diff] = [], counts: str = '') -> 'Table':
-        """Return table partitioned by discrete differences of the values.
-
-        Differs from `group` by relying on adjacency, and is typically faster.
-        Other columns can be accessed by the `column` field as a `ListColumn`.
-        Typically used in conjunction with `aggregate` or `tables`.
-        """
-        table = self.select(info)
-        funcs = {diff.pop('name'): diff for diff in map(dict, diffs)}
-        names = list(itertools.takewhile(lambda name: name not in funcs, by))
-        predicates = {}
-        for name in by[len(names) :]:  # noqa: E203
-            ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
-            predicates[name] = (getattr(pc, func),)
-            if value is not None:
-                if pa.types.is_timestamp(C.scalar_type(table[name])):
-                    value = timedelta(seconds=value)
-                predicates[name] += (value,)
-        table, counts_ = T.partition(table, *names, **predicates)
-        return Table(table.append_column(counts, counts_) if counts else table)
-
-    @doc_field(
-        by="column names",
-        reverse="descending stable order",
-        length="maximum number of rows to return; may be significantly faster but is unstable",
-    )
-    def sort(
-        self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
-    ) -> 'Table':
-        """Return table slice sorted by specified columns.
-
-        Sorting on list columns will sort within scalars, all of which must have the same lengths.
-        """
-        table = self.select(info)
-        lists = dict.fromkeys(name for name in by if C.is_list_type(table[name]))
-        scalars = [name for name in by if name not in lists]
-        if scalars:
-            table = T.sort(table, *scalars, reverse=reverse, length=length)
-        if lists:
-            table = T.sort_list(table, *lists, reverse=reverse, length=length)
-        return Table(table)
-
-    @doc_field(by="column names")
-    def min(self, info, by: List[str]) -> 'Table':
-        """Return table with minimum values per column."""
-        table = self.select(info)
-        return Table(T.matched(table, C.min, *by))
-
-    @doc_field(by="column names")
-    def max(self, info, by: List[str]) -> 'Table':
-        """Return table with maximum values per column."""
-        table = self.select(info)
-        return Table(T.matched(table, C.max, *by))
 
     @doc_field(
         query="simple queries by column",
@@ -210,53 +106,10 @@ class Table(AbstractTable):
             table = T.filter_list(table, pc.invert(mask) if invert else mask)
         return Table(table)
 
-    @Function.resolver
-    @no_type_check
-    def apply(self, info, **functions) -> 'Table':
-        """Return view of table with functions applied across columns.
-
-        If no alias is provided, the column is replaced and should be of the same type.
-        If an alias is provided, a column is added and may be referenced in the `column` field,
-        in filter `predicates`, and in the `by` arguments of grouping and sorting.
-        """
-        table = self.select(info)
-        for value in map(dict, itertools.chain(*functions.values())):
-            table = T.apply(table, value.pop('name'), **value)
-        return Table(table)
-
-    @doc_field
-    def tables(self, info) -> List['Table']:  # type: ignore
-        """Return a list of tables by splitting list columns, typically used after grouping.
-
-        At least one list column must be referenced, and all list columns must have the same lengths.
-        """
-        table = self.select(info)
-        lists = {name for name in table.column_names if C.is_list_type(table[name])}
-        scalars = set(table.column_names) - lists
-        for index, count in enumerate(T.list_value_length(table).to_pylist()):
-            row = {name: pa.repeat(table[name][index], count) for name in scalars}
-            row.update({name: table[name][index].values for name in lists})
-            yield Table(pa.Table.from_pydict(row))
-
-    @ListColumn.resolver
-    def aggregate(self, info, **fields) -> 'Table':
-        """Return table with aggregate functions applied to list columns, typically used after grouping.
-
-        Columns which are aliased or change type can be accessed by the `column` field.
-        """
-        table = self.select(info)
-        columns = {name: table[name] for name in table.column_names}
-        for key in fields:
-            func = getattr(ListChunk, key)
-            for field in fields[key]:
-                columns[field.alias or field.name] = C.map(table[field.name], func)
-        return Table(pa.Table.from_pydict(columns))
-
 
 @strawberry.type(description="a table sorted by a composite index")
 class IndexedTable(Table):
     index: List[str] = strawberry.field(default=tuple(indexed), description="the composite index")
-    __init__ = AbstractTable.__init__
 
     @QueryInput.resolve_types({name: types[name] for name in indexed})
     def search(self, info, **queries) -> Table:
