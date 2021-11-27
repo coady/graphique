@@ -64,13 +64,16 @@ def test_lists():
     assert ListChunk.last(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.element(array, 1).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.unique(array).to_pylist() == [[2, 1], [0], [None], [], []]
+    if pa.__version__ >= '7':
+        assert ListChunk.distinct(array).to_pylist() == [[2, 1], [0], []]
+        assert ListChunk.distinct(array, mode='all').to_pylist() == [[2, 1], [0], [None]]
     assert ListChunk.min(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.sum(array).to_pylist() == [3, 0, None, None, None]
     assert ListChunk.product(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.mean(array).to_pylist() == [1.5, 0.0, None, None, None]
     assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
-    assert ListChunk.mode(array, length=1).to_pylist() == [[1], [0], [], [], []]
+    assert ListChunk.mode(array, n=1).to_pylist() == [[1], [0], [], [], []]
     assert ListChunk.quantile(array).to_pylist() == [1.5, 0.0, None, None, None]
     quantile = ListChunk.quantile(array, q=[0.75])
     assert quantile.to_pylist() == [[1.75], [0.0], [None], [None], [None]]

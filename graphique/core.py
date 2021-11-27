@@ -10,7 +10,7 @@ import functools
 import operator
 from concurrent import futures
 from datetime import time
-from typing import Callable, Iterable, Iterator, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -57,15 +57,15 @@ class ListChunk(pa.lib.BaseListArray):
         offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
         return self.values.take(pa.array(offsets + index, mask=mask))
 
-    def count(self) -> pa.IntegerArray:
+    def count(self, **options) -> pa.IntegerArray:
         """non-null count of each list scalar"""
-        return ListChunk.reduce(self, pc.count, 'int64')
+        return ListChunk.reduce(self, pc.count, 'int64', pc.CountOptions(**options))
 
-    def count_distinct(self) -> pa.IntegerArray:
+    def count_distinct(self, **options) -> pa.IntegerArray:
         """non-null distinct count of each list scalar"""
         if pa.types.is_dictionary(self.values.type):
             self = type(self).from_arrays(self.offsets, self.values.indices)
-        return ListChunk.reduce(self, pc.count_distinct, 'int64')
+        return ListChunk.reduce(self, pc.count_distinct, 'int64', pc.CountOptions(**options))
 
     def value_length(self) -> pa.IntegerArray:
         """length of each list scalar"""
@@ -82,6 +82,10 @@ class ListChunk(pa.lib.BaseListArray):
     def unique(self) -> pa.lib.BaseListArray:
         """unique values within each scalar"""
         return ListChunk.map_list(self, lambda arr: Column.decode(arr.unique()))
+
+    def distinct(self, **options) -> pa.lib.BaseListArray:
+        """non-null distinct values within each scalar"""
+        return ListChunk.aggregate(self, distinct=pc.CountOptions(**options)).field(0)
 
     def scalars(self) -> Iterable:
         empty = pa.array([], self.type.value_type)
@@ -102,72 +106,85 @@ class ListChunk(pa.lib.BaseListArray):
         funcs = {f'hash_{name}': funcs[name] for name in funcs}
         return pc._group_by([self.values], [self.value_parent_indices()], funcs.items())
 
-    def reduce(self, func: Callable, tp=None) -> pa.Array:
+    def reduce(self, func: Callable, tp=None, options=None) -> pa.Array:
         with contextlib.suppress(AttributeError, ValueError):
-            groups = ListChunk.aggregate(self, **{func.__name__: None})
+            groups = ListChunk.aggregate(self, **{func.__name__: options})
             if len(groups) == len(self):  # empty scalars cause index collision
                 return groups.field(0)
-        values = (None if scalar.values is None else func(scalar.values).as_py() for scalar in self)
+        values = (
+            None if scalar.values is None else func(scalar.values, options=options).as_py()
+            for scalar in self
+        )
         return pa.array(values, tp or self.type.value_type)
 
-    def min(self) -> pa.Array:
+    def min(self, **options) -> pa.Array:
         """min value of each list scalar"""
         if pa.types.is_dictionary(self.values.type):
             self = ListChunk.unique(self)
-        return ListChunk.reduce(self, pc.min)
+        return ListChunk.reduce(self, pc.min, options=pc.ScalarAggregateOptions(**options))
 
-    def max(self) -> pa.Array:
+    def max(self, **options) -> pa.Array:
         """max value of each list scalar"""
         if pa.types.is_dictionary(self.values.type):
             self = ListChunk.unique(self)
-        return ListChunk.reduce(self, pc.max)
+        return ListChunk.reduce(self, pc.max, options=pc.ScalarAggregateOptions(**options))
 
-    def sum(self) -> pa.Array:
+    def sum(self, **options) -> pa.Array:
         """sum of each list scalar"""
-        return ListChunk.reduce(self, pc.sum)
+        return ListChunk.reduce(self, pc.sum, options=pc.ScalarAggregateOptions(**options))
 
-    def product(self) -> pa.Array:
+    def product(self, **options) -> pa.Array:
         """product of each list scalar"""
         return ListChunk.reduce(self, pc.product)
 
-    def mean(self) -> pa.FloatingPointArray:
+    def mean(self, **options) -> pa.FloatingPointArray:
         """mean of each list scalar"""
-        return ListChunk.reduce(self, pc.mean, 'float64')
+        return ListChunk.reduce(self, pc.mean, 'float64', pc.ScalarAggregateOptions(**options))
 
-    def mode(self, length: int = 0) -> pa.Array:
+    def mode(self, **options) -> pa.Array:
         """modes of each list scalar"""
-        array = ListChunk.map_list(self, lambda arr: pc.mode(arr, length or 1).field(0))
-        return array if length else ListChunk.first(array)
+        array = ListChunk.map_list(self, lambda arr: pc.mode(arr, **options).field(0))
+        return array if 'n' in options else ListChunk.first(array)
 
-    def quantile(self, q: Sequence[float] = ()) -> pa.Array:
+    def quantile(self, **options) -> pa.Array:
         """quantiles of each list scalar"""
-        array = ListChunk.map_list(self, functools.partial(pc.quantile, q=q or 0.5))
-        return array if q else ListChunk.first(array)
+        array = ListChunk.map_list(
+            self, functools.partial(pc.quantile, options=pc.QuantileOptions(**options))
+        )
+        return array if 'q' in options else ListChunk.first(array)
 
-    def tdigest(self, q: Sequence[float] = ()) -> pa.Array:
+    def tdigest(self, **options) -> pa.Array:
         """approximate quantiles of each list scalar"""
-        if q:
-            return ListChunk.map_list(self, functools.partial(pc.tdigest, q=q))
-        return ListChunk.reduce(self, pc.approximate_median, 'float64')
+        if set(options) <= {'skip_nulls', 'min_count'}:
+            return ListChunk.reduce(
+                self, pc.approximate_median, 'float64', pc.ScalarAggregateOptions(**options)
+            )
+        return ListChunk.map_list(
+            self, functools.partial(pc.tdigest, options=pc.TDigestOptions(**options))
+        )
 
-    def stddev(self) -> pa.FloatingPointArray:
+    def stddev(self, **options) -> pa.FloatingPointArray:
         """stddev of each list scalar"""
-        return ListChunk.reduce(self, pc.stddev, 'float64')
+        return ListChunk.reduce(self, pc.stddev, 'float64', pc.VarianceOptions(**options))
 
-    def variance(self) -> pa.FloatingPointArray:
+    def variance(self, **options) -> pa.FloatingPointArray:
         """variance of each list scalar"""
-        return ListChunk.reduce(self, pc.variance, 'float64')
+        return ListChunk.reduce(self, pc.variance, 'float64', pc.VarianceOptions(**options))
 
     def mask(self) -> pa.ListArray:
         return pa.ListArray.from_arrays(self.offsets, Column.mask(self.values))
 
-    def any(self) -> pa.BooleanArray:
+    def any(self, **options) -> pa.BooleanArray:
         """any true of each list scalar"""
-        return ListChunk.reduce(ListChunk.mask(self), pc.any)
+        return ListChunk.reduce(
+            ListChunk.mask(self), pc.any, options=pc.ScalarAggregateOptions(**options)
+        )
 
-    def all(self) -> pa.BooleanArray:
+    def all(self, **options) -> pa.BooleanArray:
         """all true of each list scalar"""
-        return ListChunk.reduce(ListChunk.mask(self), pc.all)
+        return ListChunk.reduce(
+            ListChunk.mask(self), pc.all, options=pc.ScalarAggregateOptions(**options)
+        )
 
 
 class Column(pa.ChunkedArray):
@@ -176,9 +193,9 @@ class Column(pa.ChunkedArray):
     threader = futures.ThreadPoolExecutor(pa.cpu_count())
     is_in = pc.is_in_meta_binary
 
-    def map(self, func: Callable) -> pa.ChunkedArray:
+    def map(self, func: Callable, **kwargs) -> pa.ChunkedArray:
         map_ = Column.threader.map if self.num_chunks > 1 else map
-        return pa.chunked_array(map_(func, self.iterchunks()))  # type: ignore
+        return pa.chunked_array(map_(functools.partial(func, **kwargs), self.iterchunks()))  # type: ignore
 
     def scalar_type(self):
         return self.type.value_type if pa.types.is_dictionary(self.type) else self.type

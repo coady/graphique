@@ -1,3 +1,4 @@
+import pyarrow as pa
 import pytest
 
 
@@ -314,7 +315,7 @@ def test_list(executor):
     data = executor('{ columns { list { mode { flatten { ... on IntColumn { values } } } } } }')
     assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0]}}}}}
     data = executor(
-        '''{ columns { list { mode(length: 2) { flatten { ... on IntColumn { values } } } } } }'''
+        '''{ columns { list { mode(n: 2) { flatten { ... on IntColumn { values } } } } } }'''
     )
     assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0, 1]}}}}}
     data = executor(
@@ -355,6 +356,9 @@ def test_list(executor):
         'any': {'values': [True, None]},
         'all': {'values': [False, None]},
     }
+    if pa.__version__ >= '7':
+        data = executor('{ columns { list { distinct { valueLength { values } } } } }')
+        assert data['columns']['list'] == {'distinct': {'valueLength': {'values': [3]}}}
     data = executor(
         '''{ filter(on: {int: [{name: "list", notEqual: 1}]}) {
         columns { list { values { ... on IntColumn { values } } } } } }'''
