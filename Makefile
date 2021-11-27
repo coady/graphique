@@ -8,7 +8,7 @@ check: all
 lint:
 	black --check .
 	flake8
-	flake8 graphique/*.pyx --ignore E999,E211
+	flake8 graphique/*.pyx --ignore E999
 	mypy -p graphique
 
 html: all docs/schema.md

@@ -98,19 +98,29 @@ class ListChunk(pa.lib.BaseListArray):
         counts = pa.array(scalar.values.true_count for scalar in masks)
         return ListChunk.from_counts(counts, self.values.filter(mask))
 
+    def aggregate(self, **funcs) -> pa.Array:
+        funcs = {f'hash_{name}': funcs[name] for name in funcs}
+        return pc._group_by([self.values], [self.value_parent_indices()], funcs.items())
+
     def reduce(self, func: Callable, tp=None) -> pa.Array:
-        values = (None if scalar.values is None else func(scalar.values) for scalar in self)
-        if hasattr(func, '__arrow_compute_function__'):  # scalars must be converted
-            values = (value and value.as_py() for value in values)
+        with contextlib.suppress(AttributeError, ValueError):
+            groups = ListChunk.aggregate(self, **{func.__name__: None})
+            if len(groups) == len(self):  # empty scalars cause index collision
+                return groups.field(0)
+        values = (None if scalar.values is None else func(scalar.values).as_py() for scalar in self)
         return pa.array(values, tp or self.type.value_type)
 
     def min(self) -> pa.Array:
         """min value of each list scalar"""
-        return ListChunk.reduce(self, Column.min)
+        if pa.types.is_dictionary(self.values.type):
+            self = ListChunk.unique(self)
+        return ListChunk.reduce(self, pc.min)
 
     def max(self) -> pa.Array:
         """max value of each list scalar"""
-        return ListChunk.reduce(self, Column.max)
+        if pa.types.is_dictionary(self.values.type):
+            self = ListChunk.unique(self)
+        return ListChunk.reduce(self, pc.max)
 
     def sum(self) -> pa.Array:
         """sum of each list scalar"""
@@ -136,8 +146,9 @@ class ListChunk(pa.lib.BaseListArray):
 
     def tdigest(self, q: Sequence[float] = ()) -> pa.Array:
         """approximate quantiles of each list scalar"""
-        array = ListChunk.map_list(self, functools.partial(pc.tdigest, q=q or 0.5))
-        return array if q else ListChunk.first(array)
+        if q:
+            return ListChunk.map_list(self, functools.partial(pc.tdigest, q=q))
+        return ListChunk.reduce(self, pc.approximate_median, 'float64')
 
     def stddev(self) -> pa.FloatingPointArray:
         """stddev of each list scalar"""
@@ -147,13 +158,16 @@ class ListChunk(pa.lib.BaseListArray):
         """variance of each list scalar"""
         return ListChunk.reduce(self, pc.variance, 'float64')
 
+    def mask(self) -> pa.ListArray:
+        return pa.ListArray.from_arrays(self.offsets, Column.mask(self.values))
+
     def any(self) -> pa.BooleanArray:
         """any true of each list scalar"""
-        return ListChunk.reduce(self, Column.any, 'bool')
+        return ListChunk.reduce(ListChunk.mask(self), pc.any)
 
     def all(self) -> pa.BooleanArray:
         """all true of each list scalar"""
-        return ListChunk.reduce(self, Column.all, 'bool')
+        return ListChunk.reduce(ListChunk.mask(self), pc.all)
 
 
 class Column(pa.ChunkedArray):

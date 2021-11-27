@@ -237,12 +237,23 @@ def test_not_implemented():
         pc.min_max(dictionary)
     with pytest.raises(NotImplementedError):
         pc.count_distinct(dictionary)
-    if pa.__version__ >= '7':
-        with pytest.raises(ValueError, match="string vs dictionary"):
-            pc.index_in(dictionary.unique(), value_set=dictionary)
     with pytest.raises(NotImplementedError):
         pa.StructArray.from_arrays([], []).dictionary_encode()
     for index in (-1, 1):
         with pytest.raises(ValueError):
             pc.list_element(pa.array([[0]]), index)
     assert pc.equal([0, None], None).to_pylist() == [None] * 2
+    with pytest.raises(NotImplementedError):
+        pc.any([0])
+
+
+@pytest.mark.skipif(pa.__version__ < '7', reason="requires pyarrow >=7")
+def test_not_implemented_7():
+    dictionary = pa.array(['']).dictionary_encode()
+    with pytest.raises(ValueError, match="string vs dictionary"):
+        pc.index_in(dictionary.unique(), value_set=dictionary)
+    array = pa.array(list('aba'))
+    with pytest.raises(NotImplementedError):
+        pc._group_by([array.dictionary_encode()], [array], [('hash_min', None)])
+    with pytest.raises(NotImplementedError):
+        pc._group_by([array], [array], [('hash_any', None)])
