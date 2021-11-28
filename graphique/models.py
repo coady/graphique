@@ -42,6 +42,9 @@ class Column:
     def __init__(self, array):
         self.array = array
 
+    def __init_subclass__(cls):
+        cls.__init__ = Column.__init__
+
     @doc_field
     def type(self) -> str:
         """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
@@ -241,7 +244,6 @@ class NumericColumn:
 
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
-    __init__ = Column.__init__  # type: ignore
     count = BooleanQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=bool)
     any = doc_field(NumericColumn.any)
@@ -253,7 +255,6 @@ class BooleanColumn(Column):
 
 @strawberry.type(description="column of ints")
 class IntColumn(Column, NumericColumn):
-    __init__ = Column.__init__  # type: ignore
     count = IntQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=int)
     values = annotate(Column.values, List[Optional[int]])
@@ -278,7 +279,6 @@ class IntColumn(Column, NumericColumn):
 
 @strawberry.type(description="column of longs")
 class LongColumn(Column, NumericColumn):
-    __init__ = Column.__init__  # type: ignore
     count = LongQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=Long)
     values = annotate(Column.values, List[Optional[Long]])
@@ -305,7 +305,6 @@ class LongColumn(Column, NumericColumn):
 
 @strawberry.type(description="column of floats")
 class FloatColumn(Column, NumericColumn):
-    __init__ = Column.__init__  # type: ignore
     count = FloatQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=float)
     values = annotate(Column.values, List[Optional[float]])
@@ -345,7 +344,6 @@ class FloatColumn(Column, NumericColumn):
 
 @strawberry.type(description="column of decimals")
 class DecimalColumn(Column):
-    __init__ = Column.__init__  # type: ignore
     count = DecimalQuery.resolver(Column.count)
     values = annotate(Column.values, List[Optional[Decimal]])
     Set = Set.subclass(Decimal, "DecimalSet", "unique decimals")
@@ -357,7 +355,6 @@ class DecimalColumn(Column):
 
 @strawberry.type(description="column of dates")
 class DateColumn(Column):
-    __init__ = Column.__init__  # type: ignore
     count = DateQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=date)
     values = annotate(Column.values, List[Optional[date]])
@@ -380,7 +377,6 @@ class DateColumn(Column):
 
 @strawberry.type(description="column of datetimes")
 class DateTimeColumn(Column):
-    __init__ = Column.__init__  # type: ignore
     count = DateTimeQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=datetime)
     values = annotate(Column.values, List[Optional[datetime]])
@@ -404,7 +400,6 @@ class DateTimeColumn(Column):
 
 @strawberry.type(description="column of times")
 class TimeColumn(Column):
-    __init__ = Column.__init__  # type: ignore
     count = TimeQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=time)
     values = annotate(Column.values, List[Optional[time]])
@@ -422,7 +417,6 @@ class TimeColumn(Column):
 
 @strawberry.type(description="column of durations")
 class DurationColumn(Column):
-    __init__ = Column.__init__  # type: ignore
     count = DurationQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=timedelta)
     values = annotate(Column.values, List[Optional[timedelta]])
@@ -430,7 +424,6 @@ class DurationColumn(Column):
 
 @strawberry.type(description="column of binaries")
 class BinaryColumn(Column):
-    __init__ = Column.__init__  # type: ignore
     count = BinaryQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=bytes)
     any = doc_field(NumericColumn.any)
@@ -451,7 +444,6 @@ class BinaryColumn(Column):
 
 @strawberry.type(description="column of strings")
 class StringColumn(Column):
-    __init__ = Column.__init__  # type: ignore
     count = StringFilter.resolver(Column.count)
     index = annotate(Column.index, Long, value=str)
     any = doc_field(NumericColumn.any)
@@ -534,7 +526,6 @@ class StringColumn(Column):
 
 @strawberry.type(description="column of lists")
 class ListColumn(Column):
-    __init__ = Column.__init__  # type: ignore
     aggregates = (
         'count',
         'count_distinct',
@@ -694,8 +685,6 @@ class ListColumn(Column):
 
 @strawberry.type(description="column of structs")
 class StructColumn(Column):
-    __init__ = Column.__init__  # type: ignore
-
     @doc_field
     def names(self) -> List[str]:
         """field names"""

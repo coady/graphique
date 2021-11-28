@@ -93,6 +93,7 @@ dev
 * `FILTERS` use query syntax and trigger reading the dataset
 * `FEDERATED` field configuration
 * List columns support sorting and filtering
+* Aggregate optimizations
 
 0.6
 

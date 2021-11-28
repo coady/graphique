@@ -6,7 +6,7 @@ A column within the schema can be accessed by `Table.columns`.
 ```
 {
     columns {
-        $name { ... }
+        <name> { ... }
     }
 }
 ```
@@ -14,19 +14,19 @@ A column within the schema can be accessed by `Table.columns`.
 Any column can be accessed by name using `Table.column` and [inline fragments](https://graphql.org/learn/queries/#inline-fragments).
 ```
 {
-    column(name: $name) {
-        ... on $TypeColumn { ... }
+    column(name: "...") {
+        ... on <Type>Column { ... }
     }
 }
 ```
 
 ### Input
-Input types don't have the equivalent of inline fragments, but GraphQL is converging on the [tagged union pattern](https://github.com/graphql/graphql-spec/issues/488) and [tagged types](https://github.com/graphql/graphql-spec/pull/733). Effectively the type of the field becomes the name of the field.
+Input types don't have the equivalent of inline fragments, but GraphQL is converging on the [tagged union pattern](https://github.com/graphql/graphql-spec/pull/825). Effectively the type of the field becomes the name of the field.
 
 `IndexedTable.search` allows simple queries on indexed columns.
 ```
 {
-    search($name: { ... }, ...)  { ... }
+    search(<name>: { ... }, ...)  { ... }
 }
 ```
 
@@ -34,15 +34,15 @@ Input types don't have the equivalent of inline fragments, but GraphQL is conver
 ```
 {
     filter(
-        query($name: {...}, ...),
-        on($type: [{name: $name, ...}, ...], ...),
+        query(<name>: { ... }, ...),
+        on(<type>: [{name: "...", ...}, ...], ...),
     )  { ... }
 }
 ```
 
 Note list inputs allow passing a single value, interpreted as a list of 1.
 ```
-on($type: {name: $name, ...}, ...)
+on(<type>: {name: "...", ...}, ...)
 ```
 
 ## Aggregation
