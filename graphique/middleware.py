@@ -163,16 +163,12 @@ class AbstractTable:
 
     @doc_field(
         by="column names",
-        reverse="return groups in reversed stable order",
-        length="maximum number of groups to return",
         counts="optionally include counts in an aliased column",
     )
     def group(
         self,
         info,
         by: List[str],
-        reverse: bool = False,
-        length: Optional[Long] = None,
         counts: str = '',
     ) -> 'AbstractTable':
         """Return table grouped by columns, with stable ordering.
@@ -182,11 +178,11 @@ class AbstractTable:
         """
         table = self.select(info)
         if selections(*info.selected_fields) == {'length'}:  # optimized for count
-            return type(self)(T.encode(table, *by).unique()[:length])
+            return type(self)(T.encode(table, *by).unique())
         if set(table.column_names) <= set(by):
-            table, counts_ = T.unique(table, *by, reverse=reverse, length=length, counts=counts)
+            table, counts_ = T.unique(table, *by, counts=counts)
         else:
-            table, counts_ = T.group(table, *by, reverse=reverse, length=length)
+            table, counts_ = T.group(table, *by)
         return type(self)(table.append_column(counts, counts_) if counts else table)
 
     @doc_field(

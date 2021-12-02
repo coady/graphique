@@ -44,8 +44,6 @@ def test_chunks():
     assert C.sort(array.dictionary_encode()[:2]).to_pylist() == ['a', 'b']
     assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
     assert ''.join(T.unique(table, 'col')[0]['col'].to_pylist()) == 'abc'
-    table = pa.Table.from_pydict({'col': array.dictionary_encode()})
-    assert ''.join(T.unique(table, 'col', reverse=True)[0]['col'].to_pylist()) == 'cba'
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
     assert len(T.unique(table, 'col')[0]) == 3
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
@@ -141,14 +139,11 @@ def test_group(table):
     assert mins['state'].to_pylist() == ['AK']
     assert mins['county'].to_pylist() == [['Aleutians East'] * 5]
     assert mins['city'][0].values[0].as_py() == 'Akutan'
-    groups, counts = T.group(table, 'state', reverse=True, length=2)
-    assert groups['state'].to_pylist() == ['AK', 'WA']
-    assert counts.to_pylist() == [273, 732]
     groups = T.sort_list(groups, 'county')
-    assert groups['county'][0].values[0].as_py() == 'Aleutians East'
+    assert groups['county'][0].values[0].as_py() == 'Albany'
     groups = T.sort_list(groups, 'county', 'city', reverse=True, length=1)
-    assert groups['county'][0].values.to_pylist() == ['Yukon Koyukuk']
-    assert groups['city'][0].values.to_pylist() == ['Venetie']
+    assert groups['county'][0].values.to_pylist() == ['Yates']
+    assert groups['city'][0].values.to_pylist() == ['Rushville']
     groups = groups.append_column('other', pa.array([[0]] * len(groups)))
     with pytest.raises(ValueError):
         T.sort_list(groups, 'county')
@@ -180,19 +175,12 @@ def test_unique(table):
     assert len(zipcodes) == 52
     assert zipcodes[0] == 501
     assert zipcodes[-1] == 99501
-    zipcodes = T.unique(table, 'state', reverse=True)[0]['zipcode'].to_pylist()
-    assert len(zipcodes) == 52
-    assert zipcodes[0] == 99501
-    assert zipcodes[-1] == 501
     indices, _ = C.unique_indices(pa.array([1, None, 1]))
     assert indices.to_pylist() == [0, 1]
-    tbl, counts = T.unique(table, 'state', 'county', 'city', reverse=True, counts=True)
+    tbl, counts = T.unique(table, 'state', 'county', 'city', counts=True)
     assert len(tbl) == 29865
-    assert tbl['zipcode'][0].as_py() == 99929
-    assert counts[0].as_py() == 1
-    tbl, counts = T.unique(table, 'state', length=3, counts=True)
-    assert tbl['state'].to_pylist() == ['NY', 'PR', 'MA']
-    assert counts.to_pylist() == [2205, 176, 703]
+    assert tbl['zipcode'][0].as_py() == 501
+    assert counts[0].as_py() == 3
 
 
 def test_sort(table):

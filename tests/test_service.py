@@ -380,23 +380,15 @@ def test_group(client):
     assert set(table['columns']['state']['values']) == {'NY'}
     assert table['columns']['county'] == {'min': 'Albany', 'max': 'Yates'}
     data = client.execute(
-        '''{ group(by: ["state", "county"], reverse: true, length: 3) {
-        aggregate(first: [{name: "city", alias: "f"}], last: [{name: "city", alias: "l"}]) {
-        f: column(name: "f") { ... on StringColumn { values } }
-        l: column(name: "l") { ... on StringColumn { values } } } } }'''
-    )
-    assert data['group']['aggregate']['f']['values'] == ['Meyers Chuck', 'Ketchikan', 'Sitka']
-    assert data['group']['aggregate']['l']['values'] == ['Point Baker', 'Ketchikan', 'Sitka']
-    data = client.execute(
-        '''{ group(by: ["state", "county"], reverse: true, counts: "counts") {
+        '''{ group(by: ["state", "county"], counts: "counts") {
         filter(on: {int: {name: "counts", greaterEqual: 200}}) {
         aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
         min: column(name: "min") { ... on StringColumn { values } }
         max: column(name: "max") { ... on StringColumn { values } } } } } }'''
     )
     agg = data['group']['filter']['aggregate']
-    assert agg['min']['values'] == ['Acton', 'Alief', 'Alsip', 'Naval Anacost Annex']
-    assert agg['max']['values'] == ['Woodland Hills', 'Webster', 'Worth', 'Washington Navy Yard']
+    assert agg['min']['values'] == ['Naval Anacost Annex', 'Alsip', 'Alief', 'Acton']
+    assert agg['max']['values'] == ['Washington Navy Yard', 'Worth', 'Webster', 'Woodland Hills']
     data = client.execute(
         '''{ group(by: ["state", "county"], counts: "c") {
         sort(by: ["c"], reverse: true, length: 4) {
@@ -409,20 +401,15 @@ def test_group(client):
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
     data = client.execute(
-        '''{ group(by: ["state"], length: 3) {
+        '''{ group(by: ["state"]) { slice(length: 3) {
         aggregate(any: [{name: "latitude"}], all: [{name: "longitude"}]) {
         lat: column(name: "latitude") { ... on BooleanColumn { values } }
-        lng: column(name: "longitude") { ... on BooleanColumn { values } } } } }'''
+        lng: column(name: "longitude") { ... on BooleanColumn { values } } } } } }'''
     )
-    assert data['group']['aggregate'] == {
+    assert data['group']['slice']['aggregate'] == {
         'lat': {'values': [True, True, True]},
         'lng': {'values': [True, True, True]},
     }
-    data = client.execute(
-        '''{ sc: group(by: ["state", "county"]) { length }
-        cs: group(by: ["county", "state"]) { length } }'''
-    )
-    assert data['sc']['length'] == data['cs']['length'] == 3216
     data = client.execute(
         '''{ sc: group(by: ["state", "county"]) { length }
         cs: group(by: ["county", "state"]) { length } }'''

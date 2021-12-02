@@ -91,9 +91,9 @@ class ListChunk(pa.lib.BaseListArray):
         empty = pa.array([], self.type.value_type)
         return (scalar.values or empty for scalar in self)
 
-    def map_list(self, func: Callable) -> pa.lib.BaseListArray:
+    def map_list(self, func: Callable, **kwargs) -> pa.lib.BaseListArray:
         """Return list array by mapping function across scalars, with null handling."""
-        values = list(map(func, ListChunk.scalars(self)))
+        values = [func(value, **kwargs) for value in ListChunk.scalars(self)]
         return ListChunk.from_counts(pa.array(map(len, values)), pa.concat_arrays(values))
 
     def filter_list(self, mask: pa.BooleanArray) -> pa.lib.BaseListArray:
@@ -148,9 +148,7 @@ class ListChunk(pa.lib.BaseListArray):
 
     def quantile(self, **options) -> pa.Array:
         """quantiles of each list scalar"""
-        array = ListChunk.map_list(
-            self, functools.partial(pc.quantile, options=pc.QuantileOptions(**options))
-        )
+        array = ListChunk.map_list(self, pc.quantile, options=pc.QuantileOptions(**options))
         return array if 'q' in options else ListChunk.first(array)
 
     def tdigest(self, **options) -> pa.Array:
@@ -159,9 +157,7 @@ class ListChunk(pa.lib.BaseListArray):
             return ListChunk.reduce(
                 self, pc.approximate_median, 'float64', pc.ScalarAggregateOptions(**options)
             )
-        return ListChunk.map_list(
-            self, functools.partial(pc.tdigest, options=pc.TDigestOptions(**options))
-        )
+        return ListChunk.map_list(self, pc.tdigest, options=pc.TDigestOptions(**options))
 
     def stddev(self, **options) -> pa.FloatingPointArray:
         """stddev of each list scalar"""
@@ -342,7 +338,7 @@ class Column(pa.ChunkedArray):
         """Return the indices of the bins to which each value in input array belongs."""
         if not isinstance(bins, (pa.Array, np.ndarray)):
             bins = pa.array(bins, self.type)
-        return Column.map(self, functools.partial(np.digitize, bins=bins, right=bool(right)))
+        return Column.map(self, np.digitize, bins=bins, right=bool(right))
 
     def count(self, value) -> int:
         """Return number of occurrences of value."""
@@ -458,10 +454,9 @@ class Table(pa.Table):
             keys = pc.add_checked(pc.multiply_checked(keys, size), array)
         return keys
 
-    def group(self, *names: str, reverse=False, length: int = None) -> tuple:
+    def group(self, *names: str) -> tuple:
         """Return table grouped by columns and corresponding counts."""
         indices = ListChunk.from_counts(*group_indices(Table.encode(self, *names)))
-        indices = (indices[::-1] if reverse else indices)[:length]
         scalars = ListChunk.first(indices)
         columns = {name: self[name].take(scalars) for name in names}
         for name in set(self.column_names) - set(names):
@@ -492,7 +487,7 @@ class Table(pa.Table):
             columns[name] = pa.LargeListArray.from_arrays(offsets, column)
         return pa.Table.from_pydict(columns), Column.diff(offsets)
 
-    def unique(self, *names: str, reverse=False, length: int = None, counts=False) -> tuple:
+    def unique(self, *names: str, counts=False) -> tuple:
         """Return table with first occurrences from grouping by columns.
 
         Optionally compute corresponding counts.
@@ -500,9 +495,7 @@ class Table(pa.Table):
         """
         column = Table.encode(self, *names) if len(names) > 1 else self.column(*names)
         indices, counts = Column.unique_indices(column, counts=counts)
-        if reverse:
-            indices, counts = indices[::-1], (counts and counts[::-1])
-        return self.take(indices[:length]), (counts and counts[:length])
+        return self.take(indices), counts
 
     def list_value_length(self) -> pa.ChunkedArray:
         lists = {name for name in self.column_names if Column.is_list_type(self[name])}
