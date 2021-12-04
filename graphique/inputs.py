@@ -5,14 +5,14 @@ import functools
 import inspect
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, Iterator, List, Optional, no_type_check
+from typing import Callable, List, Optional
 import strawberry
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument, UNSET
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from typing_extensions import Annotated
-from .core import Column
+from .core import ListChunk, Column
 from .scalars import Long, classproperty
 
 comparisons = ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal')
@@ -39,24 +39,19 @@ class Input:
         value = getattr(self, name)
         return dict(value) if hasattr(value, 'keys') else value
 
-    @classmethod
-    def subclasses(cls) -> Iterator:
-        """Generate subclasses with a description for annotating."""
-        for subclass in cls.__subclasses__():
-            if subclass._type_definition.description:  # type: ignore
-                yield subclass
-            yield from subclass.subclasses()
-
     @classproperty
-    @no_type_check
     def resolver(cls) -> Callable:
-        """a decorator which transforms the subclass input types into arguments"""
-        annotations = {}
-        for subclass in cls.subclasses():
-            name = subclass.__name__.split(cls.__name__)[0].lower()
-            argument = strawberry.argument(description=subclass._type_definition.description)
-            annotations[name] = Annotated[List[subclass], argument]
-        defaults: dict = dict.fromkeys(annotations, [])
+        """a decorator which flattens an input type's fields into arguments"""
+        annotations = dict(cls.__annotations__)
+        defaults = {name: getattr(cls, name) for name in annotations if hasattr(cls, name)}
+        for name, default in defaults.items():
+            if isinstance(default, StrawberryField):
+                argument = strawberry.argument(description=default.description)
+                annotations[name] = Annotated[annotations[name], argument]
+                defaults[name] = default.default_factory()
+        for name in cls.nullables:
+            argument = strawberry.argument(description=cls.nullables[name])
+            annotations[name] = Annotated[annotations[name], argument]
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
@@ -126,17 +121,6 @@ class Query(Input):
     def resolve_types(cls, types: dict) -> Callable:
         """Return a decorator which transforms the type map into arguments."""
         return functools.partial(resolve_annotations, annotations=cls.annotations(types))
-
-    @classproperty
-    def resolver(cls) -> Callable:
-        """a decorator which transforms the query's fields into arguments"""
-        annotations = dict(cls.__annotations__)
-        annotations.pop('apply', None)
-        defaults = {name: getattr(cls, name) for name in annotations}
-        for name in cls.nullables:
-            argument = strawberry.argument(description=cls.nullables[name])
-            annotations[name] = Annotated[annotations[name], argument]
-        return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
 @strawberry.input(description="predicates for booleans")
@@ -368,7 +352,7 @@ class NumericFunction(OrdinalFunction):
     atan: bool = False
 
 
-@strawberry.input(description=f"[functions]({link}) for booleans")
+@strawberry.input(description=f"[functions]({link}#selecting-multiplexing) for booleans")
 class BooleanFunction(Function):
     if_else: Optional[List[str]] = UNSET
 
@@ -399,10 +383,10 @@ class FloatFunction(NumericFunction):
 
 @strawberry.input(description="functions for decimals")
 class DecimalFunction(Function):
-    pass
+    fill_null: Optional[Decimal] = UNSET
 
 
-@strawberry.input(description="functions for dates")
+@strawberry.input(description="[functions]({link}#temporal-component-extraction) for dates")
 class DateFunction(OrdinalFunction):
     fill_null: Optional[date] = UNSET
     years_between: Optional[str] = UNSET
@@ -426,7 +410,7 @@ class DateFunction(OrdinalFunction):
     strftime: bool = False
 
 
-@strawberry.input(description="functions for datetimes")
+@strawberry.input(description="[functions]({link}#temporal-component-extraction) for datetimes")
 class DateTimeFunction(OrdinalFunction):
     subtract: Optional[str] = UNSET
     fill_null: Optional[datetime] = UNSET
@@ -458,7 +442,7 @@ class DateTimeFunction(OrdinalFunction):
     strftime: bool = False
 
 
-@strawberry.input(description="functions for times")
+@strawberry.input(description="[functions]({link}#temporal-component-extraction) for times")
 class TimeFunction(OrdinalFunction):
     fill_null: Optional[time] = UNSET
     hours_between: Optional[str] = UNSET
@@ -481,14 +465,14 @@ class DurationFunction(Function):
     fill_null: Optional[timedelta] = UNSET
 
 
-@strawberry.input(description="functions for binaries")
+@strawberry.input(description="[functions]({link}#string-transforms) for binaries")
 class BinaryFunction(Function):
     binary_join_element_wise: Optional[List[str]] = UNSET
     fill_null: Optional[bytes] = UNSET
     binary_length: bool = False
 
 
-@strawberry.input(description="functions for strings")
+@strawberry.input(description="[functions]({link}#string-transforms) for strings")
 class StringFunction(Function):
     binary_join_element_wise: Optional[List[str]] = UNSET
     find_substring: Optional[str] = UNSET
@@ -503,15 +487,46 @@ class StringFunction(Function):
     utf8_reverse: bool = False
 
 
-@strawberry.input(description=f"[functions]({link}) for structs")
+@strawberry.input(description=f"[functions]({link}#selecting-multiplexing) for structs")
 class StructFunction(Function):
     case_when: Optional[List[str]] = UNSET
+
+
+@strawberry.input(description=f"[functions]({link}#structural-transforms) for list")
+class ListFunction(Function):
+    mode: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.mode))
+    quantile: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.quantile))
+    unique: bool = strawberry.field(
+        default=False, description="may be faster than `distinct` aggregation"
+    )
+    value_length: bool = strawberry.field(
+        default=False, description="faster than `count` aggregation"
+    )
 
 
 @strawberry.input(description=f"names and optional aliases for [aggregation]({link}#aggregations)")
 class Field(Input):
     name: str
     alias: str = ''
+
+
+class Aggregations(Input):
+    all: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.all))
+    any: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.any))
+    count: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.count))
+    count_distinct: List[Field] = default_field(
+        list, description=inspect.getdoc(ListChunk.count_distinct)
+    )
+    first: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.first))
+    last: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.last))
+    max: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.max))
+    mean: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.mean))
+    min: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.min))
+    product: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.product))
+    stddev: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.stddev))
+    sum: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.sum))
+    tdigest: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.tdigest))
+    variance: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.variance))
 
 
 @strawberry.input(description="discrete difference predicates; durations may be in float seconds")

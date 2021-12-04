@@ -17,9 +17,8 @@ from strawberry.field import StrawberryField
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
 from .inputs import BooleanQuery, IntQuery, LongQuery, FloatQuery, DecimalQuery, DateQuery
-from .inputs import DateTimeQuery, TimeQuery, DurationQuery, BinaryQuery, StringFilter
-from .inputs import Field, resolve_annotations
-from .scalars import Long, classproperty, type_map
+from .inputs import DateTimeQuery, TimeQuery, DurationQuery, BinaryQuery, StringQuery
+from .scalars import Long, type_map
 
 
 def selections(*fields) -> set:
@@ -444,7 +443,7 @@ class BinaryColumn(Column):
 
 @strawberry.type(description="column of strings")
 class StringColumn(Column):
-    count = StringFilter.resolver(Column.count)
+    count = StringQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=str)
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
@@ -526,37 +525,6 @@ class StringColumn(Column):
 
 @strawberry.type(description="column of lists")
 class ListColumn(Column):
-    aggregates = (
-        'count',
-        'count_distinct',
-        'value_length',
-        'unique',
-        'first',
-        'last',
-        'min',
-        'max',
-        'sum',
-        'product',
-        'mean',
-        'mode',
-        'quantile',
-        'tdigest',
-        'stddev',
-        'variance',
-        'any',
-        'all',
-    )
-
-    @classproperty
-    def resolver(cls) -> Callable:
-        """a decorator which transforms aggregate functions into arguments"""
-        annotations = {}
-        for key in cls.aggregates:
-            argument = strawberry.argument(description=inspect.getdoc(getattr(ListChunk, key)))
-            annotations[key] = Annotated[List[Field], argument]
-        defaults = dict.fromkeys(cls.aggregates, [])  # type: dict
-        return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
-
     @doc_field
     def values(self) -> List[Optional[Column]]:
         """list of columns"""

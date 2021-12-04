@@ -371,12 +371,12 @@ def test_group(client):
     data = client.execute(
         '''{ group(by: ["state"]) { length tables { length
         columns { state { values } county { min max } } }
-        aggregate(valueLength: {name: "county", alias: "c"}) {
+        apply(list: {name: "county", alias: "c", valueLength: true}) {
         column(name: "c") { ... on LongColumn { values } } } } }'''
     )
     assert len(data['group']['tables']) == data['group']['length'] == 52
     table = data['group']['tables'][0]
-    assert table['length'] == data['group']['aggregate']['column']['values'][0] == 2205
+    assert table['length'] == data['group']['apply']['column']['values'][0] == 2205
     assert set(table['columns']['state']['values']) == {'NY'}
     assert table['columns']['county'] == {'min': 'Albany', 'max': 'Yates'}
     data = client.execute(

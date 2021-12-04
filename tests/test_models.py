@@ -134,18 +134,6 @@ def test_columns(executor):
         '{ binary { binaryReplaceSlice(start: 0, stop: 1, replacement: "") { values } } }'
     )
     assert data == {'binary': {'binaryReplaceSlice': {'values': ['', None]}}}
-
-    assert execute('{ string { count(stringIsAscii: true) } }') == {'string': {'count': 1}}
-    assert execute('{ string { count(utf8IsAlnum: false) } }') == {'string': {'count': 0}}
-    assert execute('{ string { count(utf8IsAlpha: true) } }') == {'string': {'count': 0}}
-    assert execute('{ string { count(utf8IsDecimal: true) } }') == {'string': {'count': 0}}
-    assert execute('{ string { count(utf8IsDigit: true) } }') == {'string': {'count': 0}}
-    assert execute('{ string { count(utf8IsLower: true) } }') == {'string': {'count': 0}}
-    assert execute('{ string { count(utf8IsNumeric: true) } }') == {'string': {'count': 0}}
-    assert execute('{ string { count(utf8IsPrintable: true) } }') == {'string': {'count': 1}}
-    assert execute('{ string { count(utf8IsSpace: true) } }') == {'string': {'count': 0}}
-    assert execute('{ string { count(utf8IsTitle: true) } }') == {'string': {'count': 0}}
-    assert execute('{ string { count(utf8IsUpper: true) } }') == {'string': {'count': 0}}
     assert execute('{ string { type } }') == {
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
     }
@@ -366,10 +354,10 @@ def test_list(executor):
     column = data['filter']['columns']['list']
     assert column == {'values': [{'values': [0, 2]}, {'values': []}]}
     data = executor(
-        '''{ aggregate(mode: {name: "list"}) {
+        '''{ apply(list: {name: "list", mode: true}) {
         column(name: "list") { ... on IntColumn { values } } } }'''
     )
-    assert data['aggregate']['column']['values'] == [0, None]
+    assert data['apply']['column']['values'] == [0, None]
     data = executor(
         '''{ aggregate(stddev: {name: "list"}, variance: {name: "list", alias: "var"}) {
         column(name: "list") { ... on FloatColumn { values } }
@@ -406,16 +394,16 @@ def test_dictionary(executor):
         {'columns': {'string': {'values': [None]}}, 'column': {'length': 1}},
     ]
     data = executor(
-        '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string"}) { column(name: "string") {
-        ... on ListColumn { count { values } } } } } }'''
+        '''{ group(by: ["camelId"]) { apply(list: {name: "string", unique: true}) {
+        column(name: "string") { ... on ListColumn { count { values } } } } } }'''
     )
-    assert data == {'group': {'aggregate': {'column': {'count': {'values': [1, 0]}}}}}
+    assert data == {'group': {'apply': {'column': {'count': {'values': [1, 0]}}}}}
     data = executor(
-        '''{ group(by: ["camelId"]) { aggregate(unique: {name: "string"}) {
+        '''{ group(by: ["camelId"]) { apply(list: {name: "string", unique: true}) {
         aggregate(count: {name: "string"}) {
         column(name: "string") { ... on LongColumn { values } } } } } }'''
     )
-    assert data == {'group': {'aggregate': {'aggregate': {'column': {'values': [1, 0]}}}}}
+    assert data == {'group': {'apply': {'aggregate': {'column': {'values': [1, 0]}}}}}
     data = executor(
         '''{ group(by: ["camelId"]) { aggregate(countDistinct: {name: "string"}) {
         column(name: "string") { ... on LongColumn { values } } } } }'''

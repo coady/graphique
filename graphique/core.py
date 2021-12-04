@@ -43,6 +43,8 @@ class Chunk(pa.Array):
 
 
 class ListChunk(pa.lib.BaseListArray):
+    value_length = pc.list_value_length
+
     def from_counts(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
         """Return list array by converting counts into offsets."""
         offsets = np.concatenate([[0], np.cumsum(counts)])
@@ -66,10 +68,6 @@ class ListChunk(pa.lib.BaseListArray):
         if pa.types.is_dictionary(self.values.type):
             self = type(self).from_arrays(self.offsets, self.values.indices)
         return ListChunk.reduce(self, pc.count_distinct, 'int64', pc.CountOptions(**options))
-
-    def value_length(self) -> pa.IntegerArray:
-        """length of each list scalar"""
-        return pc.list_value_length(self)
 
     def first(self) -> pa.Array:
         """first value of each list scalar"""
@@ -572,6 +570,8 @@ class Table(pa.Table):
                 column = getattr(Column, func)(column, arg)
             elif not isinstance(arg, bool):
                 column = getattr(pc, func + '_regex' * regex)(column, arg, **options)
+            elif arg and Column.is_list_type(column):
+                column = Column.map(column, getattr(ListChunk, func))
             elif arg:
                 column = getattr(pc, func + '_checked' * checked)(column)
         if cast:

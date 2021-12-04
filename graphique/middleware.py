@@ -14,8 +14,11 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, ListChunk, Table as T
-from .inputs import Diff, Function, Projections
-from .models import Column, ListColumn, annotate, doc_field, selections
+from .inputs import Aggregations, Diff, Projections
+from .inputs import BinaryFunction, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
+from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
+from .inputs import StringFunction, StructFunction, TimeFunction
+from .models import Column, annotate, doc_field, selections
 from .scalars import Long, scalar_map
 
 comparisons = {
@@ -102,13 +105,12 @@ class AbstractTable:
     def __init_subclass__(cls):
         """Downcast fields which return an `AbstractTable` to its implemented type."""
         cls.__init__ = AbstractTable.__init__
-        resolvers = {'apply': Function.resolver, 'aggregate': ListColumn.resolver}
         for name, func in inspect.getmembers(cls, inspect.isfunction):
             if func.__annotations__.get('return') in ('AbstractTable', List['AbstractTable']):
                 clone = types.FunctionType(func.__code__, func.__globals__)
                 clone.__annotations__['return'] = cls
-                if name in resolvers:
-                    field = resolvers[name](clone)
+                if name == 'aggregate':
+                    field = Aggregations.resolver(clone)
                 else:
                     field = annotate(func, List[cls] if name == 'tables' else cls)
                 setattr(cls, name, field)
@@ -247,9 +249,23 @@ class AbstractTable:
         table = self.select(info)
         return type(self)(T.matched(table, C.max, *by))
 
-    @Function.resolver
-    @no_type_check
-    def apply(self, info, **functions) -> 'AbstractTable':
+    def apply(
+        self,
+        info,
+        binary: List[BinaryFunction] = [],
+        boolean: List[BooleanFunction] = [],
+        date: List[DateFunction] = [],
+        datetime: List[DateTimeFunction] = [],
+        decimal: List[DecimalFunction] = [],
+        duration: List[DurationFunction] = [],
+        float: List[FloatFunction] = [],
+        int: List[IntFunction] = [],
+        long: List[LongFunction] = [],
+        list: List[ListFunction] = [],
+        string: List[StringFunction] = [],
+        struct: List[StructFunction] = [],
+        time: List[TimeFunction] = [],
+    ) -> 'AbstractTable':
         """Return view of table with functions applied across columns.
 
         If no alias is provided, the column is replaced and should be of the same type.
@@ -257,8 +273,9 @@ class AbstractTable:
         in filter `predicates`, and in the `by` arguments of grouping and sorting.
         """
         table = self.select(info)
-        for value in map(dict, itertools.chain(*functions.values())):
-            table = T.apply(table, value.pop('name'), **value)
+        args = datetime, decimal, duration, float, int, list, long, string, struct, time
+        for value in map(dict, itertools.chain(binary, boolean, date, *args)):
+            table = T.apply(table, value.pop('name'), **value)  # type: ignore
         return type(self)(table)
 
     @doc_field
@@ -275,7 +292,7 @@ class AbstractTable:
             row.update({name: table[name][index].values for name in lists})
             yield type(self)(pa.Table.from_pydict(row))
 
-    @ListColumn.resolver
+    @Aggregations.resolver
     def aggregate(self, info, **fields) -> 'AbstractTable':
         """Return table with aggregate functions applied to list columns, typically used after grouping.
 
