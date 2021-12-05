@@ -293,6 +293,7 @@ class AbstractTable:
             yield type(self)(pa.Table.from_pydict(row))
 
     @Aggregations.resolver
+    @no_type_check
     def aggregate(self, info, **fields) -> 'AbstractTable':
         """Return table with aggregate functions applied to list columns, typically used after grouping.
 
@@ -302,6 +303,7 @@ class AbstractTable:
         columns = {name: table[name] for name in table.column_names}
         for key in fields:
             func = getattr(ListChunk, key)
-            for field in fields[key]:
-                columns[field.alias or field.name] = C.map(table[field.name], func)
+            for field in map(dict, fields[key]):
+                name, alias = field.pop('name'), field.pop('alias')
+                columns[alias or name] = C.map(table[name], func, **field)
         return type(self)(pa.Table.from_pydict(columns))

@@ -44,11 +44,11 @@ class Input:
         """a decorator which flattens an input type's fields into arguments"""
         annotations = dict(cls.__annotations__)
         defaults = {name: getattr(cls, name) for name in annotations if hasattr(cls, name)}
-        for name, default in defaults.items():
-            if isinstance(default, StrawberryField):
-                argument = strawberry.argument(description=default.description)
-                annotations[name] = Annotated[annotations[name], argument]
-                defaults[name] = default.default_factory()
+        for field in cls._type_definition.fields:  # type: ignore
+            if not hasattr(cls, field.name):
+                argument = strawberry.argument(description=field.description)
+                annotations[field.name] = Annotated[annotations[field.name], argument]
+                defaults[field.name] = field.default_factory()
         for name in cls.nullables:
             argument = strawberry.argument(description=cls.nullables[name])
             annotations[name] = Annotated[annotations[name], argument]
@@ -505,28 +505,51 @@ class ListFunction(Function):
 
 
 @strawberry.input(description=f"names and optional aliases for [aggregation]({link}#aggregations)")
-class Field(Input):
+class Aggregate(Input):
     name: str
     alias: str = ''
 
 
+@strawberry.input(description=f"options for count [aggregation]({link}#grouped-aggregations)")
+class CountAggregate(Aggregate):
+    mode: str = 'only_valid'
+
+
+@strawberry.input(description=f"options for scalar [aggregation]({link}#grouped-aggregations)")
+class ScalarAggregate(Aggregate):
+    skip_nulls: bool = True
+    min_count: int = 1
+
+
+@strawberry.input
 class Aggregations(Input):
-    all: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.all))
-    any: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.any))
-    count: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.count))
-    count_distinct: List[Field] = default_field(
+    all: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.all))
+    any: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.any))
+    count: List[CountAggregate] = default_field(list, description=inspect.getdoc(ListChunk.count))
+    count_distinct: List[CountAggregate] = default_field(
         list, description=inspect.getdoc(ListChunk.count_distinct)
     )
-    first: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.first))
-    last: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.last))
-    max: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.max))
-    mean: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.mean))
-    min: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.min))
-    product: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.product))
-    stddev: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.stddev))
-    sum: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.sum))
-    tdigest: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.tdigest))
-    variance: List[Field] = default_field(list, description=inspect.getdoc(ListChunk.variance))
+    distinct: List[CountAggregate] = default_field(
+        list, description=inspect.getdoc(ListChunk.distinct)
+    )
+    first: List[Aggregate] = default_field(list, description=inspect.getdoc(ListChunk.first))
+    last: List[Aggregate] = default_field(list, description=inspect.getdoc(ListChunk.last))
+    max: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.max))
+    mean: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.mean))
+    min: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.min))
+    product: List[ScalarAggregate] = default_field(
+        list, description=inspect.getdoc(ListChunk.product)
+    )
+    stddev: List[ScalarAggregate] = default_field(
+        list, description=inspect.getdoc(ListChunk.stddev)
+    )
+    sum: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.sum))
+    tdigest: List[ScalarAggregate] = default_field(
+        list, description=inspect.getdoc(ListChunk.tdigest)
+    )
+    variance: List[ScalarAggregate] = default_field(
+        list, description=inspect.getdoc(ListChunk.variance)
+    )
 
 
 @strawberry.input(description="discrete difference predicates; durations may be in float seconds")

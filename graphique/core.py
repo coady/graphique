@@ -133,7 +133,7 @@ class ListChunk(pa.lib.BaseListArray):
 
     def product(self, **options) -> pa.Array:
         """product of each list scalar"""
-        return ListChunk.reduce(self, pc.product)
+        return ListChunk.reduce(self, pc.product, options=pc.ScalarAggregateOptions(**options))
 
     def mean(self, **options) -> pa.FloatingPointArray:
         """mean of each list scalar"""
