@@ -1,3 +1,4 @@
+import pyarrow as pa
 import pytest
 
 
@@ -415,6 +416,25 @@ def test_group(client):
         cs: group(by: ["county", "state"]) { length } }'''
     )
     assert data['sc']['length'] == data['cs']['length'] == 3216
+
+
+@pytest.mark.skipif(pa.__version__ < '7', reason="requires pyarrow >=7")
+def test_aggregate(client):
+    data = client.execute(
+        '''{ group(by: ["state"] counts: "c", aggregate: {first: [{name: "county"}]
+        countDistinct: [{name: "city", alias: "cd"}]}) { slice(length: 3) {
+        c: column(name: "c") { ... on LongColumn { values } }
+        cd: column(name: "cd") { ... on LongColumn { values } }
+        columns { state { values } county { values } } } } }'''
+    )
+    assert data['group']['slice'] == {
+        'c': {'values': [2205, 176, 703]},
+        'cd': {'values': [1612, 99, 511]},
+        'columns': {
+            'state': {'values': ['NY', 'PR', 'MA']},
+            'county': {'values': ['Suffolk', 'Adjuntas', 'Hampden']},
+        },
+    }
 
 
 def test_partition(client):

@@ -149,6 +149,20 @@ def test_group(table):
         T.sort_list(groups, 'county')
 
 
+@pytest.mark.skipif(pa.__version__ < '7', reason="requires pyarrow >=7")
+def test_aggregate(table):
+    groups = T.aggregate(table, 'state', counts='counts', first={'county': ''})
+    assert len(groups) == 52
+    assert groups['state'][0].as_py() == 'NY'
+    assert groups['counts'][0].as_py() == 2205
+    assert groups['county'][0].as_py() == 'Suffolk'
+    groups = T.aggregate(table, 'state', last={'city': 'last'}, min={'zipcode': {}})
+    assert groups['last'][0].as_py() == 'Elmira'
+    assert groups['zipcode'][0].as_py() == 501
+    groups = T.aggregate(table, 'state', max={'zipcode': {'alias': 'max', 'skip_nulls': False}})
+    assert groups['max'][0].as_py() == 14925
+
+
 def test_partition(table):
     groups, counts = T.partition(table, 'state')
     assert len(groups) == len(counts) == 66

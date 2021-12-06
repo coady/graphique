@@ -7,14 +7,31 @@ Their methods are called as functions.
 import bisect
 import contextlib
 import functools
+import itertools
 import operator
 from concurrent import futures
 from datetime import time
-from typing import Callable, Iterable, Iterator, Optional
+from typing import Callable, Iterable, Iterator, Mapping, Optional
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 from .arrayed import group_indices  # type: ignore
+
+option_map = {
+    'all': pc.ScalarAggregateOptions,
+    'any': pc.ScalarAggregateOptions,
+    'count': pc.CountOptions,
+    'count_distinct': pc.CountOptions,
+    'distinct': pc.CountOptions,
+    'max': pc.ScalarAggregateOptions,
+    'mean': pc.ScalarAggregateOptions,
+    'min': pc.ScalarAggregateOptions,
+    'product': pc.ScalarAggregateOptions,
+    'stddev': pc.VarianceOptions,
+    'sum': pc.ScalarAggregateOptions,
+    'tdigest': pc.TDigestOptions,
+    'variance': pc.VarianceOptions,
+}
 
 
 class Compare:
@@ -484,6 +501,47 @@ class Table(pa.Table):
             column = Column.combine_chunks(self[name])
             columns[name] = pa.LargeListArray.from_arrays(offsets, column)
         return pa.Table.from_pydict(columns), Column.diff(offsets)
+
+    def aggregate(
+        self,
+        *names: str,
+        counts: str = '',
+        first: Mapping[str, str] = {},
+        last: Mapping[str, str] = {},
+        **funcs: Mapping[str, dict],
+    ) -> pa.Table:
+        """Group by and aggregate.
+
+        Args:
+            names: columns to group by
+            counts: alias for optional row counts
+            first: {name: optional alias, ...} to take first value
+            last: {name: optional alias, ...} to take last value
+            funcs: {func: {name: {'alias': '', ...}, ...}, ...} aggregate funcs with options
+        """
+        selections = itertools.chain(names, first, last, *funcs.values())
+        self = self.select(set(selections)).combine_chunks()
+        aggs = [(pa.repeat(False, len(self)), 'hash_count', None)] if counts else []
+        if first or last:
+            aggs.append((pa.array(np.arange(len(self))), 'hash_min_max', None))
+        for func in funcs:
+            cls, mask = option_map[func], (func in ('any', 'all'))
+            for name, options in funcs[func].items():
+                options = {key: options[key] for key in set(options) - {'alias'}}
+                column = Column.mask(self[name]) if mask else self[name]
+                aggs.append((column, f'hash_{func}', cls(**options)))
+        values, hashes, options = zip(*aggs)
+        arrays = iter(pc._group_by(values, self.select(names), zip(hashes, options)).flatten())
+        columns = {counts: next(arrays)} if counts else {}
+        if first or last:
+            mins, maxes = next(arrays).flatten()
+            columns.update({first[name] or name: self[name].take(mins) for name in first})
+            columns.update({last[name] or name: self[name].take(maxes) for name in last})
+        for value in funcs.values():
+            aliases = (options.get('alias') or name for name, options in value.items())
+            columns.update(zip(aliases, arrays))
+        columns.update(zip(names, arrays))
+        return pa.Table.from_pydict(columns)
 
     def unique(self, *names: str, counts=False) -> tuple:
         """Return table with first occurrences from grouping by columns.

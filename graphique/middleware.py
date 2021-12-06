@@ -166,21 +166,29 @@ class AbstractTable:
     @doc_field(
         by="column names",
         counts="optionally include counts in an aliased column",
+        aggregate="grouped aggregation functions; dev only",
     )
+    @no_type_check
     def group(
-        self,
-        info,
-        by: List[str],
-        counts: str = '',
+        self, info, by: List[str], counts: str = '', aggregate: Aggregations = {}
     ) -> 'AbstractTable':
         """Return table grouped by columns, with stable ordering.
 
-        Other columns can be accessed by the `column` field as a `ListColumn`.
-        Typically used in conjunction with `aggregate` or `tables`.
+        Columns which are not aggregated are transformed into list columns.
+        See `column`, `aggregate`, and `tables` for further usage of list columns.
         """
         table = self.select(info)
         if selections(*info.selected_fields) == {'length'}:  # optimized for count
-            return type(self)(T.encode(table, *by).unique())
+            if pa.__version__ < '7':
+                return type(self)(T.encode(table, *by).unique())
+            return type(self)(T.aggregate(table, *by, counts='_'))
+        aggs = {}
+        for func, values in dict(aggregate).items():
+            aggs[func] = {value.pop('name'): value for value in map(dict, values)}
+            if func in ('first', 'last'):
+                aggs[func] = {name: value['alias'] for name, value in aggs[func].items()}
+        if any(aggs.values()):
+            return type(self)(T.aggregate(table, *by, counts=counts, **aggs))
         if set(table.column_names) <= set(by):
             table, counts_ = T.unique(table, *by, counts=counts)
         else:
