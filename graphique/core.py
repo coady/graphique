@@ -20,6 +20,7 @@ from .arrayed import group_indices  # type: ignore
 option_map = {
     'all': pc.ScalarAggregateOptions,
     'any': pc.ScalarAggregateOptions,
+    'approximate_median': pc.ScalarAggregateOptions,
     'count': pc.CountOptions,
     'count_distinct': pc.CountOptions,
     'distinct': pc.CountOptions,
@@ -525,11 +526,12 @@ class Table(pa.Table):
         if first or last:
             aggs.append((pa.array(np.arange(len(self))), 'hash_min_max', None))
         for func in funcs:
-            cls, mask = option_map[func], (func in ('any', 'all'))
             for name, options in funcs[func].items():
                 options = {key: options[key] for key in set(options) - {'alias'}}
-                column = Column.mask(self[name]) if mask else self[name]
-                aggs.append((column, f'hash_{func}', cls(**options)))
+                column = Column.mask(self[name]) if func in ('any', 'all') else self[name]
+                scalar = set(options) <= {'skip_nulls', 'min_count'}
+                key = 'approximate_median' if func == 'tdigest' and scalar else func
+                aggs.append((column, f'hash_{key}', option_map[key](**options)))
         values, hashes, options = zip(*aggs)
         arrays = iter(pc._group_by(values, self.select(names), zip(hashes, options)).flatten())
         columns = {counts: next(arrays)} if counts else {}

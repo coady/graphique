@@ -161,6 +161,9 @@ def test_aggregate(table):
     assert groups['zipcode'][0].as_py() == 501
     groups = T.aggregate(table, 'state', max={'zipcode': {'alias': 'max', 'skip_nulls': False}})
     assert groups['max'][0].as_py() == 14925
+    groups = T.aggregate(table, 'state', tdigest={'longitude': {}, 'latitude': {'q': [0.5]}})
+    assert groups['longitude'][0].as_py() == pytest.approx(-74.25370)
+    assert groups['latitude'][0].as_py() == [pytest.approx(42.34672)]
 
 
 def test_partition(table):
