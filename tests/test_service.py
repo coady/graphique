@@ -435,6 +435,16 @@ def test_aggregate(client):
             'county': {'values': ['Suffolk', 'Adjuntas', 'Hampden']},
         },
     }
+    data = client.execute(
+        '''{ group(by: ["state", "county"], aggregate: {min: {name: "city", alias: "first"}}) {
+        aggregate(max: {name: "city", alias: "last"}) { slice(length: 3) {
+        first: column(name: "first") { ... on StringColumn { values } }
+        last: column(name: "last") { ... on StringColumn { values } } } } } }'''
+    )
+    assert data['group']['aggregate']['slice'] == {
+        'first': {'values': ['Amagansett', 'Adjuntas', 'Aguada']},
+        'last': {'values': ['Yaphank', 'Adjuntas', 'Aguada']},
+    }
 
 
 def test_partition(client):

@@ -434,6 +434,13 @@ class Table(pa.Table):
         'nanoseconds_between',
     }
 
+    def union(*tables: pa.Table) -> pa.Table:
+        """Return table with union of columns."""
+        columns = {}
+        for table in tables:
+            columns.update({name: table[name] for name in table.column_names})
+        return pa.Table.from_pydict(columns)
+
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.
 

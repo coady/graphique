@@ -115,10 +115,18 @@ class AbstractTable:
                     field = annotate(func, List[cls] if name == 'tables' else cls)
                 setattr(cls, name, field)
 
+    @staticmethod
+    def references(info, level: int = 0) -> set:
+        """Return set of every possible future column reference."""
+        fields = info.selected_fields
+        for _ in range(level):
+            fields = itertools.chain(*[field.selections for field in fields])
+        return set(itertools.chain(*map(references, fields)))
+
     def select(self, info, queries: dict = {}, invert=False, reduce: str = 'and') -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
         case_map = {to_camel_case(name): name for name in self.table.schema.names}
-        names = set(itertools.chain(*map(references, info.selected_fields))) & set(case_map)
+        names = self.references(info) & set(case_map)
         if isinstance(self.table, pa.Table):
             return self.table.select(names)
         columns = {name: ds.field(case_map[name]) for name in names}
@@ -188,7 +196,12 @@ class AbstractTable:
             if func in ('first', 'last'):
                 aggs[func] = {name: value['alias'] for name, value in aggs[func].items()}
         if any(aggs.values()):
-            return type(self)(T.aggregate(table, *by, counts=counts, **aggs))
+            groups = T.aggregate(table, *by, counts=counts, **aggs)
+            names = self.references(info, level=1) & set(table.column_names)
+            if names <= set(groups.column_names):  # check whether list groups are still needed
+                return type(self)(groups)
+            table, _ = T.group(table.select(names | set(by)), *by)
+            return type(self)(T.union(table, groups))
         if set(table.column_names) <= set(by):
             table, counts_ = T.unique(table, *by, counts=counts)
         else:

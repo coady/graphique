@@ -51,10 +51,12 @@ Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partitio
 * `Table.tables` returns a list of tables based on the list scalars. 
 * `Table.aggregate` applies reduce functions to the ListColumns.
 * `Table.aggregate` with only `first` and `last` functions is faster because not all of the scalar values are needed. For example, when only `min` and `max` values are needed, it may be faster to `sort` first instead.
+* `Table.group(aggregate: {})` uses builtin hash aggregate functions. (dev only)
 * Only accessing grouped keys and counts uses builtin unique functions.
 * Only accessing `length` computes an optimized count.
 
 ListColumns support sorting and filtering within their list scalars. They must all have the same value lengths, which is the case when the result of grouping, but list arrays may also be from the original dataset.
+
 ## Column selection
 Each field resolver transforms a table or array as needed. When working with an embedded library like [pandas](https://pandas.pydata.org), it's common to select a working set of columns for efficiency. Whereas GraphQL has the advantage of knowing the entire query up front, so there is no `Table.select` field because it's done automatically at every level of resolvers.
 

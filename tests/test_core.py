@@ -151,6 +151,8 @@ def test_group(table):
 
 @pytest.mark.skipif(pa.__version__ < '7', reason="requires pyarrow >=7")
 def test_aggregate(table):
+    tbl = T.union(table, table.select([0]).rename_columns(['test']))
+    assert tbl.column_names == table.column_names + ['test']
     groups = T.aggregate(table, 'state', counts='counts', first={'county': ''})
     assert len(groups) == 52
     assert groups['state'][0].as_py() == 'NY'
