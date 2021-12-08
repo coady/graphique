@@ -250,6 +250,12 @@ class Column(pa.ChunkedArray):
         values, counts = self.value_counts().flatten() if counts else (self.unique(), None)
         return pc.index_in(values, value_set=self), counts
 
+    def indices(self) -> pa.ChunkedArray:
+        """Return chunked indices suitable for aggregation."""
+        sizes = list(map(len, self.iterchunks()))
+        items = zip(itertools.accumulate([0] + sizes), sizes)
+        return pa.chunked_array(np.arange(index, index + size) for index, size in items)
+
     def combine_chunks(self) -> pa.Array:
         """Native `combine_chunks` doesn't support empty chunks."""
         if self.num_chunks > 1:
@@ -527,11 +533,11 @@ class Table(pa.Table):
             last: {name: optional alias, ...} to take last value
             funcs: {func: {name: {'alias': '', ...}, ...}, ...} aggregate funcs with options
         """
-        selections = itertools.chain(names, first, last, *funcs.values())
-        self = self.select(set(selections)).combine_chunks()
-        aggs = [(pa.repeat(False, len(self)), 'hash_count', None)] if counts else []
+        none = not (counts or first or last or funcs)
+        column = self[names[0]]
+        aggs = [(column, 'hash_count', pc.CountOptions(mode='all'))] if none or counts else []
         if first or last:
-            aggs.append((pa.array(np.arange(len(self))), 'hash_min_max', None))
+            aggs.append((Column.indices(column), 'hash_min_max', None))
         for func in funcs:
             for name, options in funcs[func].items():
                 options = {key: options[key] for key in set(options) - {'alias'}}
@@ -541,6 +547,8 @@ class Table(pa.Table):
                 aggs.append((column, f'hash_{key}', option_map[key](**options)))
         values, hashes, options = zip(*aggs)
         arrays = iter(pc._group_by(values, self.select(names), zip(hashes, options)).flatten())
+        if none:
+            next(arrays)
         columns = {counts: next(arrays)} if counts else {}
         if first or last:
             mins, maxes = next(arrays).flatten()
