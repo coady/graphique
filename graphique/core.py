@@ -50,16 +50,6 @@ class Compare:
         return self.value > other.as_py()
 
 
-class Chunk(pa.Array):
-    def take_list(self, indices: pa.lib.BaseListArray) -> pa.lib.BaseListArray:
-        assert len(self) == len(indices.values)
-        return type(indices).from_arrays(indices.offsets, self.take(indices.values))
-
-    def index(self: pa.DictionaryArray, value) -> int:
-        index = self.dictionary.index(value).as_py()
-        return index if index < 0 else self.indices.index(index).as_py()
-
-
 class ListChunk(pa.lib.BaseListArray):
     value_length = pc.list_value_length
 
@@ -377,7 +367,9 @@ class Column(pa.ChunkedArray):
             return self.index(value, start, end).as_py()  # type: ignore
         offset = start
         for chunk in self[start:end].iterchunks():
-            index = Chunk.index(chunk, value)
+            index = chunk.dictionary.index(value).as_py()
+            if index >= 0:
+                index = chunk.indices.index(index).as_py()
             if index >= 0:
                 return offset + index
             offset += len(chunk)
@@ -442,9 +434,9 @@ class Table(pa.Table):
 
     def union(*tables: pa.Table) -> pa.Table:
         """Return table with union of columns."""
-        columns = {}
+        columns: dict = {}
         for table in tables:
-            columns.update({name: table[name] for name in table.column_names})
+            columns.update(zip(table.column_names, table))
         return pa.Table.from_pydict(columns)
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
@@ -483,14 +475,19 @@ class Table(pa.Table):
             keys = pc.add_checked(pc.multiply_checked(keys, size), array)
         return keys
 
+    def from_offsets(self, offsets: pa.IntegerArray) -> pa.Table:
+        """Return table with columns converted into list columns."""
+        cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
+        arrays = [cls.from_arrays(offsets, *column.chunks) for column in self.combine_chunks()]
+        return pa.Table.from_arrays(arrays, self.column_names)
+
     def group(self, *names: str) -> tuple:
         """Return table grouped by columns and corresponding counts."""
         indices = ListChunk.from_counts(*group_indices(Table.encode(self, *names)))
-        scalars = ListChunk.first(indices)
-        columns = {name: self[name].take(scalars) for name in names}
-        for name in set(self.column_names) - set(names):
-            columns[name] = Chunk.take_list(Column.combine_chunks(self[name]), indices)
-        return pa.Table.from_pydict(columns), indices.value_lengths()
+        scalars = self.select(names).take(ListChunk.first(indices))
+        lists = self.select(set(self.column_names) - set(names)).take(indices.values)
+        table = Table.union(scalars, Table.from_offsets(lists, indices.offsets))
+        return table, indices.value_lengths()
 
     def partition(self, *names: str, **predicates: tuple) -> tuple:
         """Return table partitioned by discrete differences and corresponding counts.
@@ -500,21 +497,15 @@ class Table(pa.Table):
             predicates: inequality predicates with optional args which will return list arrays;
                 if the predicate has args, it will be called on the differences
         """
-        names += tuple(predicates)
-        default = (pc.not_equal,)
-        offsets = Column.partition_offsets(self[names[0]], *predicates.get(names[0], default))
-        for name in names[1:]:
-            groups = [pa.array([0])]
-            predicate = predicates.get(name, default)
-            for scalar in pa.LargeListArray.from_arrays(offsets, Column.combine_chunks(self[name])):
-                group = Column.partition_offsets(pa.chunked_array([scalar.values]), *predicate)
-                groups.append(pc.add(group[1:], groups[-1][-1]))
-            offsets = pa.concat_arrays(groups)
-        columns = {name: self[name].take(offsets[:-1]) for name in set(names) - set(predicates)}
-        for name in set(self.column_names) - set(columns):
-            column = Column.combine_chunks(self[name])
-            columns[name] = pa.LargeListArray.from_arrays(offsets, column)
-        return pa.Table.from_pydict(columns), Column.diff(offsets)
+        offsets = pa.chunked_array(
+            Column.partition_offsets(self[name], *predicates.get(name, (pc.not_equal,)))
+            for name in names + tuple(predicates)
+        ).unique()
+        offsets = offsets.take(pc.sort_indices(offsets))
+        scalars = self.select(names).take(offsets[:-1])
+        lists = self.select(set(self.column_names) - set(names))
+        table = Table.union(scalars, Table.from_offsets(lists, offsets))
+        return table, Column.diff(offsets)
 
     def aggregate(
         self,
