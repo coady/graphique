@@ -18,7 +18,7 @@ from .inputs import Aggregations, Diff, Projections
 from .inputs import BinaryFunction, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction
-from .models import Column, annotate, doc_field, selections
+from .models import Column, annotate, doc_field
 from .scalars import Long, scalar_map
 
 comparisons = {
@@ -186,27 +186,20 @@ class AbstractTable:
         See `column`, `aggregate`, and `tables` for further usage of list columns.
         """
         table = self.select(info)
-        if selections(*info.selected_fields) == {'length'}:  # optimized for count
-            if pa.__version__ < '7':
-                return type(self)(T.encode(table, *by).unique())
-            return type(self)(T.aggregate(table, *by, counts='_'))
+        if pa.__version__ < '7':
+            table, counts_ = T.group(table, *by)
+            return type(self)(table.append_column(counts, counts_) if counts else table)
         aggs = {}
         for func, values in dict(aggregate).items():
             aggs[func] = {value.pop('name'): value for value in map(dict, values)}
             if func in ('first', 'last'):
                 aggs[func] = {name: value['alias'] for name, value in aggs[func].items()}
-        if any(aggs.values()):
-            groups = T.aggregate(table, *by, counts=counts, **aggs)
-            names = self.references(info, level=1) & set(table.column_names)
-            if names <= set(groups.column_names):  # check whether list groups are still needed
-                return type(self)(groups)
-            table, _ = T.group(table.select(names | set(by)), *by)
-            return type(self)(T.union(table, groups))
-        if set(table.column_names) <= set(by):
-            table, counts_ = T.unique(table, *by, counts=counts)
-        else:
-            table, counts_ = T.group(table, *by)
-        return type(self)(table.append_column(counts, counts_) if counts else table)
+        groups = T.aggregate(table, *by, counts=counts, **aggs)
+        names = self.references(info, level=1) & set(table.column_names)
+        if names <= set(groups.column_names):  # check whether list groups are still needed
+            return type(self)(groups)
+        table, _ = T.group(table.select(names | set(by)), *by)
+        return type(self)(T.union(table, groups))
 
     @doc_field(
         by="column names",

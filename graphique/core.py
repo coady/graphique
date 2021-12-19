@@ -109,8 +109,8 @@ class ListChunk(pa.lib.BaseListArray):
         return ListChunk.from_counts(counts, self.values.filter(mask))
 
     def aggregate(self, **funcs) -> pa.Array:
-        funcs = {f'hash_{name}': funcs[name] for name in funcs}
-        return pc._group_by([self.values], [self.value_parent_indices()], funcs.items())
+        items = {f'hash_{name}': funcs[name] for name in funcs}.items()
+        return pc._group_by([self.values] * len(funcs), [self.value_parent_indices()], items)
 
     def reduce(self, func: Callable, tp=None, options=None) -> pa.Array:
         with contextlib.suppress(AttributeError, ValueError):
@@ -524,7 +524,7 @@ class Table(pa.Table):
             last: {name: optional alias, ...} to take last value
             funcs: {func: {name: {'alias': '', ...}, ...}, ...} aggregate funcs with options
         """
-        none = not (counts or first or last or funcs)
+        none = not (counts or first or last or any(funcs.values()))
         column = self[names[0]]
         aggs = [(column, 'hash_count', pc.CountOptions(mode='all'))] if none or counts else []
         if first or last:
@@ -542,24 +542,13 @@ class Table(pa.Table):
             next(arrays)
         columns = {counts: next(arrays)} if counts else {}
         if first or last:
-            mins, maxes = next(arrays).flatten()
-            columns.update({first[name] or name: self[name].take(mins) for name in first})
-            columns.update({last[name] or name: self[name].take(maxes) for name in last})
+            for pairs, indices in zip([first, last], next(arrays).flatten()):
+                columns.update({pairs[name] or name: self[name].take(indices) for name in pairs})
         for value in funcs.values():
             aliases = (options.get('alias') or name for name, options in value.items())
             columns.update(zip(aliases, arrays))
         columns.update(zip(names, arrays))
         return pa.Table.from_pydict(columns)
-
-    def unique(self, *names: str, counts=False) -> tuple:
-        """Return table with first occurrences from grouping by columns.
-
-        Optionally compute corresponding counts.
-        Faster than [group][graphique.core.Table.group] when only scalars are needed.
-        """
-        column = Table.encode(self, *names) if len(names) > 1 else self.column(*names)
-        indices, counts = Column.unique_indices(column, counts=counts)
-        return self.take(indices), counts
 
     def list_value_length(self) -> pa.ChunkedArray:
         lists = {name for name in self.column_names if Column.is_list_type(self[name])}

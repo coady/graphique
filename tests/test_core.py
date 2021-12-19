@@ -20,7 +20,6 @@ def test_dictionary(table):
     assert len(C.unique_indices(array)[0]) == 52
     table = pa.Table.from_pydict({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
-    assert len(T.unique(table, 'state', 'state')[0]) == 52
     array = C.call(pa.chunked_array([[0, 0]]).dictionary_encode(), pc.add, 1)
     assert array.to_pylist() == [1, 1]
     array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()
@@ -34,7 +33,6 @@ def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
     assert C.combine_chunks(array) == pa.array(list('ababcb'))
     table = pa.Table.from_pydict({'col': array})
-    assert T.unique(table, 'col', counts=True)[1].to_pylist() == [2, 3, 1]
     groups, counts = T.group(table, 'col')
     assert groups['col'].to_pylist() == list('abc')
     assert counts.to_pylist() == [2, 3, 1]
@@ -43,9 +41,7 @@ def test_chunks():
     assert C.sort(array, length=3).to_pylist() == ['a', 'a', 'b']
     assert C.sort(array.dictionary_encode()[:2]).to_pylist() == ['a', 'b']
     assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
-    assert ''.join(T.unique(table, 'col')[0]['col'].to_pylist()) == 'abc'
     table = pa.Table.from_pydict({'col': array, 'other': range(6)})
-    assert len(T.unique(table, 'col')[0]) == 3
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
     assert pa.Array.equals(*(chunk.dictionary for chunk in C.unify_dictionaries(array).chunks))
     assert C.equal(array, 'a').to_pylist() == [True, False, True, False, True]
@@ -192,17 +188,13 @@ def test_partition(table):
 
 
 def test_unique(table):
-    assert len(T.unique(table, 'zipcode')[0]) == 41700
-    zipcodes = T.unique(table, 'state')[0]['zipcode'].to_pylist()
-    assert len(zipcodes) == 52
-    assert zipcodes[0] == 501
-    assert zipcodes[-1] == 99501
-    indices, _ = C.unique_indices(pa.array([1, None, 1]))
+    array = pa.array([1, None, 1])
+    indices, counts = C.unique_indices(array)
     assert indices.to_pylist() == [0, 1]
-    tbl, counts = T.unique(table, 'state', 'county', 'city', counts=True)
-    assert len(tbl) == 29865
-    assert tbl['zipcode'][0].as_py() == 501
-    assert counts[0].as_py() == 3
+    assert counts is None
+    indices, counts = C.unique_indices(array, counts=True)
+    assert indices.to_pylist() == [0, 1]
+    assert counts.to_pylist() == [2, 1]
 
 
 def test_sort(table):
