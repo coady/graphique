@@ -31,7 +31,6 @@ def test_dictionary(table):
 
 def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
-    assert C.combine_chunks(array) == pa.array(list('ababcb'))
     table = pa.Table.from_pydict({'col': array})
     groups, counts = T.group(table, 'col')
     assert groups['col'].to_pylist() == list('abc')
@@ -231,8 +230,6 @@ def test_numeric():
 
 
 def test_not_implemented():
-    with pytest.raises(NotImplementedError):
-        pa.chunked_array([[0]]).take([]).combine_chunks()
     dictionary = pa.array(['']).dictionary_encode()
     with pytest.raises(NotImplementedError):
         pc.sort_indices(dictionary)

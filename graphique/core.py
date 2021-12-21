@@ -246,12 +246,6 @@ class Column(pa.ChunkedArray):
         items = zip(itertools.accumulate([0] + sizes), sizes)
         return pa.chunked_array(np.arange(index, index + size) for index, size in items)
 
-    def combine_chunks(self) -> pa.Array:
-        """Native `combine_chunks` doesn't support empty chunks."""
-        if self.num_chunks > 1:
-            return self.combine_chunks()
-        return self.chunk(0) if self.num_chunks else pa.array([], self.type)
-
     def mask(self, func='and', ignore_case=False, regex=False, **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
         masks = []
@@ -572,11 +566,14 @@ class Table(pa.Table):
                 scalar.values[:length] for scalar in ListChunk.from_counts(counts, indices)
             )
             counts = pc.min_element_wise(counts, length)
-        for index, name in enumerate(self.column_names):
-            if Column.is_list_type(self[name]):
-                column = Column.combine_chunks(pc.list_flatten(self[name]).take(indices))
-                self = self.set_column(index, name, ListChunk.from_counts(counts, column))
-        return self
+        table = Table.select_list(self, pc.list_flatten).take(indices).combine_chunks()
+        arrays = [ListChunk.from_counts(counts, *column.chunks) for column in table]
+        return Table.union(self, pa.Table.from_arrays(arrays, table.column_names))
+
+    def select_list(self, apply: Callable = lambda c: c) -> pa.Table:
+        """Return table with only the list columns."""
+        names = [name for name in self.column_names if Column.is_list_type(self[name])]
+        return pa.Table.from_arrays(list(map(apply, self.select(names))), names)
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns, optimized for fixed length."""
@@ -637,11 +634,9 @@ class Table(pa.Table):
 
     def filter_list(self, mask: pa.BooleanArray):
         """Return table with list columns filtered within scalars."""
-        for index, name in enumerate(self.column_names):
-            if Column.is_list_type(self[name]):
-                column = ListChunk.filter_list(Column.combine_chunks(self[name]), mask)
-                self = self.set_column(index, name, column)
-        return self
+        table = Table.select_list(self).combine_chunks()
+        arrays = [ListChunk.filter_list(column.chunk(0), mask) for column in table]
+        return Table.union(self, pa.Table.from_arrays(arrays, table.column_names))
 
     def matched(self, func: Callable, *names: str) -> pa.Table:
         for name in names:

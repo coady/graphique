@@ -102,7 +102,7 @@ class Table(AbstractTable):
             table = table.filter(pc.invert(mask) if invert else mask)
         masks = [T.mask(table, name, **value) for name, value in filters if name in lists]
         if masks:
-            mask = C.combine_chunks(functools.reduce(getattr(pc, reduce.value), masks))
+            mask = functools.reduce(getattr(pc, reduce.value), masks).combine_chunks()
             table = T.filter_list(table, pc.invert(mask) if invert else mask)
         return Table(table)
 
