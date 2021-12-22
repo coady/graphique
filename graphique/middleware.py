@@ -13,7 +13,7 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
-from .core import Column as C, ListChunk, Table as T
+from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Diff, Projections
 from .inputs import BinaryFunction, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
@@ -191,9 +191,7 @@ class AbstractTable:
             return type(self)(table.append_column(counts, counts_) if counts else table)
         aggs = {}
         for func, values in dict(aggregate).items():
-            aggs[func] = {value.pop('name'): value for value in map(dict, values)}
-            if func in ('first', 'last'):
-                aggs[func] = {name: value['alias'] for name, value in aggs[func].items()}
+            aggs[func] = [Agg(**dict(value)) for value in values]
         groups = T.aggregate(table, *by, counts=counts, **aggs)
         names = self.references(info, level=1) & set(table.column_names)
         if names <= set(groups.column_names):  # check whether list groups are still needed

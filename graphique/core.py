@@ -11,28 +11,42 @@ import itertools
 import operator
 from concurrent import futures
 from datetime import time
-from typing import Callable, Iterable, Iterator, Mapping, Optional
+from typing import Callable, Iterable, Iterator, Optional, Sequence
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 from .arrayed import group_indices  # type: ignore
 
-option_map = {
-    'all': pc.ScalarAggregateOptions,
-    'any': pc.ScalarAggregateOptions,
-    'approximate_median': pc.ScalarAggregateOptions,
-    'count': pc.CountOptions,
-    'count_distinct': pc.CountOptions,
-    'distinct': pc.CountOptions,
-    'max': pc.ScalarAggregateOptions,
-    'mean': pc.ScalarAggregateOptions,
-    'min': pc.ScalarAggregateOptions,
-    'product': pc.ScalarAggregateOptions,
-    'stddev': pc.VarianceOptions,
-    'sum': pc.ScalarAggregateOptions,
-    'tdigest': pc.TDigestOptions,
-    'variance': pc.VarianceOptions,
-}
+
+class Agg:
+    """Aggregation options."""
+
+    option_map = {
+        'all': pc.ScalarAggregateOptions,
+        'any': pc.ScalarAggregateOptions,
+        'approximate_median': pc.ScalarAggregateOptions,
+        'count': pc.CountOptions,
+        'count_distinct': pc.CountOptions,
+        'distinct': pc.CountOptions,
+        'max': pc.ScalarAggregateOptions,
+        'mean': pc.ScalarAggregateOptions,
+        'min': pc.ScalarAggregateOptions,
+        'product': pc.ScalarAggregateOptions,
+        'stddev': pc.VarianceOptions,
+        'sum': pc.ScalarAggregateOptions,
+        'tdigest': pc.TDigestOptions,
+        'variance': pc.VarianceOptions,
+    }
+
+    def __init__(self, name: str, alias: str = '', **options):
+        self.name = name
+        self.alias = alias or name
+        self.options = options
+
+    def astuple(self, func: str) -> tuple:
+        if func == 'tdigest' and set(self.options) <= {'skip_nulls', 'min_count'}:
+            func = 'approximate_median'
+        return f'hash_{func}', self.option_map[func](**self.options)
 
 
 class Compare:
@@ -505,42 +519,38 @@ class Table(pa.Table):
         self,
         *names: str,
         counts: str = '',
-        first: Mapping[str, str] = {},
-        last: Mapping[str, str] = {},
-        **funcs: Mapping[str, dict],
+        first: Sequence[Agg] = (),
+        last: Sequence[Agg] = (),
+        **funcs: Sequence[Agg],
     ) -> pa.Table:
         """Group by and aggregate.
 
         Args:
             names: columns to group by
             counts: alias for optional row counts
-            first: {name: optional alias, ...} to take first value
-            last: {name: optional alias, ...} to take last value
-            funcs: {func: {name: {'alias': '', ...}, ...}, ...} aggregate funcs with options
+            first: columns to take first value
+            last: columns to take last value
+            funcs: aggregate funcs with columns options
         """
         none = not (counts or first or last or any(funcs.values()))
         column = self[names[0]]
-        aggs = [(column, 'hash_count', pc.CountOptions(mode='all'))] if none or counts else []
+        args = [(column, 'hash_count', pc.CountOptions(mode='all'))] if none or counts else []
         if first or last:
-            aggs.append((Column.indices(column), 'hash_min_max', None))
+            args.append((Column.indices(column), 'hash_min_max', None))
         for func in funcs:
-            for name, options in funcs[func].items():
-                options = {key: options[key] for key in set(options) - {'alias'}}
-                column = Column.mask(self[name]) if func in ('any', 'all') else self[name]
-                scalar = set(options) <= {'skip_nulls', 'min_count'}
-                key = 'approximate_median' if func == 'tdigest' and scalar else func
-                aggs.append((column, f'hash_{key}', option_map[key](**options)))
-        values, hashes, options = zip(*aggs)
+            for agg in funcs[func]:
+                column = Column.mask(self[agg.name]) if func in ('any', 'all') else self[agg.name]
+                args.append((column, *agg.astuple(func)))  # type: ignore
+        values, hashes, options = zip(*args)
         arrays = iter(pc._group_by(values, self.select(names), zip(hashes, options)).flatten())
         if none:
             next(arrays)
         columns = {counts: next(arrays)} if counts else {}
         if first or last:
-            for pairs, indices in zip([first, last], next(arrays).flatten()):
-                columns.update({pairs[name] or name: self[name].take(indices) for name in pairs})
-        for value in funcs.values():
-            aliases = (options.get('alias') or name for name, options in value.items())
-            columns.update(zip(aliases, arrays))
+            for aggs, indices in zip([first, last], next(arrays).flatten()):
+                columns.update({agg.alias: self[agg.name].take(indices) for agg in aggs})
+        for aggs in funcs.values():
+            columns.update(zip([agg.alias for agg in aggs], arrays))
         columns.update(zip(names, arrays))
         return pa.Table.from_pydict(columns)
 

@@ -3,7 +3,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
-from graphique.core import ListChunk, Column as C, Table as T
+from graphique.core import Agg, ListChunk, Column as C, Table as T
 
 
 def test_dictionary(table):
@@ -151,17 +151,17 @@ def test_aggregate(table):
     groups = T.aggregate(table, 'state', 'county')
     assert len(groups) == 3216
     assert groups.column_names == ['state', 'county']
-    groups = T.aggregate(table, 'state', counts='counts', first={'county': ''})
+    groups = T.aggregate(table, 'state', counts='counts', first=[Agg('county')])
     assert len(groups) == 52
     assert groups['state'][0].as_py() == 'NY'
     assert groups['counts'][0].as_py() == 2205
     assert groups['county'][0].as_py() == 'Suffolk'
-    groups = T.aggregate(table, 'state', last={'city': 'last'}, min={'zipcode': {}})
+    groups = T.aggregate(table, 'state', last=[Agg('city', 'last')], min=[Agg('zipcode')])
     assert groups['last'][0].as_py() == 'Elmira'
     assert groups['zipcode'][0].as_py() == 501
-    groups = T.aggregate(table, 'state', max={'zipcode': {'alias': 'max', 'skip_nulls': False}})
+    groups = T.aggregate(table, 'state', max=[Agg('zipcode', 'max', skip_nulls=False)])
     assert groups['max'][0].as_py() == 14925
-    groups = T.aggregate(table, 'state', tdigest={'longitude': {}, 'latitude': {'q': [0.5]}})
+    groups = T.aggregate(table, 'state', tdigest=[Agg('longitude'), Agg('latitude', q=[0.5])])
     assert groups['longitude'][0].as_py() == pytest.approx(-74.25370)
     assert groups['latitude'][0].as_py() == [pytest.approx(42.34672)]
 
