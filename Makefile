@@ -1,17 +1,12 @@
-all:
-	cythonize -aX linetrace=True graphique/*.pyx
-	python3 setup.py build_ext -i --define CYTHON_TRACE_NOGIL
-
-check: all
+check:
 	python3 -m pytest -s --cov
 
 lint:
 	black --check .
 	flake8
-	flake8 graphique/*.pyx --ignore E999
 	mypy -p graphique
 
-html: all docs/schema.md
+html: docs/schema.md
 	python3 -m mkdocs build
 
 docs/schema.md: docs/schema.graphql
@@ -23,17 +18,3 @@ docs/schema.md: docs/schema.graphql
 
 docs/schema.graphql: graphique/*.py
 	python3 -m graphique.schema tests/fixtures/zipcodes.parquet > $@
-
-dist:
-	python3 -m build -n
-	docker run --rm -v $(PWD):/usr/src -w /usr/src quay.io/pypa/manylinux_2_24_x86_64 make cp37 cp38 cp39 cp310
-
-cp37:
-	/opt/python/$@-$@m/bin/pip install cython
-	/opt/python/$@-$@m/bin/python -m build -nw
-	auditwheel repair dist/*$@m-linux_x86_64.whl
-
-cp38 cp39 cp310:
-	/opt/python/$@-$@/bin/pip install cython
-	/opt/python/$@-$@/bin/python -m build -nw
-	auditwheel repair dist/*$@-linux_x86_64.whl

@@ -1,10 +1,6 @@
 __pycache__/
 .coverage
 site/
-*.cpp
-*.so
-*.o
-*.html
 .venv/
 docs/schema.*
 node_modules/
