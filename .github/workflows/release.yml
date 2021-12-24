@@ -13,40 +13,14 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: 3.x
-    - run: pip install -r docs/requirements.in
+    - run: pip install build wheel -r docs/requirements.in
     # avoid .tar.gz name conflicts with previous project until v1.0
     - run: python setup.py sdist --formats zip
+    - run: python -m build -nw
     - run: npm install
     - run: make html
     - run: python -m mkdocs gh-deploy --force
     - uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_TOKEN }}
-        verbose: true
-
-  wheels:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest]
-        python-version: ['3.7', '3.8', '3.9', '3.10']
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - run: pip install build wheel twine cython
-    - run: python -m build -nw
-    - run: twine upload -u __token__ -p ${{ secrets.PYPI_TOKEN }} dist/*
-
-  linux:
-    runs-on: ubuntu-latest
-    container: quay.io/pypa/manylinux_2_24_x86_64
-    steps:
-    - uses: actions/checkout@v2
-    - run: make cp37 cp38 cp39 cp310
-    - uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_TOKEN }}
-        packages_dir: wheelhouse/
         verbose: true

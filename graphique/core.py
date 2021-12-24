@@ -13,9 +13,9 @@ from concurrent import futures
 from datetime import time
 from typing import Callable, Iterable, Iterator, Optional, Sequence
 import numpy as np
+import polars as pl  # type: ignore
 import pyarrow as pa
 import pyarrow.compute as pc
-from .arrayed import group_indices  # type: ignore
 
 
 class Agg:
@@ -234,14 +234,6 @@ class Column(pa.ChunkedArray):
     def dict_flatten(self):
         indices = pa.chunked_array(chunk.indices for chunk in self.iterchunks())
         return self.chunk(0).dictionary, indices
-
-    def encode(self) -> pa.ChunkedArray:
-        """Convert scalars to integers suitable for grouping."""
-        self = Column.unify_dictionaries(self)
-        if not pa.types.is_dictionary(self.type):
-            self = self.dictionary_encode()
-        dictionary, indices = Column.dict_flatten(self)
-        return Column.fill_null(indices, len(dictionary))
 
     def unique_indices(self, counts=False) -> tuple:
         """Return index array of first occurrences, optionally with counts.
@@ -470,28 +462,25 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
 
-    def encode(self, *names: str) -> pa.ChunkedArray:
-        """Return unique integer keys for multiple columns, suitable for grouping.
-
-        TODO(ARROW-3978): replace this when struct arrays can be dictionary encoded.
-        """
-        keys, *arrays = (self[name] for name in names)
-        if arrays or keys.null_count or not pa.types.is_integer(keys.type):
-            keys = Column.encode(keys).cast('int64')
-        for array in map(Column.encode, arrays):
-            size = pc.max(array).as_py() + 1
-            keys = pc.add_checked(pc.multiply_checked(keys, size), array)
-        return keys
-
     def from_offsets(self, offsets: pa.IntegerArray) -> pa.Table:
         """Return table with columns converted into list columns."""
         cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
         arrays = [cls.from_arrays(offsets, *column.chunks) for column in self.combine_chunks()]
         return pa.Table.from_arrays(arrays, self.column_names)
 
+    def group_indices(self, *names: str) -> pa.LargeListArray:
+        """Return list array of indices which would group the table.
+
+        Uses polars list aggregation; may be replaced in the future by ARROW-15152.
+        """
+        indices = pl.arange(0, len(self)).alias('_')
+        df = pl.from_arrow(self.select(names), rechunk=False).with_columns([indices])
+        df = df.groupby(list(names), maintain_order=True).agg(pl.list('_'))
+        return df['__agg_list'].to_arrow()
+
     def group(self, *names: str) -> tuple:
         """Return table grouped by columns and corresponding counts."""
-        indices = ListChunk.from_counts(*group_indices(Table.encode(self, *names)))
+        indices = Table.group_indices(self, *names)
         scalars = self.select(names).take(ListChunk.first(indices))
         lists = self.select(set(self.column_names) - set(names)).take(indices.values)
         table = Table.union(scalars, Table.from_offsets(lists, indices.offsets))
