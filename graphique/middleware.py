@@ -137,9 +137,7 @@ class AbstractTable:
     @doc_field
     def length(self) -> Long:
         """number of rows"""
-        if hasattr(self.table, '__len__'):
-            return len(self.table)
-        return len(self.table.to_table(columns=[]))
+        return len(self.table) if hasattr(self.table, '__len__') else self.table.count_rows()
 
     @doc_field(
         cast="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",

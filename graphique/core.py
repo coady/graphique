@@ -475,7 +475,7 @@ class Table(pa.Table):
         """
         indices = pl.arange(0, len(self)).alias('_')
         df = pl.from_arrow(self.select(names), rechunk=False).with_columns([indices])
-        df = df.groupby(list(names), maintain_order=True).agg(pl.list('_'))
+        df = df.groupby(list(names), maintain_order=True).agg_list()
         return df['__agg_list'].to_arrow()
 
     def group(self, *names: str) -> tuple:
