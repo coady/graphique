@@ -300,7 +300,7 @@ class AbstractTable:
         for index, count in enumerate(T.list_value_length(table).to_pylist()):
             row = {name: pa.repeat(table[name][index], count) for name in scalars}
             row.update({name: table[name][index].values for name in lists})
-            yield type(self)(pa.Table.from_pydict(row))
+            yield type(self)(pa.table(row))
 
     @Aggregations.resolver
     @no_type_check
@@ -316,4 +316,4 @@ class AbstractTable:
             for field in map(dict, fields[key]):
                 name, alias = field.pop('name'), field.pop('alias')
                 columns[alias or name] = C.map(table[name], func, **field)
-        return type(self)(pa.Table.from_pydict(columns))
+        return type(self)(pa.table(columns))

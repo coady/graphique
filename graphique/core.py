@@ -437,7 +437,7 @@ class Table(pa.Table):
         columns: dict = {}
         for table in tables:
             columns.update(zip(table.column_names, table))
-        return pa.Table.from_pydict(columns)
+        return pa.table(columns)
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.
@@ -466,7 +466,7 @@ class Table(pa.Table):
         """Return table with columns converted into list columns."""
         cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
         arrays = [cls.from_arrays(offsets, *column.chunks) for column in self.combine_chunks()]
-        return pa.Table.from_arrays(arrays, self.column_names)
+        return pa.table(arrays, self.column_names)
 
     def group_indices(self, *names: str) -> pa.LargeListArray:
         """Return list array of indices which would group the table.
@@ -541,7 +541,7 @@ class Table(pa.Table):
         for aggs in funcs.values():
             columns.update(zip([agg.alias for agg in aggs], arrays))
         columns.update(zip(names, arrays))
-        return pa.Table.from_pydict(columns)
+        return pa.table(columns)
 
     def list_value_length(self) -> pa.ChunkedArray:
         lists = {name for name in self.column_names if Column.is_list_type(self[name])}
@@ -558,7 +558,7 @@ class Table(pa.Table):
         keys.update(dict.fromkeys(names, 'descending' if reverse else 'ascending'))
         columns = {name: Column.sort_values(pc.list_flatten(self[name])) for name in names}
         columns[''] = pc.list_parent_indices(self[names[0]])
-        indices = pc.sort_indices(pa.Table.from_pydict(columns), sort_keys=keys.items())
+        indices = pc.sort_indices(pa.table(columns), sort_keys=keys.items())
         counts = Table.list_value_length(self)
         if length is not None:
             indices = pa.concat_arrays(
@@ -567,12 +567,12 @@ class Table(pa.Table):
             counts = pc.min_element_wise(counts, length)
         table = Table.select_list(self, pc.list_flatten).take(indices).combine_chunks()
         arrays = [ListChunk.from_counts(counts, *column.chunks) for column in table]
-        return Table.union(self, pa.Table.from_arrays(arrays, table.column_names))
+        return Table.union(self, pa.table(arrays, table.column_names))
 
     def select_list(self, apply: Callable = lambda c: c) -> pa.Table:
         """Return table with only the list columns."""
         names = [name for name in self.column_names if Column.is_list_type(self[name])]
-        return pa.Table.from_arrays(list(map(apply, self.select(names))), names)
+        return pa.table(list(map(apply, self.select(names))), names)
 
     def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
         """Return table sorted by columns, optimized for fixed length."""
@@ -580,7 +580,7 @@ class Table(pa.Table):
         if length is not None:
             func = functools.partial(pc.select_k_unstable, k=length)
         keys = dict.fromkeys(names, 'descending' if reverse else 'ascending')
-        table = pa.Table.from_pydict({name: Column.sort_values(self[name]) for name in names})
+        table = pa.table({name: Column.sort_values(self[name]) for name in names})
         return self and self.take(func(table, sort_keys=keys.items()))
 
     def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.ChunkedArray:
@@ -635,7 +635,7 @@ class Table(pa.Table):
         """Return table with list columns filtered within scalars."""
         table = Table.select_list(self).combine_chunks()
         arrays = [ListChunk.filter_list(column.chunk(0), mask) for column in table]
-        return Table.union(self, pa.Table.from_arrays(arrays, table.column_names))
+        return Table.union(self, pa.table(arrays, table.column_names))
 
     def matched(self, func: Callable, *names: str) -> pa.Table:
         for name in names:

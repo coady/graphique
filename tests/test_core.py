@@ -18,7 +18,7 @@ def test_dictionary(table):
     assert "ca" in C.call(array, pc.utf8_lower).unique().to_pylist()
     assert C.sort(array)[0].as_py() == "AK"
     assert len(C.unique_indices(array)[0]) == 52
-    table = pa.Table.from_pydict({'state': array})
+    table = pa.table({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
     array = C.call(pa.chunked_array([[0, 0]]).dictionary_encode(), pc.add, 1)
     assert array.to_pylist() == [1, 1]
@@ -31,7 +31,7 @@ def test_dictionary(table):
 
 def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
-    table = pa.Table.from_pydict({'col': array})
+    table = pa.table({'col': array})
     groups, counts = T.group(table, 'col')
     assert groups['col'].to_pylist() == list('abc')
     assert counts.to_pylist() == [2, 3, 1]
@@ -40,7 +40,7 @@ def test_chunks():
     assert C.sort(array, length=3).to_pylist() == ['a', 'a', 'b']
     assert C.sort(array.dictionary_encode()[:2]).to_pylist() == ['a', 'b']
     assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
-    table = pa.Table.from_pydict({'col': array, 'other': range(6)})
+    table = pa.table({'col': array, 'other': range(6)})
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
     assert pa.Array.equals(*(chunk.dictionary for chunk in C.unify_dictionaries(array).chunks))
     assert C.equal(array, 'a').to_pylist() == [True, False, True, False, True]
