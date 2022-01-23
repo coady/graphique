@@ -12,7 +12,6 @@ from typing import Callable, List, Optional
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
-from cached_property import cached_property
 from strawberry.field import StrawberryField
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
@@ -94,7 +93,7 @@ class Column:
         """list of values"""
         return self.array.to_pylist()
 
-    @cached_property
+    @getattr(functools, 'cached_property', property)  # added in Python 3.8
     def min_max(self):
         return C.min_max(self.array)
 

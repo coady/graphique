@@ -12,7 +12,7 @@ import operator
 from concurrent import futures
 from datetime import time
 from typing import Callable, Iterable, Iterator, Optional, Sequence
-import numpy as np
+import numpy as np  # type: ignore
 import polars as pl  # type: ignore
 import pyarrow as pa
 import pyarrow.compute as pc
