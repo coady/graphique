@@ -94,6 +94,7 @@ dev
 * `FEDERATED` field configuration
 * List columns support sorting and filtering
 * Group by and aggregate optimizations
+* Dataset scanning
 
 0.6
 

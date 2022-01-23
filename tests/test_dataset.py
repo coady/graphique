@@ -35,6 +35,17 @@ def test_search(dsclient):
     assert data == {'search': {'length': 3224}}
     data = dsclient.execute('{ search(zipcode: {}) { length } }')
     assert data == {'search': {'length': 41700}}
+    data = dsclient.execute('{ search(zipcode: {}) { row { zipcode } } }')
+    assert data == {'search': {'row': {'zipcode': 501}}}
+
+
+def test_slice(dsclient):
+    data = dsclient.execute('{ slice(length: 3) { length } }')
+    assert data == {'slice': {'length': 3}}
+    data = dsclient.execute('{ slice(offset: -3) { length } }')
+    assert data == {'slice': {'length': 3}}
+    data = dsclient.execute('{ slice { length } }')
+    assert data == {'slice': {'length': 41700}}
 
 
 def test_federation(fedclient):

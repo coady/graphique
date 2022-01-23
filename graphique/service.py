@@ -86,13 +86,15 @@ class Table(AbstractTable):
         List columns apply their respective filters to the scalar values within lists.
         All referenced list columns must have the same lengths.
         """
-        if not isinstance(self.table, pa.Table) and reduce.value in ('and', 'or'):
-            query, table = {}, self.select(info, dict(query), invert=invert, reduce=reduce.value)
-        else:
-            table = self.select(info)
+        if isinstance(self.table, ds.Dataset) and reduce.value in ('and', 'or'):
+            scanner = self.scanner(info, dict(query), invert=invert, reduce=reduce.value)
+            query, self = {}, type(self)(scanner)
         filters = list(dict(query).items())
         for value in map(dict, itertools.chain(*dict(on).values())):
             filters.append((value.pop('name'), value))
+        if not filters:
+            return self
+        table = self.select(info)
         lists = {name for name in table.column_names if C.is_list_type(table[name])}
         masks = [T.mask(table, name, **value) for name, value in filters if name not in lists]
         if masks:
@@ -122,9 +124,9 @@ class IndexedTable(Table):
             if queries[name] is None:
                 raise TypeError(f"`{name}` is optional, not nullable")
         queries = {name: dict(queries[name]) for name in queries}
-        table = self.select(info, queries)
-        if not isinstance(self.table, pa.Table):
-            return Table(table)
+        if isinstance(self.table, ds.Dataset):
+            return Table(self.scanner(info, queries))
+        table = self.select(info)
         for name in self.index:
             if name not in queries:
                 break

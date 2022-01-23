@@ -99,7 +99,7 @@ class GraphQL(strawberry.asgi.GraphQL):
 
 @strawberry.interface(description="a schema-free table")
 class AbstractTable:
-    def __init__(self, table: Union[pa.Table, ds.dataset]):
+    def __init__(self, table: Union[ds.Dataset, ds.Scanner, pa.Table]):
         self.table = table
 
     def __init_subclass__(cls):
@@ -123,16 +123,23 @@ class AbstractTable:
             fields = itertools.chain(*[field.selections for field in fields])
         return set(itertools.chain(*map(references, fields)))
 
-    def select(self, info, queries: dict = {}, invert=False, reduce: str = 'and') -> pa.Table:
-        """Return table with only the rows and columns necessary to proceed."""
+    def scanner(self, info, queries: dict = {}, invert=False, reduce: str = 'and') -> ds.Scanner:
+        """Return scanner with only the rows and columns necessary to proceed."""
+        assert isinstance(self.table, ds.Dataset)
         case_map = {to_camel_case(name): name for name in self.table.schema.names}
         names = self.references(info) & set(case_map)
-        if isinstance(self.table, pa.Table):
-            return self.table.select(names)
         columns = {name: ds.field(case_map[name]) for name in names}
         queries = {case_map[name]: queries[name] for name in queries}
         expr = filter_expression(queries, invert=invert, reduce=reduce)
-        return self.table.to_table(columns=columns, filter=expr)
+        return self.table.scanner(columns=columns, filter=expr)
+
+    def select(self, info) -> pa.Table:
+        """Return table with only the rows and columns necessary to proceed."""
+        if not isinstance(self.table, pa.Table):
+            scanner = self.table if isinstance(self.table, ds.Scanner) else self.scanner(info)
+            self = type(self)(scanner.to_table())
+        names = self.references(info) & set(self.table.column_names)
+        return self.table.select(names)
 
     @doc_field
     def length(self) -> Long:
@@ -165,8 +172,11 @@ class AbstractTable:
         self, info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
     ) -> 'AbstractTable':
         """Return zero-copy slice of table."""
+        if not isinstance(self.table, pa.Table):
+            head = offset >= 0 and length is not None
+            self = type(self)(self.table.head(offset + length) if head else self.table.to_table())
         table = self.select(info)
-        table = table.slice(len(table) + offset if offset < 0 else offset, length)
+        table = table[offset:][:length]  # `slice` bug: ARROW-15412
         return type(self)(table[::-1] if reverse else table)
 
     @doc_field(
