@@ -69,7 +69,7 @@ class ListChunk(pa.lib.BaseListArray):
 
     def from_counts(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
         """Return list array by converting counts into offsets."""
-        offsets = np.concatenate([[0], np.cumsum(counts)])
+        offsets = np.concatenate([[0], np.cumsum(counts)])  # type: ignore
         return pa.LargeListArray.from_arrays(offsets, values)
 
     def element(self, index: int) -> pa.Array:
