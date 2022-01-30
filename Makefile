@@ -2,7 +2,7 @@ check:
 	python3 -m pytest -s --cov
 
 lint:
-	black --check .
+	python3 -m black --check .
 	flake8
 	mypy -p graphique
 

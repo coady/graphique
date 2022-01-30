@@ -248,9 +248,8 @@ class Column(pa.ChunkedArray):
 
     def indices(self) -> pa.ChunkedArray:
         """Return chunked indices suitable for aggregation."""
-        sizes = list(map(len, self.iterchunks()))
-        items = zip(itertools.accumulate([0] + sizes), sizes)
-        return pa.chunked_array(np.arange(index, index + size) for index, size in items)
+        offsets = list(itertools.accumulate(map(len, self.iterchunks())))
+        return pa.chunked_array(map(np.arange, [0] + offsets, offsets))
 
     def mask(self, func='and', ignore_case=False, regex=False, **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
@@ -313,7 +312,7 @@ class Column(pa.ChunkedArray):
         if length is not None:
             func = functools.partial(pc.select_k_unstable, k=length)
         keys = {'': 'descending' if reverse else 'ascending'}
-        return self and self.take(func(Column.sort_values(self), sort_keys=keys.items()))
+        return self.take(func(Column.sort_values(self), sort_keys=keys.items()))
 
     def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
         """Return discrete differences between adjacent values."""
@@ -475,8 +474,8 @@ class Table(pa.Table):
         """
         indices = pl.arange(0, len(self)).alias('_')
         df = pl.from_arrow(self.select(names), rechunk=False).with_columns([indices])
-        df = df.groupby(list(names), maintain_order=True).agg_list()
-        return df['__agg_list'].to_arrow()
+        indices = df.groupby(list(names)).agg_list()['__agg_list'].to_arrow()
+        return indices.take(pc.sort_indices(pc.list_element(indices, 0)))
 
     def group(self, *names: str) -> tuple:
         """Return table grouped by columns and corresponding counts."""
@@ -581,7 +580,7 @@ class Table(pa.Table):
             func = functools.partial(pc.select_k_unstable, k=length)
         keys = dict.fromkeys(names, 'descending' if reverse else 'ascending')
         table = pa.table({name: Column.sort_values(self[name]) for name in names})
-        return self and self.take(func(table, sort_keys=keys.items()))
+        return self.take(func(table, sort_keys=keys.items()))
 
     def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.ChunkedArray:
         """Return mask array which matches query."""
