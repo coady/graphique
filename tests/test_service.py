@@ -489,7 +489,7 @@ def test_partition(client):
     assert agg['column']['values'] == [701, 91]
     assert agg['columns']['state']['values'] == ['MA', 'RI']
     data = client.execute(
-        '''{ partition(by: ["state"]) { filter(query: {zipcode: {greater: 90000}}) {
+        '''{ partition(by: ["state"]) { filter(on: {int: {name: "zipcode", greater: 90000}}) {
         column(name: "zipcode") { ... on ListColumn { count { values } } } } } }'''
     )
     counts = data['partition']['filter']['column']['count']['values']

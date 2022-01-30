@@ -37,6 +37,16 @@ def test_search(dsclient):
     assert data == {'search': {'length': 41700}}
     data = dsclient.execute('{ search(zipcode: {}) { row { zipcode } } }')
     assert data == {'search': {'row': {'zipcode': 501}}}
+    data = dsclient.execute(
+        '''{ search(zipcode: {greater: 90000}) { filter(query: {state: {equal: "CA"}}) {
+        length } } }'''
+    )
+    assert data == {'search': {'filter': {'length': 2647}}}
+    data = dsclient.execute(
+        '''{ search(zipcode: {greater: 90000}) { filter(query: {state: {equal: "CA"}}) {
+        length row { zipcode } } } }'''
+    )
+    assert data == {'search': {'filter': {'length': 2647, 'row': {'zipcode': 90001}}}}
 
 
 def test_slice(dsclient):

@@ -86,9 +86,11 @@ class Table(AbstractTable):
         List columns apply their respective filters to the scalar values within lists.
         All referenced list columns must have the same lengths.
         """
-        if isinstance(self.table, ds.Dataset) and reduce.value in ('and', 'or'):
+        fields = selections(*info.selected_fields)
+        if reduce.value in ('and', 'or'):
             scanner = self.scanner(info, dict(query), invert=invert, reduce=reduce.value)
-            query, self = {}, type(self)(scanner)
+            oneshot = not isinstance(self.table, ds.Dataset) and len(fields) > 1
+            query, self = {}, type(self)(scanner.to_table() if oneshot else scanner)
         filters = list(dict(query).items())
         for value in map(dict, itertools.chain(*dict(on).values())):
             filters.append((value.pop('name'), value))
@@ -99,7 +101,7 @@ class Table(AbstractTable):
         masks = [T.mask(table, name, **value) for name, value in filters if name not in lists]
         if masks:
             mask = functools.reduce(getattr(pc, reduce.value), masks)
-            if selections(*info.selected_fields) == {'length'}:  # optimized for count
+            if fields == {'length'}:  # optimized for count
                 return Table(range(C.count(mask, not invert)))
             table = table.filter(pc.invert(mask) if invert else mask)
         masks = [T.mask(table, name, **value) for name, value in filters if name in lists]

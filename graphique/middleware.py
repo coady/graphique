@@ -125,13 +125,17 @@ class AbstractTable:
 
     def scanner(self, info, queries: dict = {}, invert=False, reduce: str = 'and') -> ds.Scanner:
         """Return scanner with only the rows and columns necessary to proceed."""
-        assert isinstance(self.table, ds.Dataset)
-        case_map = {to_camel_case(name): name for name in self.table.schema.names}
+        dataset = self.table
+        schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
+        if not isinstance(dataset, ds.Dataset):
+            expr = filter_expression(queries, invert=invert, reduce=reduce)
+            return ds.Scanner.from_batches(dataset.to_batches(), schema, filter=expr)
+        case_map = {to_camel_case(name): name for name in schema.names}
         names = self.references(info) & set(case_map)
         columns = {name: ds.field(case_map[name]) for name in names}
         queries = {case_map[name]: queries[name] for name in queries}
         expr = filter_expression(queries, invert=invert, reduce=reduce)
-        return self.table.scanner(columns=columns, filter=expr)
+        return dataset.scanner(columns=columns, filter=expr)
 
     def select(self, info) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
