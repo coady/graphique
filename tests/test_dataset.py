@@ -1,3 +1,4 @@
+import pytest
 from graphique import middleware
 
 
@@ -28,6 +29,8 @@ def test_filter(dsclient):
         { length } }'''
     )
     assert data == {'filter': {'length': 2647}}
+    data = dsclient.execute('{ filter(query: {state: {equal: "CA"}}, reduce: XOR) { length } }')
+    assert data == {'filter': {'length': 2647}}
 
 
 def test_search(dsclient):
@@ -56,6 +59,30 @@ def test_slice(dsclient):
     assert data == {'slice': {'length': 3}}
     data = dsclient.execute('{ slice { length } }')
     assert data == {'slice': {'length': 41700}}
+
+
+def test_group(dsclient):
+    data = dsclient.execute(
+        '''{ group(by: ["state"], aggregate: {min: {name: "county"}}) { row { state county } } }'''
+    )
+    assert data == {'group': {'row': {'state': 'NY', 'county': 'Albany'}}}
+    data = dsclient.execute(
+        '''{ group(by: ["state"], counts: "c") { slice(length: 1) {
+        column(name: "c") { ... on LongColumn { values } } } } }'''
+    )
+    assert data == {'group': {'slice': {'column': {'values': [2205]}}}}
+    data = dsclient.execute(
+        '''{ group(by: ["state"], aggregate: {mean: {name: "zipcode"}}) { slice(length: 1) {
+        column(name: "zipcode") { ... on FloatColumn { values } } } } }'''
+    )
+    assert data == {'group': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
+    data = dsclient.execute(
+        '''{ group(by: ["state"]) { aggregate(mean: {name: "zipcode"}) { slice(length: 1) {
+        column(name: "zipcode") { ... on FloatColumn { values } } } } } }'''
+    )
+    assert data == {
+        'group': {'aggregate': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
+    }
 
 
 def test_federation(fedclient):

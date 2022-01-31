@@ -11,11 +11,13 @@ import itertools
 import operator
 from concurrent import futures
 from datetime import time
-from typing import Callable, Iterable, Iterator, Optional, Sequence
+from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
 import numpy as np  # type: ignore
 import polars as pl  # type: ignore
 import pyarrow as pa
 import pyarrow.compute as pc
+
+threader = futures.ThreadPoolExecutor(pa.cpu_count())
 
 
 class Agg:
@@ -37,6 +39,8 @@ class Agg:
         'tdigest': pc.TDigestOptions,
         'variance': pc.VarianceOptions,
     }
+
+    associatives = {'all', 'any', 'count', 'max', 'min', 'product', 'sum'}
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -206,11 +210,10 @@ class ListChunk(pa.lib.BaseListArray):
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 
-    threader = futures.ThreadPoolExecutor(pa.cpu_count())
     is_in = pc.is_in_meta_binary
 
     def map(self, func: Callable, **kwargs) -> pa.ChunkedArray:
-        map_ = Column.threader.map if self.num_chunks > 1 else map
+        map_ = threader.map if self.num_chunks > 1 else map
         return pa.chunked_array(map_(functools.partial(func, **kwargs), self.iterchunks()))  # type: ignore
 
     def scalar_type(self):
@@ -510,7 +513,7 @@ class Table(pa.Table):
         first: Sequence[Agg] = (),
         last: Sequence[Agg] = (),
         **funcs: Sequence[Agg],
-    ) -> pa.Table:
+    ) -> Union[pa.Table, pa.RecordBatch]:
         """Group by and aggregate.
 
         Args:
@@ -530,7 +533,8 @@ class Table(pa.Table):
                 column = Column.mask(self[agg.name]) if func in ('any', 'all') else self[agg.name]
                 args.append((column, *agg.astuple(func)))  # type: ignore
         values, hashes, options = zip(*args)
-        arrays = iter(pc._group_by(values, self.select(names), zip(hashes, options)).flatten())
+        keys = map(self.column, names)
+        arrays = iter(pc._group_by(values, keys, zip(hashes, options)).flatten())
         if none:
             next(arrays)
         columns = {counts: next(arrays)} if counts else {}
@@ -540,7 +544,7 @@ class Table(pa.Table):
         for aggs in funcs.values():
             columns.update(zip([agg.alias for agg in aggs], arrays))
         columns.update(zip(names, arrays))
-        return pa.table(columns)
+        return type(self).from_pydict(columns)
 
     def list_value_length(self) -> pa.ChunkedArray:
         lists = {name for name in self.column_names if Column.is_list_type(self[name])}

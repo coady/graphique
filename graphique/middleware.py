@@ -13,7 +13,7 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
-from .core import Agg, Column as C, ListChunk, Table as T
+from .core import Agg, Column as C, ListChunk, Table as T, threader
 from .inputs import Aggregations, Diff, Projections
 from .inputs import BinaryFunction, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
@@ -177,8 +177,9 @@ class AbstractTable:
     ) -> 'AbstractTable':
         """Return zero-copy slice of table."""
         if not isinstance(self.table, pa.Table):
+            scanner = self.table if isinstance(self.table, ds.Scanner) else self.scanner(info)
             head = offset >= 0 and length is not None
-            self = type(self)(self.table.head(offset + length) if head else self.table.to_table())
+            self = type(self)(scanner.head(offset + length) if head else scanner.to_table())
         table = self.select(info)
         table = table[offset:][:length]  # `slice` bug: ARROW-15412
         return type(self)(table[::-1] if reverse else table)
@@ -197,18 +198,29 @@ class AbstractTable:
         Columns which are not aggregated are transformed into list columns.
         See `column`, `aggregate`, and `tables` for further usage of list columns.
         """
-        table = self.select(info)
         if pa.__version__ < '7':
-            table, counts_ = T.group(table, *by)
+            table, counts_ = T.group(self.select(info), *by)
             return type(self)(table.append_column(counts, counts_) if counts else table)
-        aggs = {}
+        scalars, aggs = set(by), {}
         for func, values in dict(aggregate).items():
-            aggs[func] = [Agg(**dict(value)) for value in values]
+            if values:
+                aggs[func] = [Agg(**dict(value)) for value in values]
+                scalars.update(agg.alias for agg in aggs[func])
+        lists = self.references(info, level=1) - scalars
+        table = None
+        if not isinstance(self.table, pa.Table) and set(aggs) <= Agg.associatives:
+            scanner = self.table if isinstance(self.table, ds.Scanner) else self.scanner(info)
+            if lists.isdisjoint(scanner.projected_schema.names):
+                func = lambda batch: T.aggregate(batch, *by, counts=counts, **aggs)  # noqa: E731
+                table = pa.Table.from_batches(threader.map(func, scanner.to_batches()))
+                if counts:
+                    aggs.setdefault('sum', []).append(Agg(counts))
+        table = table or self.select(info)
+        lists &= set(table.column_names)
         groups = T.aggregate(table, *by, counts=counts, **aggs)
-        names = self.references(info, level=1) & set(table.column_names)
-        if names <= set(groups.column_names):  # check whether list groups are still needed
+        if not lists:
             return type(self)(groups)
-        table, _ = T.group(table.select(names | set(by)), *by)
+        table, _ = T.group(table.select(lists | set(by)), *by)
         return type(self)(T.union(table, groups))
 
     @doc_field(
