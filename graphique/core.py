@@ -434,6 +434,11 @@ class Table(pa.Table):
         'nanoseconds_between',
     }
 
+    def map_batch(self, func: Callable, *rargs, **kwargs) -> pa.Table:
+        return pa.Table.from_batches(
+            threader.map(lambda batch: func(batch, *rargs, **kwargs), self.to_batches())
+        )
+
     def union(*tables: pa.Table) -> pa.Table:
         """Return table with union of columns."""
         columns: dict = {}

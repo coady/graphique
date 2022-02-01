@@ -1,3 +1,4 @@
+import pyarrow as pa
 import pytest
 from graphique import middleware
 
@@ -61,6 +62,7 @@ def test_slice(dsclient):
     assert data == {'slice': {'length': 41700}}
 
 
+@pytest.mark.skipif(pa.__version__ < '7', reason="requires pyarrow >=7")
 def test_group(dsclient):
     data = dsclient.execute(
         '''{ group(by: ["state"], aggregate: {min: {name: "county"}}) { row { state county } } }'''

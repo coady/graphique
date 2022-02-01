@@ -13,7 +13,7 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
-from .core import Agg, Column as C, ListChunk, Table as T, threader
+from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Diff, Projections
 from .inputs import BinaryFunction, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
@@ -127,6 +127,8 @@ class AbstractTable:
         """Return scanner with only the rows and columns necessary to proceed."""
         dataset = self.table
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
+        if isinstance(dataset, ds.Scanner) and not queries:
+            return dataset
         if not isinstance(dataset, ds.Dataset):
             expr = filter_expression(queries, invert=invert, reduce=reduce)
             return ds.Scanner.from_batches(dataset.to_batches(), schema, filter=expr)
@@ -139,11 +141,8 @@ class AbstractTable:
 
     def select(self, info) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
-        if not isinstance(self.table, pa.Table):
-            scanner = self.table if isinstance(self.table, ds.Scanner) else self.scanner(info)
-            self = type(self)(scanner.to_table())
-        names = self.references(info) & set(self.table.column_names)
-        return self.table.select(names)
+        table = self.table if isinstance(self.table, pa.Table) else self.scanner(info).to_table()
+        return table.select(self.references(info) & set(table.column_names))
 
     @doc_field
     def length(self) -> Long:
@@ -177,7 +176,7 @@ class AbstractTable:
     ) -> 'AbstractTable':
         """Return zero-copy slice of table."""
         if not isinstance(self.table, pa.Table):
-            scanner = self.table if isinstance(self.table, ds.Scanner) else self.scanner(info)
+            scanner = self.scanner(info)
             head = offset >= 0 and length is not None
             self = type(self)(scanner.head(offset + length) if head else scanner.to_table())
         table = self.select(info)
@@ -209,12 +208,12 @@ class AbstractTable:
         lists = self.references(info, level=1) - scalars
         table = None
         if not isinstance(self.table, pa.Table) and set(aggs) <= Agg.associatives:
-            scanner = self.table if isinstance(self.table, ds.Scanner) else self.scanner(info)
+            scanner = self.scanner(info)
             if lists.isdisjoint(scanner.projected_schema.names):
-                func = lambda batch: T.aggregate(batch, *by, counts=counts, **aggs)  # noqa: E731
-                table = pa.Table.from_batches(threader.map(func, scanner.to_batches()))
+                table = T.map_batch(scanner, T.aggregate, *by, counts=counts, **aggs)
                 if counts:
                     aggs.setdefault('sum', []).append(Agg(counts))
+                    counts = ''
         table = table or self.select(info)
         lists &= set(table.column_names)
         groups = T.aggregate(table, *by, counts=counts, **aggs)
