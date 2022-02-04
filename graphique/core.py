@@ -13,11 +13,14 @@ from concurrent import futures
 from datetime import time
 from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
 import numpy as np  # type: ignore
-import polars as pl  # type: ignore
 import pyarrow as pa
 import pyarrow.compute as pc
 
 threader = futures.ThreadPoolExecutor(pa.cpu_count())
+try:
+    import polars as pl  # type: ignore
+except ImportError:
+    pl = None
 
 
 class Agg:
@@ -131,7 +134,7 @@ class ListChunk(pa.lib.BaseListArray):
         return pc._group_by([self.values] * len(funcs), [self.value_parent_indices()], items)
 
     def reduce(self, func: Callable, tp=None, options=None) -> pa.Array:
-        with contextlib.suppress(AttributeError, ValueError):
+        with contextlib.suppress(ValueError):
             groups = ListChunk.aggregate(self, **{func.__name__: options})
             if len(groups) == len(self):  # empty scalars cause index collision
                 return groups.field(0)
@@ -333,7 +336,7 @@ class Column(pa.ChunkedArray):
             mask = Column.call(Column.diff(self), predicate, *args)
         else:
             mask = Column.diff(self, predicate)
-        return pa.array(*np.nonzero(pa.concat_arrays(ends + mask.chunks + ends)))
+        return pc.indices_nonzero(pa.concat_arrays(ends + mask.chunks + ends))
 
     def min_max(self):
         if pa.types.is_dictionary(self.type):
@@ -475,7 +478,13 @@ class Table(pa.Table):
         arrays = [cls.from_arrays(offsets, *column.chunks) for column in self.combine_chunks()]
         return pa.table(arrays, self.column_names)
 
-    def group_indices(self, *names: str) -> pa.LargeListArray:
+    def _group_indices(self, *names: str) -> pa.LargeListArray:
+        """Return list array of indices which would group the table."""
+        indices = Column.indices(self[names[0]])
+        groups = pc._group_by([indices], self.select(names), [('hash_distinct', None)])
+        return groups.field(0).cast(pa.large_list(pa.int64()))
+
+    def _pl_group_indices(self, *names: str) -> pa.LargeListArray:
         """Return list array of indices which would group the table.
 
         Uses polars list aggregation; may be replaced in the future by ARROW-15152.
@@ -484,6 +493,8 @@ class Table(pa.Table):
         df = pl.from_arrow(self.select(names), rechunk=False).with_columns([indices])
         indices = df.groupby(list(names)).agg_list()['__agg_list'].to_arrow()
         return indices.take(pc.sort_indices(pc.list_element(indices, 0)))
+
+    group_indices = _pl_group_indices if pl else _group_indices
 
     def group(self, *names: str) -> tuple:
         """Return table grouped by columns and corresponding counts."""

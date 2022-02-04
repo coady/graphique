@@ -186,7 +186,7 @@ class AbstractTable:
     @doc_field(
         by="column names",
         counts="optionally include counts in an aliased column",
-        aggregate="grouped aggregation functions; dev only",
+        aggregate="grouped aggregation functions",
     )
     @no_type_check
     def group(
@@ -197,9 +197,6 @@ class AbstractTable:
         Columns which are not aggregated are transformed into list columns.
         See `column`, `aggregate`, and `tables` for further usage of list columns.
         """
-        if pa.__version__ < '7':
-            table, counts_ = T.group(self.select(info), *by)
-            return type(self)(table.append_column(counts, counts_) if counts else table)
         scalars, aggs = set(by), {}
         for func, values in dict(aggregate).items():
             if values:

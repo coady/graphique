@@ -1,4 +1,3 @@
-import pyarrow as pa
 import pytest
 
 
@@ -418,7 +417,6 @@ def test_group(client):
     assert data['sc']['length'] == data['cs']['length'] == 3216
 
 
-@pytest.mark.skipif(pa.__version__ < '7', reason="requires pyarrow >=7")
 def test_aggregate(client):
     data = client.execute(
         '''{ group(by: ["state"] counts: "c", aggregate: {first: [{name: "county"}]

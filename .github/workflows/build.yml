@@ -30,7 +30,7 @@ jobs:
       with:
         python-version: 3.x
     - run: pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow
-    - run: pip install -r tests/requirements.in
+    - run: pip install polars -r tests/requirements.in
     - run: make check
     - run: coverage xml
     - uses: codecov/codecov-action@v2

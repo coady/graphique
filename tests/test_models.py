@@ -1,4 +1,3 @@
-import pyarrow as pa
 import pytest
 
 
@@ -344,14 +343,13 @@ def test_list(executor):
         'any': {'values': [True, None]},
         'all': {'values': [False, None]},
     }
-    if pa.__version__ >= '7':
-        data = executor('{ columns { list { distinct { valueLength { values } } } } }')
-        assert data['columns']['list'] == {'distinct': {'valueLength': {'values': [3]}}}
-        data = executor(
-            '''{ aggregate(distinct: {name: "list", mode: "only_null"})
-            { columns { list { flatten { length } } } } }'''
-        )
-        assert data['aggregate']['columns']['list'] == {'flatten': {'length': 0}}
+    data = executor('{ columns { list { distinct { valueLength { values } } } } }')
+    assert data['columns']['list'] == {'distinct': {'valueLength': {'values': [3]}}}
+    data = executor(
+        '''{ aggregate(distinct: {name: "list", mode: "only_null"})
+        { columns { list { flatten { length } } } } }'''
+    )
+    assert data['aggregate']['columns']['list'] == {'flatten': {'length': 0}}
     data = executor(
         '''{ filter(on: {int: [{name: "list", notEqual: 1}]}) {
         columns { list { values { ... on IntColumn { values } } } } } }'''

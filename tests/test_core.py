@@ -40,7 +40,6 @@ def test_chunks():
     assert C.sort(array, length=3).to_pylist() == ['a', 'a', 'b']
     assert C.sort(array.dictionary_encode()[:2]).to_pylist() == ['a', 'b']
     assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
-    table = pa.table({'col': array, 'other': range(6)})
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
     assert pa.Array.equals(*(chunk.dictionary for chunk in C.unify_dictionaries(array).chunks))
     assert C.equal(array, 'a').to_pylist() == [True, False, True, False, True]
@@ -57,9 +56,8 @@ def test_lists():
     assert ListChunk.last(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.element(array, 1).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.unique(array).to_pylist() == [[2, 1], [0], [None], [], []]
-    if pa.__version__ >= '7':
-        assert ListChunk.distinct(array).to_pylist() == [[2, 1], [0], []]
-        assert ListChunk.distinct(array, mode='all').to_pylist() == [[2, 1], [0], [None]]
+    assert ListChunk.distinct(array).to_pylist() == [[2, 1], [0], []]
+    assert ListChunk.distinct(array, mode='all').to_pylist() == [[2, 1], [0], [None]]
     assert ListChunk.min(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.sum(array).to_pylist() == [3, 0, None, None, None]
@@ -144,7 +142,6 @@ def test_group(table):
         T.sort_list(groups, 'county')
 
 
-@pytest.mark.skipif(pa.__version__ < '7', reason="requires pyarrow >=7")
 def test_aggregate(table):
     tbl = T.union(table, table.select([0]).rename_columns(['test']))
     assert tbl.column_names == table.column_names + ['test']
@@ -247,10 +244,6 @@ def test_not_implemented():
     assert pc.equal([0, None], None).to_pylist() == [None] * 2
     with pytest.raises(NotImplementedError):
         pc.any([0])
-
-
-@pytest.mark.skipif(pa.__version__ < '7', reason="requires pyarrow >=7")
-def test_not_implemented_7():
     dictionary = pa.array(['']).dictionary_encode()
     with pytest.raises(ValueError, match="string vs dictionary"):
         pc.index_in(dictionary.unique(), value_set=dictionary)

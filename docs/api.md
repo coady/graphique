@@ -51,7 +51,7 @@ Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partitio
 * `Table.tables` returns a list of tables based on the list scalars.
 * `Table.apply(list: {...})` applies general functions to the list scalars.
 * `Table.aggregate` applies reduce functions to the list scalars.
-* `Table.group(aggregate: {...})` uses arrow hash aggregate functions. (dev only)
+* `Table.group(aggregate: {...})` uses arrow hash aggregate functions.
 
 ListColumns support sorting and filtering within their list scalars. They must all have the same value lengths, which is the case when the result of grouping, but list arrays may also be from the original dataset.
 

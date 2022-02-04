@@ -62,7 +62,7 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * `max`: select rows with largest values
 
 ### Performance
-Graphique relies on native [PyArrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), [Polars](https://pola-rs.github.io/polars/py-polars/html/reference/), or custom optimizations.
+Graphique relies on native [PyArrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/), optionally [Polars](https://pola-rs.github.io/polars/py-polars/html/reference/), or custom optimizations.
 
 By default, datasets are read on-demand, with only the necessary columns selected. Additionally `filter(query: ...)` is optimized to filter rows while reading the dataset. Although graphique is a running service, [parquet is performant](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html) at reading a subset of data. Optionally specify `COLUMNS` to read a subset of columns (or `*`) at startup, trading-off memory for latency. Similarly specify `FILTERS` in the json format of the `Query` input type to read a subset of rows at startup.
 
@@ -74,10 +74,11 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 ```
 
 ## Dependencies
-* pyarrow >=6
+* pyarrow >=7
 * strawberry-graphql[asgi] >=0.84.4
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 * pytz (optional timestamp support)
+* polars (optional optimization for list aggregation)
 
 ## Tests
 100% branch coverage.
@@ -89,7 +90,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 ## Changes
 dev
 
-* Pyarrow >=7.0.0.dev supported
+* Pyarrow >=7 required
 * `FILTERS` use query syntax and trigger reading the dataset
 * `FEDERATED` field configuration
 * List columns support sorting and filtering
