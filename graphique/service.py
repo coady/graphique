@@ -57,7 +57,7 @@ class Table(AbstractTable):
     @doc_field
     def row(self, info, index: Long = 0) -> Row:
         """Return scalar values at index."""
-        table = self.select(info)
+        table = self.select(info, index + 1 if index >= 0 else None)
         row = {}
         for name in table.column_names:
             scalar = table[name][index]

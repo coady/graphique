@@ -139,9 +139,12 @@ class AbstractTable:
         expr = filter_expression(queries, invert=invert, reduce=reduce)
         return dataset.scanner(columns=columns, filter=expr)
 
-    def select(self, info) -> pa.Table:
+    def select(self, info, length: int = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
-        table = self.table if isinstance(self.table, pa.Table) else self.scanner(info).to_table()
+        table = self.table
+        if not isinstance(table, pa.Table):
+            scanner = self.scanner(info)
+            table = scanner.to_table() if length is None else scanner.head(length)
         return table.select(self.references(info) & set(table.column_names))
 
     @doc_field
@@ -175,11 +178,7 @@ class AbstractTable:
         self, info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
     ) -> 'AbstractTable':
         """Return zero-copy slice of table."""
-        if not isinstance(self.table, pa.Table):
-            scanner = self.scanner(info)
-            head = offset >= 0 and length is not None
-            self = type(self)(scanner.head(offset + length) if head else scanner.to_table())
-        table = self.select(info)
+        table = self.select(info, length and (offset + length if offset >= 0 else None))
         table = table[offset:][:length]  # `slice` bug: ARROW-15412
         return type(self)(table[::-1] if reverse else table)
 
