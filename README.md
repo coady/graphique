@@ -88,7 +88,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 ```
 
 ## Changes
-dev
+0.7
 
 * Pyarrow >=7 required
 * `FILTERS` use query syntax and trigger reading the dataset
