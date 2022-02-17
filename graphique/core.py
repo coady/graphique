@@ -491,7 +491,7 @@ class Table(pa.Table):
         """
         indices = pl.arange(0, len(self)).alias('_')
         df = pl.from_arrow(self.select(names), rechunk=False).with_columns([indices])
-        indices = df.groupby(list(names)).agg_list()['__agg_list'].to_arrow()
+        indices = df.groupby(list(names)).agg_list()['_'].to_arrow()
         return indices.take(pc.sort_indices(pc.list_element(indices, 0)))
 
     group_indices = _pl_group_indices if pl else _group_indices

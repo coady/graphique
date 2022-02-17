@@ -78,7 +78,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 * strawberry-graphql[asgi] >=0.84.4
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 * pytz (optional timestamp support)
-* polars (optional optimization for list aggregation)
+* polars >=0.13 (optional optimization for list aggregation)
 
 ## Tests
 100% branch coverage.
