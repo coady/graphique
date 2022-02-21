@@ -72,6 +72,10 @@ def test_group(dsclient):
     )
     assert data == {'group': {'slice': {'column': {'values': [2205]}}}}
     data = dsclient.execute(
+        '{ group(by: ["state"], aggregate: {first: {name: "county"}}) { row { county } } }'
+    )
+    assert data == {'group': {'row': {'county': 'Suffolk'}}}
+    data = dsclient.execute(
         '''{ group(by: ["state"], aggregate: {mean: {name: "zipcode"}}) { slice(length: 1) {
         column(name: "zipcode") { ... on FloatColumn { values } } } } }'''
     )

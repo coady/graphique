@@ -201,7 +201,7 @@ class AbstractTable:
             if values:
                 aggs[func] = [Agg(**dict(value)) for value in values]
                 scalars.update(agg.alias for agg in aggs[func])
-        lists = self.references(info, level=1) - scalars
+        lists = self.references(info, level=1) - scalars - {counts}
         table = None
         if not isinstance(self.table, pa.Table) and set(aggs) <= Agg.associatives:
             scanner = self.scanner(info)

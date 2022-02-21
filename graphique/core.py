@@ -43,7 +43,7 @@ class Agg:
         'variance': pc.VarianceOptions,
     }
 
-    associatives = {'all', 'any', 'count', 'max', 'min', 'product', 'sum'}
+    associatives = {'all', 'any', 'count', 'max', 'min', 'product', 'sum', 'first', 'last'}
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -252,8 +252,10 @@ class Column(pa.ChunkedArray):
         values, counts = self.value_counts().flatten() if counts else (self.unique(), None)
         return pc.index_in(values, value_set=self), counts
 
-    def indices(self) -> pa.ChunkedArray:
+    def indices(self) -> Union[pa.Array, pa.ChunkedArray]:
         """Return chunked indices suitable for aggregation."""
+        if isinstance(self, pa.Array):
+            return pa.array(np.arange(len(self)))
         offsets = list(itertools.accumulate(map(len, self.iterchunks())))
         return pa.chunked_array(map(np.arange, [0] + offsets, offsets))
 
