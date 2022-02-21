@@ -54,6 +54,8 @@ def test_lists():
     assert ListChunk.first(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.element(array, -2).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.last(array).to_pylist() == [1, 0, None, None, None]
+    if pa.__version__ >= '8':
+        assert ListChunk.one(array).to_pylist()[1:] == [0, None]
     assert ListChunk.element(array, 1).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.unique(array).to_pylist() == [[2, 1], [0], [None], [], []]
     assert ListChunk.distinct(array).to_pylist() == [[2, 1], [0], []]

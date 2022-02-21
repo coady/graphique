@@ -1,3 +1,4 @@
+import pyarrow as pa
 import pytest
 from graphique import middleware
 
@@ -75,6 +76,11 @@ def test_group(dsclient):
         '{ group(by: ["state"], aggregate: {first: {name: "county"}}) { row { county } } }'
     )
     assert data == {'group': {'row': {'county': 'Suffolk'}}}
+    if pa.__version__ >= '8':
+        data = dsclient.execute(
+            '{ group(by: ["state"], aggregate: {one: {name: "county"}}) { row { county } } }'
+        )
+        assert data['group']['row']['county']
     data = dsclient.execute(
         '''{ group(by: ["state"], aggregate: {mean: {name: "zipcode"}}) { slice(length: 1) {
         column(name: "zipcode") { ... on FloatColumn { values } } } } }'''

@@ -10,6 +10,7 @@ import functools
 import itertools
 import operator
 from concurrent import futures
+from dataclasses import dataclass
 from datetime import time
 from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
 import numpy as np  # type: ignore
@@ -36,6 +37,7 @@ class Agg:
         'max': pc.ScalarAggregateOptions,
         'mean': pc.ScalarAggregateOptions,
         'min': pc.ScalarAggregateOptions,
+        'one': pc.ScalarAggregateOptions,  # no options
         'product': pc.ScalarAggregateOptions,
         'stddev': pc.VarianceOptions,
         'sum': pc.ScalarAggregateOptions,
@@ -43,7 +45,7 @@ class Agg:
         'variance': pc.VarianceOptions,
     }
 
-    associatives = {'all', 'any', 'count', 'max', 'min', 'product', 'sum', 'first', 'last'}
+    associatives = {'all', 'any', 'count', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -56,13 +58,11 @@ class Agg:
         return f'hash_{func}', self.option_map[func](**self.options)
 
 
+@dataclass(frozen=True, slots=True)
 class Compare:
     """Comparable wrapper for bisection search."""
 
-    __slots__ = ('value',)
-
-    def __init__(self, value):
-        self.value = value
+    value: object
 
     def __lt__(self, other):
         return self.value < other.as_py()
@@ -105,6 +105,10 @@ class ListChunk(pa.lib.BaseListArray):
     def last(self) -> pa.Array:
         """last value of each list scalar"""
         return ListChunk.element(self, -1)
+
+    def one(self) -> pa.Array:
+        """one arbitrary value of each list scalar (pyarrow >=8 only)"""
+        return ListChunk.aggregate(self, one=None).field(0)
 
     def unique(self) -> pa.lib.BaseListArray:
         """unique values within each scalar"""

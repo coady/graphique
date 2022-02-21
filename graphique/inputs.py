@@ -537,6 +537,7 @@ class Aggregations(Input):
     max: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.max))
     mean: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.mean))
     min: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.min))
+    one: List[Aggregate] = default_field(list, description=inspect.getdoc(ListChunk.one))
     product: List[ScalarAggregate] = default_field(
         list, description=inspect.getdoc(ListChunk.product)
     )
