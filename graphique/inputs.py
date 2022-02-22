@@ -480,6 +480,7 @@ class StringFunction(Function):
     ignore_case: bool = strawberry.field(default=False, description="case option for substrings")
     regex: bool = strawberry.field(default=False, description="regex option for substrings")
     fill_null: Optional[str] = UNSET
+    utf8_capitalize: bool = False
     utf8_length: bool = False
     utf8_lower: bool = False
     utf8_upper: bool = False

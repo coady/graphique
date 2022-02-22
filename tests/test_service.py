@@ -130,6 +130,10 @@ def test_strings(client):
     assert data == {'filter': {'apply': {'filter': {'length': 1}, 'column': {'max': 24}}}}
     data = client.execute('{ apply(string: {name: "city", utf8Swapcase: true}) { row { city } } }')
     assert data == {'apply': {'row': {'city': 'hOLTSVILLE'}}}
+    data = client.execute(
+        '{ apply(string: {name: "state", utf8Capitalize: true}) { row { state } } }'
+    )
+    assert data == {'apply': {'row': {'state': 'Ny'}}}
 
 
 def test_string_methods(client):
@@ -180,6 +184,8 @@ def test_string_methods(client):
         { unique { values } } } } }'''
     )
     assert data['columns']['state']['utf8ReplaceSlice']['unique']['values'] == ['']
+    data = client.execute('{ columns { state { utf8SliceCodeunits(stop: 1) { values } } } }')
+    assert data['columns']['state']['utf8SliceCodeunits']['values'][0] == 'N'
     data = client.execute(
         '''{ columns { state { replaceSubstring(pattern: "C", replacement: "A") { values } } } }'''
     )

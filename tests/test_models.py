@@ -107,6 +107,12 @@ def test_columns(executor):
     assert execute('{ timestamp { count(equal: "1970-01-01") } }') == {'timestamp': {'count': 1}}
     assert execute('{ timestamp { index(value: "1970-01-01") } }') == {'timestamp': {'index': 0}}
     assert execute('{ timestamp { min max sort } }')
+    data = execute(
+        '''{ timestamp { floorTemporal(unit: "day") { values }
+        roundTemporal(unit: "day") { values } ceilTemporal(unit: "day") { values } } }'''
+    )
+    for name in ('floorTemporal', 'roundTemporal', 'ceilTemporal'):
+        data['timestamp'][name] == {'values': ['1970-01-01T00:00:00', None]}
 
     for name in ('time32', 'time64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['00:00:00', None]}}

@@ -351,6 +351,20 @@ class DecimalColumn(Column):
     max = annotate(Column.max, Optional[Decimal])
 
 
+class TemporalColumn:
+    def floor_temporal(self, unit: str, multiple: int = 1):
+        """Round down to nearest multiple and time unit."""
+        return type(self)(pc.floor_temporal(self.array, multiple, unit))  # type: ignore
+
+    def round_temporal(self, unit: str, multiple: int = 1):
+        """Round to nearest multiple and time unit."""
+        return type(self)(pc.round_temporal(self.array, multiple, unit))  # type: ignore
+
+    def ceil_temporal(self, unit: str, multiple: int = 1):
+        """Round up to nearest multiple and time unit."""
+        return type(self)(pc.ceil_temporal(self.array, multiple, unit))  # type: ignore
+
+
 @strawberry.type(description="column of dates")
 class DateColumn(Column):
     count = DateQuery.resolver(Column.count)
@@ -366,6 +380,9 @@ class DateColumn(Column):
     min_element_wise = annotate(Column.min_element_wise, 'DateColumn', value=date)
     max_element_wise = annotate(Column.max_element_wise, 'DateColumn', value=date)
     between = annotate(Column.between, LongColumn, start=Optional[date], end=Optional[date])
+    floor_temporal = annotate(TemporalColumn.floor_temporal, 'DateColumn')
+    round_temporal = annotate(TemporalColumn.round_temporal, 'DateColumn')
+    ceil_temporal = annotate(TemporalColumn.ceil_temporal, 'DateColumn')
 
     @doc_field
     def strftime(self, format: str = '%Y-%m-%dT%H:%M:%S', locale: str = 'C') -> 'StringColumn':
@@ -389,6 +406,9 @@ class DateTimeColumn(Column):
     max_element_wise = annotate(Column.max_element_wise, 'DateTimeColumn', value=datetime)
     between = annotate(Column.between, LongColumn, start=Optional[datetime], end=Optional[datetime])
     strftime = doc_field(DateColumn.strftime)
+    floor_temporal = annotate(TemporalColumn.floor_temporal, 'DateTimeColumn')
+    round_temporal = annotate(TemporalColumn.round_temporal, 'DateTimeColumn')
+    ceil_temporal = annotate(TemporalColumn.ceil_temporal, 'DateTimeColumn')
 
     @doc_field
     def subtract(self, value: datetime) -> 'DurationColumn':
@@ -411,6 +431,9 @@ class TimeColumn(Column):
     min_element_wise = annotate(Column.min_element_wise, 'TimeColumn', value=time)
     max_element_wise = annotate(Column.max_element_wise, 'TimeColumn', value=time)
     between = annotate(Column.between, LongColumn, start=Optional[time], end=Optional[time])
+    floor_temporal = annotate(TemporalColumn.floor_temporal, 'TimeColumn')
+    round_temporal = annotate(TemporalColumn.round_temporal, 'TimeColumn')
+    ceil_temporal = annotate(TemporalColumn.ceil_temporal, 'TimeColumn')
 
 
 @strawberry.type(description="column of durations")
@@ -520,6 +543,13 @@ class StringColumn(Column):
     def strptime(self, format: str = '%Y-%m-%dT%H:%M:%S', unit: str = 'ms') -> DateTimeColumn:
         """Return parsed timestamps."""
         return DateTimeColumn(pc.strptime(self.array, format=format, unit=unit))
+
+    @doc_field
+    def utf8_slice_codeunits(
+        self, start: int = 0, stop: Optional[int] = None, step: int = 1
+    ) -> 'StringColumn':
+        """Return slice strings, measured in utf8 codeunits."""
+        return StringColumn(pc.utf8_slice_codeunits(self.array, start, stop, step))
 
 
 @strawberry.type(description="column of lists")
