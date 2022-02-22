@@ -316,6 +316,8 @@ class Function(Input):
         default='',
         description="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
     )
+    fill_null_backward: bool = False
+    fill_null_forward: bool = False
 
 
 @strawberry.input
@@ -350,6 +352,7 @@ class NumericFunction(OrdinalFunction):
     acos: bool = False
     tan: bool = False
     atan: bool = False
+    sqrt: bool = strawberry.field(default=False, description="pyarrow >=8 only")
 
 
 @strawberry.input(description=f"[functions]({link}#selecting-multiplexing) for booleans")
@@ -572,6 +575,7 @@ class Diff(Input):
 )
 class Projections(Input):
     coalesce: Optional[List[str]] = UNSET
+    fill_null: Optional[List[str]] = UNSET
     binary_join_element_wise: Optional[List[str]] = UNSET
     if_else: Optional[List[str]] = UNSET
     case_when: Optional[List[str]] = UNSET

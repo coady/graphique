@@ -415,6 +415,15 @@ class DateTimeColumn(Column):
         """Return values subtracted *from* scalar."""
         return DurationColumn(pc.subtract(value, self.array))
 
+    @doc_field
+    def assume_timezone(
+        self, timezone: str, ambiguous: str = 'raise', nonexistent: str = 'raise'
+    ) -> 'DateTimeColumn':
+        """Convert naive timestamps to timezone-aware timestamps."""
+        return DateTimeColumn(
+            pc.assume_timezone(self.array, timezone, ambiguous=ambiguous, nonexistent=nonexistent)
+        )
+
 
 @strawberry.type(description="column of times")
 class TimeColumn(Column):

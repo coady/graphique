@@ -265,6 +265,12 @@ def test_datetime(executor):
     assert data == {'columns': {'time32': {'between': {'values': [1, None]}}}}
     with pytest.raises(ValueError):
         executor('{ columns { time64 { between(unit: "hours") { values } } } }')
+    data = executor(
+        '''{ apply(datetime: {name: "timestamp", fillNullForward: true}) { columns
+        { timestamp { assumeTimezone(timezone: "UTC") { values } } } } }'''
+    )
+    dates = data['apply']['columns']['timestamp']['assumeTimezone']['values']
+    assert dates == ['1970-01-01T00:00:00+00:00', '1970-01-01T00:00:00+00:00']
 
 
 def test_duration(executor):

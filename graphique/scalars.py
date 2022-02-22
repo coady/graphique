@@ -63,8 +63,10 @@ class Operator(enum.Enum):
     AND = 'and'
     OR = 'or'
     XOR = 'xor'
+    AND_NOT = 'and_not'
     AND_KLEENE = 'and_kleene'
     OR_KLEENE = 'or_kleene'
+    AND_NOT_KLEENE = 'and_not_kleene'
 
 
 class classproperty(property):
