@@ -1,18 +1,15 @@
 """
 GraphQL service and top-level resolvers.
 """
-import functools
-import itertools
 from typing import List, Optional, no_type_check
 import pyarrow as pa
-import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry
 from strawberry.arguments import UNSET
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
 from .inputs import Filters, Input, Query as QueryInput
-from .middleware import AbstractTable, GraphQL, filter_expression
+from .middleware import Dataset, GraphQL, filter_expression
 from .models import Column, doc_field, selections
 from .scalars import Long, Operator, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, FEDERATED, FILTERS, INDEX, PARQUET_PATH
@@ -46,7 +43,7 @@ class Queries(Input):
 
 
 @strawberry.type(description="a column-oriented table")
-class Table(AbstractTable):
+class Table(Dataset):
     @doc_field
     def columns(self, info) -> Columns:
         """fields for each column"""
@@ -91,24 +88,13 @@ class Table(AbstractTable):
             scanner = self.scanner(info, dict(query), invert=invert, reduce=reduce.value)
             oneshot = not isinstance(self.table, ds.Dataset) and len(fields) > 1
             query, self = {}, type(self)(scanner.to_table() if oneshot else scanner)
-        filters = list(dict(query).items())
-        for value in map(dict, itertools.chain(*dict(on).values())):
-            filters.append((value.pop('name'), value))
-        if not filters:
+        filters = dict(on)
+        for name, value in dict(query).items():
+            value['name'] = name
+            filters.setdefault('', []).append(value)
+        if not any(filters.values()):
             return self
-        table = self.select(info)
-        lists = {name for name in table.column_names if C.is_list_type(table[name])}
-        masks = [T.mask(table, name, **value) for name, value in filters if name not in lists]
-        if masks:
-            mask = functools.reduce(getattr(pc, reduce.value), masks)
-            if fields == {'length'}:  # optimized for count
-                return Table(range(C.count(mask, not invert)))
-            table = table.filter(pc.invert(mask) if invert else mask)
-        masks = [T.mask(table, name, **value) for name, value in filters if name in lists]
-        if masks:
-            mask = functools.reduce(getattr(pc, reduce.value), masks).combine_chunks()
-            table = T.filter_list(table, pc.invert(mask) if invert else mask)
-        return Table(table)
+        return Dataset.filter(self, info, filters, invert, reduce)
 
 
 @strawberry.type(description="a table sorted by a composite index")

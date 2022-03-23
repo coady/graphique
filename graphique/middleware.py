@@ -14,12 +14,12 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Diff, Projections
+from .inputs import Aggregations, Diff, Filters, Projections
 from .inputs import BinaryFunction, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction
-from .models import Column, annotate, doc_field
-from .scalars import Long, scalar_map
+from .models import Column, annotate, doc_field, selections
+from .scalars import Long, Operator, scalar_map
 
 comparisons = {
     'equal': operator.eq,
@@ -98,15 +98,15 @@ class GraphQL(strawberry.asgi.GraphQL):
 
 
 @strawberry.interface(description="a schema-free table")
-class AbstractTable:
+class Dataset:
     def __init__(self, table: Union[ds.Dataset, ds.Scanner, pa.Table]):
         self.table = table
 
     def __init_subclass__(cls):
-        """Downcast fields which return an `AbstractTable` to its implemented type."""
-        cls.__init__ = AbstractTable.__init__
+        """Downcast fields which return an `Dataset` to its implemented type."""
+        cls.__init__ = Dataset.__init__
         for name, func in inspect.getmembers(cls, inspect.isfunction):
-            if func.__annotations__.get('return') in ('AbstractTable', List['AbstractTable']):
+            if func.__annotations__.get('return') in ('Dataset', List['Dataset']):
                 clone = types.FunctionType(func.__code__, func.__globals__)
                 clone.__annotations__['return'] = cls
                 if name == 'aggregate':
@@ -176,7 +176,7 @@ class AbstractTable:
     )
     def slice(
         self, info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
-    ) -> 'AbstractTable':
+    ) -> 'Dataset':
         """Return zero-copy slice of table."""
         table = self.select(info, length and (offset + length if offset >= 0 else None))
         table = table[offset:][:length]  # `slice` bug: ARROW-15412
@@ -190,7 +190,7 @@ class AbstractTable:
     @no_type_check
     def group(
         self, info, by: List[str], counts: str = '', aggregate: Aggregations = {}
-    ) -> 'AbstractTable':
+    ) -> 'Dataset':
         """Return table grouped by columns, with stable ordering.
 
         Columns which are not aggregated are transformed into list columns.
@@ -224,9 +224,7 @@ class AbstractTable:
         counts="optionally include counts in an aliased column",
     )
     @no_type_check
-    def partition(
-        self, info, by: List[str], diffs: List[Diff] = [], counts: str = ''
-    ) -> 'AbstractTable':
+    def partition(self, info, by: List[str], diffs: List[Diff] = [], counts: str = '') -> 'Dataset':
         """Return table partitioned by discrete differences of the values.
 
         Differs from `group` by relying on adjacency, and is typically faster.
@@ -254,7 +252,7 @@ class AbstractTable:
     )
     def sort(
         self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
-    ) -> 'AbstractTable':
+    ) -> 'Dataset':
         """Return table slice sorted by specified columns.
 
         Sorting on list columns will sort within scalars, all of which must have the same lengths.
@@ -269,13 +267,13 @@ class AbstractTable:
         return type(self)(table)
 
     @doc_field(by="column names")
-    def min(self, info, by: List[str]) -> 'AbstractTable':
+    def min(self, info, by: List[str]) -> 'Dataset':
         """Return table with minimum values per column."""
         table = self.select(info)
         return type(self)(T.matched(table, C.min, *by))
 
     @doc_field(by="column names")
-    def max(self, info, by: List[str]) -> 'AbstractTable':
+    def max(self, info, by: List[str]) -> 'Dataset':
         """Return table with maximum values per column."""
         table = self.select(info)
         return type(self)(T.matched(table, C.max, *by))
@@ -296,7 +294,7 @@ class AbstractTable:
         string: List[StringFunction] = [],
         struct: List[StructFunction] = [],
         time: List[TimeFunction] = [],
-    ) -> 'AbstractTable':
+    ) -> 'Dataset':
         """Return view of table with functions applied across columns.
 
         If no alias is provided, the column is replaced and should be of the same type.
@@ -310,7 +308,7 @@ class AbstractTable:
         return type(self)(table)
 
     @doc_field
-    def tables(self, info) -> List['AbstractTable']:  # type: ignore
+    def tables(self, info) -> List['Dataset']:  # type: ignore
         """Return a list of tables by splitting list columns, typically used after grouping.
 
         At least one list column must be referenced, and all list columns must have the same lengths.
@@ -325,7 +323,7 @@ class AbstractTable:
 
     @Aggregations.resolver
     @no_type_check
-    def aggregate(self, info, **fields) -> 'AbstractTable':
+    def aggregate(self, info, **fields) -> 'Dataset':
         """Return table with aggregate functions applied to list columns, typically used after grouping.
 
         Columns which are aliased or change type can be accessed by the `column` field.
@@ -338,3 +336,36 @@ class AbstractTable:
                 name, alias = field.pop('name'), field.pop('alias')
                 columns[alias or name] = C.map(table[name], func, **field)
         return type(self)(pa.table(columns))
+
+    @doc_field(
+        on="extended filters on columns organized by type",
+        invert="optionally exclude matching rows",
+        reduce="binary operator to combine filters; within a filter all predicates must match",
+    )
+    @no_type_check
+    def filter(
+        self,
+        info,
+        on: Filters = {},
+        invert: bool = False,
+        reduce: Operator = Operator.AND,
+    ) -> 'Dataset':
+        """Return table with rows which match all (by default) queries.
+
+        List columns apply their respective filters to the scalar values within lists.
+        All referenced list columns must have the same lengths.
+        """
+        table = self.select(info)
+        filters = list(map(dict, itertools.chain(*dict(on).values())))
+        lists = {name for name in table.column_names if C.is_list_type(table[name])}
+        masks = [T.mask(table, **value) for value in filters if value['name'] not in lists]
+        if masks:
+            mask = functools.reduce(getattr(pc, reduce.value), masks)
+            if selections(*info.selected_fields) == {'length'}:  # optimized for count
+                return type(self)(range(C.count(mask, not invert)))
+            table = table.filter(pc.invert(mask) if invert else mask)
+        masks = [T.mask(table, **value) for value in filters if value['name'] in lists]
+        if masks:
+            mask = functools.reduce(getattr(pc, reduce.value), masks).combine_chunks()
+            table = T.filter_list(table, pc.invert(mask) if invert else mask)
+        return type(self)(table)
