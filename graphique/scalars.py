@@ -1,7 +1,6 @@
 """
 GraphQL scalars.
 """
-import base64
 import enum
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
@@ -9,13 +8,6 @@ import pyarrow as pa
 import strawberry
 
 Long = strawberry.scalar(int, name='Long', description="64-bit int")
-Binary = strawberry.scalar(
-    bytes,
-    name='Binary',
-    description="base64 encoded bytes",
-    serialize=lambda b: base64.b64encode(b).decode('utf8'),
-    parse_value=base64.b64decode,
-)
 Duration = strawberry.scalar(
     timedelta,
     name='Duration',
@@ -23,7 +15,7 @@ Duration = strawberry.scalar(
     serialize=timedelta.total_seconds,
     parse_value=lambda s: timedelta(seconds=s),
 )
-scalar_map = {bytes: Binary, timedelta: Duration}
+scalar_map = {bytes: strawberry.scalars.Base64, timedelta: Duration}
 
 type_map = {
     pa.lib.Type_BOOL: bool,

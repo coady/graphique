@@ -15,7 +15,7 @@ import strawberry.asgi
 from strawberry.utils.str_converters import to_camel_case
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Diff, Filters, Projections
-from .inputs import BinaryFunction, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
+from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction
 from .models import Column, annotate, doc_field, selections
@@ -281,7 +281,7 @@ class Dataset:
     def apply(
         self,
         info,
-        binary: List[BinaryFunction] = [],
+        binary: List[Base64Function] = [],
         boolean: List[BooleanFunction] = [],
         date: List[DateFunction] = [],
         datetime: List[DateTimeFunction] = [],

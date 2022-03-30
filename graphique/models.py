@@ -16,7 +16,7 @@ from strawberry.field import StrawberryField
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
 from .inputs import BooleanQuery, IntQuery, LongQuery, FloatQuery, DecimalQuery, DateQuery
-from .inputs import DateTimeQuery, TimeQuery, DurationQuery, BinaryQuery, StringQuery
+from .inputs import DateTimeQuery, TimeQuery, DurationQuery, Base64Query, StringQuery
 from .scalars import Long, type_map
 
 
@@ -453,23 +453,23 @@ class DurationColumn(Column):
 
 
 @strawberry.type(description="column of binaries")
-class BinaryColumn(Column):
-    count = BinaryQuery.resolver(Column.count)
+class Base64Column(Column):
+    count = Base64Query.resolver(Column.count)
     index = annotate(Column.index, Long, value=bytes)
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[bytes]])
-    Set = Set.subclass(bytes, "BinarySet", "unique binaries")
+    Set = Set.subclass(bytes, "Base64Set", "unique binaries")
     unique = annotate(Column.unique, Set)
     sort = annotate(Column.sort, List[Optional[bytes]])
-    drop_null = annotate(Column.drop_null, 'BinaryColumn')
-    fill_null = annotate(Column.fill_null, 'BinaryColumn', value=bytes)
+    drop_null = annotate(Column.drop_null, 'Base64Column')
+    fill_null = annotate(Column.fill_null, 'Base64Column', value=bytes)
 
     @doc_field
-    def binary_replace_slice(self, start: int, stop: int, replacement: str) -> 'BinaryColumn':
+    def binary_replace_slice(self, start: int, stop: int, replacement: str) -> 'Base64Column':
         """Replace a slice of a binary string with `replacement`."""
         kwargs = dict(start=start, stop=stop, replacement=replacement)
-        return BinaryColumn(pc.binary_replace_slice(self.array, **kwargs))
+        return Base64Column(pc.binary_replace_slice(self.array, **kwargs))
 
 
 @strawberry.type(description="column of strings")
@@ -679,9 +679,9 @@ class ListColumn(Column):
         return self.map(ListChunk.all, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
 
     @doc_field
-    def binary_join(self, separator: bytes) -> BinaryColumn:
+    def binary_join(self, separator: bytes) -> Base64Column:
         """Join a list of binary strings together with a `separator` to form a single string."""
-        return BinaryColumn(pc.binary_join(self.array, separator))
+        return Base64Column(pc.binary_join(self.array, separator))
 
     @doc_field
     def string_join(self, separator: str) -> StringColumn:
@@ -712,7 +712,7 @@ Column.type_map = {  # type: ignore
     datetime: DateTimeColumn,
     time: TimeColumn,
     timedelta: DurationColumn,
-    bytes: BinaryColumn,
+    bytes: Base64Column,
     str: StringColumn,
     list: ListColumn,
     dict: StructColumn,

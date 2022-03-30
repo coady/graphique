@@ -36,7 +36,7 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 ### API
 #### types
 * `Table`: an arrow Table; the primary interface.
-* `Column`: an arrow Column (a.k.a. ChunkedArray). Each arrow data type has a corresponding column implementation: Boolean, Int, Long, Float, Decimal, Date, DateTime, Time, Duration, Binary, String, List, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
+* `Column`: an arrow Column (a.k.a. ChunkedArray). Each arrow data type has a corresponding column implementation: Boolean, Int, Long, Float, Decimal, Date, DateTime, Time, Duration, Base64, String, List, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
 * `Row`: scalar fields. Arrow tables are column-oriented, and graphique encourages that usage for performance. A single `row` field is provided for convenience, but a field for a list of rows is not. Requesting parallel columns is far more efficient.
 
 #### selection
@@ -75,7 +75,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 
 ## Dependencies
 * pyarrow >=7
-* strawberry-graphql[asgi] >=0.84.4
+* strawberry-graphql[asgi] >=0.99
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 * pytz (optional timestamp support)
 * polars >=0.13 (optional optimization for list aggregation)

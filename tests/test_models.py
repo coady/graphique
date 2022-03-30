@@ -382,7 +382,7 @@ def test_list(executor):
     assert data['aggregate']['var']['values'] == [pytest.approx((2 / 3)), None]
     data = executor(
         '''{ partition(by: "int32") { column(name: "binary") { ... on ListColumn
-        { binaryJoin(separator: " ") { ... on BinaryColumn { values } } } } } }'''
+        { binaryJoin(separator: " ") { ... on Base64Column { values } } } } } }'''
     )
     assert data == {'partition': {'column': {'binaryJoin': {'values': [None]}}}}
 

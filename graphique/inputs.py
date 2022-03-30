@@ -176,7 +176,7 @@ class DurationQuery(Query):
 
 
 @strawberry.input(description="predicates for binaries")
-class BinaryQuery(Query):
+class Base64Query(Query):
     __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bytes])
     is_in: Optional[List[bytes]] = UNSET
 
@@ -197,7 +197,7 @@ Query.type_map = {
     datetime: DateTimeQuery,
     time: TimeQuery,
     timedelta: DurationQuery,
-    bytes: BinaryQuery,
+    bytes: Base64Query,
     str: StringQuery,
 }
 
@@ -266,8 +266,8 @@ class DurationFilter(Filter):
 
 
 @strawberry.input(description="predicates for binaries")
-class BinaryFilter(Filter):
-    __annotations__.update(BinaryQuery.__annotations__)  # type: ignore
+class Base64Filter(Filter):
+    __annotations__.update(Base64Query.__annotations__)  # type: ignore
     apply: NominalFilter = default_field(dict)
 
 
@@ -303,7 +303,7 @@ class Filters(Input):
     datetime: List[DateTimeFilter] = default_field(list)
     time: List[TimeFilter] = default_field(list)
     duration: List[DurationFilter] = default_field(list)
-    binary: List[BinaryFilter] = default_field(list)
+    binary: List[Base64Filter] = default_field(list)
     string: List[StringFilter] = default_field(list)
 
 
@@ -469,7 +469,7 @@ class DurationFunction(Function):
 
 
 @strawberry.input(description="[functions]({link}#string-transforms) for binaries")
-class BinaryFunction(Function):
+class Base64Function(Function):
     binary_join_element_wise: Optional[List[str]] = UNSET
     fill_null: Optional[bytes] = UNSET
     binary_length: bool = False
