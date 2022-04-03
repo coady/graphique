@@ -32,9 +32,9 @@ def test_dictionary(table):
 def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
     table = pa.table({'col': array})
-    groups, counts = T.group(table, 'col')
+    groups = T.group(table, 'col', counts='counts')
     assert groups['col'].to_pylist() == list('abc')
-    assert counts.to_pylist() == [2, 3, 1]
+    assert groups['counts'].to_pylist() == [2, 3, 1]
     assert table['col'].unique() == pa.array('abc')
     assert C.sort(array, length=1).to_pylist() == ['a']
     assert C.sort(array, length=3).to_pylist() == ['a', 'a', 'b']
@@ -125,8 +125,8 @@ def test_functional(table):
 
 
 def test_group(table):
-    groups, counts = T.group(table, 'state')
-    assert len(groups) == len(counts) == 52
+    groups = T.group(table, 'state', list=[Agg('county'), Agg('city')])
+    assert len(groups) == 52
     assert groups['state'][0].as_py() == 'NY'
     assert sum(T.mask(groups, 'county', apply={'equal': 'city'}).to_pylist()) == 2805
     assert sum(T.mask(groups, 'county', apply={'equal': 'state'}).to_pylist()) == 0
@@ -147,20 +147,20 @@ def test_group(table):
 def test_aggregate(table):
     tbl = T.union(table, table.select([0]).rename_columns(['test']))
     assert tbl.column_names == table.column_names + ['test']
-    groups = T.aggregate(table, 'state', 'county')
+    groups = T.group(table, 'state', 'county')
     assert len(groups) == 3216
     assert groups.column_names == ['state', 'county']
-    groups = T.aggregate(table, 'state', counts='counts', first=[Agg('county')])
+    groups = T.group(table, 'state', counts='counts', first=[Agg('county')])
     assert len(groups) == 52
     assert groups['state'][0].as_py() == 'NY'
     assert groups['counts'][0].as_py() == 2205
     assert groups['county'][0].as_py() == 'Suffolk'
-    groups = T.aggregate(table, 'state', last=[Agg('city', 'last')], min=[Agg('zipcode')])
+    groups = T.group(table, 'state', last=[Agg('city', 'last')], min=[Agg('zipcode')])
     assert groups['last'][0].as_py() == 'Elmira'
     assert groups['zipcode'][0].as_py() == 501
-    groups = T.aggregate(table, 'state', max=[Agg('zipcode', 'max', skip_nulls=False)])
+    groups = T.group(table, 'state', max=[Agg('zipcode', 'max', skip_nulls=False)])
     assert groups['max'][0].as_py() == 14925
-    groups = T.aggregate(table, 'state', tdigest=[Agg('longitude'), Agg('latitude', q=[0.5])])
+    groups = T.group(table, 'state', tdigest=[Agg('longitude'), Agg('latitude', q=[0.5])])
     assert groups['longitude'][0].as_py() == pytest.approx(-74.25370)
     assert groups['latitude'][0].as_py() == [pytest.approx(42.34672)]
 

@@ -206,17 +206,13 @@ class Dataset:
         if not isinstance(self.table, pa.Table) and set(aggs) <= Agg.associatives:
             scanner = self.scanner(info)
             if lists.isdisjoint(scanner.projected_schema.names):
-                table = T.map_batch(scanner, T.aggregate, *by, counts=counts, **aggs)
+                table = T.map_batch(scanner, T.group, *by, counts=counts, **aggs)
                 if counts:
                     aggs.setdefault('sum', []).append(Agg(counts))
                     counts = ''
         table = table or self.select(info)
-        lists &= set(table.column_names)
-        groups = T.aggregate(table, *by, counts=counts, **aggs)
-        if not lists:
-            return type(self)(groups)
-        table, _ = T.group(table.select(lists | set(by)), *by)
-        return type(self)(T.union(table, groups))
+        aggs['list'] = list(map(Agg, lists & set(table.column_names)))
+        return type(self)(T.group(table, *by, counts=counts, **aggs))
 
     @doc_field(
         by="column names",

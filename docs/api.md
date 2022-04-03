@@ -46,7 +46,7 @@ on(<type>: {name: "...", ...}, ...)
 ```
 
 ## Aggregation
-Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partition` leverage that feature to transform un-grouped columns into ListColumns, which can be accessed via inline fragments and further aggregated. `Table.group` can also aggregate immediately with arrow hash functions, otherwise it uses [Polars](https://www.pola.rs) to create lists. The reason for two different aggregate modes is the trade-off between speed and flexibility. From slowest to fastest:
+Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partition` leverage that feature to transform un-grouped columns into ListColumns, which can be accessed via inline fragments and further aggregated. `Table.group` can also aggregate immediately with arrow hash functions. The reason for two different aggregate modes is the trade-off between speed and flexibility. From slowest to fastest:
 
 * `Table.tables` returns a list of tables based on the list scalars.
 * `Table.apply(list: {...})` applies general functions to the list scalars.

@@ -378,7 +378,7 @@ def test_group(client):
         '''{ group(by: ["state"]) { length tables { length
         columns { state { values } county { min max } } }
         apply(list: {name: "county", alias: "c", valueLength: true}) {
-        column(name: "c") { ... on LongColumn { values } } } } }'''
+        column(name: "c") { ... on IntColumn { values } } } } }'''
     )
     assert len(data['group']['tables']) == data['group']['length'] == 52
     table = data['group']['tables'][0]

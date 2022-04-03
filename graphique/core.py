@@ -18,10 +18,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 threader = futures.ThreadPoolExecutor(pa.cpu_count())
-try:
-    import polars as pl  # type: ignore
-except ImportError:
-    pl = None
 
 
 class Agg:
@@ -34,6 +30,7 @@ class Agg:
         'count': pc.CountOptions,
         'count_distinct': pc.CountOptions,
         'distinct': pc.CountOptions,
+        'list': pc.ElementWiseAggregateOptions,
         'max': pc.ScalarAggregateOptions,
         'mean': pc.ScalarAggregateOptions,
         'min': pc.ScalarAggregateOptions,
@@ -485,32 +482,6 @@ class Table(pa.Table):
         arrays = [cls.from_arrays(offsets, *column.chunks) for column in self.combine_chunks()]
         return pa.table(arrays, self.column_names)
 
-    def _group_indices(self, *names: str) -> pa.LargeListArray:
-        """Return list array of indices which would group the table."""
-        indices = Column.indices(self[names[0]])
-        groups = pc._group_by([indices], self.select(names), [('hash_distinct', None)])
-        return groups.field(0).cast(pa.large_list(pa.int64()))
-
-    def _pl_group_indices(self, *names: str) -> pa.LargeListArray:
-        """Return list array of indices which would group the table.
-
-        Uses polars list aggregation; may be replaced in the future by ARROW-15152.
-        """
-        indices = pl.arange(0, len(self)).alias('_')
-        df = pl.from_arrow(self.select(names), rechunk=False).with_columns([indices])
-        indices = df.groupby(list(names)).agg_list()['_'].to_arrow()
-        return indices.take(pc.sort_indices(pc.list_element(indices, 0)))
-
-    group_indices = _pl_group_indices if pl else _group_indices
-
-    def group(self, *names: str) -> tuple:
-        """Return table grouped by columns and corresponding counts."""
-        indices = Table.group_indices(self, *names)
-        scalars = self.select(names).take(ListChunk.first(indices))
-        lists = self.select(set(self.column_names) - set(names)).take(indices.values)
-        table = Table.union(scalars, Table.from_offsets(lists, indices.offsets))
-        return table, indices.value_lengths()
-
     def partition(self, *names: str, **predicates: tuple) -> tuple:
         """Return table partitioned by discrete differences and corresponding counts.
 
@@ -529,7 +500,7 @@ class Table(pa.Table):
         table = Table.union(scalars, Table.from_offsets(lists, offsets))
         return table, Column.diff(offsets)
 
-    def aggregate(
+    def group(
         self,
         *names: str,
         counts: str = '',
@@ -551,6 +522,14 @@ class Table(pa.Table):
         args = [(column, 'hash_count', pc.CountOptions(mode='all'))] if none or counts else []
         if first or last:
             args.append((Column.indices(column), 'hash_min_max', None))
+        lists = funcs.pop('list', [])
+        list_cols = [self[agg.name] for agg in lists]
+        if lists and pa.__version__ < '8':
+            args.append((Column.indices(column), 'hash_distinct', None))
+        elif any(pa.types.is_dictionary(col.type) or Column.is_list_type(col) for col in list_cols):
+            args.append((Column.indices(column), 'hash_list', None))
+        else:
+            lists, funcs['list'] = [], lists
         for func in funcs:
             for agg in funcs[func]:
                 column = Column.mask(self[agg.name]) if func in ('any', 'all') else self[agg.name]
@@ -564,6 +543,11 @@ class Table(pa.Table):
         if first or last:
             for aggs, indices in zip([first, last], next(arrays).flatten()):
                 columns.update({agg.alias: self[agg.name].take(indices) for agg in aggs})
+        if lists:
+            indices = next(arrays)
+            table = self.select({agg.name for agg in lists}).take(indices.values)
+            table = Table.from_offsets(table, indices.offsets)
+            columns.update({agg.alias: table[agg.name] for agg in lists})
         for aggs in funcs.values():
             columns.update(zip([agg.alias for agg in aggs], arrays))
         columns.update(zip(names, arrays))
