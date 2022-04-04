@@ -84,9 +84,9 @@ class Table(Dataset):
         All referenced list columns must have the same lengths.
         """
         fields = selections(*info.selected_fields)
-        if reduce.value in ('and', 'or'):
+        if reduce.value in ('and', 'or') and dict(query):
             scanner = self.scanner(info, dict(query), invert=invert, reduce=reduce.value)
-            oneshot = not isinstance(self.table, ds.Dataset) and len(fields) > 1
+            oneshot = isinstance(self.table, ds.Scanner) and len(fields) > 1
             query, self = {}, type(self)(scanner.to_table() if oneshot else scanner)
         filters = dict(on)
         for name, value in dict(query).items():

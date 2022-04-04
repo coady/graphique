@@ -127,10 +127,12 @@ class Dataset:
         """Return scanner with only the rows and columns necessary to proceed."""
         dataset = self.table
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
-        if isinstance(dataset, ds.Scanner) and not queries:
-            return dataset
-        if not isinstance(dataset, ds.Dataset):
-            expr = filter_expression(queries, invert=invert, reduce=reduce)
+        expr = filter_expression(queries, invert=invert, reduce=reduce)
+        if isinstance(dataset, pa.Table):
+            return ds.dataset(dataset).scanner(filter=expr)
+        if isinstance(dataset, ds.Scanner):
+            if expr is None:
+                return dataset
             return ds.Scanner.from_batches(dataset.to_batches(), schema, filter=expr)
         case_map = {to_camel_case(name): name for name in schema.names}
         names = self.references(info) & set(case_map)
