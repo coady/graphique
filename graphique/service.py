@@ -5,7 +5,7 @@ from typing import List, Optional, no_type_check
 import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
-from strawberry.arguments import UNSET
+from strawberry import UNSET
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
 from .inputs import Filters, Input, Query as QueryInput

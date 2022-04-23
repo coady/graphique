@@ -7,8 +7,9 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Callable, List, Optional
 import strawberry
+from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import StrawberryArgument, UNSET
+from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField
 from strawberry.types.fields.resolver import StrawberryResolver
 from typing_extensions import Annotated
