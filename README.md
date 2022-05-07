@@ -74,7 +74,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 ```
 
 ## Dependencies
-* pyarrow >=7
+* pyarrow >=8
 * strawberry-graphql[asgi] >=0.109
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 * pytz (optional timestamp support)
@@ -89,6 +89,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 ## Changes
 dev
 
+* Pyarrow >=8 required
 * Grouping and aggregation integrated
 * `AbstractTable` interface renamed to `Dataset`
 * `Binary` scalar renamed to `Base64`

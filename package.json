@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "graphql": "^15.5.0",
+    "graphql": "^15.8.0",
     "graphql-markdown": "^6.0.0"
   }
 }

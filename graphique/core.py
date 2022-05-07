@@ -522,14 +522,11 @@ class Table(pa.Table):
         args = [(column, 'hash_count', pc.CountOptions(mode='all'))] if none or counts else []
         if first or last:
             args.append((Column.indices(column), 'hash_min_max', None))
-        lists = funcs.pop('list', [])
-        list_cols = [self[agg.name] for agg in lists]
-        if lists and pa.__version__ < '8':
-            args.append((Column.indices(column), 'hash_distinct', None))
-        elif any(pa.types.is_dictionary(col.type) or Column.is_list_type(col) for col in list_cols):
+        lists: Sequence[Agg] = []
+        list_cols = [self[agg.name] for agg in funcs.get('list', [])]
+        if any(pa.types.is_dictionary(col.type) or Column.is_list_type(col) for col in list_cols):
             args.append((Column.indices(column), 'hash_list', None))
-        else:
-            lists, funcs['list'] = [], lists
+            lists = funcs.pop('list')
         for func in funcs:
             for agg in funcs[func]:
                 column = Column.mask(self[agg.name]) if func in ('any', 'all') else self[agg.name]
