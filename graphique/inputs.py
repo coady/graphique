@@ -211,25 +211,25 @@ class Filter(Query):
 
 @strawberry.input(description="predicates for booleans")
 class BooleanFilter(Filter):
-    __annotations__.update(BooleanQuery.__annotations__)  # type: ignore
+    __annotations__.update(BooleanQuery.__annotations__)
     apply: NominalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for ints")
 class IntFilter(Filter):
-    __annotations__.update(IntQuery.__annotations__)  # type: ignore
+    __annotations__.update(IntQuery.__annotations__)
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for longs")
 class LongFilter(Filter):
-    __annotations__.update(LongQuery.__annotations__)  # type: ignore
+    __annotations__.update(LongQuery.__annotations__)
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for floats")
 class FloatFilter(Filter):
-    __annotations__.update(FloatQuery.__annotations__)  # type: ignore
+    __annotations__.update(FloatQuery.__annotations__)
     is_finite: bool = False
     is_inf: bool = False
     is_nan: bool = False
@@ -238,43 +238,43 @@ class FloatFilter(Filter):
 
 @strawberry.input(description="predicates for decimals")
 class DecimalFilter(Filter):
-    __annotations__.update(DecimalQuery.__annotations__)  # type: ignore
+    __annotations__.update(DecimalQuery.__annotations__)
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for dates")
 class DateFilter(Filter):
-    __annotations__.update(DateQuery.__annotations__)  # type: ignore
+    __annotations__.update(DateQuery.__annotations__)
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeFilter(Filter):
-    __annotations__.update(DateTimeQuery.__annotations__)  # type: ignore
+    __annotations__.update(DateTimeQuery.__annotations__)
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for times")
 class TimeFilter(Filter):
-    __annotations__.update(TimeQuery.__annotations__)  # type: ignore
+    __annotations__.update(TimeQuery.__annotations__)
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for durations")
 class DurationFilter(Filter):
-    __annotations__.update(DurationQuery.__annotations__)  # type: ignore
+    __annotations__.update(DurationQuery.__annotations__)
     apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for binaries")
 class Base64Filter(Filter):
-    __annotations__.update(Base64Query.__annotations__)  # type: ignore
+    __annotations__.update(Base64Query.__annotations__)
     apply: NominalFilter = default_field(dict)
 
 
 @strawberry.input(description=f"[predicates]({link}#string-predicates) for strings")
 class StringFilter(Filter):
-    __annotations__.update(StringQuery.__annotations__)  # type: ignore
+    __annotations__.update(StringQuery.__annotations__)
     match_substring: Optional[str] = UNSET
     match_like: Optional[str] = UNSET
     ignore_case: bool = strawberry.field(default=False, description="case option for substrings")

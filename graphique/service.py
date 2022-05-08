@@ -49,7 +49,7 @@ class Table(Dataset):
         """fields for each column"""
         table = self.select(info)
         columns = {name: Columns.__annotations__[name](table[name]) for name in table.column_names}
-        return Columns(**columns)  # type: ignore
+        return Columns(**columns)
 
     @doc_field
     def row(self, info, index: Long = 0) -> Row:
@@ -61,7 +61,7 @@ class Table(Dataset):
             row[name] = (
                 Column.fromscalar(scalar) if isinstance(scalar, pa.ListScalar) else scalar.as_py()
             )
-        return Row(**row)  # type: ignore
+        return Row(**row)
 
     @doc_field(
         query="simple queries by column",
