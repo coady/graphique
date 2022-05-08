@@ -86,7 +86,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 ```
 
 ## Changes
-dev
+0.8
 
 * Pyarrow >=8 required
 * Grouping and aggregation integrated
