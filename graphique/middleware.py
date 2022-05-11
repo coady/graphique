@@ -212,7 +212,7 @@ class Dataset:
                 if counts:
                     aggs.setdefault('sum', []).append(Agg(counts))
                     counts = ''
-        table = table or self.select(info)
+        table = self.select(info) if table is None else table
         aggs['list'] = list(map(Agg, lists & set(table.column_names)))
         return type(self)(T.group(table, *by, counts=counts, **aggs))
 

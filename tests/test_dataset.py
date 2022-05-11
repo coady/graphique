@@ -50,6 +50,11 @@ def test_search(dsclient):
         length row { zipcode } } } }'''
     )
     assert data == {'search': {'filter': {'length': 2647, 'row': {'zipcode': 90001}}}}
+    data = dsclient.execute(
+        '''{ search(zipcode: {less: 90000}) { filter(query: {state: {equal: "CA"}}) {
+        group(by: "county") { length } } } }'''
+    )
+    assert data == {'search': {'filter': {'group': {'length': 0}}}}
 
 
 def test_slice(dsclient):
