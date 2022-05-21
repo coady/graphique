@@ -442,3 +442,8 @@ def test_conditions(executor):
     assert data == {'column': {'type': 'float'}}
     with pytest.raises(ValueError, match="must be BOOL"):
         executor('{ column(name: "struct", apply: {caseWhen: ["int32", "float"]}) { type } }')
+
+
+def test_long(executor):
+    with pytest.raises(ValueError, match="Long cannot represent value"):
+        executor('{ filter(query: {int64: {equal: 0.5} }) { length } }')

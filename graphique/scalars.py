@@ -7,7 +7,16 @@ from decimal import Decimal
 import pyarrow as pa
 import strawberry
 
-Long = strawberry.scalar(int, name='Long', description="64-bit int")
+
+def parse_long(value) -> int:
+    if int(value) == value:
+        return int(value)
+    raise TypeError(f"Long cannot represent value: {value}")
+
+
+Long = strawberry.scalar(
+    int, name='Long', description="64-bit int", serialize=parse_long, parse_value=parse_long
+)
 Duration = strawberry.scalar(
     timedelta,
     name='Duration',
