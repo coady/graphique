@@ -8,7 +8,7 @@ import operator
 import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, List, Optional
+from typing import Callable, Generic, List, Optional, TypeVar
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
@@ -18,6 +18,8 @@ from .core import Column as C, ListChunk
 from .inputs import BooleanQuery, IntQuery, LongQuery, FloatQuery, DecimalQuery, DateQuery
 from .inputs import DateTimeQuery, TimeQuery, DurationQuery, Base64Query, StringQuery
 from .scalars import Long, type_map
+
+T = TypeVar('T')
 
 
 def selections(*fields) -> set:
@@ -68,8 +70,8 @@ class Column:
     def unique(self, info):
         """unique values and counts"""
         if 'counts' in selections(*info.selected_fields):
-            return self.Set(*self.array.value_counts().flatten())
-        return self.Set(self.array.unique())
+            return Set(*self.array.value_counts().flatten())
+        return Set(self.array.unique())
 
     def count(self, **query) -> Long:
         """Return number of matching values.
@@ -134,21 +136,18 @@ class Column:
         return LongColumn(getattr(pc, f'{unit}_between')(*args))
 
 
-@strawberry.interface(description="unique values")
-class Set:
+@strawberry.type(description="unique values")
+class Set(Generic[T]):
     length = doc_field(Column.length)
     counts: List[Long] = strawberry.field(description="list of counts")
 
     def __init__(self, array, counts=pa.array([])):
         self.array, self.counts = array, counts.to_pylist()
 
-    @classmethod
-    def subclass(base, cls, name, description):
-        namespace = {
-            '__init__': Set.__init__,
-            'values': annotate(Column.values, List[Optional[cls]]),
-        }
-        return strawberry.type(description=description)(type(name, (base,), namespace))
+    @doc_field
+    def values(self) -> List[Optional[T]]:
+        """list of values"""
+        return self.array.to_pylist()
 
 
 def annotate(func, return_type, **annotations):
@@ -214,7 +213,7 @@ class NumericColumn:
 
     def mode(self, length: int = 1):
         """mode of the values"""
-        return self.Set(*pc.mode(self.array, length).flatten())  # type: ignore
+        return Set(*pc.mode(self.array, length).flatten())  # type: ignore
 
     def add(self, value):
         """Return values added to scalar."""
@@ -247,8 +246,7 @@ class BooleanColumn(Column):
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[bool]])
-    Set = Set.subclass(bool, "BooleanSet", "unique booleans")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[bool])
 
 
 @strawberry.type(description="column of ints")
@@ -256,12 +254,11 @@ class IntColumn(Column, NumericColumn):
     count = IntQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=int)
     values = annotate(Column.values, List[Optional[int]])
-    Set = Set.subclass(int, "IntSet", "unique ints")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[int])
     sort = annotate(Column.sort, List[Optional[int]])
     sum = annotate(NumericColumn.sum, Optional[int])
     product = annotate(NumericColumn.product, Optional[int])
-    mode = annotate(NumericColumn.mode, Set)
+    mode = annotate(NumericColumn.mode, Set[int])
     min = annotate(Column.min, Optional[int])
     max = annotate(Column.max, Optional[int])
     drop_null = annotate(Column.drop_null, 'IntColumn')
@@ -280,12 +277,11 @@ class LongColumn(Column, NumericColumn):
     count = LongQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=Long)
     values = annotate(Column.values, List[Optional[Long]])
-    Set = Set.subclass(Long, "LongSet", "unique longs")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[Long])
     sort = annotate(Column.sort, List[Optional[Long]])
     sum = annotate(NumericColumn.sum, Optional[Long])
     product = annotate(NumericColumn.product, Optional[Long])
-    mode = annotate(NumericColumn.mode, Set)
+    mode = annotate(NumericColumn.mode, Set[Long])
     min = annotate(Column.min, Optional[Long])
     max = annotate(Column.max, Optional[Long])
     drop_null = annotate(Column.drop_null, 'LongColumn')
@@ -306,12 +302,11 @@ class FloatColumn(Column, NumericColumn):
     count = FloatQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=float)
     values = annotate(Column.values, List[Optional[float]])
-    Set = Set.subclass(float, "FloatSet", "unique floats")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[float])
     sort = annotate(Column.sort, List[Optional[float]])
     sum = annotate(NumericColumn.sum, Optional[float])
     product = annotate(NumericColumn.product, Optional[float])
-    mode = annotate(NumericColumn.mode, Set)
+    mode = annotate(NumericColumn.mode, Set[float])
     min = annotate(Column.min, Optional[float])
     max = annotate(Column.max, Optional[float])
     drop_null = annotate(Column.drop_null, 'FloatColumn')
@@ -344,8 +339,7 @@ class FloatColumn(Column, NumericColumn):
 class DecimalColumn(Column):
     count = DecimalQuery.resolver(Column.count)
     values = annotate(Column.values, List[Optional[Decimal]])
-    Set = Set.subclass(Decimal, "DecimalSet", "unique decimals")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[Decimal])
     sort = annotate(Column.sort, List[Optional[Decimal]])
     min = annotate(Column.min, Optional[Decimal])
     max = annotate(Column.max, Optional[Decimal])
@@ -370,8 +364,7 @@ class DateColumn(Column):
     count = DateQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=date)
     values = annotate(Column.values, List[Optional[date]])
-    Set = Set.subclass(date, "DateSet", "unique dates")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[date])
     sort = annotate(Column.sort, List[Optional[date]])
     min = annotate(Column.min, Optional[date])
     max = annotate(Column.max, Optional[date])
@@ -395,8 +388,7 @@ class DateTimeColumn(Column):
     count = DateTimeQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=datetime)
     values = annotate(Column.values, List[Optional[datetime]])
-    Set = Set.subclass(datetime, "DatetimeSet", "unique datetimes")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[datetime])
     sort = annotate(Column.sort, List[Optional[datetime]])
     min = annotate(Column.min, Optional[datetime])
     max = annotate(Column.max, Optional[datetime])
@@ -430,8 +422,7 @@ class TimeColumn(Column):
     count = TimeQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=time)
     values = annotate(Column.values, List[Optional[time]])
-    Set = Set.subclass(time, "TimeSet", "unique times")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[time])
     sort = annotate(Column.sort, List[Optional[time]])
     min = annotate(Column.min, Optional[time])
     max = annotate(Column.max, Optional[time])
@@ -459,8 +450,7 @@ class Base64Column(Column):
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[bytes]])
-    Set = Set.subclass(bytes, "Base64Set", "unique binaries")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[bytes])
     sort = annotate(Column.sort, List[Optional[bytes]])
     drop_null = annotate(Column.drop_null, 'Base64Column')
     fill_null = annotate(Column.fill_null, 'Base64Column', value=bytes)
@@ -479,8 +469,7 @@ class StringColumn(Column):
     any = doc_field(NumericColumn.any)
     all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[str]])
-    Set = Set.subclass(str, "StringSet", "unique strings")
-    unique = annotate(Column.unique, Set)
+    unique = annotate(Column.unique, Set[str])
     sort = annotate(Column.sort, List[Optional[str]])
     min = annotate(Column.min, Optional[str])
     max = annotate(Column.max, Optional[str])
