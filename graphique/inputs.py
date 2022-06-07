@@ -353,7 +353,7 @@ class NumericFunction(OrdinalFunction):
     acos: bool = False
     tan: bool = False
     atan: bool = False
-    sqrt: bool = strawberry.field(default=False, description="pyarrow >=8 only")
+    sqrt: bool = False
 
 
 @strawberry.input(description=f"[functions]({link}#selecting-multiplexing) for booleans")

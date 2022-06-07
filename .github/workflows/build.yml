@@ -12,24 +12,16 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10']
+        arrow-version: ['']
+        include:
+        - python-version: '3.x'
+          arrow-version: '--pre '
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - run: pip install -r tests/requirements.in
-    - run: make check
-    - run: coverage xml
-    - uses: codecov/codecov-action@v3
-
-  dev:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
-      with:
-        python-version: 3.x
-    - run: pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ --pre pyarrow
+    - run: pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ ${{ matrix.arrow-version }}pyarrow
     - run: pip install -r tests/requirements.in
     - run: make check
     - run: coverage xml
