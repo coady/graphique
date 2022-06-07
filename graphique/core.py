@@ -105,7 +105,7 @@ class ListChunk(pa.lib.BaseListArray):
         return ListChunk.element(self, -1)
 
     def one(self) -> pa.Array:
-        """one arbitrary value of each list scalar (pyarrow >=8 only)"""
+        """one arbitrary value of each list scalar"""
         return ListChunk.aggregate(self, one=None).field(0)
 
     def unique(self) -> pa.lib.BaseListArray:
