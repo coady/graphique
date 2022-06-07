@@ -159,8 +159,8 @@ def annotate(func, return_type, **annotations):
     return strawberry.field(clone, description=inspect.getdoc(func))
 
 
-@strawberry.interface(description="numeric column interface")
-class NumericColumn:
+@strawberry.type
+class NumericColumn(Column):
     @doc_field
     def any(self) -> Optional[bool]:
         """whether any values evaluate to true"""
@@ -250,7 +250,7 @@ class BooleanColumn(Column):
 
 
 @strawberry.type(description="column of ints")
-class IntColumn(Column, NumericColumn):
+class IntColumn(NumericColumn):
     count = IntQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=int)
     values = annotate(Column.values, List[Optional[int]])
@@ -273,7 +273,7 @@ class IntColumn(Column, NumericColumn):
 
 
 @strawberry.type(description="column of longs")
-class LongColumn(Column, NumericColumn):
+class LongColumn(NumericColumn):
     count = LongQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=Long)
     values = annotate(Column.values, List[Optional[Long]])
@@ -298,7 +298,7 @@ class LongColumn(Column, NumericColumn):
 
 
 @strawberry.type(description="column of floats")
-class FloatColumn(Column, NumericColumn):
+class FloatColumn(NumericColumn):
     count = FloatQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=float)
     values = annotate(Column.values, List[Optional[float]])

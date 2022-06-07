@@ -86,7 +86,7 @@ class GraphQL(strawberry.asgi.GraphQL):
             root_value = strawberry.type(Query)(root_value)
         schema = Schema(
             type(root_value),
-            types=Column.__subclasses__(),
+            types=Column.type_map.values(),
             extensions=[TimingExtension] * bool(debug),
             scalar_overrides=scalar_map,
         )
