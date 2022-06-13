@@ -18,7 +18,7 @@ jobs:
           arrow-version: '--pre '
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
+    - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - run: pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ ${{ matrix.arrow-version }}pyarrow
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
+    - uses: actions/setup-python@v4
       with:
         python-version: 3.x
     - run: pip install black flake8 mypy
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
+    - uses: actions/setup-python@v4
       with:
         python-version: 3.x
     - run: pip install -r docs/requirements.in
