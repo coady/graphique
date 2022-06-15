@@ -189,9 +189,8 @@ class Dataset:
         counts="optionally include counts in an aliased column",
         aggregate="grouped aggregation functions",
     )
-    @no_type_check
     def group(
-        self, info, by: List[str], counts: str = '', aggregate: Aggregations = {}
+        self, info, by: List[str], counts: str = '', aggregate: Aggregations = {}  # type: ignore
     ) -> 'Dataset':
         """Return table grouped by columns, with stable ordering.
 

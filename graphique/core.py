@@ -13,7 +13,7 @@ from concurrent import futures
 from dataclasses import dataclass
 from datetime import time
 from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
-import numpy as np  # type: ignore
+import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 
@@ -74,7 +74,7 @@ class ListChunk(pa.lib.BaseListArray):
 
     def from_counts(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
         """Return list array by converting counts into offsets."""
-        offsets = np.concatenate([[0], np.cumsum(counts)])  # type: ignore
+        offsets = np.concatenate([[0], np.cumsum(counts)])
         return pa.LargeListArray.from_arrays(offsets, values)
 
     def element(self, index: int) -> pa.Array:

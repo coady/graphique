@@ -164,12 +164,12 @@ class NumericColumn(Column):
     @doc_field
     def any(self) -> Optional[bool]:
         """whether any values evaluate to true"""
-        return C.any(self.array)  # type: ignore
+        return C.any(self.array)
 
     @doc_field
     def all(self) -> Optional[bool]:
         """whether all values evaluate to true"""
-        return C.all(self.array)  # type: ignore
+        return C.all(self.array)
 
     def sum(self):
         """sum of the values"""
@@ -182,38 +182,38 @@ class NumericColumn(Column):
     @doc_field
     def mean(self) -> Optional[float]:
         """mean of the values"""
-        return pc.mean(self.array).as_py()  # type: ignore
+        return pc.mean(self.array).as_py()
 
     @doc_field
     def stddev(self) -> Optional[float]:
         """standard deviation of the values"""
-        return pc.stddev(self.array).as_py()  # type: ignore
+        return pc.stddev(self.array).as_py()
 
     @doc_field
     def variance(self) -> Optional[float]:
         """variance of the values"""
-        return pc.variance(self.array).as_py()  # type: ignore
+        return pc.variance(self.array).as_py()
 
     @doc_field
     def quantile(self, q: List[float] = [0.5], interpolation: str = 'linear') -> List[float]:
         """Return list of quantiles for values, defaulting to the median."""
-        return pc.quantile(self.array, q=q, interpolation=interpolation).to_pylist()  # type: ignore
+        return pc.quantile(self.array, q=q, interpolation=interpolation).to_pylist()
 
     @doc_field
     def tdigest(
         self, q: List[float] = [0.5], delta: int = 100, buffer_size: int = 500
     ) -> List[float]:
         """Return list of approximate quantiles for values, defaulting to the median."""
-        return pc.tdigest(self.array, q=q, delta=delta, buffer_size=buffer_size).to_pylist()  # type: ignore
+        return pc.tdigest(self.array, q=q, delta=delta, buffer_size=buffer_size).to_pylist()
 
     @doc_field
     def logb(self, base: float) -> 'FloatColumn':
         """Return log of values to base."""
-        return FloatColumn(pc.logb(self.array, base))  # type: ignore
+        return FloatColumn(pc.logb(self.array, base))
 
     def mode(self, length: int = 1):
         """mode of the values"""
-        return Set(*pc.mode(self.array, length).flatten())  # type: ignore
+        return Set(*pc.mode(self.array, length).flatten())
 
     def add(self, value):
         """Return values added to scalar."""

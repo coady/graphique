@@ -446,4 +446,4 @@ def test_conditions(executor):
 
 def test_long(executor):
     with pytest.raises(ValueError, match="Long cannot represent value"):
-        executor('{ filter(query: {int64: {equal: 0.5} }) { length } }')
+        executor('{ filter(query: {int64: {equal: 0.0} }) { length } }')
