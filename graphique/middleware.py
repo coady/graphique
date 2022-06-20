@@ -39,7 +39,7 @@ nulls = {
 def references(field) -> Iterator:
     """Generate every possible column reference from strawberry `SelectedField`."""
     if isinstance(field, str):
-        yield field
+        yield field.lstrip('-')
     elif isinstance(field, Iterable):
         for value in field:
             yield from references(value)
@@ -243,24 +243,22 @@ class Dataset:
         return type(self)(table.append_column(counts, counts_) if counts else table)
 
     @doc_field(
-        by="column names",
-        reverse="descending stable order",
+        by="column names; prefix with `-` for descending order",
         length="maximum number of rows to return; may be significantly faster but is unstable",
     )
-    def sort(
-        self, info, by: List[str], reverse: bool = False, length: Optional[Long] = None
-    ) -> 'Dataset':
+    def sort(self, info, by: List[str], length: Optional[Long] = None) -> 'Dataset':
         """Return table slice sorted by specified columns.
 
         Sorting on list columns will sort within scalars, all of which must have the same lengths.
         """
         table = self.select(info)
-        lists = dict.fromkeys(name for name in by if C.is_list_type(table[name]))
-        scalars = [name for name in by if name not in lists]
+        scalars, lists = [], []  # type: ignore
+        for key in by:
+            (lists if C.is_list_type(table[key.lstrip('-')]) else scalars).append(key)
         if scalars:
-            table = T.sort(table, *scalars, reverse=reverse, length=length)
+            table = T.sort(table, *scalars, length=length)
         if lists:
-            table = T.sort_list(table, *lists, reverse=reverse, length=length)
+            table = T.sort_list(table, *lists, length=length)
         return type(self)(table)
 
     @doc_field(by="column names")

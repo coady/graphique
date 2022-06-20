@@ -129,7 +129,7 @@ def test_group(table):
     assert mins['city'][0].values[0].as_py() == 'Akutan'
     groups = T.sort_list(groups, 'county')
     assert groups['county'][0].values[0].as_py() == 'Albany'
-    groups = T.sort_list(groups, 'county', 'city', reverse=True, length=1)
+    groups = T.sort_list(groups, '-county', '-city', length=1)
     assert groups['county'][0].values.to_pylist() == ['Yates']
     assert groups['city'][0].values.to_pylist() == ['Rushville']
     groups = groups.append_column('other', pa.array([[0]] * len(groups)))
@@ -183,10 +183,9 @@ def test_sort(table):
     assert (data['state'][0], data['county'][0]) == ('AK', 'Anchorage')
     data = T.sort(table, 'state', 'county', length=1).to_pydict()
     assert (data['state'], data['county']) == (['AK'], ['Aleutians East'])
-    data = T.sort(table, 'state', 'county', 'city', reverse=True, length=2).to_pydict()
-    assert data['state'] == ['WY', 'WY']
-    assert data['county'] == ['Weston', 'Weston']
-    assert data['city'] == ['Upton', 'Osage']
+    data = T.sort(table, 'state', '-county', length=2).to_pydict()
+    assert data['state'] == ['AK'] * 2
+    assert data['county'] == ['Yukon Koyukuk'] * 2
     mask = [False] * len(table)
     assert not T.sort(table.filter(mask), 'state')
 

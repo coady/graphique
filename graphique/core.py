@@ -69,6 +69,11 @@ class Compare:
         return self.value > other.as_py()
 
 
+def sort_key(name: str) -> tuple:
+    """Parse sort order."""
+    return name.lstrip('-'), ('descending' if name.startswith('-') else 'ascending')
+
+
 class ListChunk(pa.lib.BaseListArray):
     value_length = pc.list_value_length
 
@@ -540,12 +545,12 @@ class Table(pa.Table):
             raise ValueError(f"list columns have different value lengths: {lists}")
         return counts
 
-    def sort_list(self, *names: str, reverse=False, length: int = None) -> pa.Table:
+    def sort_list(self, *names, length: int = None) -> pa.Table:
         """Return table with list columns sorted within scalars."""
-        keys = {'': 'ascending'}
-        keys.update(dict.fromkeys(names, 'descending' if reverse else 'ascending'))
-        columns = {name: Column.sort_values(pc.list_flatten(self[name])) for name in names}
-        columns[''] = pc.list_parent_indices(self[names[0]])
+        keys = dict(map(sort_key, names))  # type: ignore
+        columns = {name: Column.sort_values(pc.list_flatten(self[name])) for name in keys}
+        columns[''] = pc.list_parent_indices(self[next(iter(keys))])
+        keys = dict({'': 'ascending'}, **keys)
         indices = pc.sort_indices(pa.table(columns), sort_keys=keys.items())
         counts = Table.list_value_length(self)
         if length is not None:
@@ -562,13 +567,13 @@ class Table(pa.Table):
         names = [name for name in self.column_names if Column.is_list_type(self[name])]
         return pa.table(list(map(apply, self.select(names))), names)
 
-    def sort(self, *names: str, reverse=False, length: int = None) -> pa.Table:
+    def sort(self, *names, length: int = None) -> pa.Table:
         """Return table sorted by columns, optimized for fixed length."""
         func = pc.sort_indices
         if length is not None:
             func = functools.partial(pc.select_k_unstable, k=length)
-        keys = dict.fromkeys(names, 'descending' if reverse else 'ascending')
-        table = pa.table({name: Column.sort_values(self[name]) for name in names})
+        keys = dict(map(sort_key, names))  # type: ignore
+        table = pa.table({name: Column.sort_values(self[name]) for name in keys})
         return self.take(func(table, sort_keys=keys.items()))
 
     def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.ChunkedArray:

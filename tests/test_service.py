@@ -332,19 +332,16 @@ def test_sort(client):
         client.execute('{ sort { columns { state { values } } } }')
     data = client.execute('{ sort(by: ["state"]) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'][0] == 'AK'
-    data = client.execute('{ sort(by: ["state"], reverse: true) { columns { state { values } } } }')
+    data = client.execute('{ sort(by: "-state") { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'][0] == 'WY'
     data = client.execute('{ sort(by: ["state"], length: 1) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'] == ['AK']
-    data = client.execute(
-        '{ sort(by: ["state"], reverse: true, length: 1) { columns { state { values } } } }'
-    )
+    data = client.execute('{ sort(by: "-state", length: 1) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'] == ['WY']
     data = client.execute('{ sort(by: ["state", "county"]) { columns { county { values } } } }')
     assert data['sort']['columns']['county']['values'][0] == 'Aleutians East'
     data = client.execute(
-        '''{ sort(by: ["state", "county"], reverse: true, length: 1)
-        { columns { county { values } } } }'''
+        '''{ sort(by: ["-state", "-county"], length: 1) { columns { county { values } } } }'''
     )
     assert data['sort']['columns']['county']['values'] == ['Weston']
     data = client.execute('{ sort(by: ["state"], length: 2) { columns { state { values } } } }')
@@ -355,7 +352,7 @@ def test_sort(client):
     )
     assert data['group']['sort']['aggregate']['row'] == {'state': 'NY', 'county': 'Albany'}
     data = client.execute(
-        '''{ group(by: ["state"]) { sort(by: ["county"], reverse: true, length: 1)
+        '''{ group(by: ["state"]) { sort(by: ["-county"], length: 1)
         { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
     )
     assert data['group']['sort']['aggregate']['row'] == {'state': 'NY', 'county': 'Yates'}
@@ -390,8 +387,7 @@ def test_group(client):
     assert agg['min']['values'] == ['Naval Anacost Annex', 'Alsip', 'Alief', 'Acton']
     assert agg['max']['values'] == ['Washington Navy Yard', 'Worth', 'Webster', 'Woodland Hills']
     data = client.execute(
-        '''{ group(by: ["state", "county"], counts: "c") {
-        sort(by: ["c"], reverse: true, length: 4) {
+        '''{ group(by: ["state", "county"], counts: "c") { sort(by: ["-c"], length: 4) {
         aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
         columns { latitude { values } longitude { values } }
         column(name: "zipcode") { ... on ListColumn { count { values } } } } } } }'''
