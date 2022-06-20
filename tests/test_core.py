@@ -17,7 +17,6 @@ def test_dictionary(table):
     assert sum(C.mask(array, is_in=['CA']).to_pylist()) == 2647
     assert "ca" in C.call(array, pc.utf8_lower).unique().to_pylist()
     assert C.sort(array)[0].as_py() == "AK"
-    assert len(C.unique_indices(array)[0]) == 52
     table = pa.table({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
     array = C.call(pa.chunked_array([[0, 0]]).dictionary_encode(), pc.add, 1)
@@ -182,16 +181,6 @@ def test_partition(table):
     assert groups['longitude'][:2].to_pylist() == [[-174.213333], [-171.701685]]
     groups, counts = T.partition(tbl, 'state', longitude=(pc.less,))
     assert len(groups) == len(counts) == 52
-
-
-def test_unique(table):
-    array = pa.array([1, None, 1])
-    indices, counts = C.unique_indices(array)
-    assert indices.to_pylist() == [0, 1]
-    assert counts is None
-    indices, counts = C.unique_indices(array, counts=True)
-    assert indices.to_pylist() == [0, 1]
-    assert counts.to_pylist() == [2, 1]
 
 
 def test_sort(table):

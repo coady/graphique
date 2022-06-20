@@ -13,7 +13,7 @@ from concurrent import futures
 from dataclasses import dataclass
 from datetime import time
 from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
-import numpy as np
+import numpy as np  # type: ignore
 import pyarrow as pa
 import pyarrow.compute as pc
 
@@ -242,17 +242,6 @@ class Column(pa.ChunkedArray):
     def dict_flatten(self):
         indices = pa.chunked_array(chunk.indices for chunk in self.iterchunks())
         return self.chunk(0).dictionary, indices
-
-    def unique_indices(self, counts=False) -> tuple:
-        """Return index array of first occurrences, optionally with counts.
-
-        Relies on `unique` having stable ordering.
-        """
-        self = Column.unify_dictionaries(self)
-        if pa.types.is_dictionary(self.type):
-            _, self = Column.dict_flatten(self)
-        values, counts = self.value_counts().flatten() if counts else (self.unique(), None)
-        return pc.index_in(values, value_set=self), counts
 
     def indices(self) -> Union[pa.Array, pa.ChunkedArray]:
         """Return chunked indices suitable for aggregation."""
