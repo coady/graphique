@@ -305,14 +305,6 @@ class Column(pa.ChunkedArray):
         dictionary, indices = Column.dict_flatten(self)
         return pc.sort_indices(pc.sort_indices(dictionary)).take(indices)
 
-    def sort(self, reverse=False, length: int = None) -> pa.Array:
-        """Return sorted values, optimized for fixed length."""
-        func = pc.sort_indices
-        if length is not None:
-            func = functools.partial(pc.select_k_unstable, k=length)
-        keys = {'': 'descending' if reverse else 'ascending'}
-        return self.take(func(Column.sort_values(self), sort_keys=keys.items()))
-
     def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
         """Return discrete differences between adjacent values."""
         return func(self[1:], self[:-1])

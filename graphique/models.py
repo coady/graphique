@@ -107,10 +107,6 @@ class Column:
         """maximum value"""
         return self.min_max['max']
 
-    def sort(self, reverse: bool = False, length: Optional[Long] = None):
-        """Return sorted values. Optimized for fixed length."""
-        return C.sort(self.array, reverse, length).to_pylist()
-
     def drop_null(self):
         """remove missing values from an array"""
         return type(self)(self.array.drop_null())
@@ -255,7 +251,6 @@ class IntColumn(NumericColumn):
     index = annotate(Column.index, Long, value=int)
     values = annotate(Column.values, List[Optional[int]])
     unique = annotate(Column.unique, Set[int])
-    sort = annotate(Column.sort, List[Optional[int]])
     sum = annotate(NumericColumn.sum, Optional[int])
     product = annotate(NumericColumn.product, Optional[int])
     mode = annotate(NumericColumn.mode, Set[int])
@@ -278,7 +273,6 @@ class LongColumn(NumericColumn):
     index = annotate(Column.index, Long, value=Long)
     values = annotate(Column.values, List[Optional[Long]])
     unique = annotate(Column.unique, Set[Long])
-    sort = annotate(Column.sort, List[Optional[Long]])
     sum = annotate(NumericColumn.sum, Optional[Long])
     product = annotate(NumericColumn.product, Optional[Long])
     mode = annotate(NumericColumn.mode, Set[Long])
@@ -303,7 +297,6 @@ class FloatColumn(NumericColumn):
     index = annotate(Column.index, Long, value=float)
     values = annotate(Column.values, List[Optional[float]])
     unique = annotate(Column.unique, Set[float])
-    sort = annotate(Column.sort, List[Optional[float]])
     sum = annotate(NumericColumn.sum, Optional[float])
     product = annotate(NumericColumn.product, Optional[float])
     mode = annotate(NumericColumn.mode, Set[float])
@@ -340,7 +333,6 @@ class DecimalColumn(Column):
     count = DecimalQuery.resolver(Column.count)
     values = annotate(Column.values, List[Optional[Decimal]])
     unique = annotate(Column.unique, Set[Decimal])
-    sort = annotate(Column.sort, List[Optional[Decimal]])
     min = annotate(Column.min, Optional[Decimal])
     max = annotate(Column.max, Optional[Decimal])
 
@@ -365,7 +357,6 @@ class DateColumn(Column):
     index = annotate(Column.index, Long, value=date)
     values = annotate(Column.values, List[Optional[date]])
     unique = annotate(Column.unique, Set[date])
-    sort = annotate(Column.sort, List[Optional[date]])
     min = annotate(Column.min, Optional[date])
     max = annotate(Column.max, Optional[date])
     drop_null = annotate(Column.drop_null, 'DateColumn')
@@ -389,7 +380,6 @@ class DateTimeColumn(Column):
     index = annotate(Column.index, Long, value=datetime)
     values = annotate(Column.values, List[Optional[datetime]])
     unique = annotate(Column.unique, Set[datetime])
-    sort = annotate(Column.sort, List[Optional[datetime]])
     min = annotate(Column.min, Optional[datetime])
     max = annotate(Column.max, Optional[datetime])
     drop_null = annotate(Column.drop_null, 'DateTimeColumn')
@@ -423,7 +413,6 @@ class TimeColumn(Column):
     index = annotate(Column.index, Long, value=time)
     values = annotate(Column.values, List[Optional[time]])
     unique = annotate(Column.unique, Set[time])
-    sort = annotate(Column.sort, List[Optional[time]])
     min = annotate(Column.min, Optional[time])
     max = annotate(Column.max, Optional[time])
     drop_null = annotate(Column.drop_null, 'TimeColumn')
@@ -451,7 +440,6 @@ class Base64Column(Column):
     all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[bytes]])
     unique = annotate(Column.unique, Set[bytes])
-    sort = annotate(Column.sort, List[Optional[bytes]])
     drop_null = annotate(Column.drop_null, 'Base64Column')
     fill_null = annotate(Column.fill_null, 'Base64Column', value=bytes)
 
@@ -470,7 +458,6 @@ class StringColumn(Column):
     all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[str]])
     unique = annotate(Column.unique, Set[str])
-    sort = annotate(Column.sort, List[Optional[str]])
     min = annotate(Column.min, Optional[str])
     max = annotate(Column.max, Optional[str])
     drop_null = annotate(Column.drop_null, 'StringColumn')

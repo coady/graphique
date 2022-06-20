@@ -38,10 +38,6 @@ def test_ints(client):
     data = client.execute('{ columns { zipcode { count(equal: 501) } } }')
     zipcodes = data['columns']['zipcode']
     assert zipcodes['count'] == 1
-    data = client.execute('{ columns { zipcode { sort desc: sort(reverse: true)} } }')
-    zipcodes = data['columns']['zipcode']
-    assert zipcodes['sort'][0] == zipcodes['desc'][-1] == 501
-    assert zipcodes['sort'][-1] == zipcodes['desc'][0] == 99950
     data = client.execute(
         '''{ column(name: "zipcode", apply: {subtract: "zipcode"})
         { ... on IntColumn { unique { values } } } }'''
@@ -103,7 +99,7 @@ def test_strings(client):
         '''{ columns {
         state { values unique { values counts } }
         county { unique { length values } }
-        city { min max sort(length: 1), desc: sort(reverse: true, length: 1) }
+        city { min max }
     } }'''
     )
     states = data['columns']['state']
@@ -112,9 +108,7 @@ def test_strings(client):
     assert sum(states['unique']['counts']) == 41700
     counties = data['columns']['county']
     assert len(counties['unique']['values']) == counties['unique']['length'] == 1920
-    cities = data['columns']['city']
-    assert [cities['min']] == cities['sort'] == ['Aaronsburg']
-    assert [cities['max']] == cities['desc'] == ['Zwolle']
+    assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
     data = client.execute('{ columns { state { truthy: count count(equal: "") } } }')
     states = data['columns']['state']
     assert states['truthy'] == 41700

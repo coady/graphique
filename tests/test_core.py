@@ -16,7 +16,6 @@ def test_dictionary(table):
     assert sum(C.mask(array, match_substring='CA', regex=True).to_pylist()) == 2647
     assert sum(C.mask(array, is_in=['CA']).to_pylist()) == 2647
     assert "ca" in C.call(array, pc.utf8_lower).unique().to_pylist()
-    assert C.sort(array)[0].as_py() == "AK"
     table = pa.table({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
     array = C.call(pa.chunked_array([[0, 0]]).dictionary_encode(), pc.add, 1)
@@ -35,10 +34,6 @@ def test_chunks():
     assert groups['col'].to_pylist() == list('abc')
     assert groups['counts'].to_pylist() == [2, 3, 1]
     assert table['col'].unique() == pa.array('abc')
-    assert C.sort(array, length=1).to_pylist() == ['a']
-    assert C.sort(array, length=3).to_pylist() == ['a', 'a', 'b']
-    assert C.sort(array.dictionary_encode()[:2]).to_pylist() == ['a', 'b']
-    assert C.sort(array, reverse=True).to_pylist() == list('cbbbaa')
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
     assert pa.Array.equals(*(chunk.dictionary for chunk in C.unify_dictionaries(array).chunks))
     assert C.equal(array, 'a').to_pylist() == [True, False, True, False, True]
@@ -184,14 +179,6 @@ def test_partition(table):
 
 
 def test_sort(table):
-    states = C.sort(table['state']).to_pylist()
-    assert (states[0], states[-1]) == ('AK', 'WY')
-    states = C.sort(table.combine_chunks()['state'], reverse=True).to_pylist()
-    assert (states[0], states[-1]) == ('WY', 'AK')
-    assert C.sort(table['state'], length=1).to_pylist() == ['AK']
-    assert C.sort(table['state'], reverse=True, length=1).to_pylist() == ['WY']
-    len(C.sort(table['state'], length=10**5)) == 41700
-    assert C.sort(table['state'], length=0).to_pylist() == []
     data = T.sort(table, 'state').to_pydict()
     assert (data['state'][0], data['county'][0]) == ('AK', 'Anchorage')
     data = T.sort(table, 'state', 'county', length=1).to_pydict()
@@ -201,7 +188,6 @@ def test_sort(table):
     assert data['county'] == ['Weston', 'Weston']
     assert data['city'] == ['Upton', 'Osage']
     mask = [False] * len(table)
-    assert not C.sort(table['state'].filter(mask))
     assert not T.sort(table.filter(mask), 'state')
 
 

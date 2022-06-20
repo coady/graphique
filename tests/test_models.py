@@ -61,7 +61,7 @@ def test_columns(executor):
         data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0, 1]}}}
         assert execute(f'{{ {name} {{ type }} }}') == {name: {'type': name}}
-        assert execute(f'{{ {name} {{ min max sort first: sort(length: 1) }} }}')
+        assert execute(f'{{ {name} {{ min max }} }}')
         assert execute(f'{{ {name} {{ any all }} }}')
     for name in ('uint32', 'uint64', 'int64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
@@ -71,7 +71,7 @@ def test_columns(executor):
         assert data == {name: {'dropNull': {'length': 1}}}
         data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0, 1]}}}
-        assert execute(f'{{ {name} {{ min max sort first: sort(length: 1) }} }}')
+        assert execute(f'{{ {name} {{ min max }} }}')
         assert execute(f'{{ {name} {{ any all }} }}')
 
     for name in ('float', 'double'):
@@ -82,10 +82,10 @@ def test_columns(executor):
         assert data == {name: {'dropNull': {'length': 1}}}
         data = execute(f'{{ {name} {{ fillNull(value: 1.0) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0.0, 1.0]}}}
-        assert execute(f'{{ {name} {{ min max sort first: sort(length: 1) }} }}')
+        assert execute(f'{{ {name} {{ min max }} }}')
         assert execute(f'{{ {name} {{ any all }} }}')
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
-    assert execute('{ decimal { min max sort } }')
+    assert execute('{ decimal { min max } }')
 
     for name in ('date32', 'date64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['1970-01-01', None]}}
@@ -95,7 +95,7 @@ def test_columns(executor):
         assert data == {name: {'dropNull': {'length': 1}}}
         data = execute(f'{{ {name} {{ fillNull(value: "1970-01-02") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['1970-01-01', '1970-01-02']}}}
-        assert execute(f'{{ {name} {{ min max sort }} }}')
+        assert execute(f'{{ {name} {{ min max }} }}')
 
     data = execute('{ timestamp { values } }')
     assert data == {'timestamp': {'values': ['1970-01-01T00:00:00', None]}}
@@ -107,7 +107,7 @@ def test_columns(executor):
     }
     assert execute('{ timestamp { count(equal: "1970-01-01") } }') == {'timestamp': {'count': 1}}
     assert execute('{ timestamp { index(value: "1970-01-01") } }') == {'timestamp': {'index': 0}}
-    assert execute('{ timestamp { min max sort } }')
+    assert execute('{ timestamp { min max } }')
     data = execute(
         '''{ timestamp { floorTemporal(unit: "day") { values }
         roundTemporal(unit: "day") { values } ceilTemporal(unit: "day") { values } } }'''
@@ -123,7 +123,7 @@ def test_columns(executor):
         assert data == {name: {'dropNull': {'length': 1}}}
         data = execute(f'{{ {name} {{ fillNull(value: "00:00:01") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['00:00:00', '00:00:01']}}}
-        assert execute(f'{{ {name} {{ min max sort }} }}')
+        assert execute(f'{{ {name} {{ min max }} }}')
 
     for name in ('binary', 'string'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
@@ -134,7 +134,6 @@ def test_columns(executor):
         assert data == {name: {'dropNull': {'length': 1}}}
         data = execute(f'{{ {name} {{ fillNull(value: "") {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': ['', '']}}}
-        assert execute(f'{{ {name} {{ sort }} }}')
 
     data = execute(
         '{ binary { binaryReplaceSlice(start: 0, stop: 1, replacement: "") { values } } }'
@@ -143,7 +142,7 @@ def test_columns(executor):
     assert execute('{ string { type } }') == {
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
     }
-    assert execute('{ string { min max sort(length: 1) } }')
+    assert execute('{ string { min max } }')
 
 
 def test_numeric(executor):
