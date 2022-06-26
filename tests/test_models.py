@@ -51,6 +51,7 @@ def test_columns(executor):
     assert execute('{ bool { index(value: false, start: 1, end: 2) } }') == {'bool': {'index': -1}}
     assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
     assert execute('{ bool { unique { length } } }') == {'bool': {'unique': {'length': 2}}}
+    assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
 
     for name in ('uint8', 'int8', 'uint16', 'int16', 'int32'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
@@ -62,7 +63,6 @@ def test_columns(executor):
         assert data == {name: {'fillNull': {'values': [0, 1]}}}
         assert execute(f'{{ {name} {{ type }} }}') == {name: {'type': name}}
         assert execute(f'{{ {name} {{ min max }} }}')
-        assert execute(f'{{ {name} {{ any all }} }}')
     for name in ('uint32', 'uint64', 'int64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
@@ -72,7 +72,6 @@ def test_columns(executor):
         data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0, 1]}}}
         assert execute(f'{{ {name} {{ min max }} }}')
-        assert execute(f'{{ {name} {{ any all }} }}')
 
     for name in ('float', 'double'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0.0, None]}}
@@ -83,7 +82,6 @@ def test_columns(executor):
         data = execute(f'{{ {name} {{ fillNull(value: 1.0) {{ values }} }} }}')
         assert data == {name: {'fillNull': {'values': [0.0, 1.0]}}}
         assert execute(f'{{ {name} {{ min max }} }}')
-        assert execute(f'{{ {name} {{ any all }} }}')
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
     assert execute('{ decimal { min max } }')
 
@@ -129,7 +127,6 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
         assert execute(f'{{ {name} {{ count(equal: "") }} }}') == {name: {'count': 1}}
         assert execute(f'{{ {name} {{ index(value: "") }} }}') == {name: {'index': 0}}
-        assert execute(f'{{ {name} {{ any all }} }}') == {name: {'any': False, 'all': False}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
         data = execute(f'{{ {name} {{ fillNull(value: "") {{ values }} }} }}')
@@ -337,8 +334,7 @@ def test_list(executor):
         last: element(index: -1) { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
         sum { ... on IntColumn { values } } product { ... on IntColumn { values } } mean { values }
-        stddev { values } variance { values }
-        any { values } all { values } } } }'''
+        stddev { values } variance { values } } } }'''
     )
     assert data['columns']['list'] == {
         'count': {'values': [3, None]},
@@ -353,8 +349,6 @@ def test_list(executor):
         'mean': {'values': [1.0, None]},
         'stddev': {'values': [pytest.approx((2 / 3) ** 0.5), None]},
         'variance': {'values': [pytest.approx(2 / 3), None]},
-        'any': {'values': [True, None]},
-        'all': {'values': [False, None]},
     }
     data = executor('{ columns { list { distinct { valueLength { values } } } } }')
     assert data['columns']['list'] == {'distinct': {'valueLength': {'values': [3]}}}

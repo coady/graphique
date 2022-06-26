@@ -12,7 +12,7 @@ import operator
 from concurrent import futures
 from dataclasses import dataclass
 from datetime import time
-from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
+from typing import Callable, Iterable, Iterator, Sequence, Union
 import numpy as np  # type: ignore
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -201,20 +201,13 @@ class ListChunk(pa.lib.BaseListArray):
         """variance of each list scalar"""
         return ListChunk.reduce(self, pc.variance, 'float64', pc.VarianceOptions(**options))
 
-    def mask(self) -> pa.ListArray:
-        return pa.ListArray.from_arrays(self.offsets, Column.mask(self.values))
-
     def any(self, **options) -> pa.BooleanArray:
         """any true of each list scalar"""
-        return ListChunk.reduce(
-            ListChunk.mask(self), pc.any, options=pc.ScalarAggregateOptions(**options)
-        )
+        return ListChunk.reduce(self, pc.any, options=pc.ScalarAggregateOptions(**options))
 
     def all(self, **options) -> pa.BooleanArray:
         """all true of each list scalar"""
-        return ListChunk.reduce(
-            ListChunk.mask(self), pc.all, options=pc.ScalarAggregateOptions(**options)
-        )
+        return ListChunk.reduce(self, pc.all, options=pc.ScalarAggregateOptions(**options))
 
 
 class Column(pa.ChunkedArray):
@@ -370,14 +363,6 @@ class Column(pa.ChunkedArray):
             offset += len(chunk)
         return -1
 
-    def any(self) -> Optional[bool]:
-        """Return whether any values evaluate to true."""
-        return pc.any(Column.mask(self)).as_py()
-
-    def all(self) -> Optional[bool]:
-        """Return whether all values evaluate to true."""
-        return pc.all(Column.mask(self)).as_py()
-
     def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
         """Return slice within range from a sorted array, by default a half-open interval."""
         method = bisect.bisect_left if include_lower else bisect.bisect_right
@@ -514,9 +499,7 @@ class Table(pa.Table):
             args.append((Column.indices(column), 'hash_list', None))
             lists = funcs.pop('list')
         for func in funcs:
-            for agg in funcs[func]:
-                column = Column.mask(self[agg.name]) if func in ('any', 'all') else self[agg.name]
-                args.append((column, *agg.astuple(func)))  # type: ignore
+            args += [(self[agg.name], *agg.astuple(func)) for agg in funcs[func]]  # type: ignore
         values, hashes, options = zip(*args)
         keys = map(self.column, names)
         arrays = iter(pc._group_by(values, keys, zip(hashes, options)).flatten())

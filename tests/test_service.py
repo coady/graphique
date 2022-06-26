@@ -14,8 +14,6 @@ def test_slice(client):
     assert data['columns']['zipcode']['count'] == 41700
     data = client.execute('{ columns { zipcode { count(equal: null) } } }')
     assert data['columns']['zipcode']['count'] == 0
-    data = client.execute('{ slice(length: 0) { columns { zipcode { any all } } } }')
-    assert data['slice']['columns']['zipcode'] == {'any': None, 'all': None}
 
 
 def test_ints(client):
@@ -397,14 +395,16 @@ def test_group(client):
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
     data = client.execute(
-        '''{ group(by: ["state"]) { slice(length: 3) {
-        aggregate(any: [{name: "latitude"}], all: [{name: "longitude"}]) {
-        lat: column(name: "latitude") { ... on BooleanColumn { values } }
-        lng: column(name: "longitude") { ... on BooleanColumn { values } } } } } }'''
+        '''{ apply(int: {name: "zipcode", cast: "bool"}) { group(by: ["state"]) { slice(length: 3) {
+        aggregate(any: [{name: "zipcode", alias: "a"}], all: [{name: "zipcode", alias: "b"}]) {
+        a: column(name: "a") { ... on BooleanColumn { values } }
+        b: column(name: "b") { ... on BooleanColumn { values } }
+        column(name: "zipcode") { ... on ListColumn { any { type } all { type } } } } } } } }'''
     )
-    assert data['group']['slice']['aggregate'] == {
-        'lat': {'values': [True, True, True]},
-        'lng': {'values': [True, True, True]},
+    assert data['apply']['group']['slice']['aggregate'] == {
+        'a': {'values': [True, True, True]},
+        'b': {'values': [True, True, True]},
+        'column': {'any': {'type': 'bool'}, 'all': {'type': 'bool'}},
     }
     data = client.execute(
         '''{ sc: group(by: ["state", "county"]) { length }

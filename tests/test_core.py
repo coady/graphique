@@ -68,6 +68,7 @@ def test_lists():
     assert tdigest.to_pylist() == [[2.0], [0.0], [None], [None], [None]]
     assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
+    array = pa.array([[True, True], [False, False], [None], [], None])
     assert ListChunk.any(array).to_pylist() == [True, False, None, None, None]
     assert ListChunk.all(array).to_pylist() == [True, False, None, None, None]
     array = pa.ListArray.from_arrays([0, 2, 3], pa.array(["a", "b", None]).dictionary_encode())
@@ -79,16 +80,12 @@ def test_lists():
 def test_membership():
     array = pa.chunked_array([[0]])
     assert C.count(array, True) == 0
-    assert not C.any(array)
     array = pa.chunked_array([[0, 1]])
     assert C.count(array, True) == 1
-    assert C.any(array)
-    assert not C.all(array)
     array = pa.chunked_array([[1, 1]])
     assert C.count(array, True) == 2
     assert C.count(array, False) == C.count(array, None) == 0
     assert C.count(array, 0) == 0 and C.count(array, 1) == 2
-    assert C.all(array)
     assert C.index(array, 1) == C.index(array, 1, end=1) == 0
     assert C.index(array, 1, start=1) == 1
     assert C.index(array, 1, start=2) == -1

@@ -157,16 +157,6 @@ def annotate(func, return_type, **annotations):
 
 @strawberry.type
 class NumericColumn(Column):
-    @doc_field
-    def any(self) -> Optional[bool]:
-        """whether any values evaluate to true"""
-        return C.any(self.array)
-
-    @doc_field
-    def all(self) -> Optional[bool]:
-        """whether all values evaluate to true"""
-        return C.all(self.array)
-
     def sum(self):
         """sum of the values"""
         return pc.sum(self.array).as_py()
@@ -239,10 +229,18 @@ class NumericColumn(Column):
 class BooleanColumn(Column):
     count = BooleanQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=bool)
-    any = doc_field(NumericColumn.any)
-    all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[bool]])
     unique = annotate(Column.unique, Set[bool])
+
+    @doc_field
+    def any(self) -> Optional[bool]:
+        """whether any values evaluate to true"""
+        return pc.any(self.array).as_py()
+
+    @doc_field
+    def all(self) -> Optional[bool]:
+        """whether all values evaluate to true"""
+        return pc.all(self.array).as_py()
 
 
 @strawberry.type(description="column of ints")
@@ -436,8 +434,6 @@ class DurationColumn(Column):
 class Base64Column(Column):
     count = Base64Query.resolver(Column.count)
     index = annotate(Column.index, Long, value=bytes)
-    any = doc_field(NumericColumn.any)
-    all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[bytes]])
     unique = annotate(Column.unique, Set[bytes])
     drop_null = annotate(Column.drop_null, 'Base64Column')
@@ -454,8 +450,6 @@ class Base64Column(Column):
 class StringColumn(Column):
     count = StringQuery.resolver(Column.count)
     index = annotate(Column.index, Long, value=str)
-    any = doc_field(NumericColumn.any)
-    all = doc_field(NumericColumn.all)
     values = annotate(Column.values, List[Optional[str]])
     unique = annotate(Column.unique, Set[str])
     min = annotate(Column.min, Optional[str])
