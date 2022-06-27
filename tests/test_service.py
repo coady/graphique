@@ -262,8 +262,6 @@ def test_filter(client):
     assert data['filter']['length'] == 0
     data = client.execute('{ filter(on: {string: {name: "city", utf8IsTitle: true}}) { length } }')
     assert data['filter']['length'] == 41700
-    data = client.execute('{ filter(on: {string: {name: "city"}}) { length } }')
-    assert data['filter']['length'] == 41700
     data = client.execute(
         '''{apply(float: {name: "longitude", abs: true})
         { filter(on: {float: {name: "longitude", less: 66}}) { length } } }'''

@@ -229,15 +229,12 @@ class Column(pa.ChunkedArray):
         """Native `dictionary_decode` is only on `DictionaryArray`."""
         return self.cast(self.type.value_type) if pa.types.is_dictionary(self.type) else self
 
-    def unify_dictionaries(self) -> pa.ChunkedArray:
-        """Native `unify_dictionaries` is inefficient if the dictionary is too large."""
+    def combine_dictionaries(self) -> tuple:
         if not pa.types.is_dictionary(self.type):
-            return self
+            return self, None
         if not self or len(self) <= max(len(chunk.dictionary) for chunk in self.iterchunks()):
-            return self.cast(self.type.value_type)
-        return self.unify_dictionaries()
-
-    def dict_flatten(self):
+            return self.cast(self.type.value_type), None
+        self = self.unify_dictionaries()
         indices = pa.chunked_array(chunk.indices for chunk in self.iterchunks())
         return self.chunk(0).dictionary, indices
 
@@ -262,11 +259,7 @@ class Column(pa.ChunkedArray):
                 masks.append(Column.call(self, getattr(pc, op), value, **options))
             elif value:
                 masks.append(Column.call(self, getattr(pc, op)))
-        if masks:
-            return functools.reduce(getattr(pc, func), masks)
-        with contextlib.suppress(NotImplementedError):
-            self = Column.call(self, pc.binary_length)
-        return self.cast('bool')
+        return functools.reduce(getattr(pc, func), masks) if masks else self.cast('bool')
 
     def call(self, func: Callable, *args, **kwargs) -> pa.ChunkedArray:
         """Call compute function on array with support for dictionaries."""
@@ -274,11 +267,9 @@ class Column(pa.ChunkedArray):
         args = tuple(pa.scalar(arg, scalar) if isinstance(arg, time) else arg for arg in args)
         with contextlib.suppress(NotImplementedError):
             return func(self, *args, **kwargs)
-        self = Column.unify_dictionaries(self)
-        if not pa.types.is_dictionary(self.type):
-            return func(self, *args, **kwargs)
-        dictionary, indices = Column.dict_flatten(self)
-        return func(dictionary, *args, **kwargs).take(indices)
+        dictionary, indices = Column.combine_dictionaries(self)
+        array = func(dictionary, *args, **kwargs)
+        return array if indices is None else array.take(indices)
 
     def equal(self, value) -> pa.ChunkedArray:
         """Return boolean mask array which matches scalar value."""
@@ -297,10 +288,9 @@ class Column(pa.ChunkedArray):
         return self.fill_null(value) if self.null_count else self
 
     def sort_values(self) -> pa.Array:
-        self = Column.unify_dictionaries(self)
-        if not pa.types.is_dictionary(self.type):
-            return self
-        dictionary, indices = Column.dict_flatten(self)
+        dictionary, indices = Column.combine_dictionaries(self)
+        if indices is None:
+            return dictionary
         return pc.sort_indices(pc.sort_indices(dictionary)).take(indices)
 
     def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
@@ -346,8 +336,7 @@ class Column(pa.ChunkedArray):
             return self.null_count
         if not isinstance(value, bool):
             self, value = Column.equal(self, value), True
-        getter = operator.attrgetter('true_count' if value else 'false_count')
-        return sum(map(getter, Column.mask(self).iterchunks()))
+        return sum(map(operator.attrgetter(f'{value}_count'.lower()), self.iterchunks()))
 
     def index(self, value, start=0, end=None) -> int:
         """Return the first index of a value."""

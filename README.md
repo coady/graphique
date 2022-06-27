@@ -90,6 +90,7 @@ dev
 
 * Multi-directional sorting
 * Removed unnecessary interfaces
+* Filtering has stricter typing
 
 0.8
 

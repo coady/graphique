@@ -208,6 +208,11 @@ class Filter(Query):
     name: str
     is_in = UNSET
 
+    def keys(self):
+        for name in super().keys():
+            if getattr(self, name) != getattr(type(self), name, UNSET):
+                yield name
+
 
 @strawberry.input(description="predicates for booleans")
 class BooleanFilter(Filter):

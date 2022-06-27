@@ -24,7 +24,7 @@ def test_dictionary(table):
     assert C.fill_null(array, "c").to_pylist() == C.fill_null(C.decode(array), "c").to_pylist()
     assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
     assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
-    assert not C.mask(pa.chunked_array([], 'string').dictionary_encode())
+    assert not C.mask(pa.chunked_array([], 'string').dictionary_encode(), utf8_is_upper=True)
 
 
 def test_chunks():
@@ -79,13 +79,12 @@ def test_lists():
 
 def test_membership():
     array = pa.chunked_array([[0]])
-    assert C.count(array, True) == 0
+    assert C.count(C.mask(array, is_nan=False), True) == 0
     array = pa.chunked_array([[0, 1]])
-    assert C.count(array, True) == 1
+    assert C.count(array, 1) == 1
     array = pa.chunked_array([[1, 1]])
-    assert C.count(array, True) == 2
-    assert C.count(array, False) == C.count(array, None) == 0
-    assert C.count(array, 0) == 0 and C.count(array, 1) == 2
+    assert C.count(array, 0) == C.count(array, None) == 0
+    assert C.count(array, 1) == 2
     assert C.index(array, 1) == C.index(array, 1, end=1) == 0
     assert C.index(array, 1, start=1) == 1
     assert C.index(array, 1, start=2) == -1
@@ -93,7 +92,6 @@ def test_membership():
 
 def test_functional(table):
     array = table['state'].dictionary_encode()
-    assert set(C.mask(array).to_pylist()) == {True}
     assert set(C.equal(array, None).to_pylist()) == {False}
     assert set(C.not_equal(array, None).to_pylist()) == {True}
     mask = C.equal(array, 'CA')
@@ -103,7 +101,6 @@ def test_functional(table):
     assert len(array.filter(mask)) == 2647
     assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
     assert sum(C.mask(array, utf8_is_upper=True).to_pylist()) == 41700
-    assert sum(C.mask(array, utf8_is_upper=False).to_pylist()) == 41700
     mask = T.mask(table, 'city', apply={'equal': 'county'})
     assert sum(mask.to_pylist()) == 2805
     table = T.apply(table, 'latitude', alias='diff', subtract='longitude')
