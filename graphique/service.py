@@ -6,6 +6,7 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET
+from strawberry.types import Info
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
 from .inputs import Filters, Input, Query as QueryInput
@@ -52,7 +53,7 @@ class Table(Dataset):
         return Columns(**columns)
 
     @doc_field
-    def row(self, info, index: Long = 0) -> Row:
+    def row(self, info: Info, index: Long = 0) -> Row:
         """Return scalar values at index."""
         table = self.select(info, index + 1 if index >= 0 else None)
         row = {}
@@ -72,7 +73,7 @@ class Table(Dataset):
     @no_type_check
     def filter(
         self,
-        info,
+        info: Info,
         query: Queries = {},
         on: Filters = {},
         invert: bool = False,
@@ -102,7 +103,7 @@ class IndexedTable(Table):
     index: List[str] = strawberry.field(default=tuple(indexed), description="the composite index")
 
     @QueryInput.resolve_types({name: types[name] for name in indexed})
-    def search(self, info, **queries) -> Table:
+    def search(self, info: Info, **queries) -> Table:
         """Return table with matching values for composite `index`.
 
         Queries must be a prefix of the `index`.

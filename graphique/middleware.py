@@ -12,6 +12,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
+from strawberry.types import Info
 from strawberry.utils.str_converters import to_camel_case
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Diff, Filters, Projections
@@ -116,14 +117,16 @@ class Dataset:
                 setattr(cls, name, field)
 
     @staticmethod
-    def references(info, level: int = 0) -> set:
+    def references(info: Info, level: int = 0) -> set:
         """Return set of every possible future column reference."""
         fields = info.selected_fields
         for _ in range(level):
             fields = itertools.chain(*[field.selections for field in fields])
         return set(itertools.chain(*map(references, fields)))
 
-    def scanner(self, info, queries: dict = {}, invert=False, reduce: str = 'and') -> ds.Scanner:
+    def scanner(
+        self, info: Info, queries: dict = {}, invert=False, reduce: str = 'and'
+    ) -> ds.Scanner:
         """Return scanner with only the rows and columns necessary to proceed."""
         dataset = self.table
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
@@ -141,7 +144,7 @@ class Dataset:
         expr = filter_expression(queries, invert=invert, reduce=reduce)
         return dataset.scanner(columns=columns, filter=expr)
 
-    def select(self, info, length: int = None) -> pa.Table:
+    def select(self, info: Info, length: int = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
         table = self.table
         if not isinstance(table, pa.Table):
@@ -158,7 +161,7 @@ class Dataset:
         cast="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
         apply="projected functions",
     )
-    def column(self, info, name: str, cast: str = '', apply: Projections = {}) -> Column:  # type: ignore
+    def column(self, info: Info, name: str, cast: str = '', apply: Projections = {}) -> Column:  # type: ignore
         """Return column of any type by name, with optional projection.
 
         This is typically only needed for aliased columns added by `apply` or `aggregate`.
@@ -177,7 +180,7 @@ class Dataset:
         reverse="reverse order after slicing; forces a copy",
     )
     def slice(
-        self, info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
+        self, info: Info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
     ) -> 'Dataset':
         """Return zero-copy slice of table."""
         table = self.select(info, length and (offset + length if offset >= 0 else None))
@@ -190,7 +193,7 @@ class Dataset:
         aggregate="grouped aggregation functions",
     )
     def group(
-        self, info, by: List[str], counts: str = '', aggregate: Aggregations = {}  # type: ignore
+        self, info: Info, by: List[str], counts: str = '', aggregate: Aggregations = {}  # type: ignore
     ) -> 'Dataset':
         """Return table grouped by columns, with stable ordering.
 
@@ -221,7 +224,9 @@ class Dataset:
         counts="optionally include counts in an aliased column",
     )
     @no_type_check
-    def partition(self, info, by: List[str], diffs: List[Diff] = [], counts: str = '') -> 'Dataset':
+    def partition(
+        self, info: Info, by: List[str], diffs: List[Diff] = [], counts: str = ''
+    ) -> 'Dataset':
         """Return table partitioned by discrete differences of the values.
 
         Differs from `group` by relying on adjacency, and is typically faster.
@@ -246,7 +251,7 @@ class Dataset:
         by="column names; prefix with `-` for descending order",
         length="maximum number of rows to return; may be significantly faster but is unstable",
     )
-    def sort(self, info, by: List[str], length: Optional[Long] = None) -> 'Dataset':
+    def sort(self, info: Info, by: List[str], length: Optional[Long] = None) -> 'Dataset':
         """Return table slice sorted by specified columns.
 
         Sorting on list columns will sort within scalars, all of which must have the same lengths.
@@ -262,20 +267,21 @@ class Dataset:
         return type(self)(table)
 
     @doc_field(by="column names")
-    def min(self, info, by: List[str]) -> 'Dataset':
+    def min(self, info: Info, by: List[str]) -> 'Dataset':
         """Return table with minimum values per column."""
         table = self.select(info)
         return type(self)(T.matched(table, C.min, *by))
 
     @doc_field(by="column names")
-    def max(self, info, by: List[str]) -> 'Dataset':
+    def max(self, info: Info, by: List[str]) -> 'Dataset':
         """Return table with maximum values per column."""
         table = self.select(info)
         return type(self)(T.matched(table, C.max, *by))
 
+    @doc_field
     def apply(
         self,
-        info,
+        info: Info,
         binary: List[Base64Function] = [],
         boolean: List[BooleanFunction] = [],
         date: List[DateFunction] = [],
@@ -318,7 +324,7 @@ class Dataset:
 
     @Aggregations.resolver
     @no_type_check
-    def aggregate(self, info, **fields) -> 'Dataset':
+    def aggregate(self, info: Info, **fields) -> 'Dataset':
         """Return table with aggregate functions applied to list columns, typically used after grouping.
 
         Columns which are aliased or change type can be accessed by the `column` field.
@@ -340,7 +346,7 @@ class Dataset:
     @no_type_check
     def filter(
         self,
-        info,
+        info: Info,
         on: Filters = {},
         invert: bool = False,
         reduce: Operator = Operator.AND,
