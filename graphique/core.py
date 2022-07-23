@@ -89,7 +89,7 @@ class ListChunk(pa.lib.BaseListArray):
         size = -index if index < 0 else index + 1
         mask = np.asarray(self.value_lengths().fill_null(0)) < size
         offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
-        return self.values.take(pa.array(offsets + index, mask=mask))
+        return pc.list_flatten(self).take(pa.array(offsets + index, mask=mask))
 
     def count(self, **options) -> pa.IntegerArray:
         """non-null count of each list scalar"""
@@ -134,11 +134,12 @@ class ListChunk(pa.lib.BaseListArray):
         """Return list array by selecting true values."""
         masks = type(self).from_arrays(self.offsets, mask)
         counts = pa.array(scalar.values.true_count for scalar in masks)
-        return ListChunk.from_counts(counts, self.values.filter(mask))
+        return ListChunk.from_counts(counts, pc.list_flatten(self).filter(mask))
 
     def aggregate(self, **funcs) -> pa.Array:
         items = {f'hash_{name}': funcs[name] for name in funcs}.items()
-        return pc._group_by([self.values] * len(funcs), [self.value_parent_indices()], items)
+        indices = self.value_parent_indices()
+        return pc._group_by([pc.list_flatten(self)] * len(funcs), [indices], items)
 
     def reduce(self, func: Callable, tp=None, options=None) -> pa.Array:
         with contextlib.suppress(ValueError):
