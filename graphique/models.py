@@ -13,6 +13,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
 from strawberry.field import StrawberryField
+from strawberry.types import Info
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
 from .inputs import BooleanQuery, IntQuery, LongQuery, FloatQuery, DecimalQuery, DateQuery
@@ -67,7 +68,7 @@ class Column:
     def fromscalar(cls, scalar: pa.ListScalar) -> Optional['Column']:
         return None if scalar.values is None else cls.cast(pa.chunked_array([scalar.values]))
 
-    def unique(self, info):
+    def unique(self, info: Info):
         """unique values and counts"""
         if 'counts' in selections(*info.selected_fields):
             return Set(*self.array.value_counts().flatten())
@@ -316,7 +317,7 @@ class FloatColumn(NumericColumn):
     def round(
         self, ndigits: int = 0, multiple: float = 1.0, round_mode: str = 'half_to_even'
     ) -> 'FloatColumn':
-        """Return log of values to base."""
+        """Return values rounded to a given precision."""
         if ndigits != 0 and multiple != 1.0:
             raise ValueError("only one of `ndigits` or `multiple` allowed")
         if multiple == 1:

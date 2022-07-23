@@ -46,7 +46,7 @@ class Queries(Input):
 @strawberry.type(description="a column-oriented table")
 class Table(Dataset):
     @doc_field
-    def columns(self, info) -> Columns:
+    def columns(self, info: Info) -> Columns:
         """fields for each column"""
         table = self.select(info)
         columns = {name: Columns.__annotations__[name](table[name]) for name in table.column_names}

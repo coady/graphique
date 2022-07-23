@@ -109,7 +109,7 @@ class Dataset:
         for name, func in inspect.getmembers(cls, inspect.isfunction):
             if func.__annotations__.get('return') in ('Dataset', List['Dataset']):
                 clone = types.FunctionType(func.__code__, func.__globals__)
-                clone.__annotations__['return'] = cls
+                clone.__annotations__.update({'return': cls, 'info': Info})
                 if name == 'aggregate':
                     field = Aggregations.resolver(clone)
                 else:
@@ -309,7 +309,7 @@ class Dataset:
         return type(self)(table)
 
     @doc_field
-    def tables(self, info) -> List['Dataset']:  # type: ignore
+    def tables(self, info: Info) -> List['Dataset']:  # type: ignore
         """Return a list of tables by splitting list columns, typically used after grouping.
 
         At least one list column must be referenced, and all list columns must have the same lengths.
