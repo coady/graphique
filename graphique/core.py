@@ -79,7 +79,7 @@ class ListChunk(pa.lib.BaseListArray):
 
     def from_counts(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
         """Return list array by converting counts into offsets."""
-        offsets = np.concatenate([[0], np.cumsum(counts)])
+        offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum(counts)])
         return pa.LargeListArray.from_arrays(offsets, values)
 
     def element(self, index: int) -> pa.Array:
@@ -509,14 +509,14 @@ class Table(pa.Table):
         columns.update(zip(names, arrays))
         return type(self).from_pydict(columns)
 
-    def list_value_length(self) -> pa.ChunkedArray:
+    def list_value_length(self) -> pa.Array:
         lists = {name for name in self.column_names if Column.is_list_type(self[name])}
         if not lists:
             raise ValueError(f"no list columns available: {self.column_names}")
         counts, *others = (pc.list_value_length(self[name]) for name in lists)
         if any(counts != other for other in others):
             raise ValueError(f"list columns have different value lengths: {lists}")
-        return counts
+        return counts.chunk(0)
 
     def sort_list(self, *names, length: int = None) -> pa.Table:
         """Return table with list columns sorted within scalars."""
