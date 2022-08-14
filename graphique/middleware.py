@@ -15,7 +15,7 @@ import strawberry.asgi
 from strawberry.types import Info
 from strawberry.utils.str_converters import to_camel_case
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Diff, Filters, Projections
+from .inputs import Aggregations, Diff, Expression, Filters, Projections
 from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction
@@ -176,6 +176,7 @@ class Dataset:
         return len(self.table) if hasattr(self.table, '__len__') else self.table.count_rows()
 
     @doc_field(
+        name="column name",
         cast="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
         apply="projected functions",
     )
@@ -388,3 +389,23 @@ class Dataset:
             mask = functools.reduce(getattr(pc, reduce.value), masks).combine_chunks()
             table = T.filter_list(table, pc.invert(mask) if invert else mask)
         return type(self)(table)
+
+    @doc_field(filter="selected rows", columns="projected columns")
+    def scan(
+        self, info: Info, filter: Expression = {}, columns: List[Expression] = []  # type: ignore
+    ) -> 'Dataset':
+        """Select rows and project columns without memory usage."""
+        dataset = ds.dataset(self.table) if isinstance(self.table, pa.Table) else self.table
+        schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
+        case_map = {to_camel_case(name): name for name in schema.names}
+        selection = filter.to_arrow(case_map)
+        names = self.references(info, level=1) & set(case_map)
+        projection = {name: ds.field(case_map[name]) for name in names}
+        projection.update({col.alias or col.name: col.to_arrow(case_map) for col in columns})
+        if isinstance(dataset, ds.Dataset):
+            return type(self)(dataset.scanner(filter=selection, columns=projection))
+        scanner = ds.Scanner.from_batches(
+            dataset.to_batches(), schema, filter=selection, columns=projection
+        )  # one-shot scanner can't be reused
+        fields = selections(*info.selected_fields)
+        return type(self)(scanner.to_table() if len(fields) > 1 else scanner)

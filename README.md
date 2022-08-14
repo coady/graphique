@@ -86,6 +86,11 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 ```
 
 ## Changes
+dev
+
+* Dataset schema introspection
+* Dataset scanning
+
 0.9
 
 * Pyarrow >=9 required

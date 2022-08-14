@@ -3,9 +3,12 @@ GraphQL input types.
 """
 import functools
 import inspect
+import operator
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Callable, List, Optional
+import pyarrow as pa
+import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
@@ -608,3 +611,100 @@ class Projections(Input):
     milliseconds_between: Optional[str] = UNSET
     microseconds_between: Optional[str] = UNSET
     nanoseconds_between: Optional[str] = UNSET
+
+
+@strawberry.input(
+    description="""
+[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
+used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html).
+
+Expects one of: a field `name`, a scalar, or an operator with expressions.
+
+Scalars are a `List` so that `eq` also supports `isin`. Single values can be passed for an
+[input `List`](https://spec.graphql.org/October2021/#sec-List.Input-Coercion).
+"""
+)
+class Expression:
+    name: str = strawberry.field(default='', description="field name")
+    alias: str = strawberry.field(default='', description="name for outermost columns")
+    cast: str = strawberry.field(
+        default='',
+        description="cast as [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
+    )
+    null_: Optional[bool] = strawberry.field(
+        default=None, name='null', description="`is_null` or `is_valid`"
+    )
+
+    binary: List[bytes] = default_field(list)
+    boolean: List[bool] = default_field(list)
+    date_: List[date] = default_field(list, name='date')
+    datetime_: List[datetime] = default_field(list, name='datetime')
+    decimal: List[Decimal] = default_field(list)
+    duration: List[timedelta] = default_field(list)
+    float_: List[float] = default_field(list, name='float')
+    int_: List[int] = default_field(list, name='int')
+    long: List[Long] = default_field(list)
+    string: List[str] = default_field(list)
+    time_: List[time] = default_field(list, name='time')
+
+    eq: List['Expression'] = default_field(list, description="==")
+    ne: List['Expression'] = default_field(list, description="!=")
+    lt: List['Expression'] = default_field(list, description="<")
+    le: List['Expression'] = default_field(list, description="<=")
+    gt: List['Expression'] = default_field(list, description=r"\>")
+    ge: List['Expression'] = default_field(list, description=r"\>=")
+
+    add: List['Expression'] = default_field(list, description=r"\+")
+    mul: List['Expression'] = default_field(list, description=r"\*")
+    sub: List['Expression'] = default_field(list, description=r"\-")
+    truediv: List['Expression'] = default_field(list, name='div', description='/')
+
+    and_: List['Expression'] = default_field(list, name='and', description="&")
+    or_: List['Expression'] = default_field(list, name='or', description="|")
+    inv: Optional['Expression'] = strawberry.field(default=None, description="~")
+
+    ops = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'add', 'mul', 'sub', 'truediv', 'and_', 'or_')
+    scalars = (
+        'binary',
+        'boolean',
+        'date_',
+        'datetime_',
+        'decimal',
+        'duration',
+        'float_',
+        'int_',
+        'long',
+        'string',
+        'time_',
+    )
+
+    def to_arrow(self, case_map: dict = {}) -> Optional[ds.Expression]:
+        """Transform GraphQL expression into a dataset expression."""
+        fields = []
+        if self.name:
+            field = ds.field(case_map.get(self.name, self.name))
+            if self.null_ is not None:
+                field = field.is_null() if self.null_ else field.is_valid()
+            fields.append(field)
+        for name in self.scalars:
+            scalars = getattr(self, name)
+            if self.cast:
+                scalars = [pa.scalar(scalar, self.cast) for scalar in scalars]
+            if scalars:
+                fields.append(scalars[0] if len(scalars) == 1 else scalars)
+        for op in self.ops:
+            exprs = [expr.to_arrow(case_map) for expr in getattr(self, op)]
+            if exprs:
+                if op == 'eq' and isinstance(exprs[-1], list):
+                    field = ds.Expression.isin(*exprs)
+                else:
+                    field = functools.reduce(getattr(operator, op), exprs)
+                fields.append(field)
+        if self.inv:
+            fields.append(~self.inv.to_arrow(case_map))  # type:ignore
+        if not fields:
+            return None
+        if len(fields) > 1:
+            raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
+        (field,) = fields
+        return field.cast(self.cast) if self.cast and isinstance(field, ds.Expression) else field

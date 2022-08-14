@@ -105,6 +105,37 @@ def test_schema(dsclient):
     assert schema['partitioning'] is None or len(schema['partitioning']) == 6
 
 
+def test_scan(dsclient):
+    data = dsclient.execute(
+        '{ scan(columns: {name: "zipcode", alias: "zip"}) { column(name: "zip") { type } } }'
+    )
+    assert data == {'scan': {'column': {'type': 'int32'}}}
+    data = dsclient.execute(
+        '{ scan(filter: {eq: [{name: "county"}, {name: "state"}]}) { length } }'
+    )
+    assert data == {'scan': {'length': 0}}
+    data = dsclient.execute('{ scan(filter: {name: "zipcode", null: true}) { length } }')
+    assert data == {'scan': {'length': 0}}
+    data = dsclient.execute('{ scan(filter: {inv: {name: "zipcode", null: false}}) { length } }')
+    assert data == {'scan': {'length': 0}}
+    data = dsclient.execute(
+        '{ scan(filter: {eq: [{name: "state"} {string: "CA", cast: "string"}]}) { length } }'
+    )
+    assert data == {'scan': {'length': 2647}}
+    data = dsclient.execute(
+        '{ scan(filter: {eq: [{name: "state"} {string: ["CA", "OR"]}]}) { length } }'
+    )
+    assert data == {'scan': {'length': 3131}}
+    with pytest.raises(ValueError, match="conflicting inputs"):
+        dsclient.execute('{ scan(filter: {name: "state", string: "CA"}) { length } }')
+    data = dsclient.execute(
+        '''{ scan(filter: {eq: [{name: "state"}, {string: "CA"}]})
+        { scan(filter: {eq: [{name: "county"}, {string: "Santa Clara"}]})
+        { length row { county } } } }'''
+    )
+    assert data == {'scan': {'scan': {'length': 108, 'row': {'county': 'Santa Clara'}}}}
+
+
 def test_federation(fedclient):
     data = fedclient.execute('{ _service { sdl } aTable { length } }')
     assert data['aTable']['length'] == 2
