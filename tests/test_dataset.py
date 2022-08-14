@@ -98,6 +98,13 @@ def test_group(dsclient):
     }
 
 
+def test_schema(dsclient):
+    schema = dsclient.execute('{ schema { names types partitioning } }')['schema']
+    assert set(schema['names']) >= {'zipcode', 'state', 'county'}
+    assert set(schema['types']) >= {'int32', 'string'}
+    assert schema['partitioning'] is None or len(schema['partitioning']) == 6
+
+
 def test_federation(fedclient):
     data = fedclient.execute('{ _service { sdl } aTable { length } }')
     assert data['aTable']['length'] == 2

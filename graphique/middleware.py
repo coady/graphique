@@ -98,7 +98,16 @@ class GraphQL(strawberry.asgi.GraphQL):
         return self.root_value
 
 
-@strawberry.interface(description="a schema-free table")
+@strawberry.type(description="dataset schema")
+class Schema:
+    names: List[str] = strawberry.field(description="field names")
+    types: List[str] = strawberry.field(
+        description="[arrow types](https://arrow.apache.org/docs/python/api/datatypes.html), corresponding to `names`"
+    )
+    partitioning: Optional[List[str]] = strawberry.field(description="partition keys")
+
+
+@strawberry.interface(description="an arrow dataset")
 class Dataset:
     def __init__(self, table: Union[ds.Dataset, ds.Scanner, pa.Table]):
         self.table = table
@@ -151,6 +160,15 @@ class Dataset:
             scanner = self.scanner(info)
             table = scanner.to_table() if length is None else scanner.head(length)
         return table.select(self.references(info) & set(table.column_names))
+
+    @doc_field
+    def schema(self) -> Schema:
+        """dataset schema"""
+        table = self.table
+        schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
+        partitioning = getattr(table, 'partitioning', None)
+        names = list(map(to_camel_case, schema.names))
+        return Schema(names, schema.types, partitioning and partitioning.schema.names)  # type: ignore
 
     @doc_field
     def length(self) -> Long:
