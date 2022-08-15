@@ -84,24 +84,6 @@ def default_field(default_factory: Callable = lambda: UNSET, **kwargs) -> Strawb
     return strawberry.field(default_factory=default_factory, **kwargs)
 
 
-@strawberry.input(
-    description=f"nominal [predicates]({link}#comparisons) projected across two columns"
-)
-class NominalFilter(Input):
-    equal: Optional[str] = UNSET
-    not_equal: Optional[str] = UNSET
-
-
-@strawberry.input(
-    description=f"ordinal [predicates]({link}#comparisons) projected across two columns"
-)
-class OrdinalFilter(NominalFilter):
-    less: Optional[str] = UNSET
-    less_equal: Optional[str] = UNSET
-    greater: Optional[str] = UNSET
-    greater_equal: Optional[str] = UNSET
-
-
 class Query(Input):
     """base class for predicates"""
 
@@ -219,20 +201,17 @@ class Filter(Query):
 
 @strawberry.input(description="predicates for booleans")
 class BooleanFilter(Filter):
-    __annotations__.update(BooleanQuery.__annotations__)
-    apply: NominalFilter = default_field(dict)
+    __annotations__ = dict(BooleanQuery.__annotations__)
 
 
 @strawberry.input(description="predicates for ints")
 class IntFilter(Filter):
-    __annotations__.update(IntQuery.__annotations__)
-    apply: OrdinalFilter = default_field(dict)
+    __annotations__ = dict(IntQuery.__annotations__)
 
 
 @strawberry.input(description="predicates for longs")
 class LongFilter(Filter):
-    __annotations__.update(LongQuery.__annotations__)
-    apply: OrdinalFilter = default_field(dict)
+    __annotations__ = dict(LongQuery.__annotations__)
 
 
 @strawberry.input(description="predicates for floats")
@@ -241,43 +220,36 @@ class FloatFilter(Filter):
     is_finite: bool = False
     is_inf: bool = False
     is_nan: bool = False
-    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for decimals")
 class DecimalFilter(Filter):
-    __annotations__.update(DecimalQuery.__annotations__)
-    apply: OrdinalFilter = default_field(dict)
+    __annotations__ = dict(DecimalQuery.__annotations__)
 
 
 @strawberry.input(description="predicates for dates")
 class DateFilter(Filter):
-    __annotations__.update(DateQuery.__annotations__)
-    apply: OrdinalFilter = default_field(dict)
+    __annotations__ = dict(DateQuery.__annotations__)
 
 
 @strawberry.input(description="predicates for datetimes")
 class DateTimeFilter(Filter):
-    __annotations__.update(DateTimeQuery.__annotations__)
-    apply: OrdinalFilter = default_field(dict)
+    __annotations__ = dict(DateTimeQuery.__annotations__)
 
 
 @strawberry.input(description="predicates for times")
 class TimeFilter(Filter):
-    __annotations__.update(TimeQuery.__annotations__)
-    apply: OrdinalFilter = default_field(dict)
+    __annotations__ = dict(TimeQuery.__annotations__)
 
 
 @strawberry.input(description="predicates for durations")
 class DurationFilter(Filter):
-    __annotations__.update(DurationQuery.__annotations__)
-    apply: OrdinalFilter = default_field(dict)
+    __annotations__ = dict(DurationQuery.__annotations__)
 
 
 @strawberry.input(description="predicates for binaries")
 class Base64Filter(Filter):
-    __annotations__.update(Base64Query.__annotations__)
-    apply: NominalFilter = default_field(dict)
+    __annotations__ = dict(Base64Query.__annotations__)
 
 
 @strawberry.input(description=f"[predicates]({link}#string-predicates) for strings")
@@ -298,7 +270,6 @@ class StringFilter(Filter):
     utf8_is_space: bool = False
     utf8_is_title: bool = False
     utf8_is_upper: bool = False
-    apply: OrdinalFilter = default_field(dict)
 
 
 @strawberry.input(description="predicates for columns of any type as a tagged union")
@@ -321,10 +292,6 @@ class Function(Input):
     name: str
     alias: str = ''
     coalesce: Optional[List[str]] = UNSET
-    cast: str = strawberry.field(
-        default='',
-        description="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
-    )
     fill_null_backward: bool = False
     fill_null_forward: bool = False
 
@@ -338,10 +305,6 @@ class OrdinalFunction(Function):
 @strawberry.input
 class NumericFunction(OrdinalFunction):
     checked: bool = strawberry.field(default=False, description="check math functions for overlow")
-    add: Optional[str] = UNSET
-    subtract: Optional[str] = UNSET
-    multiply: Optional[str] = UNSET
-    divide: Optional[str] = UNSET
     power: Optional[str] = UNSET
     atan2: Optional[str] = UNSET
     abs: bool = False
@@ -424,7 +387,6 @@ class DateFunction(OrdinalFunction):
 
 @strawberry.input(description="[functions]({link}#temporal-component-extraction) for datetimes")
 class DateTimeFunction(OrdinalFunction):
-    subtract: Optional[str] = UNSET
     fill_null: Optional[datetime] = UNSET
     years_between: Optional[str] = UNSET
     quarters_between: Optional[str] = UNSET
@@ -590,10 +552,6 @@ class Projections(Input):
     case_when: Optional[List[str]] = UNSET
     min_element_wise: Optional[str] = UNSET
     max_element_wise: Optional[str] = UNSET
-    add: Optional[str] = UNSET
-    subtract: Optional[str] = UNSET
-    multiply: Optional[str] = UNSET
-    divide: Optional[str] = UNSET
     power: Optional[str] = UNSET
     atan2: Optional[str] = UNSET
     bit_wise_or: Optional[str] = UNSET

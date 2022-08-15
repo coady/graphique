@@ -20,14 +20,13 @@ def test_case(executor):
         '{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}, invert: true) { length } }'
     )
     assert data == {'filter': {'length': 1}}
+    data = executor('{ scan(filter: {eq: [{name: "camelId"}, {name: "snakeId"}]}) { length } }')
+    assert data == {'scan': {'length': 2}}
     data = executor(
-        '{ filter(on: {int: {name: "camelId", apply: {equal: "snakeId"}}}) { length } }'
+        '''{ scan(columns: {alias: "ids", add: [{name: "camelId"}, {name: "snakeId"}]})
+        { column(name: "ids") { ... on LongColumn { values } } } }'''
     )
-    assert data == {'filter': {'length': 2}}
-    data = executor(
-        '{ apply(int: [{name: "camelId", add: "snakeId"}]) { columns { camelId { values } } } }'
-    )
-    assert data == {'apply': {'columns': {'camelId': {'values': [2, 4]}}}}
+    assert data == {'scan': {'column': {'values': [2, 4]}}}
     data = executor('{ index search(snakeId: {equal: 1}) { length } }')
     assert data == {'index': ['snakeId', 'camelId'], 'search': {'length': 1}}
     data = executor('{ min(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
@@ -184,9 +183,8 @@ def test_numeric(executor):
     data = executor('{ columns { float { add(value: 2.0) { divide(value: 1.0) { sum } } } } }')
     assert data == {'columns': {'float': {'add': {'divide': {'sum': 0.5}}}}}
     data = executor(
-        '''{ column(name: "float", apply: {minElementWise: "int32", maxElementWise: "int32", add: "int32"
-        subtract: "int32", multiply: "int32", divide: "int32", power: "int32"}) {
-        ... on FloatColumn { values } } }'''
+        '''{ column(name: "float", apply: {minElementWise: "int32", maxElementWise: "int32",
+        power: "int32"}) { ... on FloatColumn { values } } }'''
     )
     assert data == {'column': {'values': [1.0, None]}}
     data = executor('{ column(name: "float", cast: "int32") { type } }')
@@ -280,18 +278,10 @@ def test_duration(executor):
     assert column['values'] == ['1970-01-01T00:00:00', '0001-01-01T00:00:00']
     assert column['subtract'] == {'values': [-62135596800.0, 0.0]}
     data = executor(
-        '''{ apply(datetime: [{name: "timestamp", alias: "diff", subtract: "timestamp"}])
+        '''{ scan(columns: {alias: "diff", sub: [{name: "timestamp"}, {name: "timestamp"}]})
         { column(name: "diff") { ... on DurationColumn { values count(equal: 0.0) } } } }'''
     )
-    column = data['apply']['column']
-    assert column['values'] == [0.0, None]
-    assert column['count'] == 1
-    data = executor(
-        '''{ apply(datetime: [{name: "timestamp", subtract: "timestamp", alias: "elapsed"}])
-        { filter(on: {duration: [{name: "elapsed", equal: 0.0}]})
-        { apply(duration: {name: "elapsed", cast: "duration[s]"}) { length } } } }'''
-    )
-    assert data == {'apply': {'filter': {'apply': {'length': 1}}}}
+    assert data == {'scan': {'column': {'values': [0.0, None], 'count': 1}}}
     data = executor(
         '''{ partition(by: ["timestamp"] diffs: [{name: "timestamp", greater: 0.0}]) { length } }'''
     )

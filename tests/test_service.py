@@ -36,11 +36,6 @@ def test_ints(client):
     data = client.execute('{ columns { zipcode { count(equal: 501) } } }')
     zipcodes = data['columns']['zipcode']
     assert zipcodes['count'] == 1
-    data = client.execute(
-        '''{ column(name: "zipcode", apply: {subtract: "zipcode"})
-        { ... on IntColumn { unique { values } } } }'''
-    )
-    assert data == {'column': {'unique': {'values': [0]}}}
 
 
 def test_floats(client):
@@ -254,10 +249,6 @@ def test_filter(client):
         ignoreCase: true, regex: true}}) { length } }'''
     )
     assert data['filter']['length'] == 42
-    data = client.execute(
-        '{ filter(on: {string: {name: "county", apply: {equal: "city"}}}) { length } }'
-    )
-    assert data['filter']['length'] == 2805
     data = client.execute('{ filter(on: {string: {name: "city", utf8IsLower: true}}) { length } }')
     assert data['filter']['length'] == 0
     data = client.execute('{ filter(on: {string: {name: "city", utf8IsTitle: true}}) { length } }')
@@ -268,29 +259,39 @@ def test_filter(client):
     )
     assert data['apply']['filter']['length'] == 30
     with pytest.raises(ValueError, match="optional, not nullable"):
-        client.execute('{ filter(on: {string: {name: "city", apply: {equal: null}}}) { length } }')
+        client.execute('{ filter(query: {city: {less: null}}) { length } }')
+
+
+def test_scan(client):
+    data = client.execute('{ scan(filter: {eq: [{name: "county"}, {name: "city"}]}) { length } }')
+    assert data['scan']['length'] == 2805
     data = client.execute(
-        '''{ filter(on: {string: [{name: "state", apply: {equal: "county"}},
-        {name: "county", apply: {equal: "city"}}]}, reduce: OR) { length } }'''
+        '''{ scan(filter: {or: [{eq: [{name: "state"}, {name: "county"}]},
+        {eq: [{name: "county"}, {name: "city"}]}]}) { length } }'''
     )
-    assert data['filter']['length'] == 2805
+    assert data['scan']['length'] == 2805
+    data = client.execute(
+        '''{ scan(columns: {alias: "zipcode", add: [{name: "zipcode"}, {name: "zipcode"}]})
+        { columns { zipcode { min } } } }'''
+    )
+    assert data['scan']['columns']['zipcode']['min'] == 1002
+    data = client.execute(
+        '''{ scan(columns: {alias: "zipcode", sub: [{name: "zipcode"}, {name: "zipcode"}]})
+        { columns { zipcode { unique { values } } } } }'''
+    )
+    assert data['scan']['columns']['zipcode']['unique']['values'] == [0]
+    data = client.execute(
+        '''{ scan(columns: {alias: "product", mul: [{name: "latitude"}, {name: "longitude"}]})
+        { scan(filter: {gt: [{name: "product"}, {float: 0}]}) { length } } }'''
+    )
+    assert data['scan']['scan']['length'] == 0
+    data = client.execute(
+        '{ scan(columns: {name: "zipcode", cast: "float"}) { column(name: "zipcode") { type } } }'
+    )
+    assert data['scan']['column']['type'] == 'float'
 
 
 def test_apply(client):
-    data = client.execute(
-        '{ apply(int: {name: "zipcode", add: "zipcode"}) { columns { zipcode { min } } } }'
-    )
-    assert data['apply']['columns']['zipcode']['min'] == 1002
-    data = client.execute(
-        '''{ apply(int: {name: "zipcode", subtract: "zipcode"})
-        { columns { zipcode { unique { values } } } } }'''
-    )
-    assert data['apply']['columns']['zipcode']['unique']['values'] == [0]
-    data = client.execute(
-        '''{ apply(float: {name: "latitude", multiply: "longitude", alias: "product"})
-        { filter(on: {float: {name: "product", greater: 0}}) { length } } }'''
-    )
-    assert data['apply']['filter']['length'] == 0
     data = client.execute(
         '''{ apply(float: {name: "longitude", maxElementWise: "latitude"})
         { columns { longitude { min } } } }'''
@@ -301,11 +302,6 @@ def test_apply(client):
         { columns { latitude { max } } } }'''
     )
     assert data['apply']['columns']['latitude']['max'] == pytest.approx(-65.301389)
-    data = client.execute(
-        '''{ apply(int: {name: "zipcode", cast: "float"})
-        { column(name: "zipcode") { type } } }'''
-    )
-    assert data['apply']['column']['type'] == 'float'
     data = client.execute(
         '''{ apply(string: {name: "city", findSubstring: "mountain"})
         { column(name: "city") { ... on IntColumn { unique { values } } } } }'''
@@ -393,13 +389,14 @@ def test_group(client):
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
     data = client.execute(
-        '''{ apply(int: {name: "zipcode", cast: "bool"}) { group(by: ["state"]) { slice(length: 3) {
+        '''{ scan(columns: {name: "zipcode", cast: "bool"})
+        { group(by: ["state"]) { slice(length: 3) {
         aggregate(any: [{name: "zipcode", alias: "a"}], all: [{name: "zipcode", alias: "b"}]) {
         a: column(name: "a") { ... on BooleanColumn { values } }
         b: column(name: "b") { ... on BooleanColumn { values } }
         column(name: "zipcode") { ... on ListColumn { any { type } all { type } } } } } } } }'''
     )
-    assert data['apply']['group']['slice']['aggregate'] == {
+    assert data['scan']['group']['slice']['aggregate'] == {
         'a': {'values': [True, True, True]},
         'b': {'values': [True, True, True]},
         'column': {'any': {'type': 'bool'}, 'all': {'type': 'bool'}},

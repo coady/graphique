@@ -128,6 +128,8 @@ def test_scan(dsclient):
     assert data == {'scan': {'length': 3131}}
     with pytest.raises(ValueError, match="conflicting inputs"):
         dsclient.execute('{ scan(filter: {name: "state", string: "CA"}) { length } }')
+    with pytest.raises(ValueError, match="name or alias"):
+        dsclient.execute('{ scan(columns: {}) { length } }')
     data = dsclient.execute(
         '''{ scan(filter: {eq: [{name: "state"}, {string: "CA"}]})
         { scan(filter: {eq: [{name: "county"}, {string: "Santa Clara"}]})

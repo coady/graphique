@@ -402,6 +402,8 @@ class Dataset:
         names = self.references(info, level=1) & set(case_map)
         projection = {name: ds.field(case_map[name]) for name in names}
         projection.update({col.alias or col.name: col.to_arrow(case_map) for col in columns})
+        if '' in projection:
+            raise ValueError("projected columns need a name or alias")
         if isinstance(dataset, ds.Dataset):
             return type(self)(dataset.scanner(filter=selection, columns=projection))
         scanner = ds.Scanner.from_batches(
