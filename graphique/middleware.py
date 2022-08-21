@@ -18,7 +18,7 @@ from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Diff, Expression, Filters, Projections
 from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
-from .inputs import StringFunction, StructFunction, TimeFunction
+from .inputs import StringFunction, StructFunction, TimeFunction, links
 from .models import Column, annotate, doc_field, selections
 from .scalars import Long, Operator, scalar_map
 
@@ -177,7 +177,7 @@ class Dataset:
 
     @doc_field(
         name="column name",
-        cast="cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
+        cast=f"cast array to {links.type}",
         apply="projected functions",
     )
     def column(self, info: Info, name: str, cast: str = '', apply: Projections = {}) -> Column:  # type: ignore

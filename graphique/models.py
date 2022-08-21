@@ -16,7 +16,7 @@ from strawberry.field import StrawberryField
 from strawberry.types import Info
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
-from .inputs import BooleanQuery, IntQuery, LongQuery, FloatQuery, DecimalQuery, DateQuery
+from .inputs import BooleanQuery, IntQuery, LongQuery, FloatQuery, DecimalQuery, DateQuery, links
 from .inputs import DateTimeQuery, TimeQuery, DurationQuery, Base64Query, StringQuery
 from .scalars import Long, type_map
 
@@ -48,7 +48,7 @@ class Column:
 
     @doc_field
     def type(self) -> str:
-        """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+        f"""{links.type}"""
         return str(self.array.type)
 
     @doc_field

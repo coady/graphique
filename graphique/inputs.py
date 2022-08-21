@@ -20,7 +20,11 @@ from .core import ListChunk, Column
 from .scalars import Long, classproperty
 
 comparisons = ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal')
-link = 'https://arrow.apache.org/docs/python/api/compute.html'
+
+
+class links:
+    compute = 'https://arrow.apache.org/docs/python/api/compute.html'
+    type = '[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)'
 
 
 class Input:
@@ -252,7 +256,7 @@ class Base64Filter(Filter):
     __annotations__ = dict(Base64Query.__annotations__)
 
 
-@strawberry.input(description=f"[predicates]({link}#string-predicates) for strings")
+@strawberry.input(description=f"[predicates]({links.compute}#string-predicates) for strings")
 class StringFilter(Filter):
     __annotations__.update(StringQuery.__annotations__)
     match_substring: Optional[str] = UNSET
@@ -327,12 +331,12 @@ class NumericFunction(OrdinalFunction):
     sqrt: bool = False
 
 
-@strawberry.input(description=f"[functions]({link}#selecting-multiplexing) for booleans")
+@strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for booleans")
 class BooleanFunction(Function):
     if_else: Optional[List[str]] = UNSET
 
 
-@strawberry.input(description=f"[functions]({link}#arithmetic-functions) for ints")
+@strawberry.input(description=f"[functions]({links.compute}#arithmetic-functions) for ints")
 class IntFunction(NumericFunction):
     bit_wise_or: Optional[str] = UNSET
     bit_wise_and: Optional[str] = UNSET
@@ -344,13 +348,13 @@ class IntFunction(NumericFunction):
     digitize: Optional[List[int]] = default_field(description=inspect.getdoc(Column.digitize))
 
 
-@strawberry.input(description=f"[functions]({link}#arithmetic-functions) for longs")
+@strawberry.input(description=f"[functions]({links.compute}#arithmetic-functions) for longs")
 class LongFunction(NumericFunction):
     fill_null: Optional[Long] = UNSET
     digitize: Optional[List[Long]] = default_field(description=inspect.getdoc(Column.digitize))
 
 
-@strawberry.input(description=f"[functions]({link}#arithmetic-functions) for floats")
+@strawberry.input(description=f"[functions]({links.compute}#arithmetic-functions) for floats")
 class FloatFunction(NumericFunction):
     fill_null: Optional[float] = UNSET
     digitize: Optional[List[float]] = default_field(description=inspect.getdoc(Column.digitize))
@@ -361,7 +365,9 @@ class DecimalFunction(Function):
     fill_null: Optional[Decimal] = UNSET
 
 
-@strawberry.input(description="[functions]({link}#temporal-component-extraction) for dates")
+@strawberry.input(
+    description=f"[functions]({links.compute}#temporal-component-extraction) for dates"
+)
 class DateFunction(OrdinalFunction):
     fill_null: Optional[date] = UNSET
     years_between: Optional[str] = UNSET
@@ -385,7 +391,9 @@ class DateFunction(OrdinalFunction):
     strftime: bool = False
 
 
-@strawberry.input(description="[functions]({link}#temporal-component-extraction) for datetimes")
+@strawberry.input(
+    description=f"[functions]({links.compute}#temporal-component-extraction) for datetimes"
+)
 class DateTimeFunction(OrdinalFunction):
     fill_null: Optional[datetime] = UNSET
     years_between: Optional[str] = UNSET
@@ -416,7 +424,9 @@ class DateTimeFunction(OrdinalFunction):
     strftime: bool = False
 
 
-@strawberry.input(description="[functions]({link}#temporal-component-extraction) for times")
+@strawberry.input(
+    description=f"[functions]({links.compute}#temporal-component-extraction) for times"
+)
 class TimeFunction(OrdinalFunction):
     fill_null: Optional[time] = UNSET
     hours_between: Optional[str] = UNSET
@@ -439,14 +449,14 @@ class DurationFunction(Function):
     fill_null: Optional[timedelta] = UNSET
 
 
-@strawberry.input(description="[functions]({link}#string-transforms) for binaries")
+@strawberry.input(description=f"[functions]({links.compute}#string-transforms) for binaries")
 class Base64Function(Function):
     binary_join_element_wise: Optional[List[str]] = UNSET
     fill_null: Optional[bytes] = UNSET
     binary_length: bool = False
 
 
-@strawberry.input(description="[functions]({link}#string-transforms) for strings")
+@strawberry.input(description=f"[functions]({links.compute}#string-transforms) for strings")
 class StringFunction(Function):
     binary_join_element_wise: Optional[List[str]] = UNSET
     find_substring: Optional[str] = UNSET
@@ -462,12 +472,12 @@ class StringFunction(Function):
     utf8_reverse: bool = False
 
 
-@strawberry.input(description=f"[functions]({link}#selecting-multiplexing) for structs")
+@strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for structs")
 class StructFunction(Function):
     case_when: Optional[List[str]] = UNSET
 
 
-@strawberry.input(description=f"[functions]({link}#structural-transforms) for list")
+@strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for list")
 class ListFunction(Function):
     mode: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.mode))
     quantile: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.quantile))
@@ -479,18 +489,24 @@ class ListFunction(Function):
     )
 
 
-@strawberry.input(description=f"names and optional aliases for [aggregation]({link}#aggregations)")
+@strawberry.input(
+    description=f"names and optional aliases for [aggregation]({links.compute}#aggregations)"
+)
 class Aggregate(Input):
     name: str
     alias: str = ''
 
 
-@strawberry.input(description=f"options for count [aggregation]({link}#grouped-aggregations)")
+@strawberry.input(
+    description=f"options for count [aggregation]({links.compute}#grouped-aggregations)"
+)
 class CountAggregate(Aggregate):
     mode: str = 'only_valid'
 
 
-@strawberry.input(description=f"options for scalar [aggregation]({link}#grouped-aggregations)")
+@strawberry.input(
+    description=f"options for scalar [aggregation]({links.compute}#grouped-aggregations)"
+)
 class ScalarAggregate(Aggregate):
     skip_nulls: bool = True
     min_count: int = 1
@@ -542,7 +558,7 @@ class Diff(Input):
 
 
 @strawberry.input(
-    description=f"[functions]({link}#arithmetic-functions) projected across two columns"
+    description=f"[functions]({links.compute}#arithmetic-functions) projected across two columns"
 )
 class Projections(Input):
     coalesce: Optional[List[str]] = UNSET
@@ -585,10 +601,7 @@ Scalars are a `List` so that `eq` also supports `isin`. Single values can be pas
 class Expression:
     name: str = strawberry.field(default='', description="field name")
     alias: str = strawberry.field(default='', description="name for outermost columns")
-    cast: str = strawberry.field(
-        default='',
-        description="cast as [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)",
-    )
+    cast: str = strawberry.field(default='', description=f"cast as {links.type}")
     null_: Optional[bool] = strawberry.field(
         default=None, name='null', description="`is_null` or `is_valid`"
     )
