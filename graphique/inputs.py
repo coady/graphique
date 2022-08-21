@@ -283,7 +283,7 @@ class Filters(Input):
     datetime: List[DateTimeFilter] = default_field(list)
     time: List[TimeFilter] = default_field(list)
     duration: List[DurationFilter] = default_field(list)
-    binary: List[Base64Filter] = default_field(list)
+    base64: List[Base64Filter] = default_field(list)
     string: List[StringFilter] = default_field(list)
 
 
@@ -593,7 +593,7 @@ class Expression:
         default=None, name='null', description="`is_null` or `is_valid`"
     )
 
-    binary: List[bytes] = default_field(list)
+    base64: List[bytes] = default_field(list)
     boolean: List[bool] = default_field(list)
     date_: List[date] = default_field(list, name='date')
     datetime_: List[datetime] = default_field(list, name='datetime')
@@ -623,7 +623,7 @@ class Expression:
 
     ops = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'add', 'mul', 'sub', 'truediv', 'and_', 'or_')
     scalars = (
-        'binary',
+        'base64',
         'boolean',
         'date_',
         'datetime_',

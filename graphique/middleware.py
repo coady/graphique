@@ -301,7 +301,7 @@ class Dataset:
     def apply(
         self,
         info: Info,
-        binary: List[Base64Function] = [],
+        base64: List[Base64Function] = [],
         boolean: List[BooleanFunction] = [],
         date: List[DateFunction] = [],
         datetime: List[DateTimeFunction] = [],
@@ -323,7 +323,7 @@ class Dataset:
         """
         table = self.select(info)
         args = datetime, decimal, duration, float, int, list, long, string, struct, time
-        for value in map(dict, itertools.chain(binary, boolean, date, *args)):
+        for value in map(dict, itertools.chain(base64, boolean, date, *args)):
             table = T.apply(table, value.pop('name'), **value)  # type: ignore
         return type(self)(table)
 

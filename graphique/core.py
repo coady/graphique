@@ -376,10 +376,6 @@ class Table(pa.Table):
     applied = {'fill_null', 'digitize'}
     projected = {
         'coalesce',
-        'add',
-        'subtract',
-        'multiply',
-        'divide',
         'power',
         'min_element_wise',
         'max_element_wise',
@@ -570,7 +566,6 @@ class Table(pa.Table):
         self,
         name: str,
         alias: str = '',
-        cast: str = '',
         checked=False,
         ignore_case=False,
         regex=False,
@@ -591,8 +586,6 @@ class Table(pa.Table):
                 column = Column.map(column, getattr(ListChunk, func))
             elif arg:
                 column = getattr(pc, func + '_checked' * checked)(column)
-        if cast:
-            column = column.cast(cast)
         if alias:
             return self.append_column(alias, column)
         return self.set_column(self.column_names.index(name), name, column)
