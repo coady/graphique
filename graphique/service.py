@@ -12,7 +12,7 @@ from .core import Column as C, Table as T
 from .inputs import Filters, Input, Query as QueryInput
 from .middleware import Dataset, GraphQL, filter_expression
 from .models import Column, doc_field, selections
-from .scalars import Long, Operator, type_map
+from .scalars import Long, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, FEDERATED, FILTERS, INDEX, PARQUET_PATH
 
 format = ds.ParquetFileFormat(read_options={'dictionary_columns': DICTIONARIES})
@@ -67,33 +67,21 @@ class Table(Dataset):
     @doc_field(
         query="simple queries by column",
         on="extended filters on columns organized by type",
-        reduce="binary operator to combine filters; within a filter all predicates must match",
     )
     @no_type_check
-    def filter(
-        self,
-        info: Info,
-        query: Queries = {},
-        on: Filters = {},
-        reduce: Operator = Operator.AND,
-    ) -> 'Table':
+    def filter(self, info: Info, query: Queries = {}, on: Filters = {}) -> 'Table':
         """Return table with rows which match all (by default) queries.
 
         List columns apply their respective filters to the scalar values within lists.
         All referenced list columns must have the same lengths.
         """
         fields = selections(*info.selected_fields)
-        if reduce.value in ('and', 'or') and dict(query):
-            scanner = self.scanner(info, dict(query), reduce=reduce.value)
+        if dict(query):
+            scanner = self.scanner(info, dict(query))
             oneshot = isinstance(self.table, ds.Scanner) and len(fields) > 1
             query, self = {}, type(self)(scanner.to_table() if oneshot else scanner)
         filters = dict(on)
-        for name, value in dict(query).items():
-            value['name'] = name
-            filters.setdefault('', []).append(value)
-        if not any(filters.values()):
-            return self
-        return Dataset.filter(self, info, filters, reduce)
+        return Dataset.filter(self, info, filters) if any(filters.values()) else self
 
 
 @strawberry.type(description="a table sorted by a composite index")

@@ -203,11 +203,6 @@ class Filter(Query):
                 yield name
 
 
-@strawberry.input(description="predicates for booleans")
-class BooleanFilter(Filter):
-    __annotations__ = dict(BooleanQuery.__annotations__)
-
-
 @strawberry.input(description="predicates for ints")
 class IntFilter(Filter):
     __annotations__ = dict(IntQuery.__annotations__)
@@ -278,7 +273,6 @@ class StringFilter(Filter):
 
 @strawberry.input(description="predicates for columns of any type as a tagged union")
 class Filters(Input):
-    boolean: List[BooleanFilter] = default_field(list)
     int: List[IntFilter] = default_field(list)
     long: List[LongFilter] = default_field(list)
     float: List[FloatFilter] = default_field(list)
@@ -334,6 +328,11 @@ class NumericFunction(OrdinalFunction):
 @strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for booleans")
 class BooleanFunction(Function):
     if_else: Optional[List[str]] = UNSET
+    and_: Optional[str] = default_field(name='and')
+    or_: Optional[str] = default_field(name='or')
+    xor: Optional[str] = UNSET
+    and_not: Optional[str] = UNSET
+    kleene: bool = False
 
 
 @strawberry.input(description=f"[functions]({links.compute}#arithmetic-functions) for ints")

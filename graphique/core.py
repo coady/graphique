@@ -375,6 +375,10 @@ class Table(pa.Table):
 
     applied = {'fill_null', 'digitize'}
     projected = {
+        'and',
+        'or',
+        'xor',
+        'and_not',
         'coalesce',
         'power',
         'min_element_wise',
@@ -569,6 +573,7 @@ class Table(pa.Table):
         checked=False,
         ignore_case=False,
         regex=False,
+        kleene=False,
         **partials,
     ) -> pa.Table:
         """Return view of table with functions applied across columns."""
@@ -577,7 +582,8 @@ class Table(pa.Table):
         for func, arg in partials.items():
             if func in Table.projected:
                 others = (self[name] for name in (arg if isinstance(arg, list) else [arg]))
-                column = getattr(pc, func + '_checked' * checked)(column, *others)
+                func += ('_checked' * checked) + ('_kleene' * kleene)
+                column = getattr(pc, func)(column, *others)
             elif func in Table.applied:
                 column = getattr(Column, func)(column, arg)
             elif not isinstance(arg, bool):

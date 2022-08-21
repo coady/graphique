@@ -20,7 +20,7 @@ from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunct
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction, links
 from .models import Column, annotate, doc_field, selections
-from .scalars import Long, Operator, scalar_map
+from .scalars import Long, scalar_map
 
 comparisons = {
     'equal': operator.eq,
@@ -52,7 +52,7 @@ def references(field) -> Iterator:
             yield from references(getattr(field, name, []))
 
 
-def filter_expression(queries: dict, reduce: str = 'and') -> Optional[ds.Expression]:
+def filter_expression(queries: dict) -> Optional[ds.Expression]:
     """Translate query format `field={predicate: value}` into dataset filter expression."""
     exprs: list = []
     for name, query in queries.items():
@@ -63,9 +63,7 @@ def filter_expression(queries: dict, reduce: str = 'and') -> Optional[ds.Express
         ]
         if group:
             exprs.append(functools.reduce(operator.and_, group))
-    if not exprs:
-        return None
-    return functools.reduce(getattr(operator, f'{reduce}_'), exprs)
+    return functools.reduce(operator.and_, exprs) if exprs else None
 
 
 class TimingExtension(strawberry.extensions.Extension):
@@ -132,11 +130,11 @@ class Dataset:
             fields = itertools.chain(*[field.selections for field in fields])
         return set(itertools.chain(*map(references, fields)))
 
-    def scanner(self, info: Info, queries: dict = {}, reduce: str = 'and') -> ds.Scanner:
+    def scanner(self, info: Info, queries: dict = {}) -> ds.Scanner:
         """Return scanner with only the rows and columns necessary to proceed."""
         dataset = self.table
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
-        expr = filter_expression(queries, reduce=reduce)
+        expr = filter_expression(queries)
         if isinstance(dataset, pa.Table):
             return ds.dataset(dataset).scanner(filter=expr)
         if isinstance(dataset, ds.Scanner):
@@ -147,7 +145,7 @@ class Dataset:
         names = self.references(info) & set(case_map)
         columns = {name: ds.field(case_map[name]) for name in names}
         queries = {case_map[name]: queries[name] for name in queries}
-        expr = filter_expression(queries, reduce=reduce)
+        expr = filter_expression(queries)
         return dataset.scanner(columns=columns, filter=expr)
 
     def select(self, info: Info, length: int = None) -> pa.Table:
@@ -354,17 +352,9 @@ class Dataset:
                 columns[alias or name] = C.map(table[name], func, **field)
         return type(self)(pa.table(columns))
 
-    @doc_field(
-        on="extended filters on columns organized by type",
-        reduce="binary operator to combine filters; within a filter all predicates must match",
-    )
+    @doc_field(on="extended filters on columns organized by type")
     @no_type_check
-    def filter(
-        self,
-        info: Info,
-        on: Filters = {},
-        reduce: Operator = Operator.AND,
-    ) -> 'Dataset':
+    def filter(self, info: Info, on: Filters = {}) -> 'Dataset':
         """Return table with rows which match all (by default) queries.
 
         List columns apply their respective filters to the scalar values within lists.
@@ -375,13 +365,13 @@ class Dataset:
         lists = {name for name in table.column_names if C.is_list_type(table[name])}
         masks = [T.mask(table, **value) for value in filters if value['name'] not in lists]
         if masks:
-            mask = functools.reduce(getattr(pc, reduce.value), masks)
+            mask = functools.reduce(pc.and_, masks)
             if selections(*info.selected_fields) == {'length'}:  # optimized for count
                 return type(self)(range(C.count(mask, True)))
             table = table.filter(mask)
         masks = [T.mask(table, **value) for value in filters if value['name'] in lists]
         if masks:
-            mask = functools.reduce(getattr(pc, reduce.value), masks).combine_chunks()
+            mask = functools.reduce(pc.and_, masks).combine_chunks()
             table = T.filter_list(table, mask)
         return type(self)(table)
 

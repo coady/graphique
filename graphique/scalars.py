@@ -1,7 +1,6 @@
 """
 GraphQL scalars.
 """
-import enum
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 import pyarrow as pa
@@ -55,17 +54,6 @@ type_map = {
     pa.lib.Type_LARGE_LIST: list,
     pa.lib.Type_STRUCT: dict,
 }
-
-
-@strawberry.enum(description="boolean operator to combine predicates")
-class Operator(enum.Enum):
-    AND = 'and'
-    OR = 'or'
-    XOR = 'xor'
-    AND_NOT = 'and_not'
-    AND_KLEENE = 'and_kleene'
-    OR_KLEENE = 'or_kleene'
-    AND_NOT_KLEENE = 'and_not_kleene'
 
 
 class classproperty(property):

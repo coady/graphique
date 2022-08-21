@@ -22,13 +22,6 @@ def test_filter(dsclient):
     assert data == {'filter': {'length': 41700}}
     data = dsclient.execute('{ filter(query: {state: {notEqual: null}}) { length } }')
     assert data == {'filter': {'length': 41700}}
-    data = dsclient.execute(
-        '''{ filter(query: {state: {equal: "CA"}, county: {equal: "Santa Clara"}}, reduce: OR)
-        { length } }'''
-    )
-    assert data == {'filter': {'length': 2647}}
-    data = dsclient.execute('{ filter(query: {state: {equal: "CA"}}, reduce: XOR) { length } }')
-    assert data == {'filter': {'length': 2647}}
 
 
 def test_search(dsclient):
@@ -134,6 +127,11 @@ def test_scan(dsclient):
         { length row { county } } } }'''
     )
     assert data == {'scan': {'scan': {'length': 108, 'row': {'county': 'Santa Clara'}}}}
+    data = dsclient.execute(
+        '''{ scan(filter: {or: [{eq: [{name: "state"}, {string: "CA"}]},
+        {eq: [{name: "county"}, {string: "Santa Clara"}]}]}) { length } }'''
+    )
+    assert data == {'scan': {'length': 2647}}
 
 
 def test_federation(fedclient):

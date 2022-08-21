@@ -39,15 +39,6 @@ def test_columns(executor):
     def execute(query):
         return executor(f'{{ columns {query} }}')['columns']
 
-    assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
-    assert execute('{ bool { count(equal: false) } }') == {'bool': {'count': 1}}
-    assert execute('{ bool { count } }') == {'bool': {'count': 1}}
-    assert execute('{ bool { index(value: false) } }') == {'bool': {'index': 0}}
-    assert execute('{ bool { index(value: false, start: 1, end: 2) } }') == {'bool': {'index': -1}}
-    assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
-    assert execute('{ bool { unique { length } } }') == {'bool': {'unique': {'length': 2}}}
-    assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
-
     for name in ('uint8', 'int8', 'uint16', 'int16', 'int32'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
         assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
@@ -135,6 +126,30 @@ def test_columns(executor):
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
     }
     assert execute('{ string { min max } }')
+
+
+def test_boolean(executor):
+    def execute(query):
+        return executor(f'{{ columns {query} }}')['columns']
+
+    assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
+    assert execute('{ bool { count(equal: false) } }') == {'bool': {'count': 1}}
+    assert execute('{ bool { count } }') == {'bool': {'count': 1}}
+    assert execute('{ bool { index(value: false) } }') == {'bool': {'index': 0}}
+    assert execute('{ bool { index(value: false, start: 1, end: 2) } }') == {'bool': {'index': -1}}
+    assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
+    assert execute('{ bool { unique { length } } }') == {'bool': {'unique': {'length': 2}}}
+    assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
+
+    data = executor(
+        '{ apply(boolean: {name: "bool", xor: "bool"}) { columns { bool { values } } } }'
+    )
+    assert data == {'apply': {'columns': {'bool': {'values': [False, None]}}}}
+    data = executor(
+        '''{ apply(boolean: {name: "bool", andNot: "bool", kleene: true})
+        { columns { bool { values } } } }'''
+    )
+    assert data == {'apply': {'columns': {'bool': {'values': [False, None]}}}}
 
 
 def test_numeric(executor):
