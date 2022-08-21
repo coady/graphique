@@ -231,10 +231,6 @@ def test_filter(client):
         '{ filter(query: {state: {equal: null}}) { columns { state { values } } } }'
     )
     assert data['filter']['columns']['state']['values'] == []
-    data = client.execute('{ filter(query: {}, invert: true) { length } }')
-    assert data['filter']['length'] == 41700
-    data = client.execute('{ filter(query: {state: {equal: "CA"}}, invert: true) { length } }')
-    assert data['filter']['length'] == 39053
     data = client.execute(
         '{ filter(on: {string: {name: "city", matchSubstring: "Mountain"}}) { length } }'
     )
@@ -289,6 +285,10 @@ def test_scan(client):
         '{ scan(columns: {name: "zipcode", cast: "float"}) { column(name: "zipcode") { type } } }'
     )
     assert data['scan']['column']['type'] == 'float'
+    data = client.execute(
+        '{ scan(filter: {inv: {eq: [{name: "state"}, {string: "CA"}]}}) { length } }'
+    )
+    assert data == {'scan': {'length': 39053}}
 
 
 def test_apply(client):

@@ -52,7 +52,7 @@ def references(field) -> Iterator:
             yield from references(getattr(field, name, []))
 
 
-def filter_expression(queries: dict, invert=False, reduce: str = 'and') -> Optional[ds.Expression]:
+def filter_expression(queries: dict, reduce: str = 'and') -> Optional[ds.Expression]:
     """Translate query format `field={predicate: value}` into dataset filter expression."""
     exprs: list = []
     for name, query in queries.items():
@@ -65,8 +65,7 @@ def filter_expression(queries: dict, invert=False, reduce: str = 'and') -> Optio
             exprs.append(functools.reduce(operator.and_, group))
     if not exprs:
         return None
-    expr = functools.reduce(getattr(operator, f'{reduce}_'), exprs)
-    return ~expr if invert else expr
+    return functools.reduce(getattr(operator, f'{reduce}_'), exprs)
 
 
 class TimingExtension(strawberry.extensions.Extension):
@@ -133,13 +132,11 @@ class Dataset:
             fields = itertools.chain(*[field.selections for field in fields])
         return set(itertools.chain(*map(references, fields)))
 
-    def scanner(
-        self, info: Info, queries: dict = {}, invert=False, reduce: str = 'and'
-    ) -> ds.Scanner:
+    def scanner(self, info: Info, queries: dict = {}, reduce: str = 'and') -> ds.Scanner:
         """Return scanner with only the rows and columns necessary to proceed."""
         dataset = self.table
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
-        expr = filter_expression(queries, invert=invert, reduce=reduce)
+        expr = filter_expression(queries, reduce=reduce)
         if isinstance(dataset, pa.Table):
             return ds.dataset(dataset).scanner(filter=expr)
         if isinstance(dataset, ds.Scanner):
@@ -150,7 +147,7 @@ class Dataset:
         names = self.references(info) & set(case_map)
         columns = {name: ds.field(case_map[name]) for name in names}
         queries = {case_map[name]: queries[name] for name in queries}
-        expr = filter_expression(queries, invert=invert, reduce=reduce)
+        expr = filter_expression(queries, reduce=reduce)
         return dataset.scanner(columns=columns, filter=expr)
 
     def select(self, info: Info, length: int = None) -> pa.Table:
@@ -359,7 +356,6 @@ class Dataset:
 
     @doc_field(
         on="extended filters on columns organized by type",
-        invert="optionally exclude matching rows",
         reduce="binary operator to combine filters; within a filter all predicates must match",
     )
     @no_type_check
@@ -367,7 +363,6 @@ class Dataset:
         self,
         info: Info,
         on: Filters = {},
-        invert: bool = False,
         reduce: Operator = Operator.AND,
     ) -> 'Dataset':
         """Return table with rows which match all (by default) queries.
@@ -382,12 +377,12 @@ class Dataset:
         if masks:
             mask = functools.reduce(getattr(pc, reduce.value), masks)
             if selections(*info.selected_fields) == {'length'}:  # optimized for count
-                return type(self)(range(C.count(mask, not invert)))
-            table = table.filter(pc.invert(mask) if invert else mask)
+                return type(self)(range(C.count(mask, True)))
+            table = table.filter(mask)
         masks = [T.mask(table, **value) for value in filters if value['name'] in lists]
         if masks:
             mask = functools.reduce(getattr(pc, reduce.value), masks).combine_chunks()
-            table = T.filter_list(table, pc.invert(mask) if invert else mask)
+            table = T.filter_list(table, mask)
         return type(self)(table)
 
     @doc_field(filter="selected rows", columns="projected columns")

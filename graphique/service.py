@@ -67,7 +67,6 @@ class Table(Dataset):
     @doc_field(
         query="simple queries by column",
         on="extended filters on columns organized by type",
-        invert="optionally exclude matching rows",
         reduce="binary operator to combine filters; within a filter all predicates must match",
     )
     @no_type_check
@@ -76,7 +75,6 @@ class Table(Dataset):
         info: Info,
         query: Queries = {},
         on: Filters = {},
-        invert: bool = False,
         reduce: Operator = Operator.AND,
     ) -> 'Table':
         """Return table with rows which match all (by default) queries.
@@ -86,7 +84,7 @@ class Table(Dataset):
         """
         fields = selections(*info.selected_fields)
         if reduce.value in ('and', 'or') and dict(query):
-            scanner = self.scanner(info, dict(query), invert=invert, reduce=reduce.value)
+            scanner = self.scanner(info, dict(query), reduce=reduce.value)
             oneshot = isinstance(self.table, ds.Scanner) and len(fields) > 1
             query, self = {}, type(self)(scanner.to_table() if oneshot else scanner)
         filters = dict(on)
@@ -95,7 +93,7 @@ class Table(Dataset):
             filters.setdefault('', []).append(value)
         if not any(filters.values()):
             return self
-        return Dataset.filter(self, info, filters, invert, reduce)
+        return Dataset.filter(self, info, filters, reduce)
 
 
 @strawberry.type(description="a table sorted by a composite index")

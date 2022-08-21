@@ -16,10 +16,6 @@ def test_case(executor):
     assert data == {'row': {'snakeId': 1, 'camelId': 1}}
     data = executor('{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}) { length } }')
     assert data == {'filter': {'length': 1}}
-    data = executor(
-        '{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}, invert: true) { length } }'
-    )
-    assert data == {'filter': {'length': 1}}
     data = executor('{ scan(filter: {eq: [{name: "camelId"}, {name: "snakeId"}]}) { length } }')
     assert data == {'scan': {'length': 2}}
     data = executor(
