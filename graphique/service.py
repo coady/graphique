@@ -64,10 +64,7 @@ class Table(Dataset):
             )
         return Row(**row)
 
-    @doc_field(
-        query="simple queries by column",
-        on="extended filters on columns organized by type",
-    )
+    @doc_field(query="simple queries by column", on="deprecated: only used for lists")
     @no_type_check
     def filter(self, info: Info, query: Queries = {}, on: Filters = {}) -> 'Table':
         """Return table with rows which match all (by default) queries.

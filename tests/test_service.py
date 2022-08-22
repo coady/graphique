@@ -71,10 +71,10 @@ def test_floats(client):
     )
     assert data['slice']['columns']['latitude']['logb']['values'] == [pytest.approx(3.376188)]
     data = client.execute(
-        '''{ filter(on: {float: {name: "latitude", isFinite: true}})
-        { apply(float: {name: "latitude", round: true}) { row { latitude } } } }'''
+        '''{ apply(float: [{name: "latitude", round: true},
+        {name: "longitude", isFinite: true}]) { row { latitude longitude } } }'''
     )
-    assert data == {'filter': {'apply': {'row': {'latitude': 41.0}}}}
+    assert data == {'apply': {'row': {'latitude': 41.0, 'longitude': 1}}}
     data = client.execute(
         '''{ slice(length: 1) { columns { latitude { round(ndigits: 1) { values } } } } }'''
     )
@@ -111,16 +111,41 @@ def test_strings(client):
     data = client.execute(
         '''{ filter(query: {state: {equal: "CA"}}) {
         apply(string: {name: "city", utf8Length: true, alias: "size"}) {
-        filter(on: {int: {name: "size", greater: 23}}) { length }
+        scan(filter: {gt: [{name: "size"}, {int: 23}]}) { length }
         column(name: "size") { ... on IntColumn { max } } } } }'''
     )
-    assert data == {'filter': {'apply': {'filter': {'length': 1}, 'column': {'max': 24}}}}
+    assert data == {'filter': {'apply': {'scan': {'length': 1}, 'column': {'max': 24}}}}
     data = client.execute('{ apply(string: {name: "city", utf8Swapcase: true}) { row { city } } }')
     assert data == {'apply': {'row': {'city': 'hOLTSVILLE'}}}
     data = client.execute(
         '{ apply(string: {name: "state", utf8Capitalize: true}) { row { state } } }'
     )
     assert data == {'apply': {'row': {'state': 'Ny'}}}
+    data = client.execute(
+        '''{ apply(string: {name: "city", utf8IsLower: true})
+        { scan(filter: {name: "city"}) { length } } }'''
+    )
+    assert data == {'apply': {'scan': {'length': 0}}}
+    data = client.execute(
+        '''{ apply(string: {name: "city", utf8IsTitle: true})
+        { scan(filter: {name: "city"}) { length } } }'''
+    )
+    assert data == {'apply': {'scan': {'length': 41700}}}
+    data = client.execute(
+        '''{ apply(string: {name: "city", matchSubstring: "Mountain"})
+        { scan(filter: {name: "city"}) { length } } }'''
+    )
+    assert data == {'apply': {'scan': {'length': 88}}}
+    data = client.execute(
+        '''{ apply(string: {name: "city", matchSubstring: "mountain", ignoreCase: true})
+        { scan(filter: {name: "city"}) { length } } }'''
+    )
+    assert data == {'apply': {'scan': {'length': 88}}}
+    data = client.execute(
+        '''{ apply(string: {name: "city", matchSubstring: "^Mountain", regex: true})
+        { scan(filter: {name: "city"}) { length } } }'''
+    )
+    assert data == {'apply': {'scan': {'length': 42}}}
 
 
 def test_string_methods(client):
@@ -232,26 +257,8 @@ def test_filter(client):
     )
     assert data['filter']['columns']['state']['values'] == []
     data = client.execute(
-        '{ filter(on: {string: {name: "city", matchSubstring: "Mountain"}}) { length } }'
-    )
-    assert data['filter']['length'] == 88
-    data = client.execute(
-        '''{ filter(on: {string: {name: "city", matchSubstring: "mountain", ignoreCase: true}})
-        { length } }'''
-    )
-    assert data['filter']['length'] == 88
-    data = client.execute(
-        '''{ filter(on: {string: {name: "city", matchSubstring: "^mountain",
-        ignoreCase: true, regex: true}}) { length } }'''
-    )
-    assert data['filter']['length'] == 42
-    data = client.execute('{ filter(on: {string: {name: "city", utf8IsLower: true}}) { length } }')
-    assert data['filter']['length'] == 0
-    data = client.execute('{ filter(on: {string: {name: "city", utf8IsTitle: true}}) { length } }')
-    assert data['filter']['length'] == 41700
-    data = client.execute(
-        '''{apply(float: {name: "longitude", abs: true})
-        { filter(on: {float: {name: "longitude", less: 66}}) { length } } }'''
+        '''{ apply(float: {name: "longitude", abs: true})
+        { filter(query: {longitude: {less: 66}}) { length } } }'''
     )
     assert data['apply']['filter']['length'] == 30
     with pytest.raises(ValueError, match="optional, not nullable"):
@@ -370,12 +377,12 @@ def test_group(client):
     assert table['columns']['county'] == {'min': 'Albany', 'max': 'Yates'}
     data = client.execute(
         '''{ group(by: ["state", "county"], counts: "counts") {
-        filter(on: {int: {name: "counts", greaterEqual: 200}}) {
+        scan(filter: {gt: [{name: "counts"}, {int: 200}]}) {
         aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
         min: column(name: "min") { ... on StringColumn { values } }
         max: column(name: "max") { ... on StringColumn { values } } } } } }'''
     )
-    agg = data['group']['filter']['aggregate']
+    agg = data['group']['scan']['aggregate']
     assert agg['min']['values'] == ['Naval Anacost Annex', 'Alsip', 'Alief', 'Acton']
     assert agg['max']['values'] == ['Washington Navy Yard', 'Worth', 'Webster', 'Woodland Hills']
     data = client.execute(
@@ -485,8 +492,7 @@ def test_partition(client):
     assert len(counts) == 66
     assert counts.count(0) == 61
     data = client.execute(
-        '''{ partition(by: ["state"], counts: "c") {
-        filter(on: {string: {name: "state", equal: "NY"}}) {
+        '''{ partition(by: ["state"], counts: "c") { filter(query: {state: {equal: "NY"}}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }'''
     )
     agg = data['partition']['filter']

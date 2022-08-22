@@ -352,7 +352,7 @@ class Dataset:
                 columns[alias or name] = C.map(table[name], func, **field)
         return type(self)(pa.table(columns))
 
-    @doc_field(on="extended filters on columns organized by type")
+    @doc_field(on="deprecated: only used for lists")
     @no_type_check
     def filter(self, info: Info, on: Filters = {}) -> 'Dataset':
         """Return table with rows which match all (by default) queries.
@@ -363,16 +363,8 @@ class Dataset:
         table = self.select(info)
         filters = list(map(dict, itertools.chain(*dict(on).values())))
         lists = {name for name in table.column_names if C.is_list_type(table[name])}
-        masks = [T.mask(table, **value) for value in filters if value['name'] not in lists]
-        if masks:
-            mask = functools.reduce(pc.and_, masks)
-            if selections(*info.selected_fields) == {'length'}:  # optimized for count
-                return type(self)(range(C.count(mask, True)))
-            table = table.filter(mask)
         masks = [T.mask(table, **value) for value in filters if value['name'] in lists]
-        if masks:
-            mask = functools.reduce(pc.and_, masks).combine_chunks()
-            table = T.filter_list(table, mask)
+        table = T.filter_list(table, functools.reduce(pc.and_, masks).combine_chunks())
         return type(self)(table)
 
     @doc_field(filter="selected rows", columns="projected columns")

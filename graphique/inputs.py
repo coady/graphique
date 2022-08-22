@@ -197,92 +197,15 @@ class Filter(Query):
     name: str
     is_in = UNSET
 
-    def keys(self):
-        for name in super().keys():
-            if getattr(self, name) != getattr(type(self), name, UNSET):
-                yield name
-
 
 @strawberry.input(description="predicates for ints")
 class IntFilter(Filter):
     __annotations__ = dict(IntQuery.__annotations__)
 
 
-@strawberry.input(description="predicates for longs")
-class LongFilter(Filter):
-    __annotations__ = dict(LongQuery.__annotations__)
-
-
-@strawberry.input(description="predicates for floats")
-class FloatFilter(Filter):
-    __annotations__.update(FloatQuery.__annotations__)
-    is_finite: bool = False
-    is_inf: bool = False
-    is_nan: bool = False
-
-
-@strawberry.input(description="predicates for decimals")
-class DecimalFilter(Filter):
-    __annotations__ = dict(DecimalQuery.__annotations__)
-
-
-@strawberry.input(description="predicates for dates")
-class DateFilter(Filter):
-    __annotations__ = dict(DateQuery.__annotations__)
-
-
-@strawberry.input(description="predicates for datetimes")
-class DateTimeFilter(Filter):
-    __annotations__ = dict(DateTimeQuery.__annotations__)
-
-
-@strawberry.input(description="predicates for times")
-class TimeFilter(Filter):
-    __annotations__ = dict(TimeQuery.__annotations__)
-
-
-@strawberry.input(description="predicates for durations")
-class DurationFilter(Filter):
-    __annotations__ = dict(DurationQuery.__annotations__)
-
-
-@strawberry.input(description="predicates for binaries")
-class Base64Filter(Filter):
-    __annotations__ = dict(Base64Query.__annotations__)
-
-
-@strawberry.input(description=f"[predicates]({links.compute}#string-predicates) for strings")
-class StringFilter(Filter):
-    __annotations__.update(StringQuery.__annotations__)
-    match_substring: Optional[str] = UNSET
-    match_like: Optional[str] = UNSET
-    ignore_case: bool = strawberry.field(default=False, description="case option for substrings")
-    regex: bool = strawberry.field(default=False, description="regex option for substrings")
-    string_is_ascii: bool = False
-    utf8_is_alnum: bool = False
-    utf8_is_alpha: bool = False
-    utf8_is_decimal: bool = False
-    utf8_is_digit: bool = False
-    utf8_is_lower: bool = False
-    utf8_is_numeric: bool = False
-    utf8_is_printable: bool = False
-    utf8_is_space: bool = False
-    utf8_is_title: bool = False
-    utf8_is_upper: bool = False
-
-
 @strawberry.input(description="predicates for columns of any type as a tagged union")
 class Filters(Input):
     int: List[IntFilter] = default_field(list)
-    long: List[LongFilter] = default_field(list)
-    float: List[FloatFilter] = default_field(list)
-    decimal: List[DecimalFilter] = default_field(list)
-    date: List[DateFilter] = default_field(list)
-    datetime: List[DateTimeFilter] = default_field(list)
-    time: List[TimeFilter] = default_field(list)
-    duration: List[DurationFilter] = default_field(list)
-    base64: List[Base64Filter] = default_field(list)
-    string: List[StringFilter] = default_field(list)
 
 
 @strawberry.input
@@ -357,6 +280,9 @@ class LongFunction(NumericFunction):
 class FloatFunction(NumericFunction):
     fill_null: Optional[float] = UNSET
     digitize: Optional[List[float]] = default_field(description=inspect.getdoc(Column.digitize))
+    is_finite: bool = False
+    is_inf: bool = False
+    is_nan: bool = False
 
 
 @strawberry.input(description="functions for decimals")
@@ -460,6 +386,8 @@ class StringFunction(Function):
     binary_join_element_wise: Optional[List[str]] = UNSET
     find_substring: Optional[str] = UNSET
     count_substring: Optional[str] = UNSET
+    match_substring: Optional[str] = UNSET
+    match_like: Optional[str] = UNSET
     ignore_case: bool = strawberry.field(default=False, description="case option for substrings")
     regex: bool = strawberry.field(default=False, description="regex option for substrings")
     fill_null: Optional[str] = UNSET
@@ -469,6 +397,17 @@ class StringFunction(Function):
     utf8_upper: bool = False
     utf8_swapcase: bool = False
     utf8_reverse: bool = False
+    string_is_ascii: bool = False
+    utf8_is_alnum: bool = False
+    utf8_is_alpha: bool = False
+    utf8_is_decimal: bool = False
+    utf8_is_digit: bool = False
+    utf8_is_lower: bool = False
+    utf8_is_numeric: bool = False
+    utf8_is_printable: bool = False
+    utf8_is_space: bool = False
+    utf8_is_title: bool = False
+    utf8_is_upper: bool = False
 
 
 @strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for structs")
