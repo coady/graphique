@@ -41,7 +41,6 @@ def test_columns(executor):
 
     for name in ('uint8', 'int8', 'uint16', 'int16', 'int32'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
-        assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
         assert execute(f'{{ {name} {{ index(value: 0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
@@ -51,7 +50,6 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ min max }} }}')
     for name in ('uint32', 'uint64', 'int64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
-        assert execute(f'{{ {name} {{ count(equal: 0) }} }}') == {name: {'count': 1}}
         assert execute(f'{{ {name} {{ index(value: 0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
@@ -61,7 +59,6 @@ def test_columns(executor):
 
     for name in ('float', 'double'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0.0, None]}}
-        assert execute(f'{{ {name} {{ count(equal: 0.0) }} }}') == {name: {'count': 1}}
         assert execute(f'{{ {name} {{ index(value: 0.0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
@@ -73,7 +70,6 @@ def test_columns(executor):
 
     for name in ('date32', 'date64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['1970-01-01', None]}}
-        assert execute(f'{{ {name} {{ count(equal: "1970-01-01") }} }}') == {name: {'count': 1}}
         assert execute(f'{{ {name} {{ index(value: "1970-01-01") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
@@ -89,7 +85,6 @@ def test_columns(executor):
     assert data == {
         'timestamp': {'fillNull': {'values': ['1970-01-01T00:00:00', '1970-01-02T00:00:00']}}
     }
-    assert execute('{ timestamp { count(equal: "1970-01-01") } }') == {'timestamp': {'count': 1}}
     assert execute('{ timestamp { index(value: "1970-01-01") } }') == {'timestamp': {'index': 0}}
     assert execute('{ timestamp { min max } }')
     data = execute(
@@ -101,7 +96,6 @@ def test_columns(executor):
 
     for name in ('time32', 'time64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['00:00:00', None]}}
-        assert execute(f'{{ {name} {{ count(equal: "00:00:00") }} }}') == {name: {'count': 1}}
         assert execute(f'{{ {name} {{ index(value: "00:00:00") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
@@ -111,7 +105,6 @@ def test_columns(executor):
 
     for name in ('binary', 'string'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
-        assert execute(f'{{ {name} {{ count(equal: "") }} }}') == {name: {'count': 1}}
         assert execute(f'{{ {name} {{ index(value: "") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
@@ -133,8 +126,6 @@ def test_boolean(executor):
         return executor(f'{{ columns {query} }}')['columns']
 
     assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
-    assert execute('{ bool { count(equal: false) } }') == {'bool': {'count': 1}}
-    assert execute('{ bool { count } }') == {'bool': {'count': 1}}
     assert execute('{ bool { index(value: false) } }') == {'bool': {'index': 0}}
     assert execute('{ bool { index(value: false, start: 1, end: 2) } }') == {'bool': {'index': -1}}
     assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
@@ -207,9 +198,9 @@ def test_numeric(executor):
     assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor(
         '''{ apply(float: {name: "float", coalesce: "int32"})
-        { columns { float { count(equal: null) } } } }'''
+        { columns { float { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'float': {'count': 1}}}}
+    assert data == {'apply': {'columns': {'float': {'values': [0.0, None]}}}}
     data = executor('{ column(name: "float", apply: {coalesce: "int32"}) { type } }')
     assert data == {'column': {'type': 'float'}}
     data = executor(
@@ -290,9 +281,9 @@ def test_duration(executor):
     assert column['subtract'] == {'values': [-62135596800.0, 0.0]}
     data = executor(
         '''{ scan(columns: {alias: "diff", sub: [{name: "timestamp"}, {name: "timestamp"}]})
-        { column(name: "diff") { ... on DurationColumn { values count(equal: 0.0) } } } }'''
+        { column(name: "diff") { ... on DurationColumn { values } } } }'''
     )
-    assert data == {'scan': {'column': {'values': [0.0, None], 'count': 1}}}
+    assert data == {'scan': {'column': {'values': [0.0, None]}}}
     data = executor(
         '''{ partition(by: ["timestamp"] diffs: [{name: "timestamp", greater: 0.0}]) { length } }'''
     )

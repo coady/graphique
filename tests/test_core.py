@@ -78,13 +78,7 @@ def test_lists():
 
 
 def test_membership():
-    array = pa.chunked_array([[0]])
-    assert C.count(C.mask(array, is_nan=False), True) == 0
-    array = pa.chunked_array([[0, 1]])
-    assert C.count(array, 1) == 1
     array = pa.chunked_array([[1, 1]])
-    assert C.count(array, 0) == C.count(array, None) == 0
-    assert C.count(array, 1) == 2
     assert C.index(array, 1) == C.index(array, 1, end=1) == 0
     assert C.index(array, 1, start=1) == 1
     assert C.index(array, 1, start=2) == -1
@@ -95,7 +89,6 @@ def test_functional(table):
     assert set(C.equal(array, None).to_pylist()) == {False}
     assert set(C.not_equal(array, None).to_pylist()) == {True}
     mask = C.equal(array, 'CA')
-    assert C.count(table['city'], table['county'].dictionary_encode()) == 2805
     assert mask == C.is_in(array, ['CA']) == C.is_in(table['state'], ['CA'])
     assert C.not_equal(array, 'CA') == pc.invert(mask)
     assert len(array.filter(mask)) == 2647
@@ -155,7 +148,6 @@ def test_partition(table):
     assert len(groups) == len(counts) == 66
     assert pc.sum(counts).as_py() == 41700
     assert groups['state'][0].as_py() == 'NY'
-    assert C.count(groups['state'], 'NY') == 3
     assert groups['county'][0].values.to_pylist() == ['Suffolk', 'Suffolk']
     groups, counts = T.partition(table, 'state', 'county')
     assert len(groups) == len(counts) == 22751

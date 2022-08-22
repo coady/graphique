@@ -16,8 +16,7 @@ from strawberry.field import StrawberryField
 from strawberry.types import Info
 from typing_extensions import Annotated
 from .core import Column as C, ListChunk
-from .inputs import BooleanQuery, IntQuery, LongQuery, FloatQuery, DecimalQuery, DateQuery, links
-from .inputs import DateTimeQuery, TimeQuery, DurationQuery, Base64Query, StringQuery
+from .inputs import links
 from .scalars import Long, type_map
 
 T = TypeVar('T')
@@ -74,16 +73,10 @@ class Column:
             return Set(*self.array.value_counts().flatten())
         return Set(self.array.unique())
 
-    def count(self, **query) -> Long:
-        """Return number of matching values.
-
-        Optimized for `null`, and an empty query is equivalent to not `null`.
-        """
-        if query == {'equal': None}:
-            return self.array.null_count
-        if query in ({}, {'not_equal': None}):
-            return len(self.array) - self.array.null_count
-        return C.count(C.mask(self.array, **query), True)
+    def count(self, null: bool = False) -> Long:
+        """Return number of valid or null values."""
+        count = self.array.null_count
+        return count if null else len(self.array) - count
 
     def index(self, value, start: Long = 0, end: Optional[Long] = None) -> Long:
         """Return first index of occurrence of value; -1 indicates not found.
@@ -228,7 +221,7 @@ class NumericColumn(Column):
 
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
-    count = BooleanQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=bool)
     values = annotate(Column.values, List[Optional[bool]])
     unique = annotate(Column.unique, Set[bool])
@@ -246,7 +239,7 @@ class BooleanColumn(Column):
 
 @strawberry.type(description="column of ints")
 class IntColumn(NumericColumn):
-    count = IntQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=int)
     values = annotate(Column.values, List[Optional[int]])
     unique = annotate(Column.unique, Set[int])
@@ -268,7 +261,7 @@ class IntColumn(NumericColumn):
 
 @strawberry.type(description="column of longs")
 class LongColumn(NumericColumn):
-    count = LongQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=Long)
     values = annotate(Column.values, List[Optional[Long]])
     unique = annotate(Column.unique, Set[Long])
@@ -292,7 +285,7 @@ class LongColumn(NumericColumn):
 
 @strawberry.type(description="column of floats")
 class FloatColumn(NumericColumn):
-    count = FloatQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=float)
     values = annotate(Column.values, List[Optional[float]])
     unique = annotate(Column.unique, Set[float])
@@ -329,7 +322,7 @@ class FloatColumn(NumericColumn):
 
 @strawberry.type(description="column of decimals")
 class DecimalColumn(Column):
-    count = DecimalQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     values = annotate(Column.values, List[Optional[Decimal]])
     unique = annotate(Column.unique, Set[Decimal])
     min = annotate(Column.min, Optional[Decimal])
@@ -352,7 +345,7 @@ class TemporalColumn:
 
 @strawberry.type(description="column of dates")
 class DateColumn(Column):
-    count = DateQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=date)
     values = annotate(Column.values, List[Optional[date]])
     unique = annotate(Column.unique, Set[date])
@@ -375,7 +368,7 @@ class DateColumn(Column):
 
 @strawberry.type(description="column of datetimes")
 class DateTimeColumn(Column):
-    count = DateTimeQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=datetime)
     values = annotate(Column.values, List[Optional[datetime]])
     unique = annotate(Column.unique, Set[datetime])
@@ -408,7 +401,7 @@ class DateTimeColumn(Column):
 
 @strawberry.type(description="column of times")
 class TimeColumn(Column):
-    count = TimeQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=time)
     values = annotate(Column.values, List[Optional[time]])
     unique = annotate(Column.unique, Set[time])
@@ -426,14 +419,14 @@ class TimeColumn(Column):
 
 @strawberry.type(description="column of durations")
 class DurationColumn(Column):
-    count = DurationQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=timedelta)
     values = annotate(Column.values, List[Optional[timedelta]])
 
 
 @strawberry.type(description="column of binaries")
 class Base64Column(Column):
-    count = Base64Query.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=bytes)
     values = annotate(Column.values, List[Optional[bytes]])
     unique = annotate(Column.unique, Set[bytes])
@@ -449,7 +442,7 @@ class Base64Column(Column):
 
 @strawberry.type(description="column of strings")
 class StringColumn(Column):
-    count = StringQuery.resolver(Column.count)
+    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=str)
     values = annotate(Column.values, List[Optional[str]])
     unique = annotate(Column.unique, Set[str])

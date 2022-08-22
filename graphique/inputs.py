@@ -53,13 +53,9 @@ class Input:
         annotations = dict(cls.__annotations__)
         defaults = {name: getattr(cls, name) for name in annotations if hasattr(cls, name)}
         for field in cls._type_definition.fields:  # type: ignore
-            if not hasattr(cls, field.name):
-                argument = strawberry.argument(description=field.description)
-                annotations[field.name] = Annotated[annotations[field.name], argument]
-                defaults[field.name] = field.default_factory()
-        for name in cls.nullables:
-            argument = strawberry.argument(description=cls.nullables[name])
-            annotations[name] = Annotated[annotations[name], argument]
+            argument = strawberry.argument(description=field.description)
+            annotations[field.name] = Annotated[annotations[field.name], argument]
+            defaults[field.name] = field.default_factory()
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 

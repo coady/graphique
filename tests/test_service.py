@@ -10,9 +10,9 @@ def test_slice(client):
     assert len(zipcodes) == 41699
     data = client.execute('{ slice(offset: -1, reverse: true) { columns { zipcode { values } } } }')
     assert data['slice']['columns']['zipcode']['values'] == [99950]
-    data = client.execute('{ columns { zipcode { count(notEqual: null) } } }')
+    data = client.execute('{ columns { zipcode { count } } }')
     assert data['columns']['zipcode']['count'] == 41700
-    data = client.execute('{ columns { zipcode { count(equal: null) } } }')
+    data = client.execute('{ columns { zipcode { count(null: true) } } }')
     assert data['columns']['zipcode']['count'] == 0
 
 
@@ -29,13 +29,6 @@ def test_ints(client):
     assert zipcodes['max'] == 99950
     assert len(zipcodes['unique']['values']) == 41700
     assert set(zipcodes['unique']['counts']) == {1}
-    data = client.execute('{ columns { zipcode { truthy: count count(equal: 0) } } }')
-    zipcodes = data['columns']['zipcode']
-    assert zipcodes['truthy'] == 41700
-    assert zipcodes['count'] == 0
-    data = client.execute('{ columns { zipcode { count(equal: 501) } } }')
-    zipcodes = data['columns']['zipcode']
-    assert zipcodes['count'] == 1
 
 
 def test_floats(client):
@@ -48,10 +41,6 @@ def test_floats(client):
     longitudes = data['columns']['longitude']
     assert longitudes['min'] == pytest.approx(-174.21333)
     assert longitudes['max'] == pytest.approx(-65.301389)
-    data = client.execute('{ columns { latitude { truthy: count count(equal: 0.0) } } }')
-    latitudes = data['columns']['latitude']
-    assert latitudes['truthy'] == 41700
-    assert latitudes['count'] == 0
     data = client.execute('{ columns { latitude { quantile(q: [0.5]) } } }')
     (quantile,) = data['columns']['latitude']['quantile']
     assert quantile == pytest.approx(39.12054)
@@ -102,12 +91,6 @@ def test_strings(client):
     counties = data['columns']['county']
     assert len(counties['unique']['values']) == counties['unique']['length'] == 1920
     assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
-    data = client.execute('{ columns { state { truthy: count count(equal: "") } } }')
-    states = data['columns']['state']
-    assert states['truthy'] == 41700
-    assert states['count'] == 0
-    data = client.execute('{ columns { state { count(equal: "CA") } } }')
-    assert data == {'columns': {'state': {'count': 2647}}}
     data = client.execute(
         '''{ filter(query: {state: {equal: "CA"}}) {
         apply(string: {name: "city", utf8Length: true, alias: "size"}) {
@@ -151,11 +134,12 @@ def test_strings(client):
 def test_string_methods(client):
     data = client.execute(
         '''{ group(by: ["city"]) { columns { city { split {
-        element { ... on StringColumn { count(equal: "New") } }
+        element { ... on StringColumn { values } }
         count { ... on LongColumn { max } } } } } } }'''
     )
-    cities = data['group']['columns']['city']
-    assert cities['split'] == {'element': {'count': 177}, 'count': {'max': 6}}
+    cities = data['group']['columns']['city']['split']
+    assert cities['element']['values'].count('New') == 177
+    assert cities['count'] == {'max': 6}
     data = client.execute(
         '''{ group(by: ["city"]) { columns { city {
         split(pattern: "-", maxSplits: 1, reverse: true) {

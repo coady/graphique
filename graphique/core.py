@@ -8,7 +8,6 @@ import bisect
 import contextlib
 import functools
 import itertools
-import operator
 from concurrent import futures
 from dataclasses import dataclass
 from datetime import time
@@ -258,7 +257,7 @@ class Column(pa.ChunkedArray):
             elif 'is_' not in op:
                 op += '_regex' * regex
                 masks.append(Column.call(self, getattr(pc, op), value, **options))
-            elif value:
+            else:
                 masks.append(Column.call(self, getattr(pc, op)))
         return functools.reduce(getattr(pc, func), masks) if masks else self.cast('bool')
 
@@ -330,14 +329,6 @@ class Column(pa.ChunkedArray):
         if not isinstance(bins, (pa.Array, np.ndarray)):
             bins = pa.array(bins, self.type)
         return Column.map(self, np.digitize, bins=bins, right=bool(right))
-
-    def count(self, value) -> int:
-        """Return number of occurrences of value."""
-        if value is None:
-            return self.null_count
-        if not isinstance(value, bool):
-            self, value = Column.equal(self, value), True
-        return sum(map(operator.attrgetter(f'{value}_count'.lower()), self.iterchunks()))
 
     def index(self, value, start=0, end=None) -> int:
         """Return the first index of a value."""
