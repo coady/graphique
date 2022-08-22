@@ -14,7 +14,7 @@ def parse_long(value) -> int:
 
 
 Long = strawberry.scalar(int, name='Long', description="64-bit int", parse_value=parse_long)
-Duration = strawberry.scalar(
+Duration = strawberry.scalar(  # pragma: no branch
     timedelta,
     name='Duration',
     description="duration float (in seconds)",

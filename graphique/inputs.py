@@ -6,7 +6,7 @@ import inspect
 import operator
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, List, Optional
+from typing import Callable, Generic, List, Optional, TypeVar
 import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
@@ -19,7 +19,7 @@ from typing_extensions import Annotated
 from .core import ListChunk, Column
 from .scalars import Long, classproperty
 
-comparisons = ('equal', 'not_equal', 'less', 'less_equal', 'greater', 'greater_equal')
+T = TypeVar('T')
 
 
 class links:
@@ -84,11 +84,16 @@ def default_field(default_factory: Callable = lambda: UNSET, **kwargs) -> Strawb
     return strawberry.field(default_factory=default_factory, **kwargs)
 
 
-class Query(Input):
-    """base class for predicates"""
+@strawberry.input(description="predicates for scalars")
+class Query(Generic[T], Input):
+    equal: Optional[T] = UNSET
+    not_equal: Optional[T] = UNSET
+    less: Optional[T] = UNSET
+    less_equal: Optional[T] = UNSET
+    greater: Optional[T] = UNSET
+    greater_equal: Optional[T] = UNSET
+    is_in: Optional[List[T]] = UNSET
 
-    type_map: dict
-    locals().update(dict.fromkeys(comparisons, UNSET))
     nullables = {
         'equal': "`null` is equivalent to arrow `is_null`.",
         'not_equal': "`null` is equivalent to arrow `is_valid`.",
@@ -98,9 +103,7 @@ class Query(Input):
     def annotations(cls, types: dict) -> dict:
         """Return mapping of annotations from a mapping of types."""
         return {
-            name: Optional[cls.type_map[types[name]]]
-            for name in types
-            if types[name] in cls.type_map
+            name: Optional[Query[types[name]]] for name in types if types[name] not in (list, dict)  # type: ignore
         }
 
     @classmethod
@@ -109,94 +112,11 @@ class Query(Input):
         return functools.partial(resolve_annotations, annotations=cls.annotations(types))
 
 
-@strawberry.input(description="predicates for booleans")
-class BooleanQuery(Query):
-    __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bool])
-
-
-@strawberry.input(description="predicates for ints")
-class IntQuery(Query):
-    __annotations__ = dict.fromkeys(comparisons, Optional[int])
-    is_in: Optional[List[int]] = UNSET
-
-
-@strawberry.input(description="predicates for longs")
-class LongQuery(Query):
-    __annotations__ = dict.fromkeys(comparisons, Optional[Long])
-    is_in: Optional[List[Long]] = UNSET
-
-
-@strawberry.input(description="predicates for floats")
-class FloatQuery(Query):
-    __annotations__ = dict.fromkeys(comparisons, Optional[float])
-    is_in: Optional[List[float]] = UNSET
-
-
-@strawberry.input(description="predicates for decimals")
-class DecimalQuery(Query):
-    __annotations__ = dict.fromkeys(comparisons, Optional[Decimal])
-    is_in: Optional[List[Decimal]] = UNSET
-
-
-@strawberry.input(description="predicates for dates")
-class DateQuery(Query):
-    __annotations__ = dict.fromkeys(comparisons, Optional[date])
-    is_in: Optional[List[date]] = UNSET
-
-
-@strawberry.input(description="predicates for datetimes")
-class DateTimeQuery(Query):
-    __annotations__ = dict.fromkeys(comparisons, Optional[datetime])
-    is_in: Optional[List[datetime]] = UNSET
-
-
-@strawberry.input(description="predicates for times")
-class TimeQuery(Query):
-    __annotations__ = dict.fromkeys(comparisons, Optional[time])
-    is_in: Optional[List[time]] = UNSET
-
-
-@strawberry.input(description="predicates for durations")
-class DurationQuery(Query):
-    __annotations__ = dict.fromkeys(comparisons, Optional[timedelta])
-
-
-@strawberry.input(description="predicates for binaries")
-class Base64Query(Query):
-    __annotations__ = dict.fromkeys(['equal', 'not_equal'], Optional[bytes])
-    is_in: Optional[List[bytes]] = UNSET
-
-
-@strawberry.input(description="predicates for strings")
-class StringQuery(Query):
-    __annotations__ = dict.fromkeys(comparisons, Optional[str])
-    is_in: Optional[List[str]] = UNSET
-
-
-Query.type_map = {
-    bool: BooleanQuery,
-    int: IntQuery,
-    Long: LongQuery,
-    float: FloatQuery,
-    Decimal: DecimalQuery,
-    date: DateQuery,
-    datetime: DateTimeQuery,
-    time: TimeQuery,
-    timedelta: DurationQuery,
-    bytes: Base64Query,
-    str: StringQuery,
-}
-
-
 @strawberry.input
-class Filter(Query):
+class IntFilter(Input):
     name: str
-    is_in = UNSET
-
-
-@strawberry.input(description="predicates for ints")
-class IntFilter(Filter):
-    __annotations__ = dict(IntQuery.__annotations__)
+    not_equal: Optional[int] = UNSET
+    greater: Optional[int] = UNSET
 
 
 @strawberry.input(description="predicates for columns of any type as a tagged union")
