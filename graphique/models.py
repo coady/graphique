@@ -73,10 +73,9 @@ class Column:
             return Set(*self.array.value_counts().flatten())
         return Set(self.array.unique())
 
-    def count(self, null: bool = False) -> Long:
+    def count(self, mode: str = 'only_valid') -> Long:
         """Return number of valid or null values."""
-        count = self.array.null_count
-        return count if null else len(self.array) - count
+        return pc.count(self.array, mode=mode).as_py()
 
     def index(self, value, start: Long = 0, end: Optional[Long] = None) -> Long:
         """Return first index of occurrence of value; -1 indicates not found.

@@ -12,7 +12,7 @@ def test_slice(client):
     assert data['slice']['columns']['zipcode']['values'] == [99950]
     data = client.execute('{ columns { zipcode { count } } }')
     assert data['columns']['zipcode']['count'] == 41700
-    data = client.execute('{ columns { zipcode { count(null: true) } } }')
+    data = client.execute('{ columns { zipcode { count(mode: "only_null") } } }')
     assert data['columns']['zipcode']['count'] == 0
 
 

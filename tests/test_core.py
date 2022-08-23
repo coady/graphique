@@ -1,4 +1,3 @@
-from datetime import time
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -36,7 +35,6 @@ def test_chunks():
     assert table['col'].unique() == pa.array('abc')
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
     assert pa.Array.equals(*(chunk.dictionary for chunk in C.unify_dictionaries(array).chunks))
-    assert C.equal(array, 'a').to_pylist() == [True, False, True, False, True]
     assert C.index(array, 'a') == 0
     assert C.index(array, 'c') == 3
     assert C.index(array, 'a', start=3) == 4
@@ -86,12 +84,6 @@ def test_membership():
 
 def test_functional(table):
     array = table['state'].dictionary_encode()
-    assert set(C.equal(array, None).to_pylist()) == {False}
-    assert set(C.not_equal(array, None).to_pylist()) == {True}
-    mask = C.equal(array, 'CA')
-    assert mask == C.is_in(array, ['CA']) == C.is_in(table['state'], ['CA'])
-    assert C.not_equal(array, 'CA') == pc.invert(mask)
-    assert len(array.filter(mask)) == 2647
     assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
     assert sum(C.mask(array, utf8_is_upper=True).to_pylist()) == 41700
     mask = T.mask(table, 'city', apply={'equal': 'county'})
@@ -174,11 +166,6 @@ def test_sort(table):
     assert not T.sort(table.filter(mask), 'state')
 
 
-def test_time():
-    array = pa.array([time(), None], pa.time32('s'))
-    assert C.equal(array, time()).to_pylist() == [True, None]
-
-
 def test_numeric():
     array = pa.chunked_array([range(5)])
     assert C.digitize(array, range(0, 5, 2)).to_pylist() == [1, 1, 2, 2, 3]
@@ -200,7 +187,6 @@ def test_not_implemented():
     for index in (-1, 1):
         with pytest.raises(ValueError):
             pc.list_element(pa.array([[0]]), index)
-    assert pc.equal([0, None], None).to_pylist() == [None] * 2
     with pytest.raises(NotImplementedError):
         pc.any([0])
     dictionary = pa.array(['']).dictionary_encode()

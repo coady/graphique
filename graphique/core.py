@@ -271,18 +271,6 @@ class Column(pa.ChunkedArray):
         array = func(dictionary, *args, **kwargs)
         return array if indices is None else array.take(indices)
 
-    def equal(self, value) -> pa.ChunkedArray:
-        """Return boolean mask array which matches scalar value."""
-        if value is None:
-            return pc.is_null(self)
-        return Column.call(self, pc.equal, value)
-
-    def not_equal(self, value) -> pa.ChunkedArray:
-        """Return boolean mask array which doesn't match scalar value."""
-        if value is None:
-            return pc.is_valid(self)
-        return Column.call(self, pc.not_equal, value)
-
     def fill_null(self, value) -> pa.ChunkedArray:
         """Optimized `fill_null` to check `null_count`."""
         return self.fill_null(value) if self.null_count else self
@@ -598,7 +586,7 @@ class Table(pa.Table):
             if Column.is_list_type(self[name]):
                 scalars = list(ListChunk.scalars(self[name]))
                 column = pa.array(map(func, scalars), self[name].type.value_type)
-                self = Table.filter_list(self, pa.concat_arrays(map(Column.equal, scalars, column)))
+                self = Table.filter_list(self, pa.concat_arrays(map(pc.equal, scalars, column)))
             else:
-                self = self.filter(Column.equal(self[name], func(self[name])))
+                self = self.filter(pc.equal(self[name], func(self[name])))
         return self
