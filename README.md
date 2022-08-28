@@ -90,7 +90,7 @@ dev
 
 * Dataset schema introspection
 * Dataset scanning
-* List aggregation optimizations
+* List aggregation, filtering, and sorting optimizations
 
 0.9
 

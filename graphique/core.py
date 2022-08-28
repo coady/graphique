@@ -78,8 +78,9 @@ class ListChunk(pa.lib.BaseListArray):
 
     def from_counts(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
         """Return list array by converting counts into offsets."""
-        offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum(counts)])
-        return pa.LargeListArray.from_arrays(offsets, values)
+        offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum_checked(counts)])
+        cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
+        return cls.from_arrays(offsets, values)
 
     def element(self, index: int) -> pa.Array:
         """element at index of each list scalar; defaults to null"""
@@ -122,12 +123,6 @@ class ListChunk(pa.lib.BaseListArray):
         """Return list array by mapping function across scalars, with null handling."""
         values = [func(value, **kwargs) for value in ListChunk.scalars(self)]
         return ListChunk.from_counts(pa.array(map(len, values)), pa.concat_arrays(values))
-
-    def filter_list(self, mask: pa.BooleanArray) -> pa.lib.BaseListArray:
-        """Return list array by selecting true values."""
-        masks = type(self).from_arrays(self.offsets, mask)
-        counts = pa.array(scalar.values.true_count for scalar in masks)
-        return ListChunk.from_counts(counts, pc.list_flatten(self).filter(mask))
 
     def aggregate(self, **funcs: Optional[pc.FunctionOptions]) -> pa.StructArray:
         """Return aggregated scalars by grouping each hash function on the parent indices.
@@ -419,8 +414,13 @@ class Table(pa.Table):
     def from_offsets(self, offsets: pa.IntegerArray) -> pa.Table:
         """Return table with columns converted into list columns."""
         cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
-        arrays = [cls.from_arrays(offsets, *column.chunks) for column in self.combine_chunks()]
-        return pa.table(arrays, self.column_names)
+        arrays = [col.combine_chunks() if col else pa.array([], col.type) for col in self]
+        return pa.table([cls.from_arrays(offsets, array) for array in arrays], self.column_names)
+
+    def from_counts(self, counts: pa.IntegerArray) -> pa.Table:
+        """Return table with columns converted into list columns."""
+        offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum_checked(counts)])
+        return Table.from_offsets(self, offsets)
 
     def partition(self, *names: str, **predicates: tuple) -> tuple:
         """Return table partitioned by discrete differences and corresponding counts.
@@ -510,9 +510,8 @@ class Table(pa.Table):
                 scalar.values[:length] for scalar in ListChunk.from_counts(counts, indices)
             )
             counts = pc.min_element_wise(counts, length)
-        table = Table.select_list(self, pc.list_flatten).take(indices).combine_chunks()
-        arrays = [ListChunk.from_counts(counts, *column.chunks) for column in table]
-        return Table.union(self, pa.table(arrays, table.column_names))
+        table = Table.select_list(self, pc.list_flatten).take(indices)
+        return Table.union(self, Table.from_counts(table, counts))
 
     def select_list(self, apply: Callable = lambda c: c) -> pa.Table:
         """Return table with only the list columns."""
@@ -577,9 +576,12 @@ class Table(pa.Table):
 
     def filter_list(self, mask: pa.BooleanArray):
         """Return table with list columns filtered within scalars."""
-        table = Table.select_list(self).combine_chunks()
-        arrays = [ListChunk.filter_list(column.chunk(0), mask) for column in table]
-        return Table.union(self, pa.table(arrays, table.column_names))
+        table = Table.select_list(self)
+        counts = Table.list_value_length(table)
+        first = table[0].combine_chunks()
+        flattened = pa.table(list(map(pc.list_flatten, table)), table.column_names)
+        counts = ListChunk.sum(type(first).from_arrays(first.offsets, mask)).fill_null(0)
+        return Table.union(self, Table.from_counts(flattened.filter(mask), counts))
 
     def matched(self, func: Callable, *names: str) -> pa.Table:
         for name in names:
