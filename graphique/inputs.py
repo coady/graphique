@@ -115,8 +115,8 @@ class Query(Generic[T], Input):
 @strawberry.input
 class IntFilter(Input):
     name: str
-    not_equal: Optional[int] = UNSET
-    greater: Optional[int] = UNSET
+    ne: Optional[int] = UNSET
+    gt: Optional[int] = UNSET
 
 
 @strawberry.input(description="predicates for columns of any type as a tagged union")

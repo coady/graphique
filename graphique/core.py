@@ -15,6 +15,7 @@ from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
 import numpy as np  # type: ignore
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.dataset as ds
 
 threader = futures.ThreadPoolExecutor(pa.cpu_count())
 
@@ -243,8 +244,6 @@ class Column(pa.ChunkedArray):
     def mask(self, func='and', ignore_case=False, regex=False, **query) -> pa.ChunkedArray:
         """Return boolean mask array which matches query predicates."""
         masks = []
-        if Column.is_list_type(self):
-            self = pc.list_flatten(self)
         options = {'ignore_case': True} if ignore_case else {}
         for op, value in query.items():
             if hasattr(Column, op):
@@ -527,7 +526,7 @@ class Table(pa.Table):
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
         return self.take(func(table, sort_keys=keys.items()))
 
-    def mask(self, name: str, apply: dict = {}, **query: dict) -> pa.ChunkedArray:
+    def mask(self, name: str, apply: dict = {}) -> pa.ChunkedArray:
         """Return mask array which matches query."""
         masks = []
         for op, column in apply.items():
@@ -540,8 +539,6 @@ class Table(pa.Table):
             else:
                 mask = pa.chunked_array(map(func, ListChunk.scalars(self[name]), column))
             masks.append(mask)
-        if query:
-            masks.append(Column.mask(self[name], **query))
         return functools.reduce(getattr(pc, 'and'), masks)
 
     def apply(
@@ -574,21 +571,27 @@ class Table(pa.Table):
             return self.append_column(alias, column)
         return self.set_column(self.column_names.index(name), name, column)
 
-    def filter_list(self, mask: pa.BooleanArray):
+    def filter_list(self, expr: ds.Expression) -> 'Table':
         """Return table with list columns filtered within scalars."""
         table = Table.select_list(self)
         counts = Table.list_value_length(table)
         first = table[0].combine_chunks()
-        flattened = pa.table(list(map(pc.list_flatten, table)), table.column_names)
+        indices = pc.list_parent_indices(first)
+        columns = [
+            pc.list_flatten(column) if Column.is_list_type(column) else column.take(indices)
+            for column in self
+        ]
+        flattened = pa.table(columns, self.column_names)
+        mask = ds.dataset(flattened).to_table(columns={'mask': expr})['mask'].combine_chunks()
         counts = ListChunk.sum(type(first).from_arrays(first.offsets, mask)).fill_null(0)
-        return Table.union(self, Table.from_counts(flattened.filter(mask), counts))
+        flattened = flattened.select(table.column_names).filter(mask)
+        return Table.union(self, Table.from_counts(flattened, counts))
 
     def matched(self, func: Callable, *names: str) -> pa.Table:
         for name in names:
             if Column.is_list_type(self[name]):
-                scalars = list(ListChunk.scalars(self[name]))
-                column = pa.array(map(func, scalars), self[name].type.value_type)
-                self = Table.filter_list(self, pa.concat_arrays(map(pc.equal, scalars, column)))
+                self = self.append_column('', getattr(ListChunk, func.__name__)(self[name]))
+                self = Table.filter_list(self, ds.field(name) == ds.field('')).drop([''])
             else:
-                self = self.filter(pc.equal(self[name], func(self[name])))
+                self = ds.dataset(self).to_table(filter=ds.field(name) == func(self[name]))
         return self

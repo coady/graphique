@@ -362,9 +362,12 @@ class Dataset:
         """
         table = self.select(info)
         filters = list(map(dict, itertools.chain(*dict(on).values())))
-        lists = {name for name in table.column_names if C.is_list_type(table[name])}
-        masks = [T.mask(table, **value) for value in filters if value['name'] in lists]
-        table = T.filter_list(table, functools.reduce(pc.and_, masks).combine_chunks())
+        exprs = []
+        for item in filters:
+            name = item.pop('name')
+            for func, value in item.items():
+                exprs.append(getattr(operator, func)(ds.field(name), value))
+        table = T.filter_list(table, functools.reduce(operator.and_, exprs))
         return type(self)(table)
 
     @doc_field(filter="selected rows", columns="projected columns")

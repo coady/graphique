@@ -348,7 +348,7 @@ def test_list(executor):
     )
     assert data['aggregate']['columns']['list'] == {'flatten': {'length': 0}}
     data = executor(
-        '''{ filter(on: {int: [{name: "list", notEqual: 1}]}) {
+        '''{ filter(on: {int: [{name: "list", ne: 1}]}) {
         columns { list { values { ... on IntColumn { values } } } } } }'''
     )
     column = data['filter']['columns']['list']
