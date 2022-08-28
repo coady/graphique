@@ -325,7 +325,7 @@ def test_list(executor):
         first: element { ... on IntColumn { values } }
         last: element(index: -1) { ... on IntColumn { values } }
         min { ... on IntColumn { values } } max { ... on IntColumn { values } }
-        sum { ... on IntColumn { values } } product { ... on IntColumn { values } } mean { values }
+        sum { ... on LongColumn { values } } product { ... on LongColumn { values } } mean { values }
         stddev { values } variance { values } } } }'''
     )
     assert data['columns']['list'] == {
@@ -343,7 +343,7 @@ def test_list(executor):
         'variance': {'values': [pytest.approx(2 / 3), None]},
     }
     data = executor('{ columns { list { distinct { valueLength { values } } } } }')
-    assert data['columns']['list'] == {'distinct': {'valueLength': {'values': [3]}}}
+    assert data['columns']['list'] == {'distinct': {'valueLength': {'values': [3, None]}}}
     data = executor(
         '''{ aggregate(distinct: {name: "list", mode: "only_null"})
         { columns { list { flatten { length } } } } }'''
