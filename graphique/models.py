@@ -552,11 +552,6 @@ class ListColumn(Column):
         return self.cast(pc.list_flatten(self.array))
 
     @doc_field
-    def unique(self) -> 'ListColumn':
-        """unique values within each scalar"""
-        return self.map(ListChunk.unique)  # type: ignore
-
-    @doc_field
     def distinct(self, mode: str = 'only_valid') -> 'ListColumn':
         """non-null distinct values within each scalar"""
         return self.map(ListChunk.distinct, mode=mode)  # type: ignore

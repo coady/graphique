@@ -299,8 +299,6 @@ def test_list(executor):
     assert data == {'row': {'list': {'values': [0, 1, 2]}}}
     data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
     assert data == {'row': {'list': None}}
-    data = executor('{ columns { list { unique { flatten { ... on IntColumn { values } } } } } }')
-    assert data == {'columns': {'list': {'unique': {'flatten': {'values': [0, 1, 2]}}}}}
     data = executor('{ columns { list { mode { flatten { ... on IntColumn { values } } } } } }')
     assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0]}}}}}
     data = executor(
@@ -384,9 +382,9 @@ def test_dictionary(executor):
     assert data == {'column': {'length': 2}}
     data = executor(
         '''{ group(by: ["camelId"]) { column(name: "string") {
-        ... on ListColumn { unique { count { values } } } } } }'''
+        ... on ListColumn { distinct { count { values } } } } } }'''
     )
-    assert data == {'group': {'column': {'unique': {'count': {'values': [1, 0]}}}}}
+    assert data == {'group': {'column': {'distinct': {'count': {'values': [1, 0]}}}}}
     data = executor(
         '''{ group(by: ["string"]) { tables {
         columns { string { values } } column(name: "camelId") { length } } } }'''
@@ -395,17 +393,6 @@ def test_dictionary(executor):
         {'columns': {'string': {'values': ['']}}, 'column': {'length': 1}},
         {'columns': {'string': {'values': [None]}}, 'column': {'length': 1}},
     ]
-    data = executor(
-        '''{ group(by: ["camelId"]) { apply(list: {name: "string", unique: true}) {
-        column(name: "string") { ... on ListColumn { count { values } } } } } }'''
-    )
-    assert data == {'group': {'apply': {'column': {'count': {'values': [1, 0]}}}}}
-    data = executor(
-        '''{ group(by: ["camelId"]) { apply(list: {name: "string", unique: true}) {
-        aggregate(count: {name: "string"}) {
-        column(name: "string") { ... on LongColumn { values } } } } } }'''
-    )
-    assert data == {'group': {'apply': {'aggregate': {'column': {'values': [1, 0]}}}}}
     data = executor(
         '''{ group(by: ["camelId"]) { aggregate(countDistinct: {name: "string"}) {
         column(name: "string") { ... on LongColumn { values } } } } }'''

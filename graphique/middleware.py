@@ -349,7 +349,7 @@ class Dataset:
             func = getattr(ListChunk, key)
             for field in map(dict, fields[key]):
                 name, alias = field.pop('name'), field.pop('alias')
-                columns[alias or name] = C.map(table[name], func, **field)
+                columns[alias or name] = func(table[name], **field)
         return type(self)(pa.table(columns))
 
     @doc_field(on="deprecated: only used for lists")

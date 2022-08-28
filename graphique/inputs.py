@@ -335,9 +335,6 @@ class StructFunction(Function):
 class ListFunction(Function):
     mode: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.mode))
     quantile: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.quantile))
-    unique: bool = strawberry.field(
-        default=False, description="may be faster than `distinct` aggregation"
-    )
     value_length: bool = strawberry.field(
         default=False, description="faster than `count` aggregation"
     )

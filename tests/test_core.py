@@ -48,7 +48,6 @@ def test_lists():
     assert ListChunk.last(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.one(array).to_pylist()[1:] == [0, None, None, None]
     assert ListChunk.element(array, 1).to_pylist() == [1, 0, None, None, None]
-    assert ListChunk.unique(array).to_pylist() == [[2, 1], [0], [None], [], []]
     assert ListChunk.distinct(array).to_pylist() == [[2, 1], [0], [], None, None]
     assert ListChunk.distinct(array, mode='all').to_pylist() == [[2, 1], [0], [None], None, None]
     assert ListChunk.min(array).to_pylist() == [1, 0, None, None, None]

@@ -110,10 +110,6 @@ class ListChunk(pa.lib.BaseListArray):
         """one arbitrary value of each list scalar"""
         return ListChunk.aggregate(self, one=None).field(0)
 
-    def unique(self) -> pa.lib.BaseListArray:
-        """unique values within each scalar"""
-        return ListChunk.map_list(self, lambda arr: Column.decode(arr.unique()))
-
     def distinct(self, **options) -> pa.lib.BaseListArray:
         """non-null distinct values within each scalar"""
         return ListChunk.aggregate(self, distinct=pc.CountOptions(**options)).field(0)
@@ -140,11 +136,11 @@ class ListChunk(pa.lib.BaseListArray):
         reordered. If the function is a `count` and the scalar is empty, then the default is 0.
         """
         items = {f'hash_{name}': funcs[name] for name in funcs}.items()
-        indices = self.value_parent_indices()
-        groups = pc._group_by([self.flatten()] * len(funcs), [indices], items)
+        indices = pc.list_parent_indices(self)
+        groups = pc._group_by([pc.list_flatten(self)] * len(funcs), [indices], items)
         if len(groups) == len(self):  # no empty or null scalars
             return groups
-        mask = self.value_lengths().cast('bool')
+        mask = pc.list_value_length(self).cast('bool')
         empties = pc.indices_nonzero(pc.invert(mask))
         nulls = pc.indices_nonzero(mask.is_null())
         indices = pa.concat_arrays([groups.field(-1).cast('uint64'), empties, nulls])
@@ -154,7 +150,7 @@ class ListChunk(pa.lib.BaseListArray):
         return pa.concat_arrays([groups, empties, nulls]).take(pc.sort_indices(indices))
 
     def min_max(self, **options) -> pa.Array:
-        if pa.types.is_dictionary(self.values.type):
+        if pa.types.is_dictionary(self.type.value_type):
             self = ListChunk.distinct(self)
             self = type(self).from_arrays(self.offsets, self.values.dictionary_decode())
         return ListChunk.aggregate(self, min_max=pc.ScalarAggregateOptions(**options)).field(0)
