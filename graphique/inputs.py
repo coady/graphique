@@ -113,18 +113,6 @@ class Query(Generic[T], Input):
 
 
 @strawberry.input
-class IntFilter(Input):
-    name: str
-    ne: Optional[int] = UNSET
-    gt: Optional[int] = UNSET
-
-
-@strawberry.input(description="predicates for columns of any type as a tagged union")
-class Filters(Input):
-    int: List[IntFilter] = default_field(list)
-
-
-@strawberry.input
 class Function(Input):
     name: str
     alias: str = ''
@@ -332,7 +320,10 @@ class StructFunction(Function):
 
 
 @strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for list")
-class ListFunction(Function):
+class ListFunction(Input):
+    name: str = ''
+    alias: str = ''
+    filter: 'Expression' = default_field(dict, description="filter within list scalars")
     mode: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.mode))
     quantile: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.quantile))
     value_length: bool = strawberry.field(

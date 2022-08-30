@@ -348,10 +348,10 @@ def test_list(executor):
     )
     assert data['aggregate']['columns']['list'] == {'flatten': {'length': 0}}
     data = executor(
-        '''{ filter(on: {int: [{name: "list", ne: 1}]}) {
+        '''{ apply(list: {filter: {ne: [{name: "list"}, {int: 1}]}}) {
         columns { list { values { ... on IntColumn { values } } } } } }'''
     )
-    column = data['filter']['columns']['list']
+    column = data['apply']['columns']['list']
     assert column == {'values': [{'values': [0, 2]}, {'values': []}]}
     data = executor(
         '''{ apply(list: {name: "list", mode: true}) {

@@ -15,7 +15,7 @@ import strawberry.asgi
 from strawberry.types import Info
 from strawberry.utils.str_converters import to_camel_case
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Diff, Expression, Filters, Projections
+from .inputs import Aggregations, Diff, Expression, Projections
 from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction, links
@@ -293,6 +293,7 @@ class Dataset:
         return type(self)(T.matched(table, C.max, *by))
 
     @doc_field
+    @no_type_check
     def apply(
         self,
         info: Info,
@@ -317,9 +318,15 @@ class Dataset:
         in filter `predicates`, and in the `by` arguments of grouping and sorting.
         """
         table = self.select(info)
-        args = datetime, decimal, duration, float, int, list, long, string, struct, time
+        args = datetime, decimal, duration, float, int, long, string, struct, time
         for value in map(dict, itertools.chain(base64, boolean, date, *args)):
-            table = T.apply(table, value.pop('name'), **value)  # type: ignore
+            table = T.apply(table, value.pop('name'), **value)
+        for value in map(dict, list):
+            expr = value.pop('filter').to_arrow()
+            if expr is None:
+                table = T.apply(table, value.pop('name'), **value)
+            else:
+                table = T.filter_list(table, expr)
         return type(self)(table)
 
     @doc_field
@@ -351,24 +358,6 @@ class Dataset:
                 name, alias = field.pop('name'), field.pop('alias')
                 columns[alias or name] = func(table[name], **field)
         return type(self)(pa.table(columns))
-
-    @doc_field(on="deprecated: only used for lists")
-    @no_type_check
-    def filter(self, info: Info, on: Filters = {}) -> 'Dataset':
-        """Return table with rows which match all (by default) queries.
-
-        List columns apply their respective filters to the scalar values within lists.
-        All referenced list columns must have the same lengths.
-        """
-        table = self.select(info)
-        filters = list(map(dict, itertools.chain(*dict(on).values())))
-        exprs = []
-        for item in filters:
-            name = item.pop('name')
-            for func, value in item.items():
-                exprs.append(getattr(operator, func)(ds.field(name), value))
-        table = T.filter_list(table, functools.reduce(operator.and_, exprs))
-        return type(self)(table)
 
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(

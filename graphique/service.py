@@ -9,7 +9,7 @@ from strawberry import UNSET
 from strawberry.types import Info
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
-from .inputs import Filters, Input, Query as QueryInput
+from .inputs import Input, Query as QueryInput
 from .middleware import Dataset, GraphQL, filter_expression
 from .models import Column, doc_field, selections
 from .scalars import Long, type_map
@@ -64,21 +64,14 @@ class Table(Dataset):
             )
         return Row(**row)
 
-    @doc_field(query="simple queries by column", on="deprecated: only used for lists")
+    @doc_field(query="simple queries by column")
     @no_type_check
-    def filter(self, info: Info, query: Queries = {}, on: Filters = {}) -> 'Table':
-        """Return table with rows which match all (by default) queries.
-
-        List columns apply their respective filters to the scalar values within lists.
-        All referenced list columns must have the same lengths.
-        """
+    def filter(self, info: Info, query: Queries = {}) -> 'Table':
+        """Return table with rows which match all queries."""
         fields = selections(*info.selected_fields)
-        if dict(query):
-            scanner = self.scanner(info, dict(query))
-            oneshot = isinstance(self.table, ds.Scanner) and len(fields) > 1
-            query, self = {}, type(self)(scanner.to_table() if oneshot else scanner)
-        filters = dict(on)
-        return Dataset.filter(self, info, filters) if any(filters.values()) else self
+        scanner = self.scanner(info, dict(query))
+        oneshot = isinstance(self.table, ds.Scanner) and len(fields) > 1
+        return type(self)(scanner.to_table() if oneshot else scanner)
 
 
 @strawberry.type(description="a table sorted by a composite index")

@@ -23,6 +23,20 @@ Any column can be accessed by name using `Table.column` and [inline fragments](h
 ### Input
 Input types don't have the equivalent of inline fragments, but GraphQL is converging on the [tagged union pattern](https://github.com/graphql/graphql-spec/pull/825). Effectively the type of the field becomes the name of the field.
 
+`Dataset.scan` has flexible selection and projection.
+```
+{
+    scan(filter: { ... }, columns: [{ ... }, ...])  { ... }
+}
+```
+
+`Table.filter` provides a friendlier interface for simple queries on columns within the schema.
+```
+{
+    filter(query(<name>: { ... }, ...)  { ... }
+}
+```
+
 `IndexedTable.search` allows simple queries on indexed columns.
 ```
 {
@@ -30,20 +44,7 @@ Input types don't have the equivalent of inline fragments, but GraphQL is conver
 }
 ```
 
-`Table.filter` allows simple queries on columns within the schema, and extended filters on all columns. The term `on` was chosen because of the similarity to inline fragments.
-```
-{
-    filter(
-        query(<name>: { ... }, ...),
-        on(<type>: [{name: "...", ...}, ...], ...),
-    )  { ... }
-}
-```
-
-Note list inputs allow passing a single value, interpreted as a list of 1.
-```
-on(<type>: {name: "...", ...}, ...)
-```
+Note list inputs allow passing a single value, [coercing the input](https://spec.graphql.org/October2021/#sec-List.Input-Coercion) to a list of 1.
 
 ## Aggregation
 Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partition` leverage that feature to transform un-grouped columns into ListColumns, which can be accessed via inline fragments and further aggregated. `Table.group` can also aggregate immediately with arrow hash functions. The reason for two different aggregate modes is the trade-off between speed and flexibility. From slowest to fastest:

@@ -88,7 +88,9 @@ class ListChunk(pa.lib.BaseListArray):
         with contextlib.suppress(ValueError):
             return pc.list_element(self, index)
         size = -index if index < 0 else index + 1
-        mask = np.asarray(self.value_lengths().fill_null(0)) < size
+        if isinstance(self, pa.ChunkedArray):
+            self = self.combine_chunks()
+        mask = np.asarray(pc.list_value_length(self).fill_null(0)) < size
         offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
         return pc.list_flatten(self).take(pa.array(offsets + index, mask=mask))
 
