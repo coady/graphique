@@ -14,7 +14,7 @@ def test_case(executor):
     assert data == {'column': {'length': 2}}
     data = executor('{ row { snakeId camelId } }')
     assert data == {'row': {'snakeId': 1, 'camelId': 1}}
-    data = executor('{ filter(query: {snakeId: {equal: 1}, camelId: {equal: 1}}) { length } }')
+    data = executor('{ filter(snakeId: {eq: 1}, camelId: {eq: 1}) { length } }')
     assert data == {'filter': {'length': 1}}
     data = executor('{ scan(filter: {eq: [{name: "camelId"}, {name: "snakeId"}]}) { length } }')
     assert data == {'scan': {'length': 2}}
@@ -23,16 +23,16 @@ def test_case(executor):
         { column(name: "ids") { ... on LongColumn { values } } } }'''
     )
     assert data == {'scan': {'column': {'values': [2, 4]}}}
-    data = executor('{ index search(snakeId: {equal: 1}) { length } }')
+    data = executor('{ index search(snakeId: {eq: 1}) { length } }')
     assert data == {'index': ['snakeId', 'camelId'], 'search': {'length': 1}}
     data = executor('{ min(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
     assert data == {'min': {'row': {'snakeId': 1, 'camelId': 1}}}
     data = executor('{ max(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
     assert data == {'max': {'row': {'snakeId': 2, 'camelId': 2}}}
     with pytest.raises(ValueError, match="inequality query for"):
-        executor('{ index search(snakeId: {less: 1}, camelId: {equal: 1}) { length } }')
+        executor('{ index search(snakeId: {lt: 1}, camelId: {eq: 1}) { length } }')
     with pytest.raises(ValueError, match="expected query for"):
-        executor('{ index search(camelId: {equal: 1}) { length } }')
+        executor('{ index search(camelId: {eq: 1}) { length } }')
 
 
 def test_columns(executor):
@@ -418,4 +418,4 @@ def test_conditions(executor):
 
 def test_long(executor):
     with pytest.raises(ValueError, match="Long cannot represent value"):
-        executor('{ filter(query: {int64: {equal: 0.0} }) { length } }')
+        executor('{ filter(int64: {eq: 0.0}) { length } }')

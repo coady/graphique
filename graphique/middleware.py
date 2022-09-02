@@ -1,10 +1,8 @@
 """
 Service related utilities which don't require knowledge of the schema.
 """
-import functools
 import inspect
 import itertools
-import operator
 import types
 from datetime import datetime, timedelta
 from typing import Iterable, Iterator, List, Mapping, Optional, Union, no_type_check
@@ -15,26 +13,12 @@ import strawberry.asgi
 from strawberry.types import Info
 from strawberry.utils.str_converters import to_camel_case
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Diff, Expression, Projections
+from .inputs import Aggregations, Diff, Expression, Projections, Query
 from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction, links
 from .models import Column, annotate, doc_field, selections
 from .scalars import Long, scalar_map
-
-comparisons = {
-    'equal': operator.eq,
-    'not_equal': operator.ne,
-    'less': operator.lt,
-    'less_equal': operator.le,
-    'greater': operator.gt,
-    'greater_equal': operator.ge,
-    'is_in': ds.Expression.isin,
-}
-nulls = {
-    'equal': ds.Expression.is_null,
-    'not_equal': ds.Expression.is_valid,
-}
 
 
 def references(field) -> Iterator:
@@ -50,20 +34,6 @@ def references(field) -> Iterator:
     else:
         for name in ('name', 'arguments', 'selections'):
             yield from references(getattr(field, name, []))
-
-
-def filter_expression(queries: dict) -> Optional[ds.Expression]:
-    """Translate query format `field={predicate: value}` into dataset filter expression."""
-    exprs: list = []
-    for name, query in queries.items():
-        field = ds.field(name)
-        group = [
-            nulls[predicate](field) if value is None else comparisons[predicate](field, value)
-            for predicate, value in query.items()
-        ]
-        if group:
-            exprs.append(functools.reduce(operator.and_, group))
-    return functools.reduce(operator.and_, exprs) if exprs else None
 
 
 class TimingExtension(strawberry.extensions.Extension):
@@ -134,7 +104,7 @@ class Dataset:
         """Return scanner with only the rows and columns necessary to proceed."""
         dataset = self.table
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
-        expr = filter_expression(queries)
+        expr = Query.to_arrow(**queries)
         if isinstance(dataset, pa.Table):
             return ds.dataset(dataset).scanner(filter=expr)
         if isinstance(dataset, ds.Scanner):
@@ -145,7 +115,7 @@ class Dataset:
         names = self.references(info) & set(case_map)
         columns = {name: ds.field(case_map[name]) for name in names}
         queries = {case_map[name]: queries[name] for name in queries}
-        expr = filter_expression(queries)
+        expr = Query.to_arrow(**queries)
         return dataset.scanner(columns=columns, filter=expr)
 
     def select(self, info: Info, length: int = None) -> pa.Table:

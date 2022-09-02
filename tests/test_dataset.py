@@ -14,35 +14,35 @@ def test_filter(dsclient):
     assert data == {'column': {'length': 41700}}
     data = dsclient.execute('{ length row { state } }')
     assert data == {'length': 41700, 'row': {'state': 'NY'}}
-    data = dsclient.execute('{ filter(query: {state: {isIn: ["CA", "NY"]}}) { length } }')
+    data = dsclient.execute('{ filter(state: {eq: ["CA", "NY"]}) { length } }')
     assert data == {'filter': {'length': 4852}}
-    data = dsclient.execute('{ filter(query: {state: {notEqual: "CA"}}) { length } }')
+    data = dsclient.execute('{ filter(state: {ne: "CA"}) { length } }')
     assert data == {'filter': {'length': 39053}}
     data = dsclient.execute('{ filter { length } }')
     assert data == {'filter': {'length': 41700}}
-    data = dsclient.execute('{ filter(query: {state: {notEqual: null}}) { length } }')
+    data = dsclient.execute('{ filter(state: {ne: null}) { length } }')
     assert data == {'filter': {'length': 41700}}
 
 
 def test_search(dsclient):
-    data = dsclient.execute('{ search(zipcode: {less: 10000}) { length } }')
+    data = dsclient.execute('{ search(zipcode: {lt: 10000}) { length } }')
     assert data == {'search': {'length': 3224}}
     data = dsclient.execute('{ search(zipcode: {}) { length } }')
     assert data == {'search': {'length': 41700}}
     data = dsclient.execute('{ search(zipcode: {}) { row { zipcode } } }')
     assert data == {'search': {'row': {'zipcode': 501}}}
     data = dsclient.execute(
-        '''{ search(zipcode: {greater: 90000}) { filter(query: {state: {equal: "CA"}}) {
+        '''{ search(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
         length } } }'''
     )
     assert data == {'search': {'filter': {'length': 2647}}}
     data = dsclient.execute(
-        '''{ search(zipcode: {greater: 90000}) { filter(query: {state: {equal: "CA"}}) {
+        '''{ search(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
         length row { zipcode } } } }'''
     )
     assert data == {'search': {'filter': {'length': 2647, 'row': {'zipcode': 90001}}}}
     data = dsclient.execute(
-        '''{ search(zipcode: {less: 90000}) { filter(query: {state: {equal: "CA"}}) {
+        '''{ search(zipcode: {lt: 90000}) { filter(state: {eq: "CA"}) {
         group(by: "county") { length } } } }'''
     )
     assert data == {'search': {'filter': {'group': {'length': 0}}}}

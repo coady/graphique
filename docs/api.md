@@ -33,11 +33,11 @@ Input types don't have the equivalent of inline fragments, but GraphQL is conver
 `Table.filter` provides a friendlier interface for simple queries on columns within the schema.
 ```
 {
-    filter(query(<name>: { ... }, ...)  { ... }
+    filter(<name>: { ... }, ...)  { ... }
 }
 ```
 
-`IndexedTable.search` allows simple queries on indexed columns.
+`IndexedTable.search` provides the same interface on indexed columns.
 ```
 {
     search(<name>: { ... }, ...)  { ... }

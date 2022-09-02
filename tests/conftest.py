@@ -42,7 +42,7 @@ def table():
 
 @pytest.fixture(scope='module')
 def client():
-    filters = json.dumps({'zipcode': {'greater': 0}})
+    filters = json.dumps({'zipcode': {'gt': 0}})
     app = load('zipcodes.parquet', INDEX='zipcode', COLUMNS='*', FILTERS=filters)
     return TestClient(app)
 

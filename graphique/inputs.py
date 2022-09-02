@@ -86,17 +86,16 @@ def default_field(default_factory: Callable = lambda: UNSET, **kwargs) -> Strawb
 
 @strawberry.input(description="predicates for scalars")
 class Query(Generic[T], Input):
-    equal: Optional[T] = UNSET
-    not_equal: Optional[T] = UNSET
-    less: Optional[T] = UNSET
-    less_equal: Optional[T] = UNSET
-    greater: Optional[T] = UNSET
-    greater_equal: Optional[T] = UNSET
-    is_in: Optional[List[T]] = UNSET
+    eq: Optional[List[Optional[T]]] = UNSET
+    ne: Optional[T] = UNSET
+    lt: Optional[T] = default_field(description="<")
+    le: Optional[T] = default_field(description="<=")
+    gt: Optional[T] = default_field(description=r"\>")
+    ge: Optional[T] = default_field(description=r"\>=")
 
     nullables = {
-        'equal': "`null` is equivalent to arrow `is_null`.",
-        'not_equal': "`null` is equivalent to arrow `is_valid`.",
+        'eq': "== or `isin`; `null` is equivalent to arrow `is_null`.",
+        'ne': "!=; `null` is equivalent to arrow `is_valid`.",
     }
 
     @classmethod
@@ -110,6 +109,23 @@ class Query(Generic[T], Input):
     def resolve_types(cls, types: dict) -> Callable:
         """Return a decorator which transforms the type map into arguments."""
         return functools.partial(resolve_annotations, annotations=cls.annotations(types))
+
+    @classmethod
+    def to_arrow(cls, **queries: 'Query') -> Optional[ds.Expression]:
+        exprs = []
+        for name in queries:
+            field = ds.field(name)
+            query = dict(queries[name])
+            value = query.pop('eq', [])
+            if not isinstance(value, list):  # normally coerced by GraphQL
+                value = [value]
+            if value:
+                exprs.append(field.is_null() if value == [None] else field.isin(value))
+            value = query.pop('ne', UNSET)
+            if value is not UNSET:
+                exprs.append(field.is_valid() if value is None else field != value)
+            exprs += (getattr(operator, op)(field, value) for op, value in query.items())
+        return functools.reduce(operator.and_, exprs) if exprs else None
 
 
 @strawberry.input

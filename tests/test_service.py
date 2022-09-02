@@ -92,7 +92,7 @@ def test_strings(client):
     assert len(counties['unique']['values']) == counties['unique']['length'] == 1920
     assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
     data = client.execute(
-        '''{ filter(query: {state: {equal: "CA"}}) {
+        '''{ filter(state: {eq: "CA"}) {
         apply(string: {name: "city", utf8Length: true, alias: "size"}) {
         scan(filter: {gt: [{name: "size"}, {int: 23}]}) { length }
         column(name: "size") { ... on IntColumn { max } } } } }'''
@@ -197,28 +197,26 @@ def test_search(client):
     data = client.execute('{ index search { length } }')
     assert data['index'] == ['zipcode']
     assert data['search']['length'] == 41700
-    data = client.execute('{ search(zipcode: {equal: 501}) { columns { zipcode { values } } } }')
+    data = client.execute('{ search(zipcode: {eq: 501}) { columns { zipcode { values } } } }')
     assert data == {'search': {'columns': {'zipcode': {'values': [501]}}}}
-    data = client.execute('{ search(zipcode: {notEqual: 501}) { length } }')
+    data = client.execute('{ search(zipcode: {ne: 501}) { length } }')
     assert data['search']['length'] == 41699
 
-    data = client.execute(
-        '{ search(zipcode: {greaterEqual: 99929}) { columns { zipcode { values } } } }'
-    )
+    data = client.execute('{ search(zipcode: {ge: 99929}) { columns { zipcode { values } } } }')
     assert data == {'search': {'columns': {'zipcode': {'values': [99929, 99950]}}}}
-    data = client.execute('{ search(zipcode: {less: 601}) { columns { zipcode { values } } } }')
+    data = client.execute('{ search(zipcode: {lt: 601}) { columns { zipcode { values } } } }')
     assert data == {'search': {'columns': {'zipcode': {'values': [501, 544]}}}}
     data = client.execute(
-        '{ search(zipcode: {greater: 501, lessEqual: 601}) { columns { zipcode { values } } } }'
+        '{ search(zipcode: {gt: 501, le: 601}) { columns { zipcode { values } } } }'
     )
     assert data == {'search': {'columns': {'zipcode': {'values': [544, 601]}}}}
 
-    data = client.execute('{ search(zipcode: {isIn: []}) { length } }')
+    data = client.execute('{ search(zipcode: {eq: []}) { length } }')
     assert data == {'search': {'length': 0}}
-    data = client.execute('{ search(zipcode: {isIn: [0]}) { length } }')
+    data = client.execute('{ search(zipcode: {eq: [0]}) { length } }')
     assert data == {'search': {'length': 0}}
     data = client.execute(
-        '{ search(zipcode: {isIn: [501, 601]}) { columns { zipcode { values } } } }'
+        '{ search(zipcode: {eq: [501, 601]}) { columns { zipcode { values } } } }'
     )
     assert data == {'search': {'columns': {'zipcode': {'values': [501, 601]}}}}
     with pytest.raises(ValueError, match="optional, not nullable"):
@@ -226,27 +224,23 @@ def test_search(client):
 
 
 def test_filter(client):
-    data = client.execute('{ filter(query: {}) { length } }')
+    data = client.execute('{ filter { length } }')
     assert data['filter']['length'] == 41700
-    data = client.execute('{ filter(query: {city: {equal: "Mountain View"}}) { length } }')
+    data = client.execute('{ filter(city: {eq: "Mountain View"}) { length } }')
     assert data['filter']['length'] == 11
-    data = client.execute('{ filter(query: {state: {notEqual: "CA"}}) { length } }')
+    data = client.execute('{ filter(state: {ne: "CA"}) { length } }')
     assert data['filter']['length'] == 39053
-    data = client.execute(
-        '{ filter(query: {city: {equal: "Mountain View"}, state: {lessEqual: "CA"}}) { length } }'
-    )
+    data = client.execute('{ filter(city: {eq: "Mountain View"}, state: {le: "CA"}) { length } }')
     assert data['filter']['length'] == 7
-    data = client.execute(
-        '{ filter(query: {state: {equal: null}}) { columns { state { values } } } }'
-    )
+    data = client.execute('{ filter(state: {eq: null}) { columns { state { values } } } }')
     assert data['filter']['columns']['state']['values'] == []
     data = client.execute(
         '''{ apply(float: {name: "longitude", abs: true})
-        { filter(query: {longitude: {less: 66}}) { length } } }'''
+        { filter(longitude: {le: 66}) { length } } }'''
     )
     assert data['apply']['filter']['length'] == 30
     with pytest.raises(ValueError, match="optional, not nullable"):
-        client.execute('{ filter(query: {city: {less: null}}) { length } }')
+        client.execute('{ filter(city: {le: null}) { length } }')
 
 
 def test_scan(client):
@@ -477,7 +471,7 @@ def test_partition(client):
     assert len(counts) == 66
     assert counts.count(0) == 61
     data = client.execute(
-        '''{ partition(by: ["state"], counts: "c") { filter(query: {state: {equal: "NY"}}) {
+        '''{ partition(by: ["state"], counts: "c") { filter(state: {eq: "NY"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }'''
     )
     agg = data['partition']['filter']

@@ -10,7 +10,7 @@ from strawberry.types import Info
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
 from .inputs import Input, Query as QueryInput
-from .middleware import Dataset, GraphQL, filter_expression
+from .middleware import Dataset, GraphQL
 from .models import Column, doc_field, selections
 from .scalars import Long, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, FEDERATED, FILTERS, INDEX, PARQUET_PATH
@@ -64,12 +64,15 @@ class Table(Dataset):
             )
         return Row(**row)
 
-    @doc_field(query="simple queries by column")
     @no_type_check
-    def filter(self, info: Info, query: Queries = {}) -> 'Table':
-        """Return table with rows which match all queries."""
+    @QueryInput.resolve_types(types)
+    def filter(self, info: Info, **queries) -> 'Table':
+        """Return table with rows which match all queries.
+
+        See `scan(filter: ...)` for more advanced queries
+        """
         fields = selections(*info.selected_fields)
-        scanner = self.scanner(info, dict(query))
+        scanner = self.scanner(info, {name: dict(queries[name]) for name in queries})
         oneshot = isinstance(self.table, ds.Scanner) and len(fields) > 1
         return type(self)(scanner.to_table() if oneshot else scanner)
 
@@ -96,20 +99,18 @@ class IndexedTable(Table):
             if name not in queries:
                 break
             query = queries.pop(name)
-            if 'equal' in query:
-                table = T.is_in(table, name, query.pop('equal'))
+            if 'eq' in query:
+                table = T.is_in(table, name, *query.pop('eq'))
             if query and queries:
                 raise ValueError(f"inequality query for {name} not last; have {queries} remaining")
-            if 'not_equal' in query:
-                table = T.not_equal(table, name, query['not_equal'])
-            if 'is_in' in query:
-                table = T.is_in(table, name, *query['is_in'])
-            lower, upper = query.get('greater'), query.get('less')
+            if 'ne' in query:
+                table = T.not_equal(table, name, query['ne'])
+            lower, upper = query.get('gt'), query.get('lt')
             includes = {'include_lower': False, 'include_upper': False}
-            if 'greater_equal' in query and (lower is None or query['greater_equal'] > lower):
-                lower, includes['include_lower'] = query['greater_equal'], True
-            if 'less_equal' in query and (upper is None or query['less_equal'] > upper):
-                upper, includes['include_upper'] = query['less_equal'], True
+            if 'ge' in query and (lower is None or query['ge'] > lower):
+                lower, includes['include_lower'] = query['ge'], True
+            if 'le' in query and (upper is None or query['le'] > upper):
+                upper, includes['include_upper'] = query['le'], True
             if {lower, upper} != {None}:
                 table = T.range(table, name, lower, upper, **includes)
         if queries:
@@ -120,7 +121,7 @@ class IndexedTable(Table):
 if COLUMNS or FILTERS:
     names = dataset.schema.names if ''.join(COLUMNS) in '*' else COLUMNS
     columns = {to_camel_case(name): ds.field(name) for name in names}
-    table = dataset.to_table(columns=columns, filter=filter_expression(FILTERS))
+    table = dataset.to_table(columns=columns, filter=QueryInput.to_arrow(**FILTERS))
     for name in indexed:
         assert not table[name].null_count, f"binary search requires non-null columns: {name}"
 Query = IndexedTable if indexed else Table
