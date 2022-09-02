@@ -14,6 +14,7 @@ from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField
+from strawberry.scalars import JSON
 from strawberry.types.fields.resolver import StrawberryResolver
 from typing_extensions import Annotated
 from .core import ListChunk, Column
@@ -450,19 +451,18 @@ class Projections(Input):
 [Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
 used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html).
 
-Expects one of: a field `name`, a scalar, or an operator with expressions.
-
-Scalars are a `List` so that `eq` also supports `isin`. Single values can be passed for an
+Expects one of: a field `name`, a scalar, or an operator with expressions. Single values can be passed for an
 [input `List`](https://spec.graphql.org/October2021/#sec-List.Input-Coercion).
+* `eq` with a list scalar is equivalent to `isin`
+* `eq` with a `null` scalars is equivalent `is_null`
+* `ne` with a `null` scalar is equivalent to `is_valid`
 """
 )
 class Expression:
     name: str = strawberry.field(default='', description="field name")
     alias: str = strawberry.field(default='', description="name for outermost columns")
     cast: str = strawberry.field(default='', description=f"cast as {links.type}")
-    null_: Optional[bool] = strawberry.field(
-        default=None, name='null', description="`is_null` or `is_valid`"
-    )
+    value: Optional[JSON] = default_field(description="JSON scalar; also see typed scalars")
 
     base64: List[bytes] = default_field(list)
     boolean: List[bool] = default_field(list)
@@ -490,7 +490,7 @@ class Expression:
 
     and_: List['Expression'] = default_field(list, name='and', description="&")
     or_: List['Expression'] = default_field(list, name='or', description="|")
-    inv: Optional['Expression'] = strawberry.field(default=None, description="~")
+    inv: Optional['Expression'] = default_field(description="~")
 
     ops = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'add', 'mul', 'sub', 'truediv', 'and_', 'or_')
     scalars = (
@@ -512,8 +512,6 @@ class Expression:
         fields = []
         if self.name:
             field = ds.field(case_map.get(self.name, self.name))
-            if self.null_ is not None:
-                field = field.is_null() if self.null_ else field.is_valid()
             fields.append(field)
         for name in self.scalars:
             scalars = getattr(self, name)
@@ -521,16 +519,21 @@ class Expression:
                 scalars = [pa.scalar(scalar, self.cast) for scalar in scalars]
             if scalars:
                 fields.append(scalars[0] if len(scalars) == 1 else scalars)
+        if self.value is not UNSET:
+            fields.append(self.value)
         for op in self.ops:
             exprs = [expr.to_arrow(case_map) for expr in getattr(self, op)]
             if exprs:
                 if op == 'eq' and isinstance(exprs[-1], list):
                     field = ds.Expression.isin(*exprs)
+                elif exprs[-1] is None and op in ('eq', 'ne'):
+                    field, _ = exprs
+                    field = field.is_null() if op == 'eq' else field.is_valid()
                 else:
                     field = functools.reduce(getattr(operator, op), exprs)
                 fields.append(field)
-        if self.inv:
-            fields.append(~self.inv.to_arrow(case_map))  # type:ignore
+        if self.inv is not UNSET:
+            fields.append(~self.inv.to_arrow(case_map))  # type: ignore
         if not fields:
             return None
         if len(fields) > 1:

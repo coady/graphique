@@ -105,9 +105,11 @@ def test_scan(dsclient):
         '{ scan(filter: {eq: [{name: "county"}, {name: "state"}]}) { length } }'
     )
     assert data == {'scan': {'length': 0}}
-    data = dsclient.execute('{ scan(filter: {name: "zipcode", null: true}) { length } }')
+    data = dsclient.execute('{ scan(filter: {eq: [{name: "zipcode"}, {value: null}]}) { length } }')
     assert data == {'scan': {'length': 0}}
-    data = dsclient.execute('{ scan(filter: {inv: {name: "zipcode", null: false}}) { length } }')
+    data = dsclient.execute(
+        '{ scan(filter: {inv: {ne: [{name: "zipcode"}, {value: null}]}}) { length } }'
+    )
     assert data == {'scan': {'length': 0}}
     data = dsclient.execute(
         '{ scan(filter: {eq: [{name: "state"} {string: "CA", cast: "string"}]}) { length } }'
