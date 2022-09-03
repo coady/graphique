@@ -11,7 +11,6 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
-from strawberry.utils.str_converters import to_camel_case
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Diff, Expression, Projections
 from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
@@ -106,10 +105,8 @@ class Dataset:
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
         if isinstance(dataset, ds.Scanner):
             return dataset
-        case_map = {to_camel_case(name): name for name in schema.names}
-        names = self.references(info) & set(case_map)
-        columns = {name: ds.field(case_map[name]) for name in names}
-        return dataset.scanner(columns=columns)
+        names = self.references(info) & set(schema.names)
+        return dataset.scanner(columns=list(names))
 
     def select(self, info: Info, length: int = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
@@ -130,8 +127,7 @@ class Dataset:
         table = self.table
         schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
         partitioning = getattr(table, 'partitioning', None)
-        names = list(map(to_camel_case, schema.names))
-        return Schema(names, schema.types, partitioning and partitioning.schema.names)  # type: ignore
+        return Schema(schema.names, schema.types, partitioning and partitioning.schema.names)  # type: ignore
 
     @doc_field
     def length(self) -> Long:
@@ -334,11 +330,10 @@ class Dataset:
         """Select rows and project columns without memory usage."""
         dataset = ds.dataset(self.table) if isinstance(self.table, pa.Table) else self.table
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
-        case_map = {to_camel_case(name): name for name in schema.names}
-        selection = filter.to_arrow(case_map)
-        names = self.references(info, level=1) & set(case_map)
-        projection = {name: ds.field(case_map[name]) for name in names}
-        projection.update({col.alias or col.name: col.to_arrow(case_map) for col in columns})
+        selection = filter.to_arrow()
+        names = self.references(info, level=1) & set(schema.names)
+        projection = {name: ds.field(name) for name in names}
+        projection.update({col.alias or col.name: col.to_arrow() for col in columns})
         if '' in projection:
             raise ValueError("projected columns need a name or alias")
         if isinstance(dataset, ds.Dataset):

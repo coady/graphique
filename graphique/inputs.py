@@ -66,7 +66,7 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     resolver.arguments = [
         StrawberryArgument(
             python_name=name,
-            graphql_name=None,
+            graphql_name=name,
             type_annotation=StrawberryAnnotation(annotation),
             default=defaults.get(name, UNSET),
         )
@@ -490,11 +490,11 @@ class Expression:
         'time_',
     )
 
-    def to_arrow(self, case_map: dict = {}) -> Optional[ds.Expression]:
+    def to_arrow(self) -> Optional[ds.Expression]:
         """Transform GraphQL expression into a dataset expression."""
         fields = []
         if self.name:
-            field = ds.field(case_map.get(self.name, self.name))
+            field = ds.field(self.name)
             fields.append(field)
         for name in self.scalars:
             scalars = getattr(self, name)
@@ -505,7 +505,7 @@ class Expression:
         if self.value is not UNSET:
             fields.append(self.value)
         for op in self.ops:
-            exprs = [expr.to_arrow(case_map) for expr in getattr(self, op)]
+            exprs = [expr.to_arrow() for expr in getattr(self, op)]
             if exprs:
                 if op == 'eq' and isinstance(exprs[-1], list):
                     field = ds.Expression.isin(*exprs)
@@ -516,7 +516,7 @@ class Expression:
                     field = functools.reduce(getattr(operator, op), exprs)
                 fields.append(field)
         if self.inv is not UNSET:
-            fields.append(~self.inv.to_arrow(case_map))  # type: ignore
+            fields.append(~self.inv.to_arrow())  # type: ignore
         if not fields:
             return None
         if len(fields) > 1:

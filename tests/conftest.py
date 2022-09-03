@@ -43,13 +43,13 @@ def table():
 @pytest.fixture(scope='module')
 def client():
     filters = json.dumps({'zipcode': {'gt': 0}})
-    app = load('zipcodes.parquet', INDEX='zipcode', COLUMNS='*', FILTERS=filters)
+    app = load('zipcodes.parquet', INDEX='zipcode', FILTERS=filters)
     return TestClient(app)
 
 
-@pytest.fixture(params=['', 'zipcode,state,county'], scope='module')
+@pytest.fixture(params=[None, ['zipcode', 'state', 'county']], scope='module')
 def dsclient(request):
-    app = load('zipcodes.parquet', COLUMNS=request.param, INDEX='zipcode')
+    app = load('zipcodes.parquet', COLUMNS=json.dumps(request.param), INDEX='zipcode')
     return TestClient(app)
 
 
@@ -60,8 +60,15 @@ def fedclient(request):
 
 
 @pytest.fixture(scope='module')
+def aliasclient(request):
+    columns = {'snakeId': 'snake_id', 'camelId': 'camelId'}
+    app = load('alltypes.parquet', COLUMNS=json.dumps(columns), INDEX='snakeId,camelId')
+    return TestClient(app)
+
+
+@pytest.fixture(scope='module')
 def executor():
-    app = load('alltypes.parquet', INDEX='snake_id,camelId', COLUMNS='*', DICTIONARIES='string')
+    app = load('alltypes.parquet', INDEX='snake_id,camelId', FILTERS='{}', DICTIONARIES='string')
 
     def execute(query):
         result = app.schema.execute_sync(query, root_value=app.root_value)

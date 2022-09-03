@@ -94,7 +94,7 @@ def test_schema(dsclient):
     assert set(schema['names']) >= {'zipcode', 'state', 'county'}
     assert set(schema['types']) >= {'int32', 'string'}
     assert schema['partitioning'] is None or len(schema['partitioning']) == 6
-    assert dsclient.execute('{ type }')['type'] in {'FileSystemDataset', 'Table'}
+    assert dsclient.execute('{ type }')['type'] in {'FileSystemDataset', 'Scanner', 'Table'}
 
 
 def test_scan(dsclient):

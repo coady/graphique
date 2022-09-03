@@ -2,35 +2,27 @@ import sys
 import pytest
 
 
-def test_case(executor):
-    data = executor('{ columns { snakeId { values } camelId { values } } }')
-    assert data == {'columns': {'snakeId': {'values': [1, 2]}, 'camelId': {'values': [1, 2]}}}
-    data = executor(
-        '''{ column(name: "camelId", apply: {minElementWise: "snakeId"})
-        { ... on LongColumn { values } } }'''
+def test_camel(aliasclient):
+    data = aliasclient.execute('{ index schema { names } }')
+    assert data == {'index': ['snakeId', 'camelId'], 'schema': {'names': ['snakeId', 'camelId']}}
+    data = aliasclient.execute('{ row { snakeId } columns { snakeId { type } } }')
+    assert data == {'row': {'snakeId': 1}, 'columns': {'snakeId': {'type': 'int64'}}}
+    data = aliasclient.execute(
+        '{ search(snakeId: {eq: 1}) { length } filter(snakeId: {eq: 1}) { length } }'
     )
-    assert data == {'column': {'values': [1, 2]}}
-    data = executor('{ column(name: "snakeId") { length } }')
-    assert data == {'column': {'length': 2}}
-    data = executor('{ row { snakeId camelId } }')
-    assert data == {'row': {'snakeId': 1, 'camelId': 1}}
-    data = executor('{ filter(snakeId: {eq: 1}, camelId: {eq: 1}) { length } }')
-    assert data == {'filter': {'length': 1}}
-    data = executor('{ scan(filter: {eq: [{name: "camelId"}, {name: "snakeId"}]}) { length } }')
-    assert data == {'scan': {'length': 2}}
-    data = executor(
-        '''{ scan(columns: {alias: "ids", add: [{name: "camelId"}, {name: "snakeId"}]})
-        { column(name: "ids") { ... on LongColumn { values } } } }'''
-    )
-    assert data == {'scan': {'column': {'values': [2, 4]}}}
-    data = executor('{ index search(snakeId: {eq: 1}) { length } }')
-    assert data == {'index': ['snakeId', 'camelId'], 'search': {'length': 1}}
-    data = executor('{ min(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
-    assert data == {'min': {'row': {'snakeId': 1, 'camelId': 1}}}
-    data = executor('{ max(by: ["snakeId", "camelId"]) { row { snakeId camelId } } }')
-    assert data == {'max': {'row': {'snakeId': 2, 'camelId': 2}}}
+    assert data['search'] == data['filter'] == {'length': 1}
+
+
+def test_snake(executor):
+    data = executor('{ index schema { names } }')
+    assert data['index'] == ['snake_id', 'camelId']
+    assert 'snake_id' in data['schema']['names']
+    data = executor('{ row { snake_id } columns { snake_id { type } } }')
+    assert data == {'row': {'snake_id': 1}, 'columns': {'snake_id': {'type': 'int64'}}}
+    data = executor('{ search(snake_id: {eq: 1}) { length } filter(snake_id: {eq: 1}) { length } }')
+    assert data['search'] == data['filter'] == {'length': 1}
     with pytest.raises(ValueError, match="inequality query for"):
-        executor('{ index search(snakeId: {lt: 1}, camelId: {eq: 1}) { length } }')
+        executor('{ index search(snake_id: {lt: 1}, camelId: {eq: 1}) { length } }')
     with pytest.raises(ValueError, match="expected query for"):
         executor('{ index search(camelId: {eq: 1}) { length } }')
 
@@ -405,7 +397,7 @@ def test_dictionary(executor):
 
 
 def test_selections(executor):
-    data = executor('{ slice { length } slice { sort(by: "snakeId") { length } } }')
+    data = executor('{ slice { length } slice { sort(by: "snake_id") { length } } }')
     assert data == {'slice': {'length': 2, 'sort': {'length': 2}}}
 
 

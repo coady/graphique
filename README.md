@@ -30,8 +30,8 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * FEDERATED = '': field name to extend type `Query` with a federated `Table` 
 * DEBUG = False: run service in debug mode, which includes timing
 * DICTIONARIES = []: names of columns to read as dictionaries
-* COLUMNS = []: names of columns to read at startup; `*` indicates all
-* FILTERS = {}: json `Queries` for which rows to read at startup
+* COLUMNS = None: list of names, or mapping of aliases, of columns to select
+* FILTERS = None: json `filter` query for which rows to read at startup
 
 ### API
 #### types
@@ -66,9 +66,11 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 ### Performance
 Graphique relies on native [PyArrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/) or custom optimizations.
 
-By default, datasets are read on-demand, with only the necessary columns selected. Additionally `filter(query: ...)` is optimized to filter rows while reading the dataset. Although graphique is a running service, [parquet is performant](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html) at reading a subset of data. Optionally specify `COLUMNS` to read a subset of columns (or `*`) at startup, trading-off memory for latency. Similarly specify `FILTERS` in the json format of the `Query` input type to read a subset of rows at startup.
+By default, datasets are read on-demand, with only the necessary rows and columns scanned. Although graphique is a running service, [parquet is performant](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html) at reading a subset of data. Optionally specify `FILTERS` in the json `filter` format to read a subset of rows at startup, trading-off memory for latency. An empty filter (`{}`) will read the whole table.
 
-Specifying an `INDEX` indicates the table is sorted, and enables the binary `search` field. Specifying just `INDEX` without reading (`FILTERS` or `COLUMNS`) is allowed but only recommended if it corresponds to the partition keys. In that case, `search(...)` is functionally equivalent to `filter(query: ...)`.
+Specifying `COLUMNS` will limit memory usage when reading at startup (`FILTERS`). There is little speed difference as unused columns are inherently ignored. Optional aliasing can also be used for camel casing.
+
+Specifying an `INDEX` indicates the table is sorted, and enables the binary `search` field. Specifying just `INDEX` without reading (`FILTERS`) is allowed but only recommended if it corresponds to the partition keys. In that case, `search(...)` is functionally equivalent to `filter`.
 
 ## Installation
 ```console
