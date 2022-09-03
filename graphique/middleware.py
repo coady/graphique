@@ -13,7 +13,7 @@ import strawberry.asgi
 from strawberry.types import Info
 from strawberry.utils.str_converters import to_camel_case
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Diff, Expression, Projections, Query
+from .inputs import Aggregations, Diff, Expression, Projections
 from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction, links
@@ -100,23 +100,16 @@ class Dataset:
             fields = itertools.chain(*[field.selections for field in fields])
         return set(itertools.chain(*map(references, fields)))
 
-    def scanner(self, info: Info, queries: dict = {}) -> ds.Scanner:
-        """Return scanner with only the rows and columns necessary to proceed."""
+    def scanner(self, info: Info) -> ds.Scanner:
+        """Return scanner with only the columns necessary to proceed."""
         dataset = self.table
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
-        expr = Query.to_arrow(**queries)
-        if isinstance(dataset, pa.Table):
-            return ds.dataset(dataset).scanner(filter=expr)
         if isinstance(dataset, ds.Scanner):
-            if expr is None:
-                return dataset
-            return ds.Scanner.from_batches(dataset.to_batches(), schema, filter=expr)
+            return dataset
         case_map = {to_camel_case(name): name for name in schema.names}
         names = self.references(info) & set(case_map)
         columns = {name: ds.field(case_map[name]) for name in names}
-        queries = {case_map[name]: queries[name] for name in queries}
-        expr = Query.to_arrow(**queries)
-        return dataset.scanner(columns=columns, filter=expr)
+        return dataset.scanner(columns=columns)
 
     def select(self, info: Info, length: int = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""

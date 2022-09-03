@@ -9,9 +9,9 @@ from strawberry import UNSET
 from strawberry.types import Info
 from strawberry.utils.str_converters import to_camel_case
 from .core import Column as C, Table as T
-from .inputs import Input, Query as QueryInput
+from .inputs import Expression, Input, Query as QueryInput
 from .middleware import Dataset, GraphQL
-from .models import Column, doc_field, selections
+from .models import Column, doc_field
 from .scalars import Long, type_map
 from .settings import COLUMNS, DEBUG, DICTIONARIES, FEDERATED, FILTERS, INDEX, PARQUET_PATH
 
@@ -69,12 +69,9 @@ class Table(Dataset):
     def filter(self, info: Info, **queries) -> 'Table':
         """Return table with rows which match all queries.
 
-        See `scan(filter: ...)` for more advanced queries
+        See `scan(filter: ...)` for more advanced queries.
         """
-        fields = selections(*info.selected_fields)
-        scanner = self.scanner(info, {name: dict(queries[name]) for name in queries})
-        oneshot = isinstance(self.table, ds.Scanner) and len(fields) > 1
-        return type(self)(scanner.to_table() if oneshot else scanner)
+        return self.scan(info, filter=Expression.from_query(**queries))
 
 
 @strawberry.type(description="a table sorted by a composite index")
@@ -93,7 +90,7 @@ class IndexedTable(Table):
                 raise TypeError(f"`{name}` is optional, not nullable")
         queries = {name: dict(queries[name]) for name in queries}
         if isinstance(self.table, ds.Dataset):
-            return Table(self.scanner(info, queries))
+            return self.scan(info, filter=Expression.from_query(**queries))
         table = self.select(info)
         for name in self.index:
             if name not in queries:
@@ -121,7 +118,7 @@ class IndexedTable(Table):
 if COLUMNS or FILTERS:
     names = dataset.schema.names if ''.join(COLUMNS) in '*' else COLUMNS
     columns = {to_camel_case(name): ds.field(name) for name in names}
-    table = dataset.to_table(columns=columns, filter=QueryInput.to_arrow(**FILTERS))
+    table = dataset.to_table(columns=columns, filter=Expression.from_query(**FILTERS).to_arrow())
     for name in indexed:
         assert not table[name].null_count, f"binary search requires non-null columns: {name}"
 Query = IndexedTable if indexed else Table

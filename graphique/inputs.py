@@ -6,7 +6,7 @@ import inspect
 import operator
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, Generic, List, Optional, TypeVar
+from typing import Callable, Generic, List, Optional, TypeVar, no_type_check
 import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
@@ -110,23 +110,6 @@ class Query(Generic[T], Input):
     def resolve_types(cls, types: dict) -> Callable:
         """Return a decorator which transforms the type map into arguments."""
         return functools.partial(resolve_annotations, annotations=cls.annotations(types))
-
-    @classmethod
-    def to_arrow(cls, **queries: 'Query') -> Optional[ds.Expression]:
-        exprs = []
-        for name in queries:
-            field = ds.field(name)
-            query = dict(queries[name])
-            value = query.pop('eq', [])
-            if not isinstance(value, list):  # normally coerced by GraphQL
-                value = [value]
-            if value:
-                exprs.append(field.is_null() if value == [None] else field.isin(value))
-            value = query.pop('ne', UNSET)
-            if value is not UNSET:
-                exprs.append(field.is_valid() if value is None else field != value)
-            exprs += (getattr(operator, op)(field, value) for op, value in query.items())
-        return functools.reduce(operator.and_, exprs) if exprs else None
 
 
 @strawberry.input
@@ -540,3 +523,13 @@ class Expression:
             raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
         (field,) = fields
         return field.cast(self.cast) if self.cast and isinstance(field, ds.Expression) else field
+
+    @classmethod
+    @no_type_check
+    def from_query(cls, **queries: Query) -> 'Expression':
+        """Transform query syntax into an Expression input."""
+        exprs = []
+        for name, query in queries.items():
+            field = cls(name=name)
+            exprs += (cls(**{op: [field, cls(value=value)]}) for op, value in dict(query).items())
+        return cls(and_=exprs)
