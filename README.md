@@ -35,7 +35,8 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 
 ### API
 #### types
-* `Table`: an arrow Table; the primary interface.
+* `Dataset`: an interface for an arrow dataset or table.
+* `Table`: implements the `Dataset` interface with a known schema.
 * `Column`: an arrow Column (a.k.a. ChunkedArray). Each arrow data type has a corresponding column implementation: Boolean, Int, Long, Float, Decimal, Date, DateTime, Time, Duration, Base64, String, List, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
 * `Row`: scalar fields. Arrow tables are column-oriented, and graphique encourages that usage for performance. A single `row` field is provided for convenience, but a field for a list of rows is not. Requesting parallel columns is far more efficient.
 

@@ -74,7 +74,7 @@ class Schema:
     partitioning: Optional[List[str]] = strawberry.field(description="partition keys")
 
 
-@strawberry.interface(description="an arrow dataset")
+@strawberry.interface(description="an arrow dataset or table")
 class Dataset:
     def __init__(self, table: Union[ds.Dataset, ds.Scanner, pa.Table]):
         self.table = table
@@ -118,6 +118,11 @@ class Dataset:
             scanner = self.scanner(info)
             table = scanner.to_table() if length is None else scanner.head(length)
         return table.select(self.references(info) & set(table.column_names))
+
+    @doc_field
+    def type(self) -> str:
+        """[arrow type](https://arrow.apache.org/docs/python/api/dataset.html#classes)"""
+        return type(self.table).__name__
 
     @doc_field
     def schema(self) -> Schema:
