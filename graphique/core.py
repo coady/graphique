@@ -350,10 +350,6 @@ class Table(pa.Table):
 
     applied = {'fill_null', 'digitize'}
     projected = {
-        'and',
-        'or',
-        'xor',
-        'and_not',
         'coalesce',
         'power',
         'min_element_wise',

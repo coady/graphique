@@ -123,11 +123,11 @@ def test_boolean(executor):
     assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
 
     data = executor(
-        '{ apply(boolean: {name: "bool", xor: "bool"}) { columns { bool { values } } } }'
+        '{ apply(boolean: {xor: {name: ["bool", "bool"]}}) { columns { bool { values } } } }'
     )
     assert data == {'apply': {'columns': {'bool': {'values': [False, None]}}}}
     data = executor(
-        '''{ apply(boolean: {name: "bool", andNot: "bool", kleene: true})
+        '''{ apply(boolean: {andNotKleene: {name: ["bool", "bool"]}})
         { columns { bool { values } } } }'''
     )
     assert data == {'apply': {'columns': {'bool': {'values': [False, None]}}}}
@@ -191,8 +191,6 @@ def test_numeric(executor):
         { columns { float { values } } } }'''
     )
     assert data == {'apply': {'columns': {'float': {'values': [0.0, None]}}}}
-    data = executor('{ column(name: "float", apply: {coalesce: "int32"}) { type } }')
-    assert data == {'column': {'type': 'float'}}
     data = executor(
         '{ apply(int: {name: "int32", bitWiseNot: true}) { columns { int32 { values } } } }'
     )
@@ -400,12 +398,43 @@ def test_selections(executor):
 
 
 def test_conditions(executor):
-    data = executor('{ column(name: "bool", apply: {ifElse: ["int32", "float"]}) { type } }')
-    assert data == {'column': {'type': 'float'}}
-    with pytest.raises(ValueError, match="must be BOOL"):
-        executor('{ column(name: "struct", apply: {caseWhen: ["int32", "float"]}) { type } }')
+    data = executor(
+        '''{ apply(boolean: {ifElse: {name: ["bool", "int32", "float"]}}) {
+        column(name: "bool") { type } } }'''
+    )
+    assert data == {'apply': {'column': {'type': 'float'}}}
+    with pytest.raises(ValueError, match="no kernel"):
+        executor('{ apply(boolean: {ifElse: {name: ["struct", "int32", "float"]}}) { type } }')
 
 
 def test_long(executor):
     with pytest.raises(ValueError, match="Long cannot represent value"):
         executor('{ filter(int64: {eq: 0.0}) { length } }')
+
+
+def test_base64(executor):
+    data = executor(
+        '''{apply(base64: {binaryLength: {name: "binary"}}) {
+        column(name: "binary") { ...on IntColumn { values } } } }'''
+    )
+    assert data == {'apply': {'column': {'values': [0, None]}}}
+    data = executor(
+        '{apply(base64: {fillNullForward: {name: "binary"}}) { columns { binary { values } } } }'
+    )
+    assert data == {'apply': {'columns': {'binary': {'values': ['', '']}}}}
+    data = executor(
+        '''{apply(base64: {coalesce: {name: "binary", value: "Xw=="}}) {
+        columns { binary { values } } } }'''
+    )
+    assert data == {'apply': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
+    data = executor(
+        '''{apply(base64: {coalesce: {name: [null, "binary"], value: "Xw=="}}) {
+        columns { binary { values } } } }'''
+    )
+    assert data == {'apply': {'columns': {'binary': {'values': ['Xw==', 'Xw==']}}}}
+    data = executor(
+        '''{apply(base64: {binaryJoinElementWise: {
+        name: ["binary", "binary"], value: "Xw==", nullHandling: "replace"}}) {
+        columns { binary { values } } } }'''
+    )
+    assert data == {'apply': {'columns': {'binary': {'values': ['Xw==', 'Xw==']}}}}

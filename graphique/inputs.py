@@ -15,11 +15,11 @@ from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField
-from strawberry.scalars import JSON
+from strawberry.scalars import Base64, JSON
 from strawberry.types.fields.resolver import StrawberryResolver
 from typing_extensions import Annotated
 from .core import ListChunk, Column
-from .scalars import Long, classproperty
+from .scalars import Duration, Long, classproperty
 
 T = TypeVar('T')
 
@@ -111,8 +111,60 @@ class Query(Generic[T], Input):
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
+@strawberry.input(description="positional function arguments without scalars")
+class Fields:
+    name: List[Optional[str]] = default_field(list, description="column name(s)")
+    alias: str = strawberry.field(default='', description="output column name")
+
+    def serialize(self, table):
+        """Return (name, args, kwargs) suitable for computing."""
+        exclude = {'name', 'alias'}
+        return (
+            self.alias or self.name[0],
+            map(table.column, self.name),
+            {name: value for name, value in self.__dict__.items() if name not in exclude},
+        )
+
+
+@strawberry.input(description="positional function arguments with typed scalar")
+class Arguments(Fields, Generic[T]):
+    value: List[Optional[T]] = default_field(list, description="scalar value(s)")
+    cast: str = strawberry.field(default='', description=f"cast scalar to {links.type}")
+
+    def serialize(self, table):
+        """Return (name, args, kwargs) suitable for computing."""
+        exclude = {'name', 'alias', 'value', 'cast'}
+        values = (pa.scalar(value, self.cast) if self.cast else value for value in self.value)
+        args = [table[name] if name else next(values) for name in self.name]
+        return (
+            self.alias or next(filter(None, self.name)),
+            args + list(values),
+            {name: value for name, value in self.__dict__.items() if name not in exclude},
+        )
+
+
 @strawberry.input
-class Function(Input):
+class Join(Arguments[T]):
+    null_handling: str = 'emit_null'
+    null_replacement: str = ''
+
+
+@strawberry.input(description=f"applied [functions]({links.compute})")
+class Function(Generic[T], Input):
+    coalesce: Optional[Arguments[T]] = default_field(description="select the first non-null value")
+    fill_null_backward: Optional[Fields] = default_field(
+        description="carry non-null values backward to fill null slots"
+    )
+    fill_null_forward: Optional[Fields] = default_field(
+        description="carry non-null values forward to fill null slots"
+    )
+    if_else: Optional[Arguments[T]] = default_field(
+        description="choose values based on a condition"
+    )
+
+
+@strawberry.input
+class _Function(Input):
     name: str
     alias: str = ''
     coalesce: Optional[List[str]] = UNSET
@@ -121,7 +173,7 @@ class Function(Input):
 
 
 @strawberry.input
-class OrdinalFunction(Function):
+class OrdinalFunction(_Function):
     min_element_wise: Optional[str] = UNSET
     max_element_wise: Optional[str] = UNSET
 
@@ -151,14 +203,22 @@ class NumericFunction(OrdinalFunction):
     sqrt: bool = False
 
 
-@strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for booleans")
-class BooleanFunction(Function):
-    if_else: Optional[List[str]] = UNSET
-    and_: Optional[str] = default_field(name='and')
-    or_: Optional[str] = default_field(name='or')
-    xor: Optional[str] = UNSET
-    and_not: Optional[str] = UNSET
-    kleene: bool = False
+@operator.itemgetter(bool)
+@strawberry.input(
+    name='Function', description=f"[functions]({links.compute}#selecting-multiplexing) for booleans"
+)
+class BooleanFunction(Function[T]):
+    and_kleene: Optional[Arguments[T]] = default_field(
+        description="logical 'and' boolean values (Kleene logic)"
+    )
+    and_not: Optional[Arguments[T]] = default_field(description="logical 'and not' boolean values")
+    and_not_kleene: Optional[Arguments[T]] = default_field(
+        description="logical 'and not' boolean values (Kleene logic)"
+    )
+    or_kleene: Optional[Arguments[T]] = default_field(
+        description="logical 'or' boolean values (Kleene logic)"
+    )
+    xor: Optional[Arguments[T]] = default_field(description="logical 'xor' boolean values")
 
 
 @strawberry.input(description=f"[functions]({links.compute}#arithmetic-functions) for ints")
@@ -188,9 +248,7 @@ class FloatFunction(NumericFunction):
     is_nan: bool = False
 
 
-@strawberry.input(description="functions for decimals")
-class DecimalFunction(Function):
-    fill_null: Optional[Decimal] = UNSET
+DecimalFunction = Function[Decimal]
 
 
 @strawberry.input(
@@ -272,20 +330,22 @@ class TimeFunction(OrdinalFunction):
     nanosecond: bool = False
 
 
-@strawberry.input(description="functions for durations")
-class DurationFunction(Function):
-    fill_null: Optional[timedelta] = UNSET
+DurationFunction = Function[Duration]
 
 
-@strawberry.input(description=f"[functions]({links.compute}#string-transforms) for binaries")
-class Base64Function(Function):
-    binary_join_element_wise: Optional[List[str]] = UNSET
-    fill_null: Optional[bytes] = UNSET
-    binary_length: bool = False
+@operator.itemgetter(Base64)
+@strawberry.input(
+    name='Function', description=f"[functions]({links.compute}#string-transforms) for binaries"
+)
+class Base64Function(Function[T]):
+    binary_join_element_wise: Optional[Join[T]] = default_field(
+        description="join string arguments together, with the last argument as separator"
+    )
+    binary_length: Optional[Fields] = default_field(description="compute string lengths")
 
 
 @strawberry.input(description=f"[functions]({links.compute}#string-transforms) for strings")
-class StringFunction(Function):
+class StringFunction(_Function):
     binary_join_element_wise: Optional[List[str]] = UNSET
     find_substring: Optional[str] = UNSET
     count_substring: Optional[str] = UNSET
@@ -314,7 +374,7 @@ class StringFunction(Function):
 
 
 @strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for structs")
-class StructFunction(Function):
+class StructFunction(_Function):
     case_when: Optional[List[str]] = UNSET
 
 
@@ -409,10 +469,8 @@ class Diff(Input):
     description=f"[functions]({links.compute}#arithmetic-functions) projected across two columns"
 )
 class Projections(Input):
-    coalesce: Optional[List[str]] = UNSET
     fill_null: Optional[List[str]] = UNSET
     binary_join_element_wise: Optional[List[str]] = UNSET
-    if_else: Optional[List[str]] = UNSET
     case_when: Optional[List[str]] = UNSET
     min_element_wise: Optional[str] = UNSET
     max_element_wise: Optional[str] = UNSET

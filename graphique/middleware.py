@@ -281,8 +281,8 @@ class Dataset:
         in filter `predicates`, and in the `by` arguments of grouping and sorting.
         """
         table = self.select(info)
-        args = datetime, decimal, duration, float, int, long, string, struct, time
-        for value in map(dict, itertools.chain(base64, boolean, date, *args)):
+        deprecated = datetime, float, int, long, string, struct, time, date
+        for value in map(dict, itertools.chain(*deprecated)):
             table = T.apply(table, value.pop('name'), **value)
         for value in map(dict, list):
             expr = value.pop('filter').to_arrow()
@@ -290,7 +290,13 @@ class Dataset:
                 table = T.apply(table, value.pop('name'), **value)
             else:
                 table = T.filter_list(table, expr)
-        return type(self)(table)
+        columns = {}
+        args = base64, boolean, decimal, duration
+        for value in map(dict, itertools.chain(*args)):
+            for func, field in value.items():
+                name, args, kwargs = field.serialize(table)
+                columns[name] = getattr(pc, func)(*args, **kwargs)
+        return type(self)(T.union(table, pa.table(columns)))
 
     @doc_field
     def tables(self, info: Info) -> List['Dataset']:  # type: ignore
