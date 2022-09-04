@@ -431,7 +431,7 @@ def test_partition(client):
     assert agg['column']['count']['values'][:3] == [2, 176, 701]
     data = client.execute(
         '''{ sort(by: ["state", "longitude"]) {
-        partition(by: ["state", "longitude"], diffs: [{name: "longitude", greater: 1.0}]) {
+        partition(by: ["state", "longitude"], diffs: [{name: "longitude", gt: 1.0}]) {
         length columns { state { values } }
         column(name: "longitude") { ... on ListColumn { count { values } } } } } }'''
     )
@@ -440,7 +440,7 @@ def test_partition(client):
     assert groups['columns']['state']['values'][:7] == ['AK'] * 7
     assert groups['column']['count']['values'][:7] == [1, 1, 5, 232, 1, 32, 1]
     data = client.execute(
-        '''{ partition(by: ["state"], diffs: [{name: "state", less: null}]) {
+        '''{ partition(by: ["state"], diffs: [{name: "state", lt: null}]) {
         length column(name: "state") {
         ... on ListColumn {values { ... on StringColumn { values } } } } } }'''
     )

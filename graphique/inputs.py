@@ -8,6 +8,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Callable, Generic, List, Optional, TypeVar, no_type_check
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET
@@ -387,12 +388,19 @@ class Aggregations(Input):
 @strawberry.input(description="discrete difference predicates; durations may be in float seconds")
 class Diff(Input):
     name: str
-    less: Optional[float] = UNSET
-    less_equal: Optional[float] = UNSET
-    greater: Optional[float] = UNSET
-    greater_equal: Optional[float] = UNSET
+    lt: Optional[float] = UNSET
+    le: Optional[float] = UNSET
+    gt: Optional[float] = UNSET
+    ge: Optional[float] = UNSET
+    predicates = {
+        'ne': pc.not_equal,
+        'lt': pc.less,
+        'le': pc.less_equal,
+        'gt': pc.greater,
+        'ge': pc.greater_equal,
+    }
     nullables = dict.fromkeys(
-        ['less', 'less_equal', 'greater', 'greater_equal'],
+        predicates,
         "`null` compares the arrays element-wise. A float computes the discrete difference first.",
     )
 

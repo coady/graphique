@@ -275,7 +275,7 @@ def test_duration(executor):
     )
     assert data == {'scan': {'column': {'values': [0.0, None]}}}
     data = executor(
-        '''{ partition(by: ["timestamp"] diffs: [{name: "timestamp", greater: 0.0}]) { length } }'''
+        '''{ partition(by: ["timestamp"] diffs: [{name: "timestamp", gt: 0.0}]) { length } }'''
     )
     assert data == {'partition': {'length': 1}}
 
