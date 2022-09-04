@@ -37,13 +37,6 @@ Input types don't have the equivalent of inline fragments, but GraphQL is conver
 }
 ```
 
-`IndexedTable.search` provides the same interface on indexed columns.
-```
-{
-    search(<name>: { ... }, ...)  { ... }
-}
-```
-
 Note list inputs allow passing a single value, [coercing the input](https://spec.graphql.org/October2021/#sec-List.Input-Coercion) to a list of 1.
 
 ## Aggregation

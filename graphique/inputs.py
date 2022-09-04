@@ -100,16 +100,14 @@ class Query(Generic[T], Input):
     }
 
     @classmethod
-    def annotations(cls, types: dict) -> dict:
-        """Return mapping of annotations from a mapping of types."""
-        return {
-            name: Optional[Query[types[name]]] for name in types if types[name] not in (list, dict)  # type: ignore
-        }
-
-    @classmethod
+    @no_type_check
     def resolve_types(cls, types: dict) -> Callable:
         """Return a decorator which transforms the type map into arguments."""
-        return functools.partial(resolve_annotations, annotations=cls.annotations(types))
+        defaults = dict.fromkeys(types, {})
+        annotations = {
+            name: Query[types[name]] for name in types if types[name] not in (list, dict)
+        }  # type: ignore
+        return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
 @strawberry.input

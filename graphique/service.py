@@ -20,6 +20,8 @@ types = {
     aliases.get(field.name, field.name): type_map[C.scalar_type(field).id]
     for field in dataset.schema
 }
+missing = set(INDEX) - set(types)
+assert not missing, f"unknown index columns: {missing}"
 
 
 @strawberry.type(description="fields for each column")
@@ -40,6 +42,12 @@ class Row:
 
 @strawberry.type(description="a column-oriented table")
 class Table(Dataset):
+    index: List[str] = strawberry.field(default=(), description="the composite index")
+
+    def __init__(self, table, index=()):
+        super().__init__(table)
+        self.index = tuple(index)
+
     @doc_field
     def columns(self, info: Info) -> Columns:
         """fields for each column"""
@@ -66,35 +74,14 @@ class Table(Dataset):
 
         See `scan(filter: ...)` for more advanced queries.
         """
-        return self.scan(info, filter=Expression.from_query(**queries))
-
-
-@strawberry.type(description="a table sorted by a composite index")
-class IndexedTable(Table):
-    index: List[str] = strawberry.field(default=tuple(INDEX), description="the composite index")
-
-    @QueryInput.resolve_types({name: types[name] for name in INDEX})
-    def search(self, info: Info, **queries) -> Table:
-        """Return table with matching values for composite `index`.
-
-        Queries must be a prefix of the `index`.
-        Only one inequality query is allowed, and must be last.
-        """
-        for name in queries:
-            if queries[name] is None:
-                raise TypeError(f"`{name}` is optional, not nullable")
-        queries = {name: dict(queries[name]) for name in queries}
-        if isinstance(self.table, ds.Dataset):
-            return self.scan(info, filter=Expression.from_query(**queries))
-        table = self.select(info)
-        for name in self.index:
-            if name not in queries:
+        table, offset = self.table, 0
+        for name in self.index if isinstance(table, pa.Table) else []:
+            query = dict(queries.pop(name))
+            if not query:
                 break
-            query = queries.pop(name)
             if 'eq' in query:
                 table = T.is_in(table, name, *query.pop('eq'))
-            if query and queries:
-                raise ValueError(f"inequality query for {name} not last; have {queries} remaining")
+                offset += 1
             if 'ne' in query:
                 table = T.not_equal(table, name, query['ne'])
             lower, upper = query.get('gt'), query.get('lt')
@@ -105,9 +92,11 @@ class IndexedTable(Table):
                 upper, includes['include_upper'] = query['le'], True
             if {lower, upper} != {None}:
                 table = T.range(table, name, lower, upper, **includes)
-        if queries:
-            raise ValueError(f"expected query for {name}; have {queries} remaining")
-        return Table(table)
+            if query:
+                break
+        self = type(self)(table, self.index[offset:])
+        expr = Expression.from_query(**queries)
+        return self if expr.to_arrow() is None else self.scan(info, filter=expr)
 
 
 if isinstance(COLUMNS, dict):
@@ -119,5 +108,4 @@ if FILTERS is not None:
 elif COLUMNS:
     root = dataset.scanner(columns=COLUMNS)
 
-Query = IndexedTable if INDEX else Table
-app = GraphQL(Query(root), debug=DEBUG, federated=FEDERATED)
+app = GraphQL(Table(root, INDEX), debug=DEBUG, federated=FEDERATED)

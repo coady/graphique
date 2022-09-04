@@ -25,27 +25,27 @@ def test_filter(dsclient):
 
 
 def test_search(dsclient):
-    data = dsclient.execute('{ search(zipcode: {lt: 10000}) { length } }')
-    assert data == {'search': {'length': 3224}}
-    data = dsclient.execute('{ search(zipcode: {}) { length } }')
-    assert data == {'search': {'length': 41700}}
-    data = dsclient.execute('{ search(zipcode: {}) { row { zipcode } } }')
-    assert data == {'search': {'row': {'zipcode': 501}}}
+    data = dsclient.execute('{ filter(zipcode: {lt: 10000}) { length } }')
+    assert data == {'filter': {'length': 3224}}
+    data = dsclient.execute('{ filter(zipcode: {}) { length } }')
+    assert data == {'filter': {'length': 41700}}
+    data = dsclient.execute('{ filter(zipcode: {}) { row { zipcode } } }')
+    assert data == {'filter': {'row': {'zipcode': 501}}}
     data = dsclient.execute(
-        '''{ search(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
+        '''{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
         length } } }'''
     )
-    assert data == {'search': {'filter': {'length': 2647}}}
+    assert data == {'filter': {'filter': {'length': 2647}}}
     data = dsclient.execute(
-        '''{ search(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
+        '''{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
         length row { zipcode } } } }'''
     )
-    assert data == {'search': {'filter': {'length': 2647, 'row': {'zipcode': 90001}}}}
+    assert data == {'filter': {'filter': {'length': 2647, 'row': {'zipcode': 90001}}}}
     data = dsclient.execute(
-        '''{ search(zipcode: {lt: 90000}) { filter(state: {eq: "CA"}) {
+        '''{ filter(zipcode: {lt: 90000}) { filter(state: {eq: "CA"}) {
         group(by: "county") { length } } } }'''
     )
-    assert data == {'search': {'filter': {'group': {'length': 0}}}}
+    assert data == {'filter': {'filter': {'group': {'length': 0}}}}
 
 
 def test_slice(dsclient):

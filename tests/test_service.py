@@ -194,33 +194,30 @@ def test_string_methods(client):
 
 
 def test_search(client):
-    data = client.execute('{ index search { length } }')
-    assert data['index'] == ['zipcode']
-    assert data['search']['length'] == 41700
-    data = client.execute('{ search(zipcode: {eq: 501}) { columns { zipcode { values } } } }')
-    assert data == {'search': {'columns': {'zipcode': {'values': [501]}}}}
-    data = client.execute('{ search(zipcode: {ne: 501}) { length } }')
-    assert data['search']['length'] == 41699
+    data = client.execute('{ index filter { length } }')
+    assert data == {'index': ['zipcode'], 'filter': {'length': 41700}}
+    data = client.execute('{ filter(zipcode: {eq: 501}) { columns { zipcode { values } } } }')
+    assert data == {'filter': {'columns': {'zipcode': {'values': [501]}}}}
+    data = client.execute('{ filter(zipcode: {ne: 501}) { length } }')
+    assert data['filter']['length'] == 41699
 
-    data = client.execute('{ search(zipcode: {ge: 99929}) { columns { zipcode { values } } } }')
-    assert data == {'search': {'columns': {'zipcode': {'values': [99929, 99950]}}}}
-    data = client.execute('{ search(zipcode: {lt: 601}) { columns { zipcode { values } } } }')
-    assert data == {'search': {'columns': {'zipcode': {'values': [501, 544]}}}}
+    data = client.execute('{ filter(zipcode: {ge: 99929}) { columns { zipcode { values } } } }')
+    assert data == {'filter': {'columns': {'zipcode': {'values': [99929, 99950]}}}}
+    data = client.execute('{ filter(zipcode: {lt: 601}) { columns { zipcode { values } } } }')
+    assert data == {'filter': {'columns': {'zipcode': {'values': [501, 544]}}}}
     data = client.execute(
-        '{ search(zipcode: {gt: 501, le: 601}) { columns { zipcode { values } } } }'
+        '{ filter(zipcode: {gt: 501, le: 601}) { columns { zipcode { values } } } }'
     )
-    assert data == {'search': {'columns': {'zipcode': {'values': [544, 601]}}}}
+    assert data == {'filter': {'columns': {'zipcode': {'values': [544, 601]}}}}
 
-    data = client.execute('{ search(zipcode: {eq: []}) { length } }')
-    assert data == {'search': {'length': 0}}
-    data = client.execute('{ search(zipcode: {eq: [0]}) { length } }')
-    assert data == {'search': {'length': 0}}
+    data = client.execute('{ filter(zipcode: {eq: []}) { length } }')
+    assert data == {'filter': {'length': 0}}
+    data = client.execute('{ filter(zipcode: {eq: [0]}) { length } }')
+    assert data == {'filter': {'length': 0}}
     data = client.execute(
-        '{ search(zipcode: {eq: [501, 601]}) { columns { zipcode { values } } } }'
+        '{ filter(zipcode: {eq: [501, 601]}) { columns { zipcode { values } } } }'
     )
-    assert data == {'search': {'columns': {'zipcode': {'values': [501, 601]}}}}
-    with pytest.raises(ValueError, match="optional, not nullable"):
-        client.execute('{ search(zipcode: null) { length } }')
+    assert data == {'filter': {'columns': {'zipcode': {'values': [501, 601]}}}}
 
 
 def test_filter(client):

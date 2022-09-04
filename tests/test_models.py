@@ -7,10 +7,10 @@ def test_camel(aliasclient):
     assert data == {'index': ['snakeId', 'camelId'], 'schema': {'names': ['snakeId', 'camelId']}}
     data = aliasclient.execute('{ row { snakeId } columns { snakeId { type } } }')
     assert data == {'row': {'snakeId': 1}, 'columns': {'snakeId': {'type': 'int64'}}}
-    data = aliasclient.execute(
-        '{ search(snakeId: {eq: 1}) { length } filter(snakeId: {eq: 1}) { length } }'
-    )
-    assert data['search'] == data['filter'] == {'length': 1}
+    data = aliasclient.execute('{ filter(snakeId: {eq: 1}) { index length } }')
+    assert data == {'filter': {'index': [], 'length': 1}}
+    data = aliasclient.execute('{ filter(camelId: {eq: 1}) { index length } }')
+    assert data == {'filter': {'index': [], 'length': 1}}
 
 
 def test_snake(executor):
@@ -19,12 +19,10 @@ def test_snake(executor):
     assert 'snake_id' in data['schema']['names']
     data = executor('{ row { snake_id } columns { snake_id { type } } }')
     assert data == {'row': {'snake_id': 1}, 'columns': {'snake_id': {'type': 'int64'}}}
-    data = executor('{ search(snake_id: {eq: 1}) { length } filter(snake_id: {eq: 1}) { length } }')
-    assert data['search'] == data['filter'] == {'length': 1}
-    with pytest.raises(ValueError, match="inequality query for"):
-        executor('{ index search(snake_id: {lt: 1}, camelId: {eq: 1}) { length } }')
-    with pytest.raises(ValueError, match="expected query for"):
-        executor('{ index search(camelId: {eq: 1}) { length } }')
+    data = executor('{ filter(snake_id: {eq: 1}) { index length } }')
+    assert data == {'filter': {'index': ['camelId'], 'length': 1}}
+    data = executor('{ filter(camelId: {eq: 1}) { index length } }')
+    assert data == {'filter': {'index': [], 'length': 1}}
 
 
 def test_columns(executor):

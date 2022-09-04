@@ -80,7 +80,6 @@ class Dataset:
 
     def __init_subclass__(cls):
         """Downcast fields which return an `Dataset` to its implemented type."""
-        cls.__init__ = Dataset.__init__
         for name, func in inspect.getmembers(cls, inspect.isfunction):
             if func.__annotations__.get('return') in ('Dataset', List['Dataset']):
                 clone = types.FunctionType(func.__code__, func.__globals__)
