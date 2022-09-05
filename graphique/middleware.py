@@ -289,13 +289,14 @@ class Dataset:
         deprecated = datetime, float, int, long, time, date
         for value in map(dict, itertools.chain(*deprecated)):
             table = T.apply(table, value.pop('name'), **value)
+        columns = {}
         for value in map(dict, list):
             expr = value.pop('filter').to_arrow()
-            if expr is None:
-                table = T.apply(table, value.pop('name'), **value)
-            else:
+            if expr is not None:
                 table = T.filter_list(table, expr)
-        columns = {}
+            for func, field in value.items():
+                name, args, kwargs = field.serialize(table)
+                columns[name] = getattr(ListChunk, func)(*args, **kwargs)
         args = base64, boolean, decimal, duration, string, struct
         for value in map(dict, itertools.chain(*args)):
             for func, field in value.items():

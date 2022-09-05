@@ -1,7 +1,6 @@
 """
 GraphQL output types and resolvers.
 """
-import contextlib
 import functools
 import inspect
 import operator
@@ -15,7 +14,7 @@ import strawberry
 from strawberry.field import StrawberryField
 from strawberry.types import Info
 from typing_extensions import Annotated
-from .core import Column as C, ListChunk
+from .core import Column as C
 from .inputs import links
 from .scalars import Long, type_map
 
@@ -73,6 +72,7 @@ class Column:
             return Set(*self.array.value_counts().flatten())
         return Set(self.array.unique())
 
+    @doc_field
     def count(self, mode: str = 'only_valid') -> Long:
         """Return number of valid or null values."""
         return pc.count(self.array, mode=mode).as_py()
@@ -220,7 +220,6 @@ class NumericColumn(Column):
 
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=bool)
     values = annotate(Column.values, List[Optional[bool]])
     unique = annotate(Column.unique, Set[bool])
@@ -238,7 +237,6 @@ class BooleanColumn(Column):
 
 @strawberry.type(description="column of ints")
 class IntColumn(NumericColumn):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=int)
     values = annotate(Column.values, List[Optional[int]])
     unique = annotate(Column.unique, Set[int])
@@ -260,7 +258,6 @@ class IntColumn(NumericColumn):
 
 @strawberry.type(description="column of longs")
 class LongColumn(NumericColumn):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=Long)
     values = annotate(Column.values, List[Optional[Long]])
     unique = annotate(Column.unique, Set[Long])
@@ -284,7 +281,6 @@ class LongColumn(NumericColumn):
 
 @strawberry.type(description="column of floats")
 class FloatColumn(NumericColumn):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=float)
     values = annotate(Column.values, List[Optional[float]])
     unique = annotate(Column.unique, Set[float])
@@ -321,7 +317,6 @@ class FloatColumn(NumericColumn):
 
 @strawberry.type(description="column of decimals")
 class DecimalColumn(Column):
-    count = doc_field(Column.count)
     values = annotate(Column.values, List[Optional[Decimal]])
     unique = annotate(Column.unique, Set[Decimal])
     min = annotate(Column.min, Optional[Decimal])
@@ -344,7 +339,6 @@ class TemporalColumn:
 
 @strawberry.type(description="column of dates")
 class DateColumn(Column):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=date)
     values = annotate(Column.values, List[Optional[date]])
     unique = annotate(Column.unique, Set[date])
@@ -367,7 +361,6 @@ class DateColumn(Column):
 
 @strawberry.type(description="column of datetimes")
 class DateTimeColumn(Column):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=datetime)
     values = annotate(Column.values, List[Optional[datetime]])
     unique = annotate(Column.unique, Set[datetime])
@@ -400,7 +393,6 @@ class DateTimeColumn(Column):
 
 @strawberry.type(description="column of times")
 class TimeColumn(Column):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=time)
     values = annotate(Column.values, List[Optional[time]])
     unique = annotate(Column.unique, Set[time])
@@ -418,14 +410,12 @@ class TimeColumn(Column):
 
 @strawberry.type(description="column of durations")
 class DurationColumn(Column):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=timedelta)
     values = annotate(Column.values, List[Optional[timedelta]])
 
 
 @strawberry.type(description="column of binaries")
 class Base64Column(Column):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=bytes)
     values = annotate(Column.values, List[Optional[bytes]])
     unique = annotate(Column.unique, Set[bytes])
@@ -434,7 +424,6 @@ class Base64Column(Column):
 
 @strawberry.type(description="column of strings")
 class StringColumn(Column):
-    count = doc_field(Column.count)
     index = annotate(Column.index, Long, value=str)
     values = annotate(Column.values, List[Optional[str]])
     unique = annotate(Column.unique, Set[str])
@@ -451,47 +440,9 @@ class ListColumn(Column):
         return list(map(self.fromscalar, self.array))
 
     @doc_field
-    def value_length(self) -> LongColumn:
-        """length of each list scalar"""
-        return LongColumn(pc.list_value_length(self.array))
-
-    @doc_field
     def flatten(self) -> Column:
         """concatenation of all sub-lists"""
         return self.cast(pc.list_flatten(self.array))
-
-    @doc_field
-    def element(self, index: Long = 0) -> Column:
-        """element at index of each list scalar; defaults to null"""
-        with contextlib.suppress(ValueError):
-            return self.cast(pc.list_element(self.array, index))
-        return self.map(ListChunk.element, index=index)
-
-    @doc_field
-    def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0) -> 'ListColumn':
-        """mode of each list scalar"""
-        return self.map(ListChunk.mode, n=n, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
-
-    @doc_field
-    def quantile(
-        self,
-        q: List[float] = [0.5],
-        interpolation: str = 'linear',
-        skip_nulls: bool = True,
-        min_count: int = 0,
-    ) -> 'ListColumn':
-        """quantile of each list scalar"""
-        return self.map(ListChunk.quantile, q=q, interpolation=interpolation, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
-
-    @doc_field
-    def binary_join(self, separator: bytes) -> Base64Column:
-        """Join a list of binary strings together with a `separator` to form a single string."""
-        return Base64Column(pc.binary_join(self.array, separator))
-
-    @doc_field
-    def string_join(self, separator: str) -> StringColumn:
-        """Join a list of strings together with a `separator` to form a single string."""
-        return StringColumn(pc.binary_join(self.array, separator))
 
 
 @strawberry.type(description="column of structs")

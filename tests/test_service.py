@@ -159,11 +159,6 @@ def test_string_methods(client):
         { columns { state { values } } } }'''
     )
     assert 'AA' in data['apply']['columns']['state']['values']
-    data = client.execute(
-        '''{ group(by: "state") { column(name: "city") { ... on ListColumn
-        { stringJoin(separator: ",") { ... on StringColumn { values } } } } } }'''
-    )
-    assert ','.join(['New York'] * 3) in data['group']['column']['stringJoin']['values'][0]
 
 
 def test_search(client):
@@ -320,7 +315,7 @@ def test_group(client):
     data = client.execute(
         '''{ group(by: ["state"]) { length tables { length
         columns { state { values } county { min max } } }
-        apply(list: {name: "county", alias: "c", valueLength: true}) {
+        apply(list: {valueLength: {name: "county", alias: "c"}}) {
         column(name: "c") { ... on IntColumn { values } } } } }'''
     )
     assert len(data['group']['tables']) == data['group']['length'] == 52
@@ -342,10 +337,10 @@ def test_group(client):
         '''{ group(by: ["state", "county"], counts: "c") { sort(by: ["-c"], length: 4) {
         aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
         columns { latitude { values } longitude { values } }
-        column(name: "zipcode") { ... on ListColumn { valueLength { values } } } } } } }'''
+        column(name: "zipcode") { type } } } } }'''
     )
     agg = data['group']['sort']['aggregate']
-    assert agg['column']['valueLength']['values'] == [525, 284, 242, 219]
+    assert agg['column']['type'] == 'list<item: int32>'
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
     data = client.execute(
@@ -401,22 +396,22 @@ def test_partition(client):
         client.execute('{ group { length } }')
     data = client.execute(
         '''{ partition(by: ["state"]) { aggregate { length columns { state { values } }
-        column(name: "county") { ... on ListColumn { valueLength { values } } } } } }'''
+        column(name: "county") { type } } } }'''
     )
     agg = data['partition']['aggregate']
     assert agg['length'] == 66
     assert agg['columns']['state']['values'][:3] == ['NY', 'PR', 'MA']
-    assert agg['column']['valueLength']['values'][:3] == [2, 176, 701]
+    assert agg['column']['type'] == 'list<item: string>'
     data = client.execute(
         '''{ sort(by: ["state", "longitude"]) {
         partition(by: ["state", "longitude"], diffs: [{name: "longitude", gt: 1.0}]) {
         length columns { state { values } }
-        column(name: "longitude") { ... on ListColumn { valueLength { values } } } } } }'''
+        column(name: "longitude") { type } } } }'''
     )
     groups = data['sort']['partition']
     assert groups['length'] == 62
     assert groups['columns']['state']['values'][:7] == ['AK'] * 7
-    assert groups['column']['valueLength']['values'][:7] == [1, 1, 5, 232, 1, 32, 1]
+    assert groups['column']['type'] == 'list<item: double>'
     data = client.execute(
         '''{ partition(by: ["state"], diffs: [{name: "state", lt: null}]) {
         length column(name: "state") {
@@ -440,11 +435,9 @@ def test_partition(client):
     data = client.execute(
         '''{ partition(by: ["state"]) {
         apply(list: {filter: {gt: [{name: "zipcode"}, {int: 90000}]}}) {
-        column(name: "zipcode") { ... on ListColumn { valueLength{ values } } } } } }'''
+        column(name: "zipcode") { type } } } }'''
     )
-    counts = data['partition']['apply']['column']['valueLength']['values']
-    assert len(counts) == 66
-    assert counts.count(0) == 61
+    assert data['partition']['apply']['column']['type'] == 'list<item: int32>'
     data = client.execute(
         '''{ partition(by: ["state"], counts: "c") { filter(state: {eq: "NY"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }'''

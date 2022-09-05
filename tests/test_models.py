@@ -281,18 +281,6 @@ def test_list(executor):
     assert data == {'row': {'list': {'values': [0, 1, 2]}}}
     data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
     assert data == {'row': {'list': None}}
-    data = executor('{ columns { list { mode { flatten { ... on IntColumn { values } } } } } }')
-    assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0]}}}}}
-    data = executor(
-        '''{ columns { list { mode(n: 2) { flatten { ... on IntColumn { values } } } } } }'''
-    )
-    assert data == {'columns': {'list': {'mode': {'flatten': {'values': [0, 1]}}}}}
-    data = executor(
-        '''{ columns { list { quantile(q: [0.25, 0.75]) { flatten { ... on FloatColumn
-        { values } } } } } }'''
-    )
-    column = data['columns']['list']
-    assert column == {'quantile': {'flatten': {'values': [0.5, 1.5, None, None]}}}
     data = executor(
         '''{ aggregate(approximateMedian: {name: "list"}) {
         column(name: "list") { ... on FloatColumn { values } } } }'''
@@ -306,17 +294,10 @@ def test_list(executor):
     assert column == {'flatten': {'values': [0.0, 2.0]}}
 
     data = executor(
-        '''{ columns { list { valueLength { values }
-        first: element { ... on IntColumn { values } }
-        last: element(index: -1) { ... on IntColumn { values } } } } }'''
+        '''{ apply(list: {element: {name: "list", index: 1}}) {
+        column(name: "list") { ... on IntColumn { values } } } }'''
     )
-    assert data['columns']['list'] == {
-        'valueLength': {'values': [3, None]},
-        'first': {'values': [0, None]},
-        'last': {'values': [2, None]},
-    }
-    data = executor('{ columns { list { valueLength { values } } } }')
-    assert data['columns']['list'] == {'valueLength': {'values': [3, None]}}
+    assert data == {'apply': {'column': {'values': [1, None]}}}
     data = executor(
         '''{ aggregate(distinct: {name: "list", mode: "only_null"})
         { columns { list { flatten { length } } } } }'''
@@ -328,11 +309,8 @@ def test_list(executor):
     )
     column = data['apply']['columns']['list']
     assert column == {'values': [{'values': [0, 2]}, {'values': []}]}
-    data = executor(
-        '''{ apply(list: {name: "list", mode: true}) {
-        column(name: "list") { ... on IntColumn { values } } } }'''
-    )
-    assert data['apply']['column']['values'] == [0, None]
+    data = executor('{ apply(list: {mode: {name: "list"}}) { column(name: "list") { type } } }')
+    assert data['apply']['column']['type'] == 'large_list<item: struct<mode: int32, count: int64>>'
     data = executor(
         '''{ aggregate(stddev: {name: "list"}, variance: {name: "list", alias: "var", ddof: 1}) {
         column(name: "list") { ... on FloatColumn { values } }
@@ -341,10 +319,10 @@ def test_list(executor):
     assert data['aggregate']['column']['values'] == [pytest.approx((2 / 3) ** 0.5), None]
     assert data['aggregate']['var']['values'] == [1, None]
     data = executor(
-        '''{ partition(by: "int32") { column(name: "binary") { ... on ListColumn
-        { binaryJoin(separator: " ") { ... on Base64Column { values } } } } } }'''
+        '''{ partition(by: "int32") { apply(base64: {binaryJoin: {name: "binary", value: ""}}) {
+        column(name: "binary") { ... on Base64Column { values } } } } }'''
     )
-    assert data == {'partition': {'column': {'binaryJoin': {'values': [None]}}}}
+    assert data == {'partition': {'apply': {'column': {'values': [None]}}}}
 
 
 def test_struct(executor):
@@ -362,11 +340,6 @@ def test_struct(executor):
 def test_dictionary(executor):
     data = executor('{ column(name: "string") { length } }')
     assert data == {'column': {'length': 2}}
-    data = executor(
-        '''{ group(by: ["camelId"]) { column(name: "string") {
-        ... on ListColumn { valueLength { values } } } } }'''
-    )
-    assert data == {'group': {'column': {'valueLength': {'values': [1, 1]}}}}
     data = executor(
         '''{ group(by: ["string"]) { tables {
         columns { string { values } } column(name: "camelId") { length } } } }'''

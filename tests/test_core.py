@@ -50,9 +50,8 @@ def test_lists():
     assert ListChunk.element(array, 1).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.min(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
-    assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
-    assert ListChunk.mode(array, n=1).to_pylist() == [[1], [0], [], [], []]
-    assert ListChunk.quantile(array).to_pylist() == [1.5, 0.0, None, None, None]
+    assert ListChunk.mode(array)[0].as_py() == [{'mode': 1, 'count': 1}]
+    assert ListChunk.quantile(array).to_pylist() == [[1.5], [0.0], [None], [None], [None]]
     quantile = ListChunk.quantile(array, q=[0.75])
     assert quantile.to_pylist() == [[1.75], [0.0], [None], [None], [None]]
     array = pa.array([[True, True], [False, False], [None], [], None])

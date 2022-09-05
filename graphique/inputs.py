@@ -354,6 +354,7 @@ class ReplaceSlice(Fields, Generic[T]):
     name='Function', description=f"[functions]({links.compute}#string-transforms) for binaries"
 )
 class Base64Function(Function[T]):
+    binary_join: Optional[Arguments[T]] = default_field(func=pc.binary_join)
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
     binary_length: Optional[Fields] = default_field(func=pc.binary_length)
     binary_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.binary_replace_slice)
@@ -402,6 +403,7 @@ class Slice(Fields):
     name='Function', description=f"[functions]({links.compute}#string-transforms) for strings"
 )
 class StringFunction(OrdinalFunction[T]):
+    binary_join: Optional[Arguments[T]] = default_field(func=pc.binary_join)
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
     binary_length: Optional[Fields] = default_field(func=pc.binary_length)
 
@@ -463,16 +465,35 @@ class StructFunction(Input):
     struct_field: Optional[StructField] = default_field(func=pc.struct_field)
 
 
+@strawberry.input
+class Element(Fields):
+    index: int
+
+
+@strawberry.input
+class Mode(Fields):
+    n: int = 1
+    skip_nulls: bool = True
+    min_count: int = 1
+
+
+@strawberry.input
+class Quantile(Fields):
+    q: List[float] = (0.5,)  # type: ignore
+    interpolation: str = 'linear'
+    skip_nulls: bool = True
+    min_count: int = 1
+
+
 @strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for list")
 class ListFunction(Input):
-    name: str = ''
-    alias: str = ''
+    element: Optional[Element] = default_field(func=ListChunk.element)
+    fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
+    fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
     filter: 'Expression' = default_field(dict, description="filter within list scalars")
-    mode: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.mode))
-    quantile: bool = strawberry.field(default=False, description=inspect.getdoc(ListChunk.quantile))
-    value_length: bool = strawberry.field(
-        default=False, description="faster than `count` aggregation"
-    )
+    mode: Optional[Mode] = default_field(func=pc.mode)
+    quantile: Optional[Mode] = default_field(func=pc.quantile)
+    value_length: Optional[Fields] = default_field(func=pc.list_value_length)
 
 
 @strawberry.input(
@@ -483,31 +504,23 @@ class Aggregate(Input):
     alias: str = ''
 
 
-@strawberry.input(
-    description=f"options for count [aggregation]({links.compute}#grouped-aggregations)"
-)
+@strawberry.input(description=f"options for count [aggregation]({links.compute}#aggregations)")
 class CountAggregate(Aggregate):
     mode: str = 'only_valid'
 
 
-@strawberry.input(
-    description=f"options for scalar [aggregation]({links.compute}#grouped-aggregations)"
-)
+@strawberry.input(description=f"options for scalar [aggregation]({links.compute}#aggregations)")
 class ScalarAggregate(Aggregate):
     skip_nulls: bool = True
     min_count: int = 1
 
 
-@strawberry.input(
-    description=f"options for variance [aggregation]({links.compute}#grouped-aggregations)"
-)
+@strawberry.input(description=f"options for variance [aggregation]({links.compute}#aggregations)")
 class VarianceAggregate(ScalarAggregate):
     ddof: int = 0
 
 
-@strawberry.input(
-    description=f"options for tdigest [aggregation]({links.compute}#grouped-aggregations)"
-)
+@strawberry.input(description=f"options for tdigest [aggregation]({links.compute}#aggregations)")
 class TDigestAggregate(ScalarAggregate):
     q: List[float] = (0.5,)  # type: ignore
     delta: int = 100

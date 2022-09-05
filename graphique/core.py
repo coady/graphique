@@ -147,13 +147,11 @@ class ListChunk(pa.lib.BaseListArray):
 
     def mode(self, **options) -> pa.Array:
         """modes of each list scalar"""
-        array = ListChunk.map_list(self, lambda arr: pc.mode(arr, **options).field(0))
-        return array if 'n' in options else ListChunk.first(array)
+        return ListChunk.map_list(self, pc.mode, **options)
 
     def quantile(self, **options) -> pa.Array:
         """quantiles of each list scalar"""
-        array = ListChunk.map_list(self, pc.quantile, options=pc.QuantileOptions(**options))
-        return array if 'q' in options else ListChunk.first(array)
+        return ListChunk.map_list(self, pc.quantile, **options)
 
 
 class Column(pa.ChunkedArray):
@@ -492,8 +490,6 @@ class Table(pa.Table):
         name: str,
         alias: str = '',
         checked=False,
-        ignore_case=False,
-        regex=False,
         kleene=False,
         **partials,
     ) -> pa.Table:
@@ -506,8 +502,6 @@ class Table(pa.Table):
                 column = getattr(pc, func)(column, *others)
             elif func in Table.applied:
                 column = getattr(Column, func)(column, arg)
-            elif arg and Column.is_list_type(column):
-                column = Column.map(column, getattr(ListChunk, func))
             elif arg:
                 column = getattr(pc, func + '_checked' * checked)(column)
         if alias:
