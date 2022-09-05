@@ -81,8 +81,12 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     )
 
 
-def default_field(default_factory: Callable = lambda: UNSET, **kwargs) -> StrawberryField:
+def default_field(
+    default_factory: Callable = lambda: UNSET, func: Callable = None, **kwargs
+) -> StrawberryField:
     """Use dataclass `default_factory` for `UNSET` or mutables."""
+    if func is not None:
+        kwargs['description'] = func.__doc__.splitlines()[0]  # type: ignore
     return strawberry.field(default_factory=default_factory, **kwargs)
 
 
@@ -111,10 +115,9 @@ class Query(Generic[T], Input):
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
-@strawberry.input(description="positional function arguments without scalars")
-class Fields:
-    name: List[Optional[str]] = default_field(list, description="column name(s)")
-    alias: str = strawberry.field(default='', description="output column name")
+@strawberry.input
+class Names:
+    name: List[Optional[str]] = strawberry.field(description="column name(s)")
 
     def serialize(self, table):
         """Return (name, args, kwargs) suitable for computing."""
@@ -124,6 +127,11 @@ class Fields:
             map(table.column, self.name),
             {name: value for name, value in self.__dict__.items() if name not in exclude},
         )
+
+
+@strawberry.input(description="positional function arguments without scalars")
+class Fields(Names):
+    alias: str = strawberry.field(default='', description="output column name")
 
 
 @strawberry.input(description="positional function arguments with typed scalar")
@@ -143,24 +151,12 @@ class Arguments(Fields, Generic[T]):
         )
 
 
-@strawberry.input
-class Join(Arguments[T]):
-    null_handling: str = 'emit_null'
-    null_replacement: str = ''
-
-
 @strawberry.input(description=f"applied [functions]({links.compute})")
 class Function(Generic[T], Input):
-    coalesce: Optional[Arguments[T]] = default_field(description="select the first non-null value")
-    fill_null_backward: Optional[Fields] = default_field(
-        description="carry non-null values backward to fill null slots"
-    )
-    fill_null_forward: Optional[Fields] = default_field(
-        description="carry non-null values forward to fill null slots"
-    )
-    if_else: Optional[Arguments[T]] = default_field(
-        description="choose values based on a condition"
-    )
+    coalesce: Optional[Arguments[T]] = default_field(func=pc.coalesce)
+    fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
+    fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
+    if_else: Optional[Arguments[T]] = default_field(func=pc.if_else)
 
 
 @strawberry.input
@@ -173,13 +169,24 @@ class _Function(Input):
 
 
 @strawberry.input
-class OrdinalFunction(_Function):
+class ElementWiseAggregate(Arguments[T]):
+    skip_nulls: bool = True
+
+
+@strawberry.input
+class OrdinalFunction(Function[T]):
+    min_element_wise: Optional[ElementWiseAggregate[T]] = default_field(func=pc.min_element_wise)
+    max_element_wise: Optional[ElementWiseAggregate[T]] = default_field(func=pc.max_element_wise)
+
+
+@strawberry.input
+class _OrdinalFunction(_Function):
     min_element_wise: Optional[str] = UNSET
     max_element_wise: Optional[str] = UNSET
 
 
 @strawberry.input
-class NumericFunction(OrdinalFunction):
+class NumericFunction(_OrdinalFunction):
     checked: bool = strawberry.field(default=False, description="check math functions for overlow")
     power: Optional[str] = UNSET
     atan2: Optional[str] = UNSET
@@ -254,7 +261,7 @@ DecimalFunction = Function[Decimal]
 @strawberry.input(
     description=f"[functions]({links.compute}#temporal-component-extraction) for dates"
 )
-class DateFunction(OrdinalFunction):
+class DateFunction(_OrdinalFunction):
     fill_null: Optional[date] = UNSET
     years_between: Optional[str] = UNSET
     quarters_between: Optional[str] = UNSET
@@ -280,7 +287,7 @@ class DateFunction(OrdinalFunction):
 @strawberry.input(
     description=f"[functions]({links.compute}#temporal-component-extraction) for datetimes"
 )
-class DateTimeFunction(OrdinalFunction):
+class DateTimeFunction(_OrdinalFunction):
     fill_null: Optional[datetime] = UNSET
     years_between: Optional[str] = UNSET
     quarters_between: Optional[str] = UNSET
@@ -313,7 +320,7 @@ class DateTimeFunction(OrdinalFunction):
 @strawberry.input(
     description=f"[functions]({links.compute}#temporal-component-extraction) for times"
 )
-class TimeFunction(OrdinalFunction):
+class TimeFunction(_OrdinalFunction):
     fill_null: Optional[time] = UNSET
     hours_between: Optional[str] = UNSET
     minutes_between: Optional[str] = UNSET
@@ -333,44 +340,123 @@ class TimeFunction(OrdinalFunction):
 DurationFunction = Function[Duration]
 
 
+@strawberry.input
+class Join(Arguments[T]):
+    null_handling: str = 'emit_null'
+    null_replacement: str = ''
+
+
+@strawberry.input
+class ReplaceSlice(Names, Generic[T]):
+    start: int
+    stop: int
+    replacement: T
+    alias: str = strawberry.field(default='', description="output column name")
+
+
 @operator.itemgetter(Base64)
 @strawberry.input(
     name='Function', description=f"[functions]({links.compute}#string-transforms) for binaries"
 )
 class Base64Function(Function[T]):
-    binary_join_element_wise: Optional[Join[T]] = default_field(
-        description="join string arguments together, with the last argument as separator"
+    binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
+    binary_length: Optional[Fields] = default_field(func=pc.binary_length)
+    binary_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.binary_replace_slice)
+
+
+@strawberry.input
+class MatchSubstring(Arguments[T]):
+    ignore_case: bool = False
+
+
+@strawberry.input
+class Split(Arguments[T]):
+    max_splits: Optional[int] = None
+    reverse: bool = False
+
+
+@strawberry.input
+class Pad(Names):
+    width: int
+    padding: str = ''
+    alias: str = strawberry.field(default='', description="output column name")
+
+
+@strawberry.input
+class ReplaceSubstring(Names):
+    pattern: str
+    replacement: str
+    max_replacements: Optional[int] = None
+    alias: str = strawberry.field(default='', description="output column name")
+
+
+@strawberry.input
+class Strptime(Names):
+    format: str
+    unit: str
+    error_is_null: bool = False
+    alias: str = strawberry.field(default='', description="output column name")
+
+
+@strawberry.input
+class Slice(Names):
+    start: int
+    stop: Optional[int] = None
+    step: int = 1
+    alias: str = strawberry.field(default='', description="output column name")
+
+
+@operator.itemgetter(str)
+@strawberry.input(
+    name='Function', description=f"[functions]({links.compute}#string-transforms) for strings"
+)
+class StringFunction(OrdinalFunction[T]):
+    binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
+    binary_length: Optional[Fields] = default_field(func=pc.binary_length)
+
+    find_substring: Optional[MatchSubstring[T]] = default_field(func=pc.find_substring)
+    count_substring: Optional[MatchSubstring[T]] = default_field(func=pc.count_substring)
+    match_substring: Optional[MatchSubstring[T]] = default_field(func=pc.match_substring)
+    match_substring_regex: Optional[MatchSubstring[T]] = default_field(
+        func=pc.match_substring_regex
     )
-    binary_length: Optional[Fields] = default_field(description="compute string lengths")
+    match_like: Optional[MatchSubstring[T]] = default_field(func=pc.match_like)
 
+    utf8_capitalize: Optional[Fields] = default_field(func=pc.utf8_capitalize)
+    utf8_length: Optional[Fields] = default_field(func=pc.utf8_length)
+    utf8_lower: Optional[Fields] = default_field(func=pc.utf8_lower)
+    utf8_upper: Optional[Fields] = default_field(func=pc.utf8_upper)
+    utf8_swapcase: Optional[Fields] = default_field(func=pc.utf8_swapcase)
+    utf8_reverse: Optional[Fields] = default_field(func=pc.utf8_reverse)
 
-@strawberry.input(description=f"[functions]({links.compute}#string-transforms) for strings")
-class StringFunction(_Function):
-    binary_join_element_wise: Optional[List[str]] = UNSET
-    find_substring: Optional[str] = UNSET
-    count_substring: Optional[str] = UNSET
-    match_substring: Optional[str] = UNSET
-    match_like: Optional[str] = UNSET
-    ignore_case: bool = strawberry.field(default=False, description="case option for substrings")
-    regex: bool = strawberry.field(default=False, description="regex option for substrings")
-    fill_null: Optional[str] = UNSET
-    utf8_capitalize: bool = False
-    utf8_length: bool = False
-    utf8_lower: bool = False
-    utf8_upper: bool = False
-    utf8_swapcase: bool = False
-    utf8_reverse: bool = False
-    string_is_ascii: bool = False
-    utf8_is_alnum: bool = False
-    utf8_is_alpha: bool = False
-    utf8_is_decimal: bool = False
-    utf8_is_digit: bool = False
-    utf8_is_lower: bool = False
-    utf8_is_numeric: bool = False
-    utf8_is_printable: bool = False
-    utf8_is_space: bool = False
-    utf8_is_title: bool = False
-    utf8_is_upper: bool = False
+    utf8_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.utf8_replace_slice)
+    utf8_split_whitespace: Optional[Split] = default_field(func=pc.utf8_split_whitespace)
+    split_pattern: Optional[Split] = default_field(func=pc.split_pattern)
+    split_pattern_regex: Optional[Split] = default_field(func=pc.split_pattern_regex)
+    utf8_ltrim: Optional[Arguments[T]] = default_field(func=pc.utf8_ltrim)
+    utf8_ltrim_whitespace: Optional[Fields] = default_field(func=pc.utf8_ltrim_whitespace)
+    utf8_rtrim: Optional[Arguments[T]] = default_field(func=pc.utf8_rtrim)
+    utf8_rtrim_whitespace: Optional[Fields] = default_field(func=pc.utf8_rtrim_whitespace)
+    utf8_trim: Optional[Arguments[T]] = default_field(func=pc.utf8_trim)
+    utf8_trim_whitespace: Optional[Fields] = default_field(func=pc.utf8_trim_whitespace)
+    utf8_center: Optional[Pad] = default_field(func=pc.utf8_center)
+    utf8_lpad: Optional[Pad] = default_field(func=pc.utf8_lpad)
+    utf8_rpad: Optional[Pad] = default_field(func=pc.utf8_rpad)
+    replace_substring: Optional[ReplaceSubstring] = default_field(func=pc.replace_substring)
+    strptime: Optional[Strptime] = default_field(func=pc.strptime)
+    utf8_slice_codeunits: Optional[Slice] = default_field(func=pc.utf8_slice_codeunits)
+
+    string_is_ascii: Optional[Fields] = default_field(func=pc.string_is_ascii)
+    utf8_is_alnum: Optional[Fields] = default_field(func=pc.utf8_is_alnum)
+    utf8_is_alpha: Optional[Fields] = default_field(func=pc.utf8_is_alpha)
+    utf8_is_decimal: Optional[Fields] = default_field(func=pc.utf8_is_decimal)
+    utf8_is_digit: Optional[Fields] = default_field(func=pc.utf8_is_digit)
+    utf8_is_lower: Optional[Fields] = default_field(func=pc.utf8_is_lower)
+    utf8_is_numeric: Optional[Fields] = default_field(func=pc.utf8_is_numeric)
+    utf8_is_printable: Optional[Fields] = default_field(func=pc.utf8_is_printable)
+    utf8_is_space: Optional[Fields] = default_field(func=pc.utf8_is_space)
+    utf8_is_title: Optional[Fields] = default_field(func=pc.utf8_is_title)
+    utf8_is_upper: Optional[Fields] = default_field(func=pc.utf8_is_upper)
 
 
 @strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for structs")

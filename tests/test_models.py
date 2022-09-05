@@ -98,13 +98,7 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ index(value: "") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
-        data = execute(f'{{ {name} {{ fillNull(value: "") {{ values }} }} }}')
-        assert data == {name: {'fillNull': {'values': ['', '']}}}
 
-    data = execute(
-        '{ binary { binaryReplaceSlice(start: 0, stop: 1, replacement: "") { values } } }'
-    )
-    assert data == {'binary': {'binaryReplaceSlice': {'values': ['', None]}}}
     assert execute('{ string { type } }') == {
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
     }
@@ -228,8 +222,8 @@ def test_datetime(executor):
             {{ between(unit: "years", start: "1969-01-01") {{ values }} }} }} }}'''
         )
         assert data == {'columns': {name: {'between': {'values': [1, None]}}}}
-    data = executor('{ columns { date32 { strftime { strptime { values } } } } }')
-    dates = data['columns']['date32']['strftime']['strptime']['values']
+    data = executor('{ columns { date32 { strftime { values } } } }')
+    dates = data['columns']['date32']['strftime']['values']
     assert dates == ['1970-01-01T00:00:00', None]
     for name in ('timestamp', 'time32'):
         data = executor(
@@ -387,7 +381,8 @@ def test_dictionary(executor):
     )
     assert data == {'group': {'aggregate': {'column': {'values': [1, 0]}}}}
     data = executor(
-        '{ apply(string: [{name: "string", fillNull: ""}]) { columns { string { values } } } }'
+        '''{ apply(string: {coalesce: {name: "string", value: ""}}) {
+        columns { string { values } } } }'''
     )
     assert data == {'apply': {'columns': {'string': {'values': ['', '']}}}}
 
@@ -414,27 +409,33 @@ def test_long(executor):
 
 def test_base64(executor):
     data = executor(
-        '''{apply(base64: {binaryLength: {name: "binary"}}) {
+        '''{ apply(base64: {binaryLength: {name: "binary"}}) {
         column(name: "binary") { ...on IntColumn { values } } } }'''
     )
     assert data == {'apply': {'column': {'values': [0, None]}}}
     data = executor(
-        '{apply(base64: {fillNullForward: {name: "binary"}}) { columns { binary { values } } } }'
+        '{ apply(base64: {fillNullForward: {name: "binary"}}) { columns { binary { values } } } }'
     )
     assert data == {'apply': {'columns': {'binary': {'values': ['', '']}}}}
     data = executor(
-        '''{apply(base64: {coalesce: {name: "binary", value: "Xw=="}}) {
+        '''{ apply(base64: {coalesce: {name: "binary", value: "Xw=="}}) {
         columns { binary { values } } } }'''
     )
     assert data == {'apply': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
     data = executor(
-        '''{apply(base64: {coalesce: {name: [null, "binary"], value: "Xw=="}}) {
+        '''{ apply(base64: {coalesce: {name: [null, "binary"], value: "Xw=="}}) {
         columns { binary { values } } } }'''
     )
     assert data == {'apply': {'columns': {'binary': {'values': ['Xw==', 'Xw==']}}}}
     data = executor(
-        '''{apply(base64: {binaryJoinElementWise: {
+        '''{ apply(base64: {binaryJoinElementWise: {
         name: ["binary", "binary"], value: "Xw==", nullHandling: "replace"}}) {
         columns { binary { values } } } }'''
     )
     assert data == {'apply': {'columns': {'binary': {'values': ['Xw==', 'Xw==']}}}}
+    data = executor(
+        '''{ apply(base64: {binaryReplaceSlice:
+        {name: "binary", start: 0, stop: 1, replacement: "Xw=="}}) {
+        columns { binary { values } } } }'''
+    )
+    assert data == {'apply': {'columns': {'binary': {'values': ['Xw==', None]}}}}

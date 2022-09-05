@@ -93,39 +93,37 @@ def test_strings(client):
     assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
     data = client.execute(
         '''{ filter(state: {eq: "CA"}) {
-        apply(string: {name: "city", utf8Length: true, alias: "size"}) {
+        apply(string: {utf8Length: {name: "city", alias: "size"}}) {
         scan(filter: {gt: [{name: "size"}, {int: 23}]}) { length }
         column(name: "size") { ... on IntColumn { max } } } } }'''
     )
     assert data == {'filter': {'apply': {'scan': {'length': 1}, 'column': {'max': 24}}}}
-    data = client.execute('{ apply(string: {name: "city", utf8Swapcase: true}) { row { city } } }')
+    data = client.execute('{ apply(string: {utf8Swapcase: {name: "city"}}) { row { city } } }')
     assert data == {'apply': {'row': {'city': 'hOLTSVILLE'}}}
-    data = client.execute(
-        '{ apply(string: {name: "state", utf8Capitalize: true}) { row { state } } }'
-    )
+    data = client.execute('{ apply(string: {utf8Capitalize: {name: "state"}}) { row { state } } }')
     assert data == {'apply': {'row': {'state': 'Ny'}}}
     data = client.execute(
-        '''{ apply(string: {name: "city", utf8IsLower: true})
+        '''{ apply(string: {utf8IsLower: {name: "city"}})
         { scan(filter: {name: "city"}) { length } } }'''
     )
     assert data == {'apply': {'scan': {'length': 0}}}
     data = client.execute(
-        '''{ apply(string: {name: "city", utf8IsTitle: true})
+        '''{ apply(string: {utf8IsTitle: {name: "city"}})
         { scan(filter: {name: "city"}) { length } } }'''
     )
     assert data == {'apply': {'scan': {'length': 41700}}}
     data = client.execute(
-        '''{ apply(string: {name: "city", matchSubstring: "Mountain"})
+        '''{ apply(string: {matchSubstring: {name: "city", value: "Mountain"}})
         { scan(filter: {name: "city"}) { length } } }'''
     )
     assert data == {'apply': {'scan': {'length': 88}}}
     data = client.execute(
-        '''{ apply(string: {name: "city", matchSubstring: "mountain", ignoreCase: true})
+        '''{ apply(string: {matchSubstring: {name: "city", value: "mountain", ignoreCase: true}})
         { scan(filter: {name: "city"}) { length } } }'''
     )
     assert data == {'apply': {'scan': {'length': 88}}}
     data = client.execute(
-        '''{ apply(string: {name: "city", matchSubstring: "^Mountain", regex: true})
+        '''{ apply(string: {matchSubstringRegex: {name: "city", value: "^Mountain"}})
         { scan(filter: {name: "city"}) { length } } }'''
     )
     assert data == {'apply': {'scan': {'length': 42}}}
@@ -133,59 +131,34 @@ def test_strings(client):
 
 def test_string_methods(client):
     data = client.execute(
-        '''{ group(by: ["city"]) { columns { city { split {
-        element { ... on StringColumn { values } }
-        count { ... on LongColumn { max } } } } } } }'''
+        '''{ apply(string: {splitPattern: {name: "city", value: "-", maxSplits: 1}}) {
+        columns { city { type } } } }'''
     )
-    cities = data['group']['columns']['city']['split']
-    assert cities['element']['values'].count('New') == 177
-    assert cities['count'] == {'max': 6}
+    assert data == {'apply': {'columns': {'city': {'type': 'list<item: string>'}}}}
     data = client.execute(
-        '''{ group(by: ["city"]) { columns { city {
-        split(pattern: "-", maxSplits: 1, reverse: true) {
-        count { unique { values counts } } } } } } }'''
+        '''{ apply(string: {utf8Trim: {name: "state", value: "C"}}) {
+        columns { state { values } } } }'''
     )
-    cities = data['group']['columns']['city']
-    cities['split']['count']['unique'] == {'values': [1, 2], 'counts': [18718, 1]}
+    states = data['apply']['columns']['state']['values']
+    assert 'CA' not in states and 'A' in states
     data = client.execute(
-        '''{ columns { city { split(pattern: "-", maxSplits: 1, regex: true)
-        { count { values } } } } }'''
+        '{ apply(string: {utf8Center: {name: "state", width: 4, padding: "_"}}) { row { state } } }'
     )
-    assert all(count > 0 for count in data['columns']['city']['split']['count']['values'])
+    assert data == {'apply': {'row': {'state': '_NY_'}}}
     data = client.execute(
-        '{ columns { state { utf8Trim { values } utf8Ltrim { values } utf8Rtrim { values } } } }'
+        '''{ apply(string: {utf8ReplaceSlice: {name: "state", start: 0, stop: 2, replacement: ""}})
+        { columns { state { unique { values } } } } }'''
     )
-    states = data['columns']['state']
-    assert 'CA' in states['utf8Trim']['values']
-    assert 'CA' in states['utf8Ltrim']['values']
-    assert 'CA' in states['utf8Rtrim']['values']
+    assert data == {'apply': {'columns': {'state': {'unique': {'values': ['']}}}}}
     data = client.execute(
-        '''{ columns { state { utf8Trim(characters: "C") { values }
-        utf8Ltrim(characters: "C") { values } utf8Rtrim(characters: "A") { values } } } }'''
+        '{ apply(string: {utf8SliceCodeunits: {name: "state", start: 0, stop: 1}}) { row { state } } }'
     )
-    states = data['columns']['state']
-    assert 'A' in states['utf8Trim']['values']
-    assert 'A' in states['utf8Ltrim']['values']
-    assert 'C' in states['utf8Rtrim']['values']
+    assert data == {'apply': {'row': {'state': 'N'}}}
     data = client.execute(
-        '''{ columns { state { utf8Center(width: 4, padding: "_") { values }
-        utf8Lpad(width: 3) { values } utf8Rpad(width: 3) { values } } } }'''
+        '''{ apply(string: {replaceSubstring: {name: "state", pattern: "C", replacement: "A"}})
+        { columns { state { values } } } }'''
     )
-    states = data['columns']['state']
-    assert all(len(state.split('_')) == 3 for state in states['utf8Center']['values'])
-    assert all(state.startswith(' ') for state in states['utf8Lpad']['values'])
-    assert all(state.endswith(' ') for state in states['utf8Rpad']['values'])
-    data = client.execute(
-        '''{ columns { state { utf8ReplaceSlice(start: 0, stop: 2, replacement: "")
-        { unique { values } } } } }'''
-    )
-    assert data['columns']['state']['utf8ReplaceSlice']['unique']['values'] == ['']
-    data = client.execute('{ columns { state { utf8SliceCodeunits(stop: 1) { values } } } }')
-    assert data['columns']['state']['utf8SliceCodeunits']['values'][0] == 'N'
-    data = client.execute(
-        '''{ columns { state { replaceSubstring(pattern: "C", replacement: "A") { values } } } }'''
-    )
-    assert 'AA' in data['columns']['state']['replaceSubstring']['values']
+    assert 'AA' in data['apply']['columns']['state']['values']
     data = client.execute(
         '''{ group(by: "state") { column(name: "city") { ... on ListColumn
         { stringJoin(separator: ",") { ... on StringColumn { values } } } } } }'''
@@ -285,20 +258,25 @@ def test_apply(client):
     )
     assert data['apply']['columns']['latitude']['max'] == pytest.approx(-65.301389)
     data = client.execute(
-        '''{ apply(string: {name: "city", findSubstring: "mountain"})
+        '''{ apply(string: {findSubstring: {name: "city", value: "mountain"}})
         { column(name: "city") { ... on IntColumn { unique { values } } } } }'''
     )
     assert data['apply']['column']['unique']['values'] == [-1]
     data = client.execute(
-        '''{ apply(string: {name: "city", countSubstring: "mountain", ignoreCase: true})
+        '''{ apply(string: {countSubstring: {name: "city", value: "mountain", ignoreCase: true}})
         { column(name: "city") { ... on IntColumn { unique { values } } } } }'''
     )
     assert data['apply']['column']['unique']['values'] == [0, 1]
     data = client.execute(
-        '''{ apply(string: {name: "state", binaryJoinElementWise: ["county", "city"]})
+        '''{ apply(string: {binaryJoinElementWise: {name: ["state", "county"], value: " "}})
         { columns { state { values } } } }'''
     )
-    assert data['apply']['columns']['state']['values'][0] == 'NYHoltsvilleSuffolk'
+    assert data['apply']['columns']['state']['values'][0] == 'NY Suffolk'
+    data = client.execute(
+        '''{ apply(string: {minElementWise: {name: ["state", "county"], skipNulls: false}})
+        { columns { state { values } } } }'''
+    )
+    assert data['apply']['columns']['state']['values'][0] == 'NY'
 
 
 def test_sort(client):

@@ -551,7 +551,6 @@ class Table(pa.Table):
     ) -> pa.Table:
         """Return view of table with functions applied across columns."""
         column = self[name]
-        options = {'ignore_case': True} if ignore_case else {}
         for func, arg in partials.items():
             if func in Table.projected:
                 others = (self[name] for name in (arg if isinstance(arg, list) else [arg]))
@@ -559,8 +558,6 @@ class Table(pa.Table):
                 column = getattr(pc, func)(column, *others)
             elif func in Table.applied:
                 column = getattr(Column, func)(column, arg)
-            elif not isinstance(arg, bool):
-                column = getattr(pc, func + '_regex' * regex)(column, arg, **options)
             elif arg and Column.is_list_type(column):
                 column = Column.map(column, getattr(ListChunk, func))
             elif arg:

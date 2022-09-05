@@ -430,13 +430,6 @@ class Base64Column(Column):
     values = annotate(Column.values, List[Optional[bytes]])
     unique = annotate(Column.unique, Set[bytes])
     drop_null = annotate(Column.drop_null, 'Base64Column')
-    fill_null = annotate(Column.fill_null, 'Base64Column', value=bytes)
-
-    @doc_field
-    def binary_replace_slice(self, start: int, stop: int, replacement: str) -> 'Base64Column':
-        """Replace a slice of a binary string with `replacement`."""
-        kwargs = dict(start=start, stop=stop, replacement=replacement)
-        return Base64Column(pc.binary_replace_slice(self.array, **kwargs))
 
 
 @strawberry.type(description="column of strings")
@@ -448,80 +441,6 @@ class StringColumn(Column):
     min = annotate(Column.min, Optional[str])
     max = annotate(Column.max, Optional[str])
     drop_null = annotate(Column.drop_null, 'StringColumn')
-    fill_null = annotate(Column.fill_null, 'StringColumn', value=str)
-
-    @doc_field
-    def split(
-        self, pattern: str = '', max_splits: int = -1, reverse: bool = False, regex: bool = False
-    ) -> 'ListColumn':
-        """Return strings split on pattern, by default whitespace."""
-        kwargs = {'max_splits': max_splits, 'reverse': reverse}
-        if pattern:
-            func = pc.split_pattern_regex if regex else pc.split_pattern
-            return ListColumn(func(self.array, pattern=pattern, **kwargs))
-        return ListColumn(pc.utf8_split_whitespace(self.array, **kwargs))
-
-    @doc_field
-    def utf8_ltrim(self, characters: str = '') -> 'StringColumn':
-        """Trim leading characters, by default whitespace."""
-        if characters:
-            return StringColumn(pc.utf8_ltrim(self.array, characters=characters))
-        return StringColumn(pc.utf8_ltrim_whitespace(self.array))
-
-    @doc_field
-    def utf8_rtrim(self, characters: str = '') -> 'StringColumn':
-        """Trim trailing characters, by default whitespace."""
-        if characters:
-            return StringColumn(pc.utf8_rtrim(self.array, characters=characters))
-        return StringColumn(pc.utf8_rtrim_whitespace(self.array))
-
-    @doc_field
-    def utf8_trim(self, characters: str = '') -> 'StringColumn':
-        """Trim trailing characters, by default whitespace."""
-        if characters:
-            return StringColumn(pc.utf8_trim(self.array, characters=characters))
-        return StringColumn(pc.utf8_trim_whitespace(self.array))
-
-    @doc_field
-    def utf8_lpad(self, width: int, padding: str = ' ') -> 'StringColumn':
-        """Right-align strings by padding with a given character."""
-        return StringColumn(pc.utf8_lpad(self.array, width=width, padding=padding))
-
-    @doc_field
-    def utf8_rpad(self, width: int, padding: str = ' ') -> 'StringColumn':
-        """Left-align strings by padding with a given character."""
-        return StringColumn(pc.utf8_rpad(self.array, width=width, padding=padding))
-
-    @doc_field
-    def utf8_center(self, width: int, padding: str = ' ') -> 'StringColumn':
-        """Center strings by padding with a given character."""
-        return StringColumn(pc.utf8_center(self.array, width=width, padding=padding))
-
-    @doc_field
-    def utf8_replace_slice(self, start: int, stop: int, replacement: str) -> 'StringColumn':
-        """Replace a slice of a string with `replacement`."""
-        kwargs = dict(start=start, stop=stop, replacement=replacement)
-        return StringColumn(pc.utf8_replace_slice(self.array, **kwargs))
-
-    @doc_field
-    def replace_substring(
-        self, pattern: str, replacement: str, max_replacements: int = -1
-    ) -> 'StringColumn':
-        """Replace non-overlapping substrings that match pattern."""
-        kwargs = dict(pattern=pattern, replacement=replacement, max_replacements=max_replacements)
-        return StringColumn(pc.replace_substring(self.array, **kwargs))
-
-    @doc_field
-    def strptime(self, format: str = '%Y-%m-%dT%H:%M:%S', unit: str = 'ms') -> DateTimeColumn:
-        """Return parsed timestamps."""
-        return DateTimeColumn(pc.strptime(self.array, format=format, unit=unit))
-
-    @doc_field
-    def utf8_slice_codeunits(
-        self, start: int = 0, stop: Optional[int] = None, step: int = 1
-    ) -> 'StringColumn':
-        """Return slice strings, measured in utf8 codeunits."""
-        return StringColumn(pc.utf8_slice_codeunits(self.array, start, stop, step))
 
 
 @strawberry.type(description="column of lists")
