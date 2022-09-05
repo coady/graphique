@@ -51,7 +51,7 @@ class GraphQL(strawberry.asgi.GraphQL):
         if federated:
             Schema = strawberry.federation.Schema
             Query = type('Query', (), {'__annotations__': {federated: type(root_value)}})
-            root_value = strawberry.type(Query)(root_value)
+            root_value = strawberry.type(Query)(**{federated: root_value})
         schema = Schema(
             type(root_value),
             types=Column.type_map.values(),
@@ -127,7 +127,11 @@ class Dataset:
         table = self.table
         schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
         partitioning = getattr(table, 'partitioning', None)
-        return Schema(schema.names, schema.types, partitioning and partitioning.schema.names)  # type: ignore
+        return Schema(
+            names=schema.names,
+            types=schema.types,
+            partitioning=partitioning and partitioning.schema.names,
+        )  # type: ignore
 
     @doc_field
     def length(self) -> Long:

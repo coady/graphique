@@ -79,7 +79,7 @@ Specifying an `INDEX` indicates the table is sorted, and enables the binary `sea
 
 ## Dependencies
 * pyarrow >=9
-* strawberry-graphql[asgi] >=0.116.4
+* strawberry-graphql[asgi] >=0.128
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 
 ## Tests

@@ -115,9 +115,10 @@ class Query(Generic[T], Input):
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
-@strawberry.input
-class Names:
+@strawberry.input(description="positional function arguments without scalars")
+class Fields:
     name: List[Optional[str]] = strawberry.field(description="column name(s)")
+    alias: str = strawberry.field(default='', description="output column name")
 
     def serialize(self, table):
         """Return (name, args, kwargs) suitable for computing."""
@@ -127,11 +128,6 @@ class Names:
             map(table.column, self.name),
             {name: value for name, value in self.__dict__.items() if name not in exclude},
         )
-
-
-@strawberry.input(description="positional function arguments without scalars")
-class Fields(Names):
-    alias: str = strawberry.field(default='', description="output column name")
 
 
 @strawberry.input(description="positional function arguments with typed scalar")
@@ -347,11 +343,10 @@ class Join(Arguments[T]):
 
 
 @strawberry.input
-class ReplaceSlice(Names, Generic[T]):
+class ReplaceSlice(Fields, Generic[T]):
     start: int
     stop: int
     replacement: T
-    alias: str = strawberry.field(default='', description="output column name")
 
 
 @operator.itemgetter(Base64)
@@ -376,34 +371,30 @@ class Split(Arguments[T]):
 
 
 @strawberry.input
-class Pad(Names):
+class Pad(Fields):
     width: int
     padding: str = ''
-    alias: str = strawberry.field(default='', description="output column name")
 
 
 @strawberry.input
-class ReplaceSubstring(Names):
+class ReplaceSubstring(Fields):
     pattern: str
     replacement: str
     max_replacements: Optional[int] = None
-    alias: str = strawberry.field(default='', description="output column name")
 
 
 @strawberry.input
-class Strptime(Names):
+class Strptime(Fields):
     format: str
     unit: str
     error_is_null: bool = False
-    alias: str = strawberry.field(default='', description="output column name")
 
 
 @strawberry.input
-class Slice(Names):
+class Slice(Fields):
     start: int
     stop: Optional[int] = None
     step: int = 1
-    alias: str = strawberry.field(default='', description="output column name")
 
 
 @operator.itemgetter(str)
@@ -460,9 +451,8 @@ class StringFunction(OrdinalFunction[T]):
 
 
 @strawberry.input
-class StructField(Names):
+class StructField(Fields):
     indices: List[int]
-    alias: str = strawberry.field(default='', description="output column name")
 
 
 @strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for structs")
