@@ -61,9 +61,9 @@ def test_lists():
     assert ListChunk.quantile(array).to_pylist() == [1.5, 0.0, None, None, None]
     quantile = ListChunk.quantile(array, q=[0.75])
     assert quantile.to_pylist() == [[1.75], [0.0], [None], [None], [None]]
-    assert ListChunk.tdigest(array).to_pylist() == [1.0, 0.0, None, None, None]
+    assert ListChunk.approximate_median(array).to_pylist() == [1.0, 0.0, None, None, None]
     tdigest = ListChunk.tdigest(array, q=[0.75])
-    assert tdigest.to_pylist() == [[2.0], [0.0], [None], [None], [None]]
+    assert tdigest.to_pylist() == [[2.0], [0.0], [None], None, None]
     assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
     assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
     array = pa.array([[True, True], [False, False], [None], [], None])

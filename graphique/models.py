@@ -451,16 +451,6 @@ class ListColumn(Column):
         return list(map(self.fromscalar, self.array))
 
     @doc_field
-    def count(self, mode: str = 'only_valid') -> LongColumn:
-        """non-null count of each list scalar"""
-        return LongColumn(self.map(ListChunk.count, mode=mode).array)
-
-    @doc_field
-    def count_distinct(self, mode: str = 'only_valid') -> LongColumn:
-        """non-null distinct count of each list scalar"""
-        return LongColumn(self.map(ListChunk.count_distinct, mode=mode).array)
-
-    @doc_field
     def value_length(self) -> LongColumn:
         """length of each list scalar"""
         return LongColumn(pc.list_value_length(self.array))
@@ -471,41 +461,11 @@ class ListColumn(Column):
         return self.cast(pc.list_flatten(self.array))
 
     @doc_field
-    def distinct(self, mode: str = 'only_valid') -> 'ListColumn':
-        """non-null distinct values within each scalar"""
-        return self.map(ListChunk.distinct, mode=mode)  # type: ignore
-
-    @doc_field
     def element(self, index: Long = 0) -> Column:
         """element at index of each list scalar; defaults to null"""
         with contextlib.suppress(ValueError):
             return self.cast(pc.list_element(self.array, index))
         return self.map(ListChunk.element, index=index)
-
-    @doc_field
-    def min(self, skip_nulls: bool = True, min_count: int = 1) -> Column:
-        """min value of each list scalar"""
-        return self.map(ListChunk.min, skip_nulls=skip_nulls, min_count=min_count)
-
-    @doc_field
-    def max(self, skip_nulls: bool = True, min_count: int = 1) -> Column:
-        """max value of each list scalar"""
-        return self.map(ListChunk.max, skip_nulls=skip_nulls, min_count=min_count)
-
-    @doc_field
-    def sum(self, skip_nulls: bool = True, min_count: int = 1) -> Column:
-        """sum of each list scalar"""
-        return self.map(ListChunk.sum, skip_nulls=skip_nulls, min_count=min_count)
-
-    @doc_field
-    def product(self, skip_nulls: bool = True, min_count: int = 1) -> Column:
-        """product of each list scalar"""
-        return self.map(ListChunk.product, skip_nulls=skip_nulls, min_count=min_count)
-
-    @doc_field
-    def mean(self, skip_nulls: bool = True, min_count: int = 1) -> FloatColumn:
-        """mean of each list scalar"""
-        return self.map(ListChunk.mean, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
 
     @doc_field
     def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0) -> 'ListColumn':
@@ -522,38 +482,6 @@ class ListColumn(Column):
     ) -> 'ListColumn':
         """quantile of each list scalar"""
         return self.map(ListChunk.quantile, q=q, interpolation=interpolation, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
-
-    @doc_field
-    def tdigest(
-        self,
-        q: List[float] = [0.5],
-        delta: int = 100,
-        buffer_size: int = 500,
-        skip_nulls: bool = True,
-        min_count: int = 0,
-    ) -> 'ListColumn':
-        """approximate quantile of each list scalar"""
-        return self.map(ListChunk.tdigest, q=q, delta=delta, buffer_size=buffer_size, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
-
-    @doc_field
-    def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> FloatColumn:
-        """stddev of each list scalar"""
-        return self.map(ListChunk.stddev, ddof=ddof, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
-
-    @doc_field
-    def variance(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> FloatColumn:
-        """variance of each list scalar"""
-        return self.map(ListChunk.variance, ddof=ddof, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
-
-    @doc_field
-    def any(self, skip_nulls: bool = True, min_count: int = 1) -> BooleanColumn:
-        """any true of each list scalar"""
-        return self.map(ListChunk.any, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
-
-    @doc_field
-    def all(self, skip_nulls: bool = True, min_count: int = 1) -> BooleanColumn:
-        """all true of each list scalar"""
-        return self.map(ListChunk.all, skip_nulls=skip_nulls, min_count=min_count)  # type: ignore
 
     @doc_field
     def binary_join(self, separator: bytes) -> Base64Column:

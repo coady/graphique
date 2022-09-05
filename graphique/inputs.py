@@ -508,6 +508,22 @@ class ScalarAggregate(Aggregate):
     min_count: int = 1
 
 
+@strawberry.input(
+    description=f"options for variance [aggregation]({links.compute}#grouped-aggregations)"
+)
+class VarianceAggregate(ScalarAggregate):
+    ddof: int = 0
+
+
+@strawberry.input(
+    description=f"options for tdigest [aggregation]({links.compute}#grouped-aggregations)"
+)
+class TDigestAggregate(ScalarAggregate):
+    q: List[float] = (0.5,)  # type: ignore
+    delta: int = 100
+    buffer_size: int = 500
+
+
 @strawberry.input
 class Aggregations(Input):
     all: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.all))
@@ -528,14 +544,17 @@ class Aggregations(Input):
     product: List[ScalarAggregate] = default_field(
         list, description=inspect.getdoc(ListChunk.product)
     )
-    stddev: List[ScalarAggregate] = default_field(
+    stddev: List[VarianceAggregate] = default_field(
         list, description=inspect.getdoc(ListChunk.stddev)
     )
     sum: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.sum))
-    tdigest: List[ScalarAggregate] = default_field(
+    approximate_median: List[ScalarAggregate] = default_field(
+        list, description=inspect.getdoc(ListChunk.approximate_median)
+    )
+    tdigest: List[TDigestAggregate] = default_field(
         list, description=inspect.getdoc(ListChunk.tdigest)
     )
-    variance: List[ScalarAggregate] = default_field(
+    variance: List[VarianceAggregate] = default_field(
         list, description=inspect.getdoc(ListChunk.variance)
     )
 

@@ -183,13 +183,15 @@ class ListChunk(pa.lib.BaseListArray):
         array = ListChunk.map_list(self, pc.quantile, options=pc.QuantileOptions(**options))
         return array if 'q' in options else ListChunk.first(array)
 
+    def approximate_median(self, **options) -> pa.Array:
+        """approximate median of each list scalar"""
+        return ListChunk.aggregate(
+            self, approximate_median=pc.ScalarAggregateOptions(**options)
+        ).field(0)
+
     def tdigest(self, **options) -> pa.Array:
         """approximate quantiles of each list scalar"""
-        if set(options) <= {'skip_nulls', 'min_count'}:
-            return ListChunk.aggregate(
-                self, approximate_median=pc.ScalarAggregateOptions(**options)
-            ).field(0)
-        return ListChunk.map_list(self, pc.tdigest, options=pc.TDigestOptions(**options))
+        return ListChunk.aggregate(self, tdigest=pc.TDigestOptions(**options)).field(0)
 
     def stddev(self, **options) -> pa.FloatingPointArray:
         """stddev of each list scalar"""
