@@ -1,6 +1,7 @@
 """
 Service related utilities which don't require knowledge of the schema.
 """
+import collections
 import inspect
 import itertools
 import types
@@ -321,11 +322,19 @@ class Dataset:
         """
         table = self.select(info)
         columns = {name: table[name] for name in table.column_names}
+        agg_fields = collections.defaultdict(dict)
         for key in fields:
-            func = getattr(ListChunk, key)
-            for field in map(dict, fields[key]):
-                name, alias = field.pop('name'), field.pop('alias')
-                columns[alias or name] = func(table[name], **field)
+            func = getattr(ListChunk, key, None)
+            for field in fields[key]:
+                agg = Agg(**dict(field))
+                if func is None or key == 'sum':  # `sum` is a method on `Array``
+                    agg_fields[agg.name][key] = agg
+                else:
+                    columns[agg.alias] = func(table[agg.name], **agg.options)
+        for name, aggs in agg_fields.items():
+            funcs = {key: agg.astuple(key)[1] for key, agg in aggs.items()}
+            arrays = ListChunk.aggregate(table[name], **funcs).flatten()
+            columns.update(zip([agg.alias for agg in aggs.values()], arrays))
         return type(self)(pa.table(columns))
 
     @doc_field(filter="selected rows", columns="projected columns")

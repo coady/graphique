@@ -47,30 +47,16 @@ def test_lists():
     assert ListChunk.element(array, -2).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.last(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.last(pa.chunked_array([array])).to_pylist() == [1, 0, None, None, None]
-    assert ListChunk.one(array).to_pylist()[1:] == [0, None, None, None]
     assert ListChunk.element(array, 1).to_pylist() == [1, 0, None, None, None]
-    assert ListChunk.distinct(array).to_pylist() == [[2, 1], [0], [], None, None]
-    assert ListChunk.distinct(array, mode='all').to_pylist() == [[2, 1], [0], [None], None, None]
     assert ListChunk.min(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
-    assert ListChunk.sum(array).to_pylist() == [3, 0, None, None, None]
-    assert ListChunk.product(array).to_pylist() == [2, 0, None, None, None]
-    assert ListChunk.mean(array).to_pylist() == [1.5, 0.0, None, None, None]
     assert ListChunk.mode(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.mode(array, n=1).to_pylist() == [[1], [0], [], [], []]
     assert ListChunk.quantile(array).to_pylist() == [1.5, 0.0, None, None, None]
     quantile = ListChunk.quantile(array, q=[0.75])
     assert quantile.to_pylist() == [[1.75], [0.0], [None], [None], [None]]
-    assert ListChunk.approximate_median(array).to_pylist() == [1.0, 0.0, None, None, None]
-    tdigest = ListChunk.tdigest(array, q=[0.75])
-    assert tdigest.to_pylist() == [[2.0], [0.0], [None], None, None]
-    assert ListChunk.stddev(array).to_pylist() == [0.5, 0.0, None, None, None]
-    assert ListChunk.variance(array).to_pylist() == [0.25, 0.0, None, None, None]
     array = pa.array([[True, True], [False, False], [None], [], None])
-    assert ListChunk.any(array).to_pylist() == [True, False, None, None, None]
-    assert ListChunk.all(array).to_pylist() == [True, False, None, None, None]
     array = pa.ListArray.from_arrays([0, 2, 3], pa.array(["a", "b", None]).dictionary_encode())
-    assert ListChunk.count_distinct(array).to_pylist() == [2, 0]
     assert ListChunk.min(array).to_pylist() == ["a", None]
     assert ListChunk.max(array).to_pylist() == ["b", None]
 

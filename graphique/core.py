@@ -94,14 +94,6 @@ class ListChunk(pa.lib.BaseListArray):
         offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
         return pc.list_flatten(self).take(pa.array(offsets + index, mask=mask))
 
-    def count(self, **options) -> pa.IntegerArray:
-        """non-null count of each list scalar"""
-        return ListChunk.aggregate(self, count=pc.CountOptions(**options)).field(0)
-
-    def count_distinct(self, **options) -> pa.IntegerArray:
-        """non-null distinct count of each list scalar"""
-        return ListChunk.aggregate(self, count_distinct=pc.CountOptions(**options)).field(0)
-
     def first(self) -> pa.Array:
         """first value of each list scalar"""
         return ListChunk.element(self, 0)
@@ -109,14 +101,6 @@ class ListChunk(pa.lib.BaseListArray):
     def last(self) -> pa.Array:
         """last value of each list scalar"""
         return ListChunk.element(self, -1)
-
-    def one(self) -> pa.Array:
-        """one arbitrary value of each list scalar"""
-        return ListChunk.aggregate(self, one=None).field(0)
-
-    def distinct(self, **options) -> pa.lib.BaseListArray:
-        """non-null distinct values within each scalar"""
-        return ListChunk.aggregate(self, distinct=pc.CountOptions(**options)).field(0)
 
     def scalars(self) -> Iterable:
         empty = pa.array([], self.type.value_type)
@@ -149,7 +133,7 @@ class ListChunk(pa.lib.BaseListArray):
 
     def min_max(self, **options) -> pa.Array:
         if pa.types.is_dictionary(self.type.value_type):
-            self = ListChunk.distinct(self)
+            self = ListChunk.aggregate(self, distinct=None).field(0)
             self = type(self).from_arrays(self.offsets, self.values.dictionary_decode())
         return ListChunk.aggregate(self, min_max=pc.ScalarAggregateOptions(**options)).field(0)
 
@@ -161,18 +145,6 @@ class ListChunk(pa.lib.BaseListArray):
         """max value of each list scalar"""
         return ListChunk.min_max(self, **options).field('max')
 
-    def sum(self, **options) -> pa.Array:
-        """sum of each list scalar"""
-        return ListChunk.aggregate(self, sum=pc.ScalarAggregateOptions(**options)).field(0)
-
-    def product(self, **options) -> pa.Array:
-        """product of each list scalar"""
-        return ListChunk.aggregate(self, product=pc.ScalarAggregateOptions(**options)).field(0)
-
-    def mean(self, **options) -> pa.FloatingPointArray:
-        """mean of each list scalar"""
-        return ListChunk.aggregate(self, mean=pc.ScalarAggregateOptions(**options)).field(0)
-
     def mode(self, **options) -> pa.Array:
         """modes of each list scalar"""
         array = ListChunk.map_list(self, lambda arr: pc.mode(arr, **options).field(0))
@@ -182,32 +154,6 @@ class ListChunk(pa.lib.BaseListArray):
         """quantiles of each list scalar"""
         array = ListChunk.map_list(self, pc.quantile, options=pc.QuantileOptions(**options))
         return array if 'q' in options else ListChunk.first(array)
-
-    def approximate_median(self, **options) -> pa.Array:
-        """approximate median of each list scalar"""
-        return ListChunk.aggregate(
-            self, approximate_median=pc.ScalarAggregateOptions(**options)
-        ).field(0)
-
-    def tdigest(self, **options) -> pa.Array:
-        """approximate quantiles of each list scalar"""
-        return ListChunk.aggregate(self, tdigest=pc.TDigestOptions(**options)).field(0)
-
-    def stddev(self, **options) -> pa.FloatingPointArray:
-        """stddev of each list scalar"""
-        return ListChunk.aggregate(self, stddev=pc.VarianceOptions(**options)).field(0)
-
-    def variance(self, **options) -> pa.FloatingPointArray:
-        """variance of each list scalar"""
-        return ListChunk.aggregate(self, variance=pc.VarianceOptions(**options)).field(0)
-
-    def any(self, **options) -> pa.BooleanArray:
-        """any true of each list scalar"""
-        return ListChunk.aggregate(self, any=pc.ScalarAggregateOptions(**options)).field(0)
-
-    def all(self, **options) -> pa.BooleanArray:
-        """all true of each list scalar"""
-        return ListChunk.aggregate(self, all=pc.ScalarAggregateOptions(**options)).field(0)
 
 
 class Column(pa.ChunkedArray):
@@ -580,7 +526,8 @@ class Table(pa.Table):
         ]
         flattened = pa.table(columns, self.column_names)
         mask = ds.dataset(flattened).to_table(columns={'mask': expr})['mask'].combine_chunks()
-        counts = ListChunk.sum(type(first).from_arrays(first.offsets, mask)).fill_null(0)
+        masks = type(first).from_arrays(first.offsets, mask)
+        counts = ListChunk.aggregate(masks, sum=None).field(0).fill_null(0)
         flattened = flattened.select(table.column_names).filter(mask)
         return Table.union(self, Table.from_counts(flattened, counts))
 

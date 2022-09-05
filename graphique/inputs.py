@@ -86,7 +86,7 @@ def default_field(
 ) -> StrawberryField:
     """Use dataclass `default_factory` for `UNSET` or mutables."""
     if func is not None:
-        kwargs['description'] = func.__doc__.splitlines()[0]  # type: ignore
+        kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
     return strawberry.field(default_factory=default_factory, **kwargs)
 
 
@@ -526,37 +526,25 @@ class TDigestAggregate(ScalarAggregate):
 
 @strawberry.input
 class Aggregations(Input):
-    all: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.all))
-    any: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.any))
-    count: List[CountAggregate] = default_field(list, description=inspect.getdoc(ListChunk.count))
-    count_distinct: List[CountAggregate] = default_field(
-        list, description=inspect.getdoc(ListChunk.count_distinct)
-    )
+    all: List[ScalarAggregate] = default_field(list, func=pc.all)
+    any: List[ScalarAggregate] = default_field(list, func=pc.any)
+    count: List[CountAggregate] = default_field(list, func=pc.count)
+    count_distinct: List[CountAggregate] = default_field(list, func=pc.count_distinct)
     distinct: List[CountAggregate] = default_field(
-        list, description=inspect.getdoc(ListChunk.distinct)
+        list, description="distinct values within each scalar"
     )
-    first: List[Aggregate] = default_field(list, description=inspect.getdoc(ListChunk.first))
-    last: List[Aggregate] = default_field(list, description=inspect.getdoc(ListChunk.last))
-    max: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.max))
-    mean: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.mean))
-    min: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.min))
-    one: List[Aggregate] = default_field(list, description=inspect.getdoc(ListChunk.one))
-    product: List[ScalarAggregate] = default_field(
-        list, description=inspect.getdoc(ListChunk.product)
-    )
-    stddev: List[VarianceAggregate] = default_field(
-        list, description=inspect.getdoc(ListChunk.stddev)
-    )
-    sum: List[ScalarAggregate] = default_field(list, description=inspect.getdoc(ListChunk.sum))
-    approximate_median: List[ScalarAggregate] = default_field(
-        list, description=inspect.getdoc(ListChunk.approximate_median)
-    )
-    tdigest: List[TDigestAggregate] = default_field(
-        list, description=inspect.getdoc(ListChunk.tdigest)
-    )
-    variance: List[VarianceAggregate] = default_field(
-        list, description=inspect.getdoc(ListChunk.variance)
-    )
+    first: List[Aggregate] = default_field(list, func=ListChunk.first)
+    last: List[Aggregate] = default_field(list, func=ListChunk.last)
+    max: List[ScalarAggregate] = default_field(list, func=pc.max)
+    mean: List[ScalarAggregate] = default_field(list, func=pc.mean)
+    min: List[ScalarAggregate] = default_field(list, func=pc.min)
+    one: List[Aggregate] = default_field(list, description="arbitrary value within each scalar")
+    product: List[ScalarAggregate] = default_field(list, func=pc.product)
+    stddev: List[VarianceAggregate] = default_field(list, func=pc.stddev)
+    sum: List[ScalarAggregate] = default_field(list, func=pc.sum)
+    approximate_median: List[ScalarAggregate] = default_field(list, func=pc.approximate_median)
+    tdigest: List[TDigestAggregate] = default_field(list, func=pc.tdigest)
+    variance: List[VarianceAggregate] = default_field(list, func=pc.variance)
 
 
 @strawberry.input(description="discrete difference predicates; durations may be in float seconds")
