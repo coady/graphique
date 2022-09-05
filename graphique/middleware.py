@@ -281,7 +281,7 @@ class Dataset:
         in filter `predicates`, and in the `by` arguments of grouping and sorting.
         """
         table = self.select(info)
-        deprecated = datetime, float, int, long, struct, time, date
+        deprecated = datetime, float, int, long, time, date
         for value in map(dict, itertools.chain(*deprecated)):
             table = T.apply(table, value.pop('name'), **value)
         for value in map(dict, list):
@@ -291,7 +291,7 @@ class Dataset:
             else:
                 table = T.filter_list(table, expr)
         columns = {}
-        args = base64, boolean, decimal, duration, string
+        args = base64, boolean, decimal, duration, string, struct
         for value in map(dict, itertools.chain(*args)):
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)

@@ -357,6 +357,13 @@ def test_list(executor):
 def test_struct(executor):
     data = executor('{ columns { struct { names column(name: "x") { length } } } }')
     assert data == {'columns': {'struct': {'names': ['x', 'y'], 'column': {'length': 2}}}}
+    data = executor(
+        '''{apply(struct: {structField: {name: "struct", indices: 0}}) {
+        column(name: "struct") { ... on IntColumn { values } } } }'''
+    )
+    assert data == {'apply': {'column': {'values': [0, None]}}}
+    with pytest.raises(ValueError, match="must be BOOL"):
+        executor('{ apply(struct: {caseWhen: {name: ["struct", "int32", "float"]}}) { type } }')
 
 
 def test_dictionary(executor):

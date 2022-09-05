@@ -459,9 +459,18 @@ class StringFunction(OrdinalFunction[T]):
     utf8_is_upper: Optional[Fields] = default_field(func=pc.utf8_is_upper)
 
 
+@strawberry.input
+class StructField(Names):
+    indices: List[int]
+    alias: str = strawberry.field(default='', description="output column name")
+
+
 @strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for structs")
-class StructFunction(_Function):
-    case_when: Optional[List[str]] = UNSET
+class StructFunction(Input):
+    fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
+    fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
+    case_when: Optional[Fields] = default_field(func=pc.case_when)
+    struct_field: Optional[StructField] = default_field(func=pc.struct_field)
 
 
 @strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for list")
@@ -557,7 +566,6 @@ class Diff(Input):
 class Projections(Input):
     fill_null: Optional[List[str]] = UNSET
     binary_join_element_wise: Optional[List[str]] = UNSET
-    case_when: Optional[List[str]] = UNSET
     min_element_wise: Optional[str] = UNSET
     max_element_wise: Optional[str] = UNSET
     power: Optional[str] = UNSET
