@@ -108,14 +108,6 @@ class Column:
         """Return values with null elements replaced."""
         return type(self)(C.fill_null(self.array, value))
 
-    def min_element_wise(self, value, skip_nulls: bool = True):
-        """Return element-wise minimum compared to scalar."""
-        return type(self)(pc.min_element_wise(self.array, value, skip_nulls=skip_nulls))
-
-    def max_element_wise(self, value, skip_nulls: bool = True):
-        """Return element-wise maximum compared to scalar."""
-        return type(self)(pc.max_element_wise(self.array, value, skip_nulls=skip_nulls))
-
     def between(self, unit: str, start=None, end=None) -> 'LongColumn':
         """Return duration between start and end."""
         if [start, end].count(None) != 1:
@@ -194,29 +186,6 @@ class NumericColumn(Column):
         """mode of the values"""
         return Set(*pc.mode(self.array, length).flatten())
 
-    def add(self, value):
-        """Return values added to scalar."""
-        return type(self)(pc.add(value, self.array))
-
-    def subtract(self, value):
-        """Return values subtracted *from* scalar."""
-        return type(self)(pc.subtract(value, self.array))
-
-    def multiply(self, value):
-        """Return values multiplied by scalar."""
-        return type(self)(pc.multiply(value, self.array))
-
-    def divide(self, value):
-        """Return values divided *into* scalar."""
-        return type(self)(pc.divide(value, self.array))
-
-    def power(self, base=None, exponent=None):
-        """Return values raised to power."""
-        if [base, exponent].count(None) != 1:
-            raise ValueError("exactly one of `base` or `exponent` required")
-        args = (self.array, exponent) if base is None else (base, self.array)
-        return type(self)(pc.power(*args))
-
 
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
@@ -246,14 +215,6 @@ class IntColumn(NumericColumn):
     min = annotate(Column.min, Optional[int])
     max = annotate(Column.max, Optional[int])
     drop_null = annotate(Column.drop_null, 'IntColumn')
-    fill_null = annotate(Column.fill_null, 'IntColumn', value=int)
-    add = annotate(NumericColumn.add, 'IntColumn', value=int)
-    subtract = annotate(NumericColumn.subtract, 'IntColumn', value=int)
-    multiply = annotate(NumericColumn.multiply, 'IntColumn', value=int)
-    divide = annotate(NumericColumn.divide, 'IntColumn', value=int)
-    power = annotate(NumericColumn.power, 'IntColumn', base=Optional[int], exponent=Optional[int])
-    min_element_wise = annotate(Column.min_element_wise, 'IntColumn', value=int)
-    max_element_wise = annotate(Column.max_element_wise, 'IntColumn', value=int)
 
 
 @strawberry.type(description="column of longs")
@@ -267,16 +228,6 @@ class LongColumn(NumericColumn):
     min = annotate(Column.min, Optional[Long])
     max = annotate(Column.max, Optional[Long])
     drop_null = annotate(Column.drop_null, 'LongColumn')
-    fill_null = annotate(Column.fill_null, 'LongColumn', value=Long)
-    add = annotate(NumericColumn.add, 'LongColumn', value=Long)
-    subtract = annotate(NumericColumn.subtract, 'LongColumn', value=Long)
-    multiply = annotate(NumericColumn.multiply, 'LongColumn', value=Long)
-    divide = annotate(NumericColumn.divide, 'LongColumn', value=Long)
-    power = annotate(
-        NumericColumn.power, 'LongColumn', base=Optional[Long], exponent=Optional[Long]
-    )
-    min_element_wise = annotate(Column.min_element_wise, 'LongColumn', value=Long)
-    max_element_wise = annotate(Column.max_element_wise, 'LongColumn', value=Long)
 
 
 @strawberry.type(description="column of floats")
@@ -290,16 +241,6 @@ class FloatColumn(NumericColumn):
     min = annotate(Column.min, Optional[float])
     max = annotate(Column.max, Optional[float])
     drop_null = annotate(Column.drop_null, 'FloatColumn')
-    fill_null = annotate(Column.fill_null, 'FloatColumn', value=float)
-    add = annotate(NumericColumn.add, 'FloatColumn', value=float)
-    subtract = annotate(NumericColumn.subtract, 'FloatColumn', value=float)
-    multiply = annotate(NumericColumn.multiply, 'FloatColumn', value=float)
-    divide = annotate(NumericColumn.divide, 'FloatColumn', value=float)
-    power = annotate(
-        NumericColumn.power, 'FloatColumn', base=Optional[float], exponent=Optional[float]
-    )
-    min_element_wise = annotate(Column.min_element_wise, 'FloatColumn', value=float)
-    max_element_wise = annotate(Column.max_element_wise, 'FloatColumn', value=float)
 
     @doc_field
     def round(
@@ -346,8 +287,6 @@ class DateColumn(Column):
     max = annotate(Column.max, Optional[date])
     drop_null = annotate(Column.drop_null, 'DateColumn')
     fill_null = annotate(Column.fill_null, 'DateColumn', value=date)
-    min_element_wise = annotate(Column.min_element_wise, 'DateColumn', value=date)
-    max_element_wise = annotate(Column.max_element_wise, 'DateColumn', value=date)
     between = annotate(Column.between, LongColumn, start=Optional[date], end=Optional[date])
     floor_temporal = annotate(TemporalColumn.floor_temporal, 'DateColumn')
     round_temporal = annotate(TemporalColumn.round_temporal, 'DateColumn')
@@ -368,8 +307,6 @@ class DateTimeColumn(Column):
     max = annotate(Column.max, Optional[datetime])
     drop_null = annotate(Column.drop_null, 'DateTimeColumn')
     fill_null = annotate(Column.fill_null, 'DateTimeColumn', value=datetime)
-    min_element_wise = annotate(Column.min_element_wise, 'DateTimeColumn', value=datetime)
-    max_element_wise = annotate(Column.max_element_wise, 'DateTimeColumn', value=datetime)
     between = annotate(Column.between, LongColumn, start=Optional[datetime], end=Optional[datetime])
     strftime = doc_field(DateColumn.strftime)
     floor_temporal = annotate(TemporalColumn.floor_temporal, 'DateTimeColumn')
@@ -400,8 +337,6 @@ class TimeColumn(Column):
     max = annotate(Column.max, Optional[time])
     drop_null = annotate(Column.drop_null, 'TimeColumn')
     fill_null = annotate(Column.fill_null, 'TimeColumn', value=time)
-    min_element_wise = annotate(Column.min_element_wise, 'TimeColumn', value=time)
-    max_element_wise = annotate(Column.max_element_wise, 'TimeColumn', value=time)
     between = annotate(Column.between, LongColumn, start=Optional[time], end=Optional[time])
     floor_temporal = annotate(TemporalColumn.floor_temporal, 'TimeColumn')
     round_temporal = annotate(TemporalColumn.round_temporal, 'TimeColumn')

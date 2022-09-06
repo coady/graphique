@@ -34,8 +34,6 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ index(value: 0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
-        data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
-        assert data == {name: {'fillNull': {'values': [0, 1]}}}
         assert execute(f'{{ {name} {{ type }} }}') == {name: {'type': name}}
         assert execute(f'{{ {name} {{ min max }} }}')
     for name in ('uint32', 'uint64', 'int64'):
@@ -43,8 +41,6 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ index(value: 0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
-        data = execute(f'{{ {name} {{ fillNull(value: 1) {{ values }} }} }}')
-        assert data == {name: {'fillNull': {'values': [0, 1]}}}
         assert execute(f'{{ {name} {{ min max }} }}')
 
     for name in ('float', 'double'):
@@ -52,8 +48,6 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ index(value: 0.0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
-        data = execute(f'{{ {name} {{ fillNull(value: 1.0) {{ values }} }} }}')
-        assert data == {name: {'fillNull': {'values': [0.0, 1.0]}}}
         assert execute(f'{{ {name} {{ min max }} }}')
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
     assert execute('{ decimal { min max } }')
@@ -129,27 +123,6 @@ def test_boolean(executor):
 
 def test_numeric(executor):
     for name in ('int32', 'int64', 'float'):
-        data = executor(f'{{ columns {{ {name} {{ add(value: 1) {{ sum product }} }} }} }}')
-        assert data == {'columns': {name: {'add': {'sum': 1, 'product': 1}}}}
-        data = executor(f'{{ columns {{ {name} {{ subtract(value: 1) {{ sum }} }} }} }}')
-        assert data == {'columns': {name: {'subtract': {'sum': 1}}}}
-        data = executor(f'{{ columns {{ {name} {{ multiply(value: 1) {{ sum }} }} }} }}')
-        assert data == {'columns': {name: {'multiply': {'sum': 0}}}}
-        with pytest.raises(ValueError):
-            executor(f'{{ columns {{ {name} {{ divide(value: 1) {{ sum }} }} }} }}')
-        data = executor(f'{{ columns {{ {name} {{ power(base: 2) {{ values }} }} }} }}')
-        assert data == {'columns': {name: {'power': {'values': [1, None]}}}}
-        data = executor(f'{{ columns {{ {name} {{ power(exponent: 2) {{ values }} }} }} }}')
-        assert data == {'columns': {name: {'power': {'values': [0, None]}}}}
-        with pytest.raises(ValueError):
-            executor(f'{{ columns {{ {name} {{ power {{ values }} }} }} }}')
-        with pytest.raises(ValueError):
-            executor(f'{{ columns {{ {name} {{ power(base: 1, exponent: 1) {{ values }} }} }} }}')
-
-        data = executor(f'{{ columns {{ {name} {{ minElementWise(value: -1) {{ sum }} }} }} }}')
-        assert data == {'columns': {name: {'minElementWise': {'sum': -2}}}}
-        data = executor(f'{{ columns {{ {name} {{ maxElementWise(value: 1) {{ sum }} }} }} }}')
-        assert data == {'columns': {name: {'maxElementWise': {'sum': 2}}}}
         data = executor(f'{{ columns {{ {name} {{ mean stddev variance }} }} }}')
         assert data == {'columns': {name: {'mean': 0.0, 'stddev': 0.0, 'variance': 0.0}}}
         data = executor(f'{{ columns {{ {name} {{ mode {{ values }} }} }} }}')
@@ -160,43 +133,32 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'quantile': [0.0]}}}
         data = executor(f'{{ columns {{ {name} {{ tdigest }} }} }}')
         assert data == {'columns': {name: {'tdigest': [0.0]}}}
+        data = executor(f'{{ columns {{ {name} {{ product }} }} }}')
+        assert data == {'columns': {name: {'product': 0.0}}}
 
     data = executor(
-        '''{ apply(int: [{name: "int32", fillNull: -1, alias: "i"}])
-        { column(name: "i") { type ... on IntColumn { values } } } }'''
+        '''{ column(name: "float", apply: {minElementWise: "int32", maxElementWise: "int32"}) {
+        ... on FloatColumn { values } } }'''
     )
-    assert data == {'apply': {'column': {'type': 'int32', 'values': [0, -1]}}}
-    data = executor('{ columns { float { add(value: 2.0) { divide(value: 1.0) { sum } } } } }')
-    assert data == {'columns': {'float': {'add': {'divide': {'sum': 0.5}}}}}
-    data = executor(
-        '''{ column(name: "float", apply: {minElementWise: "int32", maxElementWise: "int32",
-        power: "int32"}) { ... on FloatColumn { values } } }'''
-    )
-    assert data == {'column': {'values': [1.0, None]}}
+    assert data == {'column': {'values': [0.0, None]}}
     data = executor('{ column(name: "float", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
     data = executor(
-        '''{ apply(int: {name: "int32", negate: true, checked: true})
-        { columns { int32 { values } } } }'''
+        '{ apply(int: {negateChecked: {name: "int32"}}) { columns { int32 { values } } } }'
     )
     assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor(
-        '''{ apply(float: {name: "float", coalesce: "int32"})
-        { columns { float { values } } } }'''
+        '{ apply(float: {coalesce: {name: ["float", "int32"]}}) { columns { float { values } } } }'
     )
     assert data == {'apply': {'columns': {'float': {'values': [0.0, None]}}}}
     data = executor(
-        '{ apply(int: {name: "int32", bitWiseNot: true}) { columns { int32 { values } } } }'
+        '{ apply(int: {bitWiseNot: {name: "int32"}}) { columns { int32 { values } } } }'
     )
     assert data == {'apply': {'columns': {'int32': {'values': [-1, None]}}}}
     data = executor(
-        '{ apply(int: {name: "int32", bitWiseOr: "int64"}) { columns { int32 { values } } } }'
+        '{ apply(int: {bitWiseOr: {name: ["int32", "int64"]}}) { columns { int32 { values } } } }'
     )
     assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
-    data = executor(
-        '{ column(name: "int32", apply: {atan2: "float"}) { ... on FloatColumn { values } } }'
-    )
-    assert data == {'column': {'values': [0.0, None]}}
 
 
 @pytest.mark.skipif(sys.version_info < (3, 9), reason="requires python3.9 or pytz")

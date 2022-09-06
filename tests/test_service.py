@@ -50,7 +50,7 @@ def test_floats(client):
     )
     assert data['column']['min'] == pytest.approx(-174.213333)
     data = client.execute(
-        f'''{{ apply(int: {{name: "latitude", digitize: {list(range(90))}}})
+        f'''{{ apply(int: {{digitize: {{name: "latitude", bins: {list(range(90))} }}}})
         {{ columns {{ latitude {{ min max unique {{ length }} }} }} }} }}'''
     )
     latitudes = data['apply']['columns']['latitude']
@@ -60,8 +60,8 @@ def test_floats(client):
     )
     assert data['slice']['columns']['latitude']['logb']['values'] == [pytest.approx(3.376188)]
     data = client.execute(
-        '''{ apply(float: [{name: "latitude", round: true},
-        {name: "longitude", isFinite: true}]) { row { latitude longitude } } }'''
+        '''{ apply(float: {round: {name: "latitude"}, isFinite: {name: "longitude"}}) {
+        row { latitude longitude } } }'''
     )
     assert data == {'apply': {'row': {'latitude': 41.0, 'longitude': 1}}}
     data = client.execute(
@@ -200,7 +200,7 @@ def test_filter(client):
     data = client.execute('{ filter(state: {eq: null}) { columns { state { values } } } }')
     assert data['filter']['columns']['state']['values'] == []
     data = client.execute(
-        '''{ apply(float: {name: "longitude", abs: true})
+        '''{ apply(float: {abs: {name: "longitude"}})
         { filter(longitude: {le: 66}) { length } } }'''
     )
     assert data['apply']['filter']['length'] == 30
@@ -243,12 +243,12 @@ def test_scan(client):
 
 def test_apply(client):
     data = client.execute(
-        '''{ apply(float: {name: "longitude", maxElementWise: "latitude"})
+        '''{ apply(float: {maxElementWise: {name: ["longitude", "latitude"]}})
         { columns { longitude { min } } } }'''
     )
     assert data['apply']['columns']['longitude']['min'] == pytest.approx(17.963333)
     data = client.execute(
-        '''{ apply(float: {name: "latitude", minElementWise: "longitude"})
+        '''{ apply(float: {minElementWise: {name: ["latitude", "longitude"]}})
         { columns { latitude { max } } } }'''
     )
     assert data['apply']['columns']['latitude']['max'] == pytest.approx(-65.301389)

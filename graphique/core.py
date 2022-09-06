@@ -295,29 +295,6 @@ class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
     applied = {'fill_null', 'digitize'}
-    projected = {
-        'coalesce',
-        'power',
-        'min_element_wise',
-        'max_element_wise',
-        'binary_join_element_wise',
-        'atan2',
-        'bit_wise_or',
-        'bit_wise_and',
-        'bit_wise_xor',
-        'shift_left',
-        'shift_right',
-        'years_between',
-        'quarters_between',
-        'weeks_between',
-        'days_between',
-        'hours_between',
-        'minutes_between',
-        'seconds_between',
-        'milliseconds_between',
-        'microseconds_between',
-        'nanoseconds_between',
-    }
 
     def map_batch(self, func: Callable, *rargs, **kwargs) -> pa.Table:
         return pa.Table.from_batches(
@@ -496,11 +473,7 @@ class Table(pa.Table):
         """Return view of table with functions applied across columns."""
         column = self[name]
         for func, arg in partials.items():
-            if func in Table.projected:
-                others = (self[name] for name in (arg if isinstance(arg, list) else [arg]))
-                func += ('_checked' * checked) + ('_kleene' * kleene)
-                column = getattr(pc, func)(column, *others)
-            elif func in Table.applied:
+            if func in Table.applied:
                 column = getattr(Column, func)(column, arg)
             elif arg:
                 column = getattr(pc, func + '_checked' * checked)(column)

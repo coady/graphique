@@ -182,28 +182,66 @@ class _OrdinalFunction(_Function):
 
 
 @strawberry.input
-class NumericFunction(_OrdinalFunction):
-    checked: bool = strawberry.field(default=False, description="check math functions for overlow")
-    power: Optional[str] = UNSET
-    atan2: Optional[str] = UNSET
-    abs: bool = False
-    negate: bool = False
-    sign: bool = False
-    ln: bool = False
-    log1p: bool = False
-    log10: bool = False
-    log2: bool = False
-    floor: bool = False
-    ceil: bool = False
-    trunc: bool = False
-    round: bool = False
-    sin: bool = False
-    asin: bool = False
-    cos: bool = False
-    acos: bool = False
-    tan: bool = False
-    atan: bool = False
-    sqrt: bool = False
+class Round(Fields):
+    ndigits: int = 0
+    round_mode: str = 'half_to_even'
+
+
+@strawberry.input
+class RoundToMultiple(Fields):
+    multiple: float = 1.0
+    round_mode: str = 'half_to_even'
+
+
+@strawberry.input(
+    description="numpy [digitize](https://numpy.org/doc/stable/reference/generated/numpy.digitize.html)"
+)
+class Digitize(Arguments[T]):
+    bins: List[T]
+    right: bool = False
+
+
+@strawberry.input(description=f"arithmetic [functions]({links.compute}#arithmetic-functions)")
+class NumericFunction(OrdinalFunction[T]):
+    digitize: Optional[Digitize[T]] = default_field(func=Column.digitize)
+
+    add: Optional[Arguments[T]] = default_field(func=pc.power)
+    subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
+    multiply: Optional[Arguments[T]] = default_field(func=pc.multiply)
+    divide: Optional[Arguments[T]] = default_field(func=pc.divide)
+
+    power: Optional[Arguments[T]] = default_field(func=pc.power)
+    power_checked: Optional[Arguments[T]] = default_field(func=pc.power_checked)
+    sqrt: Optional[Fields] = default_field(func=pc.sqrt)
+    sqrt_checked: Optional[Fields] = default_field(func=pc.sqrt_checked)
+    ln: Optional[Fields] = default_field(func=pc.ln)
+    ln_checked: Optional[Fields] = default_field(func=pc.ln_checked)
+    log1p: Optional[Fields] = default_field(func=pc.log1p)
+    log1p_checked: Optional[Fields] = default_field(func=pc.log1p_checked)
+    logb: Optional[Arguments[T]] = default_field(func=pc.logb)
+    logb_checked: Optional[Arguments[T]] = default_field(func=pc.logb_checked)
+
+    abs: Optional[Fields] = default_field(func=pc.abs)
+    abs_checked: Optional[Fields] = default_field(func=pc.abs_checked)
+    negate: Optional[Fields] = default_field(func=pc.negate)
+    negate_checked: Optional[Fields] = default_field(func=pc.negate_checked)
+    sign: Optional[Fields] = default_field(func=pc.sign)
+    round: Optional[Round] = default_field(func=pc.round)
+    round_to_multiple: Optional[RoundToMultiple] = default_field(func=pc.round_to_multiple)
+
+    sin: Optional[Fields] = default_field(func=pc.sin)
+    sin_checked: Optional[Fields] = default_field(func=pc.sin_checked)
+    cos: Optional[Fields] = default_field(func=pc.cos)
+    cos_checked: Optional[Fields] = default_field(func=pc.cos_checked)
+    tan: Optional[Fields] = default_field(func=pc.tan)
+    tan_checked: Optional[Fields] = default_field(func=pc.tan_checked)
+
+    asin: Optional[Fields] = default_field(func=pc.asin)
+    asin_checked: Optional[Fields] = default_field(func=pc.asin_checked)
+    acos: Optional[Fields] = default_field(func=pc.acos)
+    acos_checked: Optional[Fields] = default_field(func=pc.acos_checked)
+    atan: Optional[Fields] = default_field(func=pc.atan)
+    atan2: Optional[Fields] = default_field(func=pc.atan2)
 
 
 @operator.itemgetter(bool)
@@ -211,44 +249,47 @@ class NumericFunction(_OrdinalFunction):
     name='Function', description=f"[functions]({links.compute}#selecting-multiplexing) for booleans"
 )
 class BooleanFunction(Function[T]):
-    and_kleene: Optional[Arguments[T]] = default_field(
-        description="logical 'and' boolean values (Kleene logic)"
-    )
-    and_not: Optional[Arguments[T]] = default_field(description="logical 'and not' boolean values")
-    and_not_kleene: Optional[Arguments[T]] = default_field(
-        description="logical 'and not' boolean values (Kleene logic)"
-    )
-    or_kleene: Optional[Arguments[T]] = default_field(
-        description="logical 'or' boolean values (Kleene logic)"
-    )
-    xor: Optional[Arguments[T]] = default_field(description="logical 'xor' boolean values")
+    and_kleene: Optional[Arguments[T]] = default_field(func=pc.and_kleene)
+    and_not: Optional[Arguments[T]] = default_field(func=pc.and_not)
+    and_not_kleene: Optional[Arguments[T]] = default_field(func=pc.and_not_kleene)
+    or_kleene: Optional[Arguments[T]] = default_field(func=pc.or_kleene)
+    xor: Optional[Arguments[T]] = default_field(func=pc.xor)
 
 
-@strawberry.input(description=f"[functions]({links.compute}#arithmetic-functions) for ints")
-class IntFunction(NumericFunction):
-    bit_wise_or: Optional[str] = UNSET
-    bit_wise_and: Optional[str] = UNSET
-    bit_wise_xor: Optional[str] = UNSET
-    shift_left: Optional[str] = UNSET
-    shift_right: Optional[str] = UNSET
-    bit_wise_not: bool = False
-    fill_null: Optional[int] = UNSET
-    digitize: Optional[List[int]] = default_field(description=inspect.getdoc(Column.digitize))
+@operator.itemgetter(int)
+@strawberry.input(
+    name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for ints"
+)
+class IntFunction(NumericFunction[T]):
+    bit_wise_and: Optional[Arguments[T]] = default_field(func=pc.bit_wise_and)
+    bit_wise_or: Optional[Arguments[T]] = default_field(func=pc.bit_wise_or)
+    bit_wise_xor: Optional[Arguments[T]] = default_field(func=pc.bit_wise_xor)
+    bit_wise_not: Optional[Fields] = default_field(func=pc.bit_wise_not)
+    shift_left: Optional[Arguments[T]] = default_field(func=pc.shift_left)
+    shift_left_checked: Optional[Arguments[T]] = default_field(func=pc.shift_left_checked)
+    shift_right: Optional[Arguments[T]] = default_field(func=pc.shift_right)
+    shift_right_checked: Optional[Arguments[T]] = default_field(func=pc.shift_right_checked)
 
 
-@strawberry.input(description=f"[functions]({links.compute}#arithmetic-functions) for longs")
-class LongFunction(NumericFunction):
-    fill_null: Optional[Long] = UNSET
-    digitize: Optional[List[Long]] = default_field(description=inspect.getdoc(Column.digitize))
+@operator.itemgetter(Long)
+@strawberry.input(
+    name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for floats"
+)
+class LongFunction(NumericFunction[T]):
+    ...
 
 
-@strawberry.input(description=f"[functions]({links.compute}#arithmetic-functions) for floats")
-class FloatFunction(NumericFunction):
-    fill_null: Optional[float] = UNSET
-    digitize: Optional[List[float]] = default_field(description=inspect.getdoc(Column.digitize))
-    is_finite: bool = False
-    is_inf: bool = False
-    is_nan: bool = False
+@operator.itemgetter(float)
+@strawberry.input(
+    name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for floats"
+)
+class FloatFunction(NumericFunction[T]):
+    is_finite: Optional[Fields] = default_field(func=pc.is_finite)
+    is_inf: Optional[Fields] = default_field(func=pc.is_inf)
+    is_nan: Optional[Fields] = default_field(func=pc.is_nan)
+    floor: Optional[Fields] = default_field(func=pc.floor)
+    ceil: Optional[Fields] = default_field(func=pc.ceil)
+    trunc: Optional[Fields] = default_field(func=pc.trunc)
 
 
 DecimalFunction = Function[Decimal]
@@ -575,16 +616,8 @@ class Diff(Input):
 )
 class Projections(Input):
     fill_null: Optional[List[str]] = UNSET
-    binary_join_element_wise: Optional[List[str]] = UNSET
     min_element_wise: Optional[str] = UNSET
     max_element_wise: Optional[str] = UNSET
-    power: Optional[str] = UNSET
-    atan2: Optional[str] = UNSET
-    bit_wise_or: Optional[str] = UNSET
-    bit_wise_and: Optional[str] = UNSET
-    bit_wise_xor: Optional[str] = UNSET
-    shift_left: Optional[str] = UNSET
-    shift_right: Optional[str] = UNSET
     years_between: Optional[str] = UNSET
     quarters_between: Optional[str] = UNSET
     weeks_between: Optional[str] = UNSET
