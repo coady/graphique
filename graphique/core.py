@@ -465,9 +465,7 @@ class Table(pa.Table):
     def apply(
         self,
         name: str,
-        alias: str = '',
         checked=False,
-        kleene=False,
         **partials,
     ) -> pa.Table:
         """Return view of table with functions applied across columns."""
@@ -477,8 +475,6 @@ class Table(pa.Table):
                 column = getattr(Column, func)(column, arg)
             elif arg:
                 column = getattr(pc, func + '_checked' * checked)(column)
-        if alias:
-            return self.append_column(alias, column)
         return self.set_column(self.column_names.index(name), name, column)
 
     def filter_list(self, expr: ds.Expression) -> 'Table':

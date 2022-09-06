@@ -57,34 +57,20 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ index(value: "1970-01-01") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
-        data = execute(f'{{ {name} {{ fillNull(value: "1970-01-02") {{ values }} }} }}')
-        assert data == {name: {'fillNull': {'values': ['1970-01-01', '1970-01-02']}}}
         assert execute(f'{{ {name} {{ min max }} }}')
 
     data = execute('{ timestamp { values } }')
     assert data == {'timestamp': {'values': ['1970-01-01T00:00:00', None]}}
     data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
     assert data == {name: {'dropNull': {'length': 1}}}
-    data = execute('{ timestamp { fillNull(value: "1970-01-02T00:00:00") { values } } }')
-    assert data == {
-        'timestamp': {'fillNull': {'values': ['1970-01-01T00:00:00', '1970-01-02T00:00:00']}}
-    }
     assert execute('{ timestamp { index(value: "1970-01-01") } }') == {'timestamp': {'index': 0}}
     assert execute('{ timestamp { min max } }')
-    data = execute(
-        '''{ timestamp { floorTemporal(unit: "day") { values }
-        roundTemporal(unit: "day") { values } ceilTemporal(unit: "day") { values } } }'''
-    )
-    for name in ('floorTemporal', 'roundTemporal', 'ceilTemporal'):
-        data['timestamp'][name] == {'values': ['1970-01-01T00:00:00', None]}
 
     for name in ('time32', 'time64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['00:00:00', None]}}
         assert execute(f'{{ {name} {{ index(value: "00:00:00") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull {{ length }} }} }}')
         assert data == {name: {'dropNull': {'length': 1}}}
-        data = execute(f'{{ {name} {{ fillNull(value: "00:00:01") {{ values }} }} }}')
-        assert data == {name: {'fillNull': {'values': ['00:00:00', '00:00:01']}}}
         assert execute(f'{{ {name} {{ min max }} }}')
 
     for name in ('binary', 'string'):
@@ -165,12 +151,12 @@ def test_numeric(executor):
 def test_datetime(executor):
     for name in ('timestamp', 'date32'):
         data = executor(
-            f'''{{ apply(datetime: {{name: "{name}", year: true, alias: "year"}})
+            f'''{{ apply(datetime: {{year: {{name: "{name}", alias: "year"}}}})
             {{ column(name: "year") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
         assert data == {'apply': {'column': {'values': [1970, None]}}}
         data = executor(
-            f'''{{ apply(datetime: {{name: "{name}", quarter: true, alias: "quarter"}})
+            f'''{{ apply(datetime: {{quarter: {{name: "{name}", alias: "quarter"}}}})
             {{ column(name: "quarter") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
         assert data == {'apply': {'column': {'values': [1, None]}}}
@@ -179,50 +165,43 @@ def test_datetime(executor):
             {{ ... on LongColumn {{ values }} }} }}'''
         )
         assert data == {'column': {'values': [0, None]}}
-        data = executor(
-            f'''{{ columns {{ {name}
-            {{ between(unit: "years", start: "1969-01-01") {{ values }} }} }} }}'''
-        )
-        assert data == {'columns': {name: {'between': {'values': [1, None]}}}}
-    data = executor('{ columns { date32 { strftime { values } } } }')
-    dates = data['columns']['date32']['strftime']['values']
-    assert dates == ['1970-01-01T00:00:00', None]
+    data = executor(
+        '''{ apply(datetime: {strftime: {name: "timestamp"}}) {
+        column(name: "timestamp") { type } } }'''
+    )
+    assert data == {'apply': {'column': {'type': 'string'}}}
     for name in ('timestamp', 'time32'):
         data = executor(
-            f'''{{ apply(datetime: {{name: "{name}", hour: true, alias: "hour"}})
+            f'''{{ apply(datetime: {{hour: {{name: "{name}", alias: "hour"}}}})
             {{ column(name: "hour") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
         assert data == {'apply': {'column': {'values': [0, None]}}}
         data = executor(
-            f'''{{ apply(datetime: {{name: "{name}", subsecond: true, alias: "subsecond"}})
+            f'''{{ apply(datetime: {{subsecond: {{name: "{name}", alias: "subsecond"}}}})
             {{ column(name: "subsecond") {{ ... on FloatColumn {{ values }} }} }} }}'''
         )
         assert data == {'apply': {'column': {'values': [0.0, None]}}}
         data = executor(
-            f'''{{ column(name: "{name}", apply: {{hoursBetween: "{name}"}})
-            {{ ... on LongColumn {{ values }} }} }}'''
+            f'''{{ apply(datetime: {{hoursBetween: {{name: ["{name}", "{name}"]}}}})
+            {{ column(name: "{name}") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
-        assert data == {'column': {'values': [0, None]}}
-    data = executor('{ columns { time32 { between(unit: "hours", end: "01:00:00") { values } } } }')
-    assert data == {'columns': {'time32': {'between': {'values': [1, None]}}}}
+        assert data == {'apply': {'column': {'values': [0, None]}}}
     with pytest.raises(ValueError):
         executor('{ columns { time64 { between(unit: "hours") { values } } } }')
     data = executor(
-        '''{ apply(datetime: {name: "timestamp", fillNullForward: true}) { columns
-        { timestamp { assumeTimezone(timezone: "UTC") { values } } } } }'''
+        '''{ apply(datetime: {assumeTimezone: {name: "timestamp", timezone: "UTC"}}) {
+        columns { timestamp { values } } } }'''
     )
-    dates = data['apply']['columns']['timestamp']['assumeTimezone']['values']
-    assert dates == ['1970-01-01T00:00:00+00:00', '1970-01-01T00:00:00+00:00']
+    dates = data['apply']['columns']['timestamp']['values']
+    assert dates == ['1970-01-01T00:00:00+00:00', None]
+    data = executor(
+        '''{ apply(time: {roundTemporal: {name: "time32", unit: "hour"}}) {
+        columns { time32 { values } } } }'''
+    )
+    assert data == {'apply': {'columns': {'time32': {'values': ['00:00:00', None]}}}}
 
 
 def test_duration(executor):
-    data = executor(
-        '''{ apply(datetime: [{name: "timestamp", fillNull: "0001-01-01"}])
-        { columns { timestamp { values subtract(value: "0001-01-01") { values } } } } }'''
-    )
-    column = data['apply']['columns']['timestamp']
-    assert column['values'] == ['1970-01-01T00:00:00', '0001-01-01T00:00:00']
-    assert column['subtract'] == {'values': [-62135596800.0, 0.0]}
     data = executor(
         '''{ scan(columns: {alias: "diff", sub: [{name: "timestamp"}, {name: "timestamp"}]})
         { column(name: "diff") { ... on DurationColumn { values } } } }'''

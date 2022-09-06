@@ -286,8 +286,6 @@ class Dataset:
         in filter `predicates`, and in the `by` arguments of grouping and sorting.
         """
         table = self.select(info)
-        for value in map(dict, itertools.chain(datetime, time, date)):
-            table = T.apply(table, value.pop('name'), **value)
         columns = {}
         for value in map(dict, list):
             expr = value.pop('filter').to_arrow()
@@ -296,8 +294,8 @@ class Dataset:
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
-        args = base64, boolean, decimal, duration, float, long, int, string, struct
-        for value in map(dict, itertools.chain(*args)):
+        args = boolean, date, datetime, decimal, duration, float, long, int, string, struct, time
+        for value in map(dict, itertools.chain(base64, *args)):
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(pc, func, C.digitize)(*args, **kwargs)

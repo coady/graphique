@@ -104,18 +104,6 @@ class Column:
         """remove missing values from an array"""
         return type(self)(self.array.drop_null())
 
-    def fill_null(self, value):
-        """Return values with null elements replaced."""
-        return type(self)(C.fill_null(self.array, value))
-
-    def between(self, unit: str, start=None, end=None) -> 'LongColumn':
-        """Return duration between start and end."""
-        if [start, end].count(None) != 1:
-            raise ValueError("exactly one of `start` or `end` required")
-        convert = functools.partial(pa.scalar, type=self.array.type)
-        args = (self.array, convert(end)) if start is None else (convert(start), self.array)
-        return LongColumn(getattr(pc, f'{unit}_between')(*args))
-
 
 @strawberry.type(description="unique values")
 class Set(Generic[T]):
@@ -242,19 +230,6 @@ class FloatColumn(NumericColumn):
     max = annotate(Column.max, Optional[float])
     drop_null = annotate(Column.drop_null, 'FloatColumn')
 
-    @doc_field
-    def round(
-        self, ndigits: int = 0, multiple: float = 1.0, round_mode: str = 'half_to_even'
-    ) -> 'FloatColumn':
-        """Return values rounded to a given precision."""
-        if ndigits != 0 and multiple != 1.0:
-            raise ValueError("only one of `ndigits` or `multiple` allowed")
-        if multiple == 1:
-            array = pc.round(self.array, ndigits=ndigits, round_mode=round_mode)
-        else:
-            array = pc.round_to_multiple(self.array, multiple=multiple, round_mode=round_mode)
-        return FloatColumn(array)
-
 
 @strawberry.type(description="column of decimals")
 class DecimalColumn(Column):
@@ -262,20 +237,6 @@ class DecimalColumn(Column):
     unique = annotate(Column.unique, Set[Decimal])
     min = annotate(Column.min, Optional[Decimal])
     max = annotate(Column.max, Optional[Decimal])
-
-
-class TemporalColumn:
-    def floor_temporal(self, unit: str, multiple: int = 1):
-        """Round down to nearest multiple and time unit."""
-        return type(self)(pc.floor_temporal(self.array, multiple, unit))  # type: ignore
-
-    def round_temporal(self, unit: str, multiple: int = 1):
-        """Round to nearest multiple and time unit."""
-        return type(self)(pc.round_temporal(self.array, multiple, unit))  # type: ignore
-
-    def ceil_temporal(self, unit: str, multiple: int = 1):
-        """Round up to nearest multiple and time unit."""
-        return type(self)(pc.ceil_temporal(self.array, multiple, unit))  # type: ignore
 
 
 @strawberry.type(description="column of dates")
@@ -286,16 +247,6 @@ class DateColumn(Column):
     min = annotate(Column.min, Optional[date])
     max = annotate(Column.max, Optional[date])
     drop_null = annotate(Column.drop_null, 'DateColumn')
-    fill_null = annotate(Column.fill_null, 'DateColumn', value=date)
-    between = annotate(Column.between, LongColumn, start=Optional[date], end=Optional[date])
-    floor_temporal = annotate(TemporalColumn.floor_temporal, 'DateColumn')
-    round_temporal = annotate(TemporalColumn.round_temporal, 'DateColumn')
-    ceil_temporal = annotate(TemporalColumn.ceil_temporal, 'DateColumn')
-
-    @doc_field
-    def strftime(self, format: str = '%Y-%m-%dT%H:%M:%S', locale: str = 'C') -> 'StringColumn':
-        """Return formatted temporal values according to a format string."""
-        return StringColumn(pc.strftime(self.array, format=format, locale=locale))
 
 
 @strawberry.type(description="column of datetimes")
@@ -306,26 +257,6 @@ class DateTimeColumn(Column):
     min = annotate(Column.min, Optional[datetime])
     max = annotate(Column.max, Optional[datetime])
     drop_null = annotate(Column.drop_null, 'DateTimeColumn')
-    fill_null = annotate(Column.fill_null, 'DateTimeColumn', value=datetime)
-    between = annotate(Column.between, LongColumn, start=Optional[datetime], end=Optional[datetime])
-    strftime = doc_field(DateColumn.strftime)
-    floor_temporal = annotate(TemporalColumn.floor_temporal, 'DateTimeColumn')
-    round_temporal = annotate(TemporalColumn.round_temporal, 'DateTimeColumn')
-    ceil_temporal = annotate(TemporalColumn.ceil_temporal, 'DateTimeColumn')
-
-    @doc_field
-    def subtract(self, value: datetime) -> 'DurationColumn':
-        """Return values subtracted *from* scalar."""
-        return DurationColumn(pc.subtract(value, self.array))
-
-    @doc_field
-    def assume_timezone(
-        self, timezone: str, ambiguous: str = 'raise', nonexistent: str = 'raise'
-    ) -> 'DateTimeColumn':
-        """Convert naive timestamps to timezone-aware timestamps."""
-        return DateTimeColumn(
-            pc.assume_timezone(self.array, timezone, ambiguous=ambiguous, nonexistent=nonexistent)
-        )
 
 
 @strawberry.type(description="column of times")
@@ -336,11 +267,6 @@ class TimeColumn(Column):
     min = annotate(Column.min, Optional[time])
     max = annotate(Column.max, Optional[time])
     drop_null = annotate(Column.drop_null, 'TimeColumn')
-    fill_null = annotate(Column.fill_null, 'TimeColumn', value=time)
-    between = annotate(Column.between, LongColumn, start=Optional[time], end=Optional[time])
-    floor_temporal = annotate(TemporalColumn.floor_temporal, 'TimeColumn')
-    round_temporal = annotate(TemporalColumn.round_temporal, 'TimeColumn')
-    ceil_temporal = annotate(TemporalColumn.ceil_temporal, 'TimeColumn')
 
 
 @strawberry.type(description="column of durations")

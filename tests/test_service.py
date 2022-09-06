@@ -64,16 +64,6 @@ def test_floats(client):
         row { latitude longitude } } }'''
     )
     assert data == {'apply': {'row': {'latitude': 41.0, 'longitude': 1}}}
-    data = client.execute(
-        '''{ slice(length: 1) { columns { latitude { round(ndigits: 1) { values } } } } }'''
-    )
-    assert data == {'slice': {'columns': {'latitude': {'round': {'values': [40.8]}}}}}
-    data = client.execute(
-        '''{ slice(length: 1) { columns { latitude { round(multiple: 10) { values } } } } }'''
-    )
-    assert data == {'slice': {'columns': {'latitude': {'round': {'values': [40.0]}}}}}
-    with pytest.raises(ValueError, match="only one"):
-        client.execute('{ columns { latitude { round(ndigits: 1, multiple: 10) { length } } } }')
 
 
 def test_strings(client):

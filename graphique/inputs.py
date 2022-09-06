@@ -156,15 +156,6 @@ class Function(Generic[T], Input):
 
 
 @strawberry.input
-class _Function(Input):
-    name: str
-    alias: str = ''
-    coalesce: Optional[List[str]] = UNSET
-    fill_null_backward: bool = False
-    fill_null_forward: bool = False
-
-
-@strawberry.input
 class ElementWiseAggregate(Arguments[T]):
     skip_nulls: bool = True
 
@@ -173,12 +164,6 @@ class ElementWiseAggregate(Arguments[T]):
 class OrdinalFunction(Function[T]):
     min_element_wise: Optional[ElementWiseAggregate[T]] = default_field(func=pc.min_element_wise)
     max_element_wise: Optional[ElementWiseAggregate[T]] = default_field(func=pc.max_element_wise)
-
-
-@strawberry.input
-class _OrdinalFunction(_Function):
-    min_element_wise: Optional[str] = UNSET
-    max_element_wise: Optional[str] = UNSET
 
 
 @strawberry.input
@@ -295,83 +280,141 @@ class FloatFunction(NumericFunction[T]):
 DecimalFunction = Function[Decimal]
 
 
+@strawberry.input
+class Week(Fields):
+    week_starts_monday: bool = True
+    count_from_zero: bool = False
+    first_week_is_fully_in_year: bool = False
+
+
+@strawberry.input
+class DayOfWeek(Arguments[T]):
+    count_from_zero: bool = True
+    week_start: int = 1
+
+
+@strawberry.input
+class Strftime(Fields):
+    format: str = '%Y-%m-%dT%H:%M:%S'
+    locale: str = 'C'
+
+
+@strawberry.input
+class AssumeTimezone(Fields):
+    timezone: str
+    ambiguous: str = 'raise'
+    nonexistent: str = 'raise'
+
+
+@strawberry.input
+class RoundTemporal(Fields):
+    multiple: int = 1
+    unit: str = 'day'
+    week_starts_monday: bool = True
+    ceil_is_strictly_greater: bool = False
+    calendar_based_origin: bool = False
+
+
+@operator.itemgetter(date)
 @strawberry.input(
-    description=f"[functions]({links.compute}#temporal-component-extraction) for dates"
+    name='Function',
+    description=f"[functions]({links.compute}#temporal-component-extraction) for dates",
 )
-class DateFunction(_OrdinalFunction):
-    fill_null: Optional[date] = UNSET
-    years_between: Optional[str] = UNSET
-    quarters_between: Optional[str] = UNSET
-    weeks_between: Optional[str] = UNSET
-    days_between: Optional[str] = UNSET
-    hours_between: Optional[str] = UNSET
-    minutes_between: Optional[str] = UNSET
-    seconds_between: Optional[str] = UNSET
-    milliseconds_between: Optional[str] = UNSET
-    microseconds_between: Optional[str] = UNSET
-    nanoseconds_between: Optional[str] = UNSET
-    year: bool = False
-    quarter: bool = False
-    month: bool = False
-    week: bool = False
-    us_week: bool = False
-    day: bool = False
-    day_of_week: bool = False
-    day_of_year: bool = False
-    strftime: bool = False
+class DateFunction(OrdinalFunction[T]):
+    strftime: Optional[Strftime] = default_field(func=pc.strftime)
+    subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
+
+    ceil_temporal: Optional[RoundTemporal] = default_field(func=pc.ceil_temporal)
+    floor_temporal: Optional[RoundTemporal] = default_field(func=pc.floor_temporal)
+    round_temporal: Optional[RoundTemporal] = default_field(func=pc.round_temporal)
+
+    year: Optional[Fields] = default_field(func=pc.year)
+    year_month_day: Optional[Fields] = default_field(func=pc.year_month_day)
+    quarter: Optional[Fields] = default_field(func=pc.quarter)
+    month: Optional[Fields] = default_field(func=pc.month)
+    week: Optional[Week] = default_field(func=pc.week)
+    us_week: Optional[Fields] = default_field(func=pc.us_week)
+    day: Optional[Fields] = default_field(func=pc.day)
+    day_of_week: Optional[DayOfWeek[T]] = default_field(func=pc.day_of_week)
+    day_of_year: Optional[Fields] = default_field(func=pc.day_of_year)
+
+    years_between: Optional[Arguments[T]] = default_field(func=pc.years_between)
+    quarters_between: Optional[Arguments[T]] = default_field(func=pc.quarters_between)
+    weeks_between: Optional[DayOfWeek[T]] = default_field(func=pc.weeks_between)
+    days_between: Optional[Arguments[T]] = default_field(func=pc.days_between)
 
 
+@operator.itemgetter(datetime)
 @strawberry.input(
-    description=f"[functions]({links.compute}#temporal-component-extraction) for datetimes"
+    name='Function',
+    description=f"[functions]({links.compute}#temporal-component-extraction) for datetimes",
 )
-class DateTimeFunction(_OrdinalFunction):
-    fill_null: Optional[datetime] = UNSET
-    years_between: Optional[str] = UNSET
-    quarters_between: Optional[str] = UNSET
-    weeks_between: Optional[str] = UNSET
-    days_between: Optional[str] = UNSET
-    hours_between: Optional[str] = UNSET
-    minutes_between: Optional[str] = UNSET
-    seconds_between: Optional[str] = UNSET
-    milliseconds_between: Optional[str] = UNSET
-    microseconds_between: Optional[str] = UNSET
-    nanoseconds_between: Optional[str] = UNSET
-    year: bool = False
-    quarter: bool = False
-    month: bool = False
-    week: bool = False
-    us_week: bool = False
-    day: bool = False
-    day_of_week: bool = False
-    day_of_year: bool = False
-    hour: bool = False
-    minute: bool = False
-    second: bool = False
-    subsecond: bool = False
-    millisecond: bool = False
-    microsecond: bool = False
-    nanosecond: bool = False
-    strftime: bool = False
+class DateTimeFunction(OrdinalFunction[T]):
+    strftime: Optional[Strftime] = default_field(func=pc.strftime)
+    subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
+    assume_timezone: Optional[AssumeTimezone] = default_field(func=pc.assume_timezone)
+
+    ceil_temporal: Optional[RoundTemporal] = default_field(func=pc.ceil_temporal)
+    floor_temporal: Optional[RoundTemporal] = default_field(func=pc.floor_temporal)
+    round_temporal: Optional[RoundTemporal] = default_field(func=pc.round_temporal)
+
+    year: Optional[Fields] = default_field(func=pc.year)
+    year_month_day: Optional[Fields] = default_field(func=pc.year_month_day)
+    quarter: Optional[Fields] = default_field(func=pc.quarter)
+    month: Optional[Fields] = default_field(func=pc.month)
+    week: Optional[Week] = default_field(func=pc.week)
+    us_week: Optional[Fields] = default_field(func=pc.us_week)
+    day: Optional[Fields] = default_field(func=pc.day)
+    day_of_week: Optional[DayOfWeek[T]] = default_field(func=pc.day_of_week)
+    day_of_year: Optional[Fields] = default_field(func=pc.day_of_year)
+
+    hour: Optional[Fields] = default_field(func=pc.hour)
+    minute: Optional[Fields] = default_field(func=pc.minute)
+    second: Optional[Fields] = default_field(func=pc.second)
+    subsecond: Optional[Fields] = default_field(func=pc.subsecond)
+    millisecond: Optional[Fields] = default_field(func=pc.millisecond)
+    microsecond: Optional[Fields] = default_field(func=pc.microsecond)
+    nanosecond: Optional[Fields] = default_field(func=pc.nanosecond)
+
+    years_between: Optional[Arguments[T]] = default_field(func=pc.years_between)
+    quarters_between: Optional[Arguments[T]] = default_field(func=pc.quarters_between)
+    weeks_between: Optional[DayOfWeek[T]] = default_field(func=pc.weeks_between)
+    days_between: Optional[Arguments[T]] = default_field(func=pc.days_between)
+
+    hours_between: Optional[Arguments[T]] = default_field(func=pc.hours_between)
+    minutes_between: Optional[Arguments[T]] = default_field(func=pc.minutes_between)
+    seconds_between: Optional[Arguments[T]] = default_field(func=pc.seconds_between)
+    milliseconds_between: Optional[Arguments[T]] = default_field(func=pc.milliseconds_between)
+    microseconds_between: Optional[Arguments[T]] = default_field(func=pc.microseconds_between)
+    nanoseconds_between: Optional[Arguments[T]] = default_field(func=pc.nanoseconds_between)
 
 
+@operator.itemgetter(time)
 @strawberry.input(
-    description=f"[functions]({links.compute}#temporal-component-extraction) for times"
+    name='Function',
+    description=f"[functions]({links.compute}#temporal-component-extraction) for times",
 )
-class TimeFunction(_OrdinalFunction):
-    fill_null: Optional[time] = UNSET
-    hours_between: Optional[str] = UNSET
-    minutes_between: Optional[str] = UNSET
-    seconds_between: Optional[str] = UNSET
-    milliseconds_between: Optional[str] = UNSET
-    microseconds_between: Optional[str] = UNSET
-    nanoseconds_between: Optional[str] = UNSET
-    hour: bool = False
-    minute: bool = False
-    second: bool = False
-    subsecond: bool = False
-    millisecond: bool = False
-    microsecond: bool = False
-    nanosecond: bool = False
+class TimeFunction(OrdinalFunction[T]):
+    subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
+
+    ceil_temporal: Optional[RoundTemporal] = default_field(func=pc.ceil_temporal)
+    floor_temporal: Optional[RoundTemporal] = default_field(func=pc.floor_temporal)
+    round_temporal: Optional[RoundTemporal] = default_field(func=pc.round_temporal)
+
+    hour: Optional[Fields] = default_field(func=pc.hour)
+    minute: Optional[Fields] = default_field(func=pc.minute)
+    second: Optional[Fields] = default_field(func=pc.second)
+    subsecond: Optional[Fields] = default_field(func=pc.subsecond)
+    millisecond: Optional[Fields] = default_field(func=pc.millisecond)
+    microsecond: Optional[Fields] = default_field(func=pc.microsecond)
+    nanosecond: Optional[Fields] = default_field(func=pc.nanosecond)
+
+    hours_between: Optional[Arguments[T]] = default_field(func=pc.hours_between)
+    minutes_between: Optional[Arguments[T]] = default_field(func=pc.minutes_between)
+    seconds_between: Optional[Arguments[T]] = default_field(func=pc.seconds_between)
+    milliseconds_between: Optional[Arguments[T]] = default_field(func=pc.milliseconds_between)
+    microseconds_between: Optional[Arguments[T]] = default_field(func=pc.microseconds_between)
+    nanoseconds_between: Optional[Arguments[T]] = default_field(func=pc.nanoseconds_between)
 
 
 DurationFunction = Function[Duration]
