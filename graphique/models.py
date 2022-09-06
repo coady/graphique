@@ -102,7 +102,7 @@ class Column:
 
     def drop_null(self):
         """remove missing values from an array"""
-        return type(self)(self.array.drop_null())
+        return self.array.drop_null().to_pylist()
 
 
 @strawberry.type(description="unique values")
@@ -165,11 +165,6 @@ class NumericColumn(Column):
         """Return list of approximate quantiles for values, defaulting to the median."""
         return pc.tdigest(self.array, q=q, delta=delta, buffer_size=buffer_size).to_pylist()
 
-    @doc_field
-    def logb(self, base: float) -> 'FloatColumn':
-        """Return log of values to base."""
-        return FloatColumn(pc.logb(self.array, base))
-
     def mode(self, length: int = 1):
         """mode of the values"""
         return Set(*pc.mode(self.array, length).flatten())
@@ -202,7 +197,7 @@ class IntColumn(NumericColumn):
     mode = annotate(NumericColumn.mode, Set[int])
     min = annotate(Column.min, Optional[int])
     max = annotate(Column.max, Optional[int])
-    drop_null = annotate(Column.drop_null, 'IntColumn')
+    drop_null = annotate(Column.drop_null, List[int])
 
 
 @strawberry.type(description="column of longs")
@@ -215,7 +210,7 @@ class LongColumn(NumericColumn):
     mode = annotate(NumericColumn.mode, Set[Long])
     min = annotate(Column.min, Optional[Long])
     max = annotate(Column.max, Optional[Long])
-    drop_null = annotate(Column.drop_null, 'LongColumn')
+    drop_null = annotate(Column.drop_null, List[Long])
 
 
 @strawberry.type(description="column of floats")
@@ -228,7 +223,7 @@ class FloatColumn(NumericColumn):
     mode = annotate(NumericColumn.mode, Set[float])
     min = annotate(Column.min, Optional[float])
     max = annotate(Column.max, Optional[float])
-    drop_null = annotate(Column.drop_null, 'FloatColumn')
+    drop_null = annotate(Column.drop_null, List[float])
 
 
 @strawberry.type(description="column of decimals")
@@ -246,7 +241,7 @@ class DateColumn(Column):
     unique = annotate(Column.unique, Set[date])
     min = annotate(Column.min, Optional[date])
     max = annotate(Column.max, Optional[date])
-    drop_null = annotate(Column.drop_null, 'DateColumn')
+    drop_null = annotate(Column.drop_null, List[date])
 
 
 @strawberry.type(description="column of datetimes")
@@ -256,7 +251,7 @@ class DateTimeColumn(Column):
     unique = annotate(Column.unique, Set[datetime])
     min = annotate(Column.min, Optional[datetime])
     max = annotate(Column.max, Optional[datetime])
-    drop_null = annotate(Column.drop_null, 'DateTimeColumn')
+    drop_null = annotate(Column.drop_null, List[datetime])
 
 
 @strawberry.type(description="column of times")
@@ -266,7 +261,7 @@ class TimeColumn(Column):
     unique = annotate(Column.unique, Set[time])
     min = annotate(Column.min, Optional[time])
     max = annotate(Column.max, Optional[time])
-    drop_null = annotate(Column.drop_null, 'TimeColumn')
+    drop_null = annotate(Column.drop_null, List[time])
 
 
 @strawberry.type(description="column of durations")
@@ -280,7 +275,7 @@ class Base64Column(Column):
     index = annotate(Column.index, Long, value=bytes)
     values = annotate(Column.values, List[Optional[bytes]])
     unique = annotate(Column.unique, Set[bytes])
-    drop_null = annotate(Column.drop_null, 'Base64Column')
+    drop_null = annotate(Column.drop_null, List[bytes])
 
 
 @strawberry.type(description="column of strings")
@@ -290,7 +285,7 @@ class StringColumn(Column):
     unique = annotate(Column.unique, Set[str])
     min = annotate(Column.min, Optional[str])
     max = annotate(Column.max, Optional[str])
-    drop_null = annotate(Column.drop_null, 'StringColumn')
+    drop_null = annotate(Column.drop_null, List[str])
 
 
 @strawberry.type(description="column of lists")

@@ -56,9 +56,9 @@ def test_floats(client):
     latitudes = data['apply']['columns']['latitude']
     assert latitudes == {'min': 18.0, 'max': 72.0, 'unique': {'length': 52}}
     data = client.execute(
-        '''{ slice(length: 1) { columns { latitude { logb(base: 3) { values } } } } }'''
+        '{ apply(int: {logb: {name: "latitude", value: 3}}) { row { latitude } } }'
     )
-    assert data['slice']['columns']['latitude']['logb']['values'] == [pytest.approx(3.376188)]
+    assert data == {'apply': {'row': {'latitude': pytest.approx(3.376188)}}}
     data = client.execute(
         '''{ apply(float: {round: {name: "latitude"}, isFinite: {name: "longitude"}}) {
         row { latitude longitude } } }'''
