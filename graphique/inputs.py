@@ -655,25 +655,6 @@ class Diff(Input):
 
 
 @strawberry.input(
-    description=f"[functions]({links.compute}#arithmetic-functions) projected across two columns"
-)
-class Projections(Input):
-    fill_null: Optional[List[str]] = UNSET
-    min_element_wise: Optional[str] = UNSET
-    max_element_wise: Optional[str] = UNSET
-    years_between: Optional[str] = UNSET
-    quarters_between: Optional[str] = UNSET
-    weeks_between: Optional[str] = UNSET
-    days_between: Optional[str] = UNSET
-    hours_between: Optional[str] = UNSET
-    minutes_between: Optional[str] = UNSET
-    seconds_between: Optional[str] = UNSET
-    milliseconds_between: Optional[str] = UNSET
-    microseconds_between: Optional[str] = UNSET
-    nanoseconds_between: Optional[str] = UNSET
-
-
-@strawberry.input(
     description="""
 [Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
 used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html).

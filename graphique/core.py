@@ -10,7 +10,6 @@ import functools
 import itertools
 from concurrent import futures
 from dataclasses import dataclass
-from datetime import time
 from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
 import numpy as np  # type: ignore
 import pyarrow as pa
@@ -189,28 +188,12 @@ class Column(pa.ChunkedArray):
         offsets = list(itertools.accumulate(map(len, self.iterchunks())))
         return pa.chunked_array(map(np.arange, [0] + offsets, offsets))
 
-    def mask(self, func='and', ignore_case=False, regex=False, **query) -> pa.ChunkedArray:
-        """Return boolean mask array which matches query predicates."""
-        masks = []
-        options = {'ignore_case': True} if ignore_case else {}
-        for op, value in query.items():
-            if hasattr(Column, op):
-                masks.append(getattr(Column, op)(self, value))
-            elif 'is_' not in op:
-                op += '_regex' * regex
-                masks.append(Column.call(self, getattr(pc, op), value, **options))
-            else:
-                masks.append(Column.call(self, getattr(pc, op)))
-        return functools.reduce(getattr(pc, func), masks) if masks else self.cast('bool')
-
-    def call(self, func: Callable, *args, **kwargs) -> pa.ChunkedArray:
-        """Call compute function on array with support for dictionaries."""
-        scalar = Column.scalar_type(self)
-        args = tuple(pa.scalar(arg, scalar) if isinstance(arg, time) else arg for arg in args)
+    def call(func: Callable, *args, **kwargs) -> pa.ChunkedArray:
+        """Call compute function with support for dictionary arrays."""
         with contextlib.suppress(NotImplementedError):
-            return func(self, *args, **kwargs)
-        dictionary, indices = Column.combine_dictionaries(self)
-        array = func(dictionary, *args, **kwargs)
+            return func(*args, **kwargs)
+        dictionary, indices = Column.combine_dictionaries(args[0])
+        array = func(dictionary, *args[1:], **kwargs)
         return array if indices is None else array.take(indices)
 
     def fill_null(self, value) -> pa.ChunkedArray:
@@ -235,10 +218,7 @@ class Column(pa.ChunkedArray):
             args: apply binary function to scalar, using `subtract` as the difference function
         """
         ends = [pa.array([True])]
-        if args:
-            mask = Column.call(Column.diff(self), predicate, *args)
-        else:
-            mask = Column.diff(self, predicate)
+        mask = predicate(Column.diff(self), *args) if args else Column.diff(self, predicate)
         return pc.indices_nonzero(pa.concat_arrays(ends + mask.chunks + ends))
 
     def min_max(self):
@@ -293,8 +273,6 @@ class Column(pa.ChunkedArray):
 
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
-
-    applied = {'fill_null', 'digitize'}
 
     def map_batch(self, func: Callable, *rargs, **kwargs) -> pa.Table:
         return pa.Table.from_batches(
@@ -446,36 +424,6 @@ class Table(pa.Table):
         keys = dict(map(sort_key, names))  # type: ignore
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
         return self.take(func(table, sort_keys=keys.items()))
-
-    def mask(self, name: str, apply: dict = {}) -> pa.ChunkedArray:
-        """Return mask array which matches query."""
-        masks = []
-        for op, column in apply.items():
-            column = self[apply[op]]
-            func = getattr(pc, op)
-            if not Column.is_list_type(self[name]):
-                mask = func(self[name], column)
-            elif Column.is_list_type(column):
-                mask = func(pc.list_flatten(self[name]), pc.list_flatten(column))
-            else:
-                mask = pa.chunked_array(map(func, ListChunk.scalars(self[name]), column))
-            masks.append(mask)
-        return functools.reduce(getattr(pc, 'and'), masks)
-
-    def apply(
-        self,
-        name: str,
-        checked=False,
-        **partials,
-    ) -> pa.Table:
-        """Return view of table with functions applied across columns."""
-        column = self[name]
-        for func, arg in partials.items():
-            if func in Table.applied:
-                column = getattr(Column, func)(column, arg)
-            elif arg:
-                column = getattr(pc, func + '_checked' * checked)(column)
-        return self.set_column(self.column_names.index(name), name, column)
 
     def filter_list(self, expr: ds.Expression) -> 'Table':
         """Return table with list columns filtered within scalars."""

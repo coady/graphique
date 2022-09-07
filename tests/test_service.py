@@ -45,10 +45,10 @@ def test_floats(client):
     (quantile,) = data['columns']['latitude']['quantile']
     assert quantile == pytest.approx(39.12054)
     data = client.execute(
-        '''{ column(name: "latitude", apply: {minElementWise: "longitude"})
-        { ... on FloatColumn { min } } }'''
+        '''{ apply(float: {minElementWise: {name: ["latitude", "longitude"]}}) {
+        columns { latitude { min } } } }'''
     )
-    assert data['column']['min'] == pytest.approx(-174.213333)
+    assert data == {'apply': {'columns': {'latitude': {'min': pytest.approx(-174.213333)}}}}
     data = client.execute(
         f'''{{ apply(int: {{digitize: {{name: "latitude", bins: {list(range(90))} }}}})
         {{ columns {{ latitude {{ min max unique {{ length }} }} }} }} }}'''

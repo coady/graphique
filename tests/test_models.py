@@ -123,10 +123,9 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'product': 0.0}}}
 
     data = executor(
-        '''{ column(name: "float", apply: {minElementWise: "int32", maxElementWise: "int32"}) {
-        ... on FloatColumn { values } } }'''
+        '{ apply(int: {minElementWise: {name: "int32"}}) { columns { int32 { values } } } }'
     )
-    assert data == {'column': {'values': [0.0, None]}}
+    assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor('{ column(name: "float", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
     data = executor(
@@ -161,10 +160,10 @@ def test_datetime(executor):
         )
         assert data == {'apply': {'column': {'values': [1, None]}}}
         data = executor(
-            f'''{{ column(name: "{name}", apply: {{yearsBetween: "{name}"}})
-            {{ ... on LongColumn {{ values }} }} }}'''
+            f'''{{ apply(datetime: {{yearsBetween: {{name: ["{name}", "{name}"]}}}})
+            {{ column(name: "{name}") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
-        assert data == {'column': {'values': [0, None]}}
+        assert data == {'apply': {'column': {'values': [0, None]}}}
     data = executor(
         '''{ apply(datetime: {strftime: {name: "timestamp"}}) {
         column(name: "timestamp") { type } } }'''

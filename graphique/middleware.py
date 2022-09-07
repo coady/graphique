@@ -13,7 +13,7 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Diff, Expression, Projections
+from .inputs import Aggregations, Diff, Expression
 from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction, links
@@ -138,23 +138,15 @@ class Dataset:
         """number of rows"""
         return len(self.table) if hasattr(self.table, '__len__') else self.table.count_rows()
 
-    @doc_field(
-        name="column name",
-        cast=f"cast array to {links.type}",
-        apply="projected functions",
-    )
-    def column(self, info: Info, name: str, cast: str = '', apply: Projections = {}) -> Column:  # type: ignore
-        """Return column of any type by name, with optional projection.
+    @doc_field(name="column name", cast=f"cast array to {links.type}")
+    def column(self, info: Info, name: str, cast: str = '') -> Column:
+        """Return column of any type by name.
 
         This is typically only needed for aliased columns added by `apply` or `aggregate`.
         If the column is in the schema, `columns` can be used instead.
         """
         table = self.select(info)
-        column = table[name]
-        for func, name in dict(apply).items():
-            others = (table[name] for name in (name if isinstance(name, list) else [name]))
-            column = getattr(pc, func)(column, *others)
-        return Column.cast(column.cast(cast) if cast else column)
+        return Column.cast(table[name].cast(cast) if cast else table[name])
 
     @doc_field(
         offset="number of rows to skip; negative value skips from the end",
@@ -298,7 +290,7 @@ class Dataset:
         for value in map(dict, itertools.chain(base64, *args)):
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
-                columns[name] = getattr(pc, func, C.digitize)(*args, **kwargs)
+                columns[name] = C.call(getattr(pc, func, C.digitize), *args, **kwargs)
         return type(self)(T.union(table, pa.table(columns)))
 
     @doc_field

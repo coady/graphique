@@ -1,6 +1,7 @@
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.dataset as ds
 import pytest
 from graphique.core import Agg, ListChunk, Column as C, Table as T
 
@@ -10,20 +11,18 @@ def test_dictionary(table):
     assert C.min(array) == 'AK'
     assert C.max(array) == 'WY'
     assert C.min_max(array[:0]) == {'min': None, 'max': None}
-    assert sum(C.mask(array, match_substring="CA").to_pylist()) == 2647
-    assert sum(C.call(array, pc.match_substring, "ca", ignore_case=True).to_pylist()) == 2647
-    assert sum(C.mask(array, match_substring='CA', regex=True).to_pylist()) == 2647
-    assert sum(C.mask(array, is_in=['CA']).to_pylist()) == 2647
-    assert "ca" in C.call(array, pc.utf8_lower).unique().to_pylist()
+    assert sum(C.call(pc.match_substring, array, "ca", ignore_case=True).to_pylist()) == 2647
+    assert "ca" in C.call(pc.utf8_lower, array).unique().to_pylist()
     table = pa.table({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
-    array = C.call(pa.chunked_array([[0, 0]]).dictionary_encode(), pc.add, 1)
+    array = C.call(pc.add, pa.chunked_array([[0, 0]]).dictionary_encode(), 1)
     assert array.to_pylist() == [1, 1]
     array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()
     assert C.fill_null(array, "c").to_pylist() == C.fill_null(C.decode(array), "c").to_pylist()
     assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
     assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
-    assert not C.mask(pa.chunked_array([], 'string').dictionary_encode(), utf8_is_upper=True)
+    dictionary, ind = C.combine_dictionaries(pa.chunked_array([], 'string').dictionary_encode())
+    assert not len(dictionary) and ind is None
 
 
 def test_chunks():
@@ -67,24 +66,12 @@ def test_membership():
     assert C.index(array, 1, start=2) == -1
 
 
-def test_functional(table):
-    array = table['state'].dictionary_encode()
-    assert sum(C.mask(array, less_equal='CA', greater_equal='CA').to_pylist()) == 2647
-    assert sum(C.mask(array, utf8_is_upper=True).to_pylist()) == 41700
-    mask = T.mask(table, 'city', apply={'equal': 'county'})
-    assert sum(mask.to_pylist()) == 2805
-    table = T.apply(table, 'zipcode', fill_null=0)
-    assert not table['zipcode'].null_count
-    table = T.apply(table, 'state', utf8_lower=True, utf8_upper=False)
-    assert table['state'][0].as_py() == 'ny'
-
-
 def test_group(table):
     groups = T.group(table, 'state', list=[Agg('county'), Agg('city')])
     assert len(groups) == 52
     assert groups['state'][0].as_py() == 'NY'
-    assert sum(T.mask(groups, 'county', apply={'equal': 'city'}).to_pylist()) == 2805
-    assert sum(T.mask(groups, 'county', apply={'equal': 'state'}).to_pylist()) == 0
+    table = T.filter_list(groups, ds.field('county') == ds.field('city'))
+    assert len(pc.list_flatten(table['city'])) == 2805
     mins = T.matched(groups, C.min, 'state', 'county')
     assert mins['state'].to_pylist() == ['AK']
     assert mins['county'].to_pylist() == [['Aleutians East'] * 5]
@@ -167,6 +154,8 @@ def test_not_implemented():
         pc.min_max(dictionary)
     with pytest.raises(NotImplementedError):
         pc.count_distinct(dictionary)
+    with pytest.raises(NotImplementedError):
+        pc.utf8_lower(dictionary)
     with pytest.raises(NotImplementedError):
         pa.StructArray.from_arrays([], []).dictionary_encode()
     for index in (-1, 1):
