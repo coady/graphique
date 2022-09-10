@@ -338,16 +338,15 @@ class Dataset:
         """Select rows and project columns without memory usage."""
         dataset = ds.dataset(self.table) if isinstance(self.table, pa.Table) else self.table
         schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
-        selection = filter.to_arrow()
         names = self.references(info, level=1) & set(schema.names)
         projection = {name: ds.field(name) for name in names}
-        projection.update({col.alias or col.name: col.to_arrow() for col in columns})
+        projection.update({col.alias or '.'.join(col.name): col.to_arrow() for col in columns})
         if '' in projection:
             raise ValueError("projected columns need a name or alias")
         if isinstance(dataset, ds.Dataset):
-            return type(self)(dataset.scanner(filter=selection, columns=projection))
+            return type(self)(dataset.scanner(filter=filter.to_arrow(), columns=projection))
         scanner = ds.Scanner.from_batches(
-            dataset.to_batches(), schema, filter=selection, columns=projection
+            dataset.to_batches(), schema, filter=filter.to_arrow(), columns=projection
         )  # one-shot scanner can't be reused
         fields = selections(*info.selected_fields)
         return type(self)(scanner.to_table() if len(fields) > 1 else scanner)

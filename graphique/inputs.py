@@ -709,7 +709,7 @@ Expects one of: a field `name`, a scalar, or an operator with expressions. Singl
 """
 )
 class Expression:
-    name: str = strawberry.field(default='', description="field name")
+    name: List[str] = default_field(list, description="field name(s)")
     alias: str = strawberry.field(default='', description="name for outermost columns")
     cast: str = strawberry.field(default='', description=f"cast as {links.type}")
     value: Optional[JSON] = default_field(description="JSON scalar; also see typed scalars")
@@ -761,8 +761,7 @@ class Expression:
         """Transform GraphQL expression into a dataset expression."""
         fields = []
         if self.name:
-            field = ds.field(self.name)
-            fields.append(field)
+            fields.append(ds.field(*self.name))
         for name in self.scalars:
             scalars = getattr(self, name)
             if self.cast:
@@ -797,6 +796,6 @@ class Expression:
         """Transform query syntax into an Expression input."""
         exprs = []
         for name, query in queries.items():
-            field = cls(name=name)
+            field = cls(name=[name])
             exprs += (cls(**{op: [field, cls(value=value)]}) for op, value in dict(query).items())
         return cls(and_=exprs)
