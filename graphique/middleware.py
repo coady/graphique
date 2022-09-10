@@ -91,28 +91,27 @@ class Dataset:
                     field = annotate(func, List[cls] if name == 'tables' else cls)
                 setattr(cls, name, field)
 
-    @staticmethod
-    def references(info: Info, level: int = 0) -> set:
+    def references(self, info: Info, level: int = 0) -> set:
         """Return set of every possible future column reference."""
         fields = info.selected_fields
         for _ in range(level):
             fields = itertools.chain(*[field.selections for field in fields])
-        return set(itertools.chain(*map(references, fields)))
+        return set(itertools.chain(*map(references, fields))) & set(self.schema().names)
 
-    def scanner(self, info: Info) -> ds.Scanner:
+    def scanner(self, info: Info, **options) -> ds.Scanner:
         """Return scanner with only the columns necessary to proceed."""
-        if isinstance(self.table, ds.Scanner):
-            return self.table
-        names = self.references(info) & set(self.table.schema.names)
-        return self.table.scanner(columns=list(names))
+        options.setdefault('columns', list(self.references(info)))
+        dataset = ds.dataset(self.table) if isinstance(self.table, pa.Table) else self.table
+        if isinstance(dataset, ds.Dataset):
+            return dataset.scanner(**options)
+        return ds.Scanner.from_batches(dataset.to_batches(), dataset.projected_schema, **options)
 
     def select(self, info: Info, length: int = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
-        table = self.table
-        if not isinstance(table, pa.Table):
-            scanner = self.scanner(info)
-            table = scanner.to_table() if length is None else scanner.head(length)
-        return table.select(self.references(info) & set(table.column_names))
+        if isinstance(self.table, pa.Table):
+            return self.table.select(self.references(info))
+        scanner = self.scanner(info)
+        return scanner.to_table() if length is None else scanner.head(length)
 
     @doc_field
     def type(self) -> str:
@@ -182,17 +181,14 @@ class Dataset:
                 aggs[func] = [Agg(**dict(value)) for value in values]
                 scalars.update(agg.alias for agg in aggs[func])
         lists = self.references(info, level=1) - scalars - {counts}
-        table = None
-        if not isinstance(self.table, pa.Table) and set(aggs) <= Agg.associatives:
-            scanner = self.scanner(info)
-            if lists.isdisjoint(scanner.projected_schema.names):
-                table = T.map_batch(scanner, T.group, *by, counts=counts, **aggs)
-                if counts:
-                    aggs.setdefault('sum', []).append(Agg(counts))
-                    counts = ''
-        table = self.select(info) if table is None else table
-        aggs['list'] = list(map(Agg, lists & set(table.column_names)))
-        return type(self)(T.group(table, *by, counts=counts, **aggs))
+        if isinstance(self.table, pa.Table) or lists or not set(aggs) <= Agg.associatives:
+            table = self.select(info)
+        else:  # scan in parallel when possible
+            table = T.map_batch(self.scanner(info), T.group, *by, counts=counts, **aggs)
+            if counts:
+                aggs.setdefault('sum', []).append(Agg(counts))
+                counts = ''
+        return type(self)(T.group(table, *by, counts=counts, list=list(map(Agg, lists)), **aggs))
 
     @doc_field(
         by="column names",
@@ -338,17 +334,10 @@ class Dataset:
         self, info: Info, filter: Expression = {}, columns: List[Expression] = []  # type: ignore
     ) -> 'Dataset':
         """Select rows and project columns without memory usage."""
-        dataset = ds.dataset(self.table) if isinstance(self.table, pa.Table) else self.table
-        schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
-        names = self.references(info, level=1) & set(schema.names)
-        projection = {name: ds.field(name) for name in names}
+        projection = {name: ds.field(name) for name in self.references(info, level=1)}
         projection.update({col.alias or '.'.join(col.name): col.to_arrow() for col in columns})
         if '' in projection:
             raise ValueError("projected columns need a name or alias")
-        if isinstance(dataset, ds.Dataset):
-            return type(self)(dataset.scanner(filter=filter.to_arrow(), columns=projection))
-        scanner = ds.Scanner.from_batches(
-            dataset.to_batches(), schema, filter=filter.to_arrow(), columns=projection
-        )  # one-shot scanner can't be reused
-        fields = selections(*info.selected_fields)
-        return type(self)(scanner.to_table() if len(fields) > 1 else scanner)
+        scanner = self.scanner(info, filter=filter.to_arrow(), columns=projection)
+        oneshot = len(selections(*info.selected_fields)) > 1 and isinstance(self.table, ds.Scanner)
+        return type(self)(scanner.to_table() if oneshot else scanner)
