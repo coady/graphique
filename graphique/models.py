@@ -3,13 +3,13 @@ GraphQL output types and resolvers.
 """
 import functools
 import inspect
-import operator
 import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Callable, Generic, List, Optional, TypeVar
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.dataset as ds
 import strawberry
 from strawberry.field import StrawberryField
 from strawberry.types import Info
@@ -58,9 +58,6 @@ class Column:
     def cast(cls, array: pa.ChunkedArray) -> 'Column':
         """Return typed column based on array type."""
         return cls.type_map[type_map[C.scalar_type(array).id]](array)  # type: ignore
-
-    def map(self, func: Callable, **kwargs) -> 'Column':
-        return self.cast(C.map(self.array, func, **kwargs))
 
     @classmethod
     def fromscalar(cls, scalar: pa.ListScalar) -> Optional['Column']:
@@ -327,10 +324,11 @@ class StructColumn(Column):
         """field names"""
         return [field.name for field in self.array.type]
 
-    @doc_field
-    def column(self, name: str) -> Column:
+    @doc_field(name="field name(s); multiple names access nested fields")
+    def column(self, name: List[str]) -> Column:
         """Return struct field as a column."""
-        return self.map(operator.methodcaller('field', name))
+        dataset = ds.dataset(pa.table({'': self.array}))
+        return self.cast(*dataset.to_table(columns={'': ds.field('', *name)}))
 
 
 Column.type_map = {  # type: ignore

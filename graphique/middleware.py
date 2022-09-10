@@ -138,15 +138,19 @@ class Dataset:
         """number of rows"""
         return len(self.table) if hasattr(self.table, '__len__') else self.table.count_rows()
 
-    @doc_field(name="column name", cast=f"cast array to {links.type}")
-    def column(self, info: Info, name: str, cast: str = '') -> Column:
+    @doc_field(
+        name="column name(s); multiple names access nested struct fields",
+        cast=f"cast array to {links.type}",
+    )
+    def column(self, info: Info, name: List[str], cast: str = '') -> Column:
         """Return column of any type by name.
 
         This is typically only needed for aliased columns added by `apply` or `aggregate`.
         If the column is in the schema, `columns` can be used instead.
         """
         table = self.select(info)
-        return Column.cast(table[name].cast(cast) if cast else table[name])
+        (column,) = ds.dataset(table).to_table(columns={'': ds.field(*name)})
+        return Column.cast(column.cast(cast) if cast else column)
 
     @doc_field(
         offset="number of rows to skip; negative value skips from the end",

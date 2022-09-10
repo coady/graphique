@@ -283,6 +283,8 @@ def test_struct(executor):
         column(name: "leaf") { ... on IntColumn { values } } } }'''
     )
     assert data == {'scan': {'column': {'values': [0, None]}}}
+    data = executor('{ column(name: ["struct", "x"]) { type } }')
+    assert data == {'column': {'type': 'int32'}}
     with pytest.raises(ValueError, match="must be BOOL"):
         executor('{ apply(struct: {caseWhen: {name: ["struct", "int32", "float"]}}) { type } }')
 

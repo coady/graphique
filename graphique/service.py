@@ -1,7 +1,7 @@
 """
 GraphQL service and top-level resolvers.
 """
-from typing import List, Optional, no_type_check
+from typing import List, Optional
 import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
@@ -67,7 +67,6 @@ class Table(Dataset):
             )
         return Row(**row)
 
-    @no_type_check
     @QueryInput.resolve_types(types)
     def filter(self, info: Info, **queries) -> 'Table':
         """Return table with rows which match all queries.
