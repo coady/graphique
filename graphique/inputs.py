@@ -131,7 +131,7 @@ class Fields:
 
 
 @strawberry.input(description="positional function arguments with typed scalar")
-class Arguments(Fields, Generic[T]):
+class Arguments(Generic[T], Fields):
     value: List[Optional[T]] = default_field(list, description="scalar value(s)")
     cast: str = strawberry.field(default='', description=f"cast scalar to {links.type}")
 
@@ -147,12 +147,24 @@ class Arguments(Fields, Generic[T]):
         )
 
 
+@strawberry.input
+class SetLookup(Arguments[T]):
+    skip_nulls: bool = False
+
+    def serialize(self, table):
+        """Return (name, args, kwargs) suitable for computing."""
+        name, (values, *value_set), kwargs = super().serialize(table)
+        return name, (values, pa.array(value_set, self.cast or None)), kwargs
+
+
 @strawberry.input(description=f"applied [functions]({links.compute})")
 class Function(Generic[T], Input):
     coalesce: Optional[Arguments[T]] = default_field(func=pc.coalesce)
     fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
     fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
     if_else: Optional[Arguments[T]] = default_field(func=pc.if_else)
+    replace_with_mask: Optional[Fields] = default_field(func=pc.replace_with_mask)
+    index_in: Optional[SetLookup[T]] = default_field(func=pc.index_in)
 
 
 @strawberry.input
@@ -194,6 +206,10 @@ class NumericFunction(OrdinalFunction[T]):
     subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
     multiply: Optional[Arguments[T]] = default_field(func=pc.multiply)
     divide: Optional[Arguments[T]] = default_field(func=pc.divide)
+    cumulative_sum: Optional[ElementWiseAggregate[T]] = default_field(func=pc.cumulative_sum)
+    cumulative_sum_checked: Optional[ElementWiseAggregate[T]] = default_field(
+        func=pc.cumulative_sum_checked
+    )
 
     power: Optional[Arguments[T]] = default_field(func=pc.power)
     power_checked: Optional[Arguments[T]] = default_field(func=pc.power_checked)
@@ -246,6 +262,8 @@ class BooleanFunction(Function[T]):
     name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for ints"
 )
 class IntFunction(NumericFunction[T]):
+    choose: Optional[Fields] = default_field(func=pc.choose)
+
     bit_wise_and: Optional[Arguments[T]] = default_field(func=pc.bit_wise_and)
     bit_wise_or: Optional[Arguments[T]] = default_field(func=pc.bit_wise_or)
     bit_wise_xor: Optional[Arguments[T]] = default_field(func=pc.bit_wise_xor)
@@ -261,7 +279,7 @@ class IntFunction(NumericFunction[T]):
     name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for floats"
 )
 class LongFunction(NumericFunction[T]):
-    ...
+    choose: Optional[Fields] = default_field(func=pc.choose)
 
 
 @operator.itemgetter(float)
@@ -315,20 +333,24 @@ class RoundTemporal(Fields):
     calendar_based_origin: bool = False
 
 
+@strawberry.input
+class TemporalFunction(Function[T]):
+    ceil_temporal: Optional[RoundTemporal] = default_field(func=pc.ceil_temporal)
+    floor_temporal: Optional[RoundTemporal] = default_field(func=pc.floor_temporal)
+    round_temporal: Optional[RoundTemporal] = default_field(func=pc.round_temporal)
+
+
 @operator.itemgetter(date)
 @strawberry.input(
     name='Function',
     description=f"[functions]({links.compute}#temporal-component-extraction) for dates",
 )
-class DateFunction(OrdinalFunction[T]):
+class DateFunction(TemporalFunction[T]):
     strftime: Optional[Strftime] = default_field(func=pc.strftime)
     subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
 
-    ceil_temporal: Optional[RoundTemporal] = default_field(func=pc.ceil_temporal)
-    floor_temporal: Optional[RoundTemporal] = default_field(func=pc.floor_temporal)
-    round_temporal: Optional[RoundTemporal] = default_field(func=pc.round_temporal)
-
     year: Optional[Fields] = default_field(func=pc.year)
+    us_year: Optional[Fields] = default_field(func=pc.us_year)
     year_month_day: Optional[Fields] = default_field(func=pc.year_month_day)
     quarter: Optional[Fields] = default_field(func=pc.quarter)
     month: Optional[Fields] = default_field(func=pc.month)
@@ -337,6 +359,10 @@ class DateFunction(OrdinalFunction[T]):
     day: Optional[Fields] = default_field(func=pc.day)
     day_of_week: Optional[DayOfWeek[T]] = default_field(func=pc.day_of_week)
     day_of_year: Optional[Fields] = default_field(func=pc.day_of_year)
+    iso_week: Optional[Fields] = default_field(func=pc.iso_week)
+    iso_year: Optional[Fields] = default_field(func=pc.iso_year)
+    iso_calendar: Optional[Fields] = default_field(func=pc.iso_calendar)
+    is_leap_year: Optional[Fields] = default_field(func=pc.is_leap_year)
 
     years_between: Optional[Arguments[T]] = default_field(func=pc.years_between)
     quarters_between: Optional[Arguments[T]] = default_field(func=pc.quarters_between)
@@ -349,16 +375,13 @@ class DateFunction(OrdinalFunction[T]):
     name='Function',
     description=f"[functions]({links.compute}#temporal-component-extraction) for datetimes",
 )
-class DateTimeFunction(OrdinalFunction[T]):
+class DateTimeFunction(TemporalFunction[T]):
     strftime: Optional[Strftime] = default_field(func=pc.strftime)
     subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
     assume_timezone: Optional[AssumeTimezone] = default_field(func=pc.assume_timezone)
 
-    ceil_temporal: Optional[RoundTemporal] = default_field(func=pc.ceil_temporal)
-    floor_temporal: Optional[RoundTemporal] = default_field(func=pc.floor_temporal)
-    round_temporal: Optional[RoundTemporal] = default_field(func=pc.round_temporal)
-
     year: Optional[Fields] = default_field(func=pc.year)
+    us_year: Optional[Fields] = default_field(func=pc.us_year)
     year_month_day: Optional[Fields] = default_field(func=pc.year_month_day)
     quarter: Optional[Fields] = default_field(func=pc.quarter)
     month: Optional[Fields] = default_field(func=pc.month)
@@ -367,6 +390,10 @@ class DateTimeFunction(OrdinalFunction[T]):
     day: Optional[Fields] = default_field(func=pc.day)
     day_of_week: Optional[DayOfWeek[T]] = default_field(func=pc.day_of_week)
     day_of_year: Optional[Fields] = default_field(func=pc.day_of_year)
+    iso_week: Optional[Fields] = default_field(func=pc.iso_week)
+    iso_year: Optional[Fields] = default_field(func=pc.iso_year)
+    iso_calendar: Optional[Fields] = default_field(func=pc.iso_calendar)
+    is_leap_year: Optional[Fields] = default_field(func=pc.is_leap_year)
 
     hour: Optional[Fields] = default_field(func=pc.hour)
     minute: Optional[Fields] = default_field(func=pc.minute)
@@ -394,12 +421,8 @@ class DateTimeFunction(OrdinalFunction[T]):
     name='Function',
     description=f"[functions]({links.compute}#temporal-component-extraction) for times",
 )
-class TimeFunction(OrdinalFunction[T]):
+class TimeFunction(TemporalFunction[T]):
     subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
-
-    ceil_temporal: Optional[RoundTemporal] = default_field(func=pc.ceil_temporal)
-    floor_temporal: Optional[RoundTemporal] = default_field(func=pc.floor_temporal)
-    round_temporal: Optional[RoundTemporal] = default_field(func=pc.round_temporal)
 
     hour: Optional[Fields] = default_field(func=pc.hour)
     minute: Optional[Fields] = default_field(func=pc.minute)
@@ -427,7 +450,7 @@ class Join(Arguments[T]):
 
 
 @strawberry.input
-class ReplaceSlice(Fields, Generic[T]):
+class ReplaceSlice(Generic[T], Fields):
     start: int
     stop: int
     replacement: T
@@ -442,6 +465,8 @@ class Base64Function(Function[T]):
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
     binary_length: Optional[Fields] = default_field(func=pc.binary_length)
     binary_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.binary_replace_slice)
+    binary_repeat: Optional[Arguments[int]] = default_field(func=pc.binary_repeat)
+    binary_reverse: Optional[Fields] = default_field(func=pc.binary_reverse)
 
 
 @strawberry.input
@@ -491,7 +516,10 @@ class StringFunction(OrdinalFunction[T]):
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
     binary_length: Optional[Fields] = default_field(func=pc.binary_length)
 
+    ends_with: Optional[MatchSubstring[T]] = default_field(func=pc.ends_with)
+    starts_with: Optional[MatchSubstring[T]] = default_field(func=pc.starts_with)
     find_substring: Optional[MatchSubstring[T]] = default_field(func=pc.find_substring)
+    find_substring_regex: Optional[MatchSubstring[T]] = default_field(func=pc.find_substring_regex)
     count_substring: Optional[MatchSubstring[T]] = default_field(func=pc.count_substring)
     match_substring: Optional[MatchSubstring[T]] = default_field(func=pc.match_substring)
     match_substring_regex: Optional[MatchSubstring[T]] = default_field(
@@ -504,6 +532,7 @@ class StringFunction(OrdinalFunction[T]):
     utf8_lower: Optional[Fields] = default_field(func=pc.utf8_lower)
     utf8_upper: Optional[Fields] = default_field(func=pc.utf8_upper)
     utf8_swapcase: Optional[Fields] = default_field(func=pc.utf8_swapcase)
+    utf8_title: Optional[Fields] = default_field(func=pc.utf8_title)
     utf8_reverse: Optional[Fields] = default_field(func=pc.utf8_reverse)
 
     utf8_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.utf8_replace_slice)
@@ -520,6 +549,10 @@ class StringFunction(OrdinalFunction[T]):
     utf8_lpad: Optional[Pad] = default_field(func=pc.utf8_lpad)
     utf8_rpad: Optional[Pad] = default_field(func=pc.utf8_rpad)
     replace_substring: Optional[ReplaceSubstring] = default_field(func=pc.replace_substring)
+    replace_substring_regex: Optional[ReplaceSubstring] = default_field(
+        func=pc.replace_substring_regex
+    )
+    extract_regex: Optional[Arguments[T]] = default_field(func=pc.extract_regex)
     strptime: Optional[Strptime] = default_field(func=pc.strptime)
     utf8_slice_codeunits: Optional[Slice] = default_field(func=pc.utf8_slice_codeunits)
 
@@ -555,6 +588,13 @@ class Element(Fields):
 
 
 @strawberry.input
+class Index(Fields):
+    value: JSON
+    start: Long = 0
+    end: Optional[Long] = None
+
+
+@strawberry.input
 class Mode(Fields):
     n: int = 1
     skip_nulls: bool = True
@@ -575,8 +615,9 @@ class ListFunction(Input):
     fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
     fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
     filter: 'Expression' = default_field(dict, description="filter within list scalars")
+    index: Optional[Index] = default_field(func=pc.index)
     mode: Optional[Mode] = default_field(func=pc.mode)
-    quantile: Optional[Mode] = default_field(func=pc.quantile)
+    quantile: Optional[Quantile] = default_field(func=pc.quantile)
     value_length: Optional[Fields] = default_field(func=pc.list_value_length)
 
 
@@ -615,6 +656,7 @@ class TDigestAggregate(ScalarAggregate):
 class Aggregations(Input):
     all: List[ScalarAggregate] = default_field(list, func=pc.all)
     any: List[ScalarAggregate] = default_field(list, func=pc.any)
+    approximate_median: List[ScalarAggregate] = default_field(list, func=pc.approximate_median)
     count: List[CountAggregate] = default_field(list, func=pc.count)
     count_distinct: List[CountAggregate] = default_field(list, func=pc.count_distinct)
     distinct: List[CountAggregate] = default_field(
@@ -625,11 +667,11 @@ class Aggregations(Input):
     max: List[ScalarAggregate] = default_field(list, func=pc.max)
     mean: List[ScalarAggregate] = default_field(list, func=pc.mean)
     min: List[ScalarAggregate] = default_field(list, func=pc.min)
+    min_max: List[ScalarAggregate] = default_field(list, func=pc.min_max)
     one: List[Aggregate] = default_field(list, description="arbitrary value within each scalar")
     product: List[ScalarAggregate] = default_field(list, func=pc.product)
     stddev: List[VarianceAggregate] = default_field(list, func=pc.stddev)
     sum: List[ScalarAggregate] = default_field(list, func=pc.sum)
-    approximate_median: List[ScalarAggregate] = default_field(list, func=pc.approximate_median)
     tdigest: List[TDigestAggregate] = default_field(list, func=pc.tdigest)
     variance: List[VarianceAggregate] = default_field(list, func=pc.variance)
 

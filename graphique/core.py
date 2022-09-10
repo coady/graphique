@@ -152,11 +152,13 @@ class ListChunk(pa.lib.BaseListArray):
         """quantiles of each list scalar"""
         return ListChunk.map_list(self, pc.quantile, **options)
 
+    def index(self, **options) -> pa.Array:
+        """quantiles of each list scalar"""
+        return pa.array(pc.index(value, **options).as_py() for value in ListChunk.scalars(self))
+
 
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
-
-    is_in = pc.is_in_meta_binary
 
     def map(self, func: Callable, **kwargs) -> pa.ChunkedArray:
         map_ = threader.map if self.num_chunks > 1 else map
@@ -221,18 +223,18 @@ class Column(pa.ChunkedArray):
         mask = predicate(Column.diff(self), *args) if args else Column.diff(self, predicate)
         return pc.indices_nonzero(pa.concat_arrays(ends + mask.chunks + ends))
 
-    def min_max(self):
+    def min_max(self, **options):
         if pa.types.is_dictionary(self.type):
             self = self.unique().dictionary_decode()
-        return pc.min_max(self).as_py()
+        return pc.min_max(self, **options).as_py()
 
-    def min(self):
+    def min(self, **options):
         """Return min of the values."""
-        return Column.min_max(self)['min']
+        return Column.min_max(self, **options)['min']
 
-    def max(self):
+    def max(self, **options):
         """Return max of the values."""
-        return Column.min_max(self)['max']
+        return Column.min_max(self, **options)['max']
 
     def digitize(self, bins: Iterable, right=False) -> pa.ChunkedArray:
         """Return the indices of the bins to which each value in input array belongs."""

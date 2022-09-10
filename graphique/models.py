@@ -77,6 +77,11 @@ class Column:
         """Return number of valid or null values."""
         return pc.count(self.array, mode=mode).as_py()
 
+    @doc_field
+    def count_distinct(self, mode: str = 'only_valid') -> Long:
+        """Return number of unique values."""
+        return pc.count_distinct(self.array, mode=mode).as_py()
+
     def index(self, value, start: Long = 0, end: Optional[Long] = None) -> Long:
         """Return first index of occurrence of value; -1 indicates not found.
 
@@ -88,21 +93,21 @@ class Column:
         """list of values"""
         return self.array.to_pylist()
 
-    @getattr(functools, 'cached_property', property)  # added in Python 3.8
-    def min_max(self):
-        return C.min_max(self.array)
-
-    def min(self):
+    def min(self, skip_nulls: bool = True, min_count: int = 0):
         """minimum value"""
-        return self.min_max['min']
+        return C.min(self.array, skip_nulls=skip_nulls, min_count=min_count)
 
-    def max(self):
+    def max(self, skip_nulls: bool = True, min_count: int = 0):
         """maximum value"""
-        return self.min_max['max']
+        return C.max(self.array, skip_nulls=skip_nulls, min_count=min_count)
 
     def drop_null(self):
         """remove missing values from an array"""
         return self.array.drop_null().to_pylist()
+
+    def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0):
+        """mode of the values"""
+        return Set(*pc.mode(self.array, n, skip_nulls=skip_nulls, min_count=min_count).flatten())
 
 
 @strawberry.type(description="unique values")
@@ -130,44 +135,56 @@ def annotate(func, return_type, **annotations):
 
 @strawberry.type
 class NumericColumn(Column):
-    def sum(self):
+    def sum(self, skip_nulls: bool = True, min_count: int = 0):
         """sum of the values"""
-        return pc.sum(self.array).as_py()
+        return pc.sum(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
-    def product(self):
+    def product(self, skip_nulls: bool = True, min_count: int = 0):
         """product of the values"""
-        return pc.product(self.array).as_py()
+        return pc.product(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @doc_field
-    def mean(self) -> Optional[float]:
+    def mean(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
         """mean of the values"""
-        return pc.mean(self.array).as_py()
+        return pc.mean(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @doc_field
-    def stddev(self) -> Optional[float]:
+    def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
         """standard deviation of the values"""
-        return pc.stddev(self.array).as_py()
+        return pc.stddev(self.array, ddof=ddof, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @doc_field
-    def variance(self) -> Optional[float]:
+    def variance(
+        self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0
+    ) -> Optional[float]:
         """variance of the values"""
-        return pc.variance(self.array).as_py()
+        options = {'skip_nulls': skip_nulls, 'min_count': min_count}
+        return pc.variance(self.array, ddof=ddof, **options).as_py()
 
     @doc_field
-    def quantile(self, q: List[float] = [0.5], interpolation: str = 'linear') -> List[float]:
+    def quantile(
+        self,
+        q: List[float] = [0.5],
+        interpolation: str = 'linear',
+        skip_nulls: bool = True,
+        min_count: int = 0,
+    ) -> List[float]:
         """Return list of quantiles for values, defaulting to the median."""
-        return pc.quantile(self.array, q=q, interpolation=interpolation).to_pylist()
+        options = {'skip_nulls': skip_nulls, 'min_count': min_count}
+        return pc.quantile(self.array, q=q, interpolation=interpolation, **options).to_pylist()
 
     @doc_field
     def tdigest(
-        self, q: List[float] = [0.5], delta: int = 100, buffer_size: int = 500
+        self,
+        q: List[float] = [0.5],
+        delta: int = 100,
+        buffer_size: int = 500,
+        skip_nulls: bool = True,
+        min_count: int = 0,
     ) -> List[float]:
         """Return list of approximate quantiles for values, defaulting to the median."""
-        return pc.tdigest(self.array, q=q, delta=delta, buffer_size=buffer_size).to_pylist()
-
-    def mode(self, length: int = 1):
-        """mode of the values"""
-        return Set(*pc.mode(self.array, length).flatten())
+        options = {'buffer_size': buffer_size, 'skip_nulls': skip_nulls, 'min_count': min_count}
+        return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
 
 
 @strawberry.type(description="column of booleans")
@@ -175,16 +192,17 @@ class BooleanColumn(Column):
     index = annotate(Column.index, Long, value=bool)
     values = annotate(Column.values, List[Optional[bool]])
     unique = annotate(Column.unique, Set[bool])
+    mode = annotate(NumericColumn.mode, Set[bool])
 
     @doc_field
-    def any(self) -> Optional[bool]:
-        """whether any values evaluate to true"""
-        return pc.any(self.array).as_py()
-
-    @doc_field
-    def all(self) -> Optional[bool]:
+    def any(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
         """whether all values evaluate to true"""
-        return pc.all(self.array).as_py()
+        return pc.any(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
+
+    @doc_field
+    def all(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
+        """whether any values evaluate to true"""
+        return pc.all(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
 
 @strawberry.type(description="column of ints")
@@ -230,6 +248,7 @@ class FloatColumn(NumericColumn):
 class DecimalColumn(Column):
     values = annotate(Column.values, List[Optional[Decimal]])
     unique = annotate(Column.unique, Set[Decimal])
+    mode = annotate(NumericColumn.mode, Set[Decimal])
     min = annotate(Column.min, Optional[Decimal])
     max = annotate(Column.max, Optional[Decimal])
 

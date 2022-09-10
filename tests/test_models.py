@@ -113,7 +113,7 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'mean': 0.0, 'stddev': 0.0, 'variance': 0.0}}}
         data = executor(f'{{ columns {{ {name} {{ mode {{ values }} }} }} }}')
         assert data == {'columns': {name: {'mode': {'values': [0]}}}}
-        data = executor(f'{{ columns {{ {name} {{ mode(length: 2) {{ counts }} }} }} }}')
+        data = executor(f'{{ columns {{ {name} {{ mode(n: 2) {{ counts }} }} }} }}')
         assert data == {'columns': {name: {'mode': {'counts': [1]}}}}
         data = executor(f'{{ columns {{ {name} {{ quantile }} }} }}')
         assert data == {'columns': {name: {'quantile': [0.0]}}}
@@ -233,6 +233,16 @@ def test_list(executor):
     column = data['aggregate']['columns']['list']
     assert column == {'flatten': {'values': [0.0, 2.0]}}
 
+    data = executor(
+        '''{ apply(list: {quantile: {name: "list", q: 0.5}}) {
+        columns { list { flatten { ... on FloatColumn { values } } } } } }'''
+    )
+    assert data == {'apply': {'columns': {'list': {'flatten': {'values': [1.0, None]}}}}}
+    data = executor(
+        '''{ apply(list: {index: {name: "list", value: 1}}) {
+        column(name: "list") { ... on LongColumn { values } } } }'''
+    )
+    assert data == {'apply': {'column': {'values': [1, -1]}}}
     data = executor(
         '''{ apply(list: {element: {name: "list", index: 1}}) {
         column(name: "list") { ... on IntColumn { values } } } }'''

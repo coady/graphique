@@ -69,14 +69,14 @@ def test_floats(client):
 def test_strings(client):
     data = client.execute(
         '''{ columns {
-        state { values unique { values counts } }
+        state { values unique { values counts } countDistinct }
         county { unique { length values } }
         city { min max }
     } }'''
     )
     states = data['columns']['state']
     assert len(states['values']) == 41700
-    assert len(states['unique']['values']) == 52
+    assert len(states['unique']['values']) == states['countDistinct'] == 52
     assert sum(states['unique']['counts']) == 41700
     counties = data['columns']['county']
     assert len(counties['unique']['values']) == counties['unique']['length'] == 1920
@@ -117,6 +117,11 @@ def test_strings(client):
         { scan(filter: {name: "city"}) { length } } }'''
     )
     assert data == {'apply': {'scan': {'length': 42}}}
+    data = client.execute(
+        '''{ apply(string: {indexIn: {name: "state", value: ["CA", "OR"]}})
+        { column(name: "state") { ... on IntColumn { unique { values } } } } }'''
+    )
+    assert data == {'apply': {'column': {'unique': {'values': [None, 0, 1]}}}}
 
 
 def test_string_methods(client):
