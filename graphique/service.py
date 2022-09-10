@@ -33,9 +33,7 @@ class Columns:
 @strawberry.type(description="scalar fields")
 class Row:
     __annotations__ = {
-        name: Optional[Column if types[name] is list else types[name]]
-        for name in types
-        if types[name] is not dict
+        name: Optional[Column if types[name] is list else types[name]] for name in types
     }
     locals().update({name: default_field(name=name) for name in __annotations__})
 

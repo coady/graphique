@@ -101,12 +101,10 @@ class Dataset:
 
     def scanner(self, info: Info) -> ds.Scanner:
         """Return scanner with only the columns necessary to proceed."""
-        dataset = self.table
-        schema = dataset.projected_schema if isinstance(dataset, ds.Scanner) else dataset.schema
-        if isinstance(dataset, ds.Scanner):
-            return dataset
-        names = self.references(info) & set(schema.names)
-        return dataset.scanner(columns=list(names))
+        if isinstance(self.table, ds.Scanner):
+            return self.table
+        names = self.references(info) & set(self.table.schema.names)
+        return self.table.scanner(columns=list(names))
 
     def select(self, info: Info, length: int = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""

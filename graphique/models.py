@@ -86,6 +86,10 @@ class Column:
         """
         return C.index(self.array, value, start, end)
 
+    def value(self, index: Long = 0):
+        """scalar value at index"""
+        return self.array[index].as_py()
+
     def values(self):
         """list of values"""
         return self.array.to_pylist()
@@ -187,6 +191,7 @@ class NumericColumn(Column):
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
     index = annotate(Column.index, Long, value=bool)
+    value = annotate(Column.value, Optional[bool])
     values = annotate(Column.values, List[Optional[bool]])
     unique = annotate(Column.unique, Set[bool])
     mode = annotate(NumericColumn.mode, Set[bool])
@@ -205,6 +210,7 @@ class BooleanColumn(Column):
 @strawberry.type(description="column of ints")
 class IntColumn(NumericColumn):
     index = annotate(Column.index, Long, value=int)
+    value = annotate(Column.value, Optional[int])
     values = annotate(Column.values, List[Optional[int]])
     unique = annotate(Column.unique, Set[int])
     sum = annotate(NumericColumn.sum, Optional[int])
@@ -218,6 +224,7 @@ class IntColumn(NumericColumn):
 @strawberry.type(description="column of longs")
 class LongColumn(NumericColumn):
     index = annotate(Column.index, Long, value=Long)
+    value = annotate(Column.value, Optional[Long])
     values = annotate(Column.values, List[Optional[Long]])
     unique = annotate(Column.unique, Set[Long])
     sum = annotate(NumericColumn.sum, Optional[Long])
@@ -231,6 +238,7 @@ class LongColumn(NumericColumn):
 @strawberry.type(description="column of floats")
 class FloatColumn(NumericColumn):
     index = annotate(Column.index, Long, value=float)
+    value = annotate(Column.value, Optional[float])
     values = annotate(Column.values, List[Optional[float]])
     unique = annotate(Column.unique, Set[float])
     sum = annotate(NumericColumn.sum, Optional[float])
@@ -244,6 +252,7 @@ class FloatColumn(NumericColumn):
 @strawberry.type(description="column of decimals")
 class DecimalColumn(Column):
     values = annotate(Column.values, List[Optional[Decimal]])
+    value = annotate(Column.value, Optional[Decimal])
     unique = annotate(Column.unique, Set[Decimal])
     mode = annotate(NumericColumn.mode, Set[Decimal])
     min = annotate(Column.min, Optional[Decimal])
@@ -253,6 +262,7 @@ class DecimalColumn(Column):
 @strawberry.type(description="column of dates")
 class DateColumn(Column):
     index = annotate(Column.index, Long, value=date)
+    value = annotate(Column.value, Optional[date])
     values = annotate(Column.values, List[Optional[date]])
     unique = annotate(Column.unique, Set[date])
     min = annotate(Column.min, Optional[date])
@@ -263,6 +273,7 @@ class DateColumn(Column):
 @strawberry.type(description="column of datetimes")
 class DateTimeColumn(Column):
     index = annotate(Column.index, Long, value=datetime)
+    value = annotate(Column.value, Optional[datetime])
     values = annotate(Column.values, List[Optional[datetime]])
     unique = annotate(Column.unique, Set[datetime])
     min = annotate(Column.min, Optional[datetime])
@@ -273,6 +284,7 @@ class DateTimeColumn(Column):
 @strawberry.type(description="column of times")
 class TimeColumn(Column):
     index = annotate(Column.index, Long, value=time)
+    value = annotate(Column.value, Optional[time])
     values = annotate(Column.values, List[Optional[time]])
     unique = annotate(Column.unique, Set[time])
     min = annotate(Column.min, Optional[time])
@@ -283,12 +295,14 @@ class TimeColumn(Column):
 @strawberry.type(description="column of durations")
 class DurationColumn(Column):
     index = annotate(Column.index, Long, value=timedelta)
+    value = annotate(Column.value, Optional[timedelta])
     values = annotate(Column.values, List[Optional[timedelta]])
 
 
 @strawberry.type(description="column of binaries")
 class Base64Column(Column):
     index = annotate(Column.index, Long, value=bytes)
+    value = annotate(Column.value, Optional[bytes])
     values = annotate(Column.values, List[Optional[bytes]])
     unique = annotate(Column.unique, Set[bytes])
     drop_null = annotate(Column.drop_null, List[bytes])
@@ -297,6 +311,7 @@ class Base64Column(Column):
 @strawberry.type(description="column of strings")
 class StringColumn(Column):
     index = annotate(Column.index, Long, value=str)
+    value = annotate(Column.value, Optional[str])
     values = annotate(Column.values, List[Optional[str]])
     unique = annotate(Column.unique, Set[str])
     min = annotate(Column.min, Optional[str])
@@ -306,6 +321,11 @@ class StringColumn(Column):
 
 @strawberry.type(description="column of lists")
 class ListColumn(Column):
+    @doc_field
+    def value(self, index: Long = 0) -> Optional[Column]:
+        """scalar column at index"""
+        return self.fromscalar(self.array[index])
+
     @doc_field
     def values(self) -> List[Optional[Column]]:
         """list of columns"""
@@ -319,6 +339,8 @@ class ListColumn(Column):
 
 @strawberry.type(description="column of structs")
 class StructColumn(Column):
+    value = annotate(Column.value, Optional[dict])
+
     @doc_field
     def names(self) -> List[str]:
         """field names"""

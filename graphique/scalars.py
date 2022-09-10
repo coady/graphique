@@ -21,7 +21,7 @@ Duration = strawberry.scalar(  # pragma: no branch
     serialize=timedelta.total_seconds,
     parse_value=lambda s: timedelta(seconds=s),
 )
-scalar_map = {bytes: strawberry.scalars.Base64, timedelta: Duration}
+scalar_map = {bytes: strawberry.scalars.Base64, dict: strawberry.scalars.JSON, timedelta: Duration}
 
 type_map = {
     pa.lib.Type_BOOL: bool,

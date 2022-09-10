@@ -273,6 +273,8 @@ def test_list(executor):
         column(name: "binary") { ... on Base64Column { values } } } } }'''
     )
     assert data == {'partition': {'apply': {'column': {'values': [None]}}}}
+    data = executor('{ columns { list { value { type } } } }')
+    assert data == {'columns': {'list': {'value': {'type': 'int32'}}}}
 
 
 def test_struct(executor):
@@ -285,6 +287,8 @@ def test_struct(executor):
     assert data == {'scan': {'column': {'values': [0, None]}}}
     data = executor('{ column(name: ["struct", "x"]) { type } }')
     assert data == {'column': {'type': 'int32'}}
+    data = executor('{ row { struct } columns { struct { value } } }')
+    assert data['row']['struct'] == data['columns']['struct']['value'] == {'x': 0, 'y': None}
     with pytest.raises(ValueError, match="must be BOOL"):
         executor('{ apply(struct: {caseWhen: {name: ["struct", "int32", "float"]}}) { type } }')
 
