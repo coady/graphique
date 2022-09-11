@@ -157,8 +157,8 @@ def test_string_methods(client):
 
 
 def test_search(client):
-    data = client.execute('{ index filter { length } }')
-    assert data == {'index': ['zipcode'], 'filter': {'length': 41700}}
+    data = client.execute('{ schema { index } filter { length } }')
+    assert data == {'schema': {'index': ['zipcode']}, 'filter': {'length': 41700}}
     data = client.execute('{ filter(zipcode: {eq: 501}) { columns { zipcode { values } } } }')
     assert data == {'filter': {'columns': {'zipcode': {'values': [501]}}}}
     data = client.execute('{ filter(zipcode: {ne: 501}) { length } }')
@@ -181,6 +181,8 @@ def test_search(client):
         '{ filter(zipcode: {eq: [501, 601]}) { columns { zipcode { values } } } }'
     )
     assert data == {'filter': {'columns': {'zipcode': {'values': [501, 601]}}}}
+    data = client.execute('{ slice(reverse: true) { filter(zipcode: {ge: 90000}) { length } } }')
+    assert data == {'slice': {'filter': {'length': 4275}}}
 
 
 def test_filter(client):

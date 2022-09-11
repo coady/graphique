@@ -1,7 +1,7 @@
 """
 GraphQL service and top-level resolvers.
 """
-from typing import List, Optional
+from typing import Optional
 import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
@@ -11,7 +11,7 @@ from .inputs import Expression, Query as QueryInput, default_field
 from .middleware import Dataset, GraphQL
 from .models import Column, doc_field
 from .scalars import Long, type_map
-from .settings import COLUMNS, DEBUG, DICTIONARIES, FEDERATED, FILTERS, INDEX, PARQUET_PATH
+from .settings import COLUMNS, DEBUG, DICTIONARIES, FEDERATED, FILTERS, PARQUET_PATH
 
 format = ds.ParquetFileFormat(read_options={'dictionary_columns': DICTIONARIES})
 root = dataset = ds.dataset(PARQUET_PATH, format=format, partitioning='hive')
@@ -20,8 +20,6 @@ types = {
     aliases.get(field.name, field.name): type_map[C.scalar_type(field).id]
     for field in dataset.schema
 }
-missing = set(INDEX) - set(types)
-assert not missing, f"unknown index columns: {missing}"
 
 
 @strawberry.type(description="fields for each column")
@@ -40,11 +38,7 @@ class Row:
 
 @strawberry.type(description="a column-oriented table")
 class Table(Dataset):
-    index: List[str] = strawberry.field(default=(), description="the composite index")
-
-    def __init__(self, table, index=()):
-        super().__init__(table)
-        self.index = tuple(index)
+    __init__ = Dataset.__init__
 
     @doc_field
     def columns(self, info: Info) -> Columns:
@@ -71,14 +65,15 @@ class Table(Dataset):
 
         See `scan(filter: ...)` for more advanced queries.
         """
-        table, offset = self.table, 0
-        for name in self.index if isinstance(table, pa.Table) else []:
+        table = self.table
+        search = isinstance(table, pa.Table) and info.path.prev is None
+        for name in self.schema().index if search else []:
+            assert not table[name].null_count, f"binary search requires non-null columns: {name}"
             query = dict(queries.pop(name))
             if not query:
                 break
             if 'eq' in query:
                 table = T.is_in(table, name, *query.pop('eq'))
-                offset += 1
             if 'ne' in query:
                 table = T.not_equal(table, name, query['ne'])
             lower, upper = query.get('gt'), query.get('lt')
@@ -91,7 +86,7 @@ class Table(Dataset):
                 table = T.range(table, name, lower, upper, **includes)
             if query:
                 break
-        self = type(self)(table, self.index[offset:])
+        self = type(self)(table)
         expr = Expression.from_query(**queries)
         return self if expr.to_arrow() is None else self.scan(info, filter=expr)
 
@@ -100,9 +95,7 @@ if isinstance(COLUMNS, dict):
     COLUMNS = {alias: ds.field(name) for alias, name in COLUMNS.items()}
 if FILTERS is not None:
     root = dataset.to_table(columns=COLUMNS, filter=Expression.from_query(**FILTERS).to_arrow())
-    for name in INDEX:
-        assert not root[name].null_count, f"binary search requires non-null columns: {name}"
 elif COLUMNS:
     root = dataset.scanner(columns=COLUMNS)
 
-app = GraphQL(Table(root, INDEX), debug=DEBUG, federated=FEDERATED)
+app = GraphQL(Table(root), debug=DEBUG, federated=FEDERATED)

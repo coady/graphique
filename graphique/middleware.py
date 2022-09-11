@@ -71,7 +71,8 @@ class Schema:
     types: List[str] = strawberry.field(
         description="[arrow types](https://arrow.apache.org/docs/python/api/datatypes.html), corresponding to `names`"
     )
-    partitioning: Optional[List[str]] = strawberry.field(description="partition keys")
+    partitioning: List[str] = strawberry.field(description="partition keys")
+    index: List[str] = strawberry.field(description="sorted index columns")
 
 
 @strawberry.interface(description="an arrow dataset or table")
@@ -124,10 +125,12 @@ class Dataset:
         table = self.table
         schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
         partitioning = getattr(table, 'partitioning', None)
+        index = (schema.pandas_metadata or {}).get('index_columns', [])
         return Schema(
             names=schema.names,
             types=schema.types,
-            partitioning=partitioning and partitioning.schema.names,
+            partitioning=partitioning.schema.names if partitioning else [],
+            index=[name for name in index if isinstance(name, str)],
         )  # type: ignore
 
     @doc_field

@@ -3,26 +3,25 @@ import pytest
 
 
 def test_camel(aliasclient):
-    data = aliasclient.execute('{ index schema { names } }')
-    assert data == {'index': ['snakeId', 'camelId'], 'schema': {'names': ['snakeId', 'camelId']}}
+    data = aliasclient.execute('{ schema { index names } }')
+    assert data == {'schema': {'index': [], 'names': ['snakeId', 'camelId']}}
     data = aliasclient.execute('{ row { snakeId } columns { snakeId { type } } }')
     assert data == {'row': {'snakeId': 1}, 'columns': {'snakeId': {'type': 'int64'}}}
-    data = aliasclient.execute('{ filter(snakeId: {eq: 1}) { index length } }')
-    assert data == {'filter': {'index': [], 'length': 1}}
-    data = aliasclient.execute('{ filter(camelId: {eq: 1}) { index length } }')
-    assert data == {'filter': {'index': [], 'length': 1}}
+    data = aliasclient.execute('{ filter(snakeId: {eq: 1}) { length } }')
+    assert data == {'filter': {'length': 1}}
+    data = aliasclient.execute('{ filter(camelId: {eq: 1}) { length } }')
+    assert data == {'filter': {'length': 1}}
 
 
 def test_snake(executor):
-    data = executor('{ index schema { names } }')
-    assert data['index'] == ['snake_id', 'camelId']
+    data = executor('{ schema { names } }')
     assert 'snake_id' in data['schema']['names']
     data = executor('{ row { snake_id } columns { snake_id { type } } }')
     assert data == {'row': {'snake_id': 1}, 'columns': {'snake_id': {'type': 'int64'}}}
-    data = executor('{ filter(snake_id: {eq: 1}) { index length } }')
-    assert data == {'filter': {'index': ['camelId'], 'length': 1}}
-    data = executor('{ filter(camelId: {eq: 1}) { index length } }')
-    assert data == {'filter': {'index': [], 'length': 1}}
+    data = executor('{ filter(snake_id: {eq: 1}) { length } }')
+    assert data == {'filter': {'length': 1}}
+    data = executor('{ filter(camelId: {eq: 1}) { length } }')
+    assert data == {'filter': {'length': 1}}
 
 
 def test_columns(executor):

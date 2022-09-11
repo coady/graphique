@@ -26,7 +26,6 @@ outputs the graphql schema for a parquet data set.
 Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to [parquet dataset](https://arrow.apache.org/docs/python/dataset.html).
 
 * PARQUET_PATH: path to the parquet directory or file
-* INDEX = []: partition keys or names of columns which represent a sorted composite index 
 * FEDERATED = '': field name to extend type `Query` with a federated `Table` 
 * DEBUG = False: run service in debug mode, which includes timing
 * DICTIONARIES = []: names of columns to read as dictionaries
@@ -70,7 +69,7 @@ By default, datasets are read on-demand, with only the necessary rows and column
 
 Specifying `COLUMNS` will limit memory usage when reading at startup (`FILTERS`). There is little speed difference as unused columns are inherently ignored. Optional aliasing can also be used for camel casing.
 
-Specifying an `INDEX` indicates the table is sorted, and enables the binary `search` field. Specifying just `INDEX` without reading (`FILTERS`) is allowed but only recommended if it corresponds to the partition keys. In that case, `search(...)` is functionally equivalent to `filter`.
+If index columns are detected in the schema metadata, then an initial `filter` will also attempt a binary search on tables.
 
 ## Installation
 ```console
