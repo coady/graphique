@@ -31,7 +31,7 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
 * FILTERS = None: json `filter` query for which rows to read at startup
 
-For more options create a custom ASGI app. Call graphique's `GraphQL` on an arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html), [Scanner](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html), or [Table](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html).
+For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html), [Scanner](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html), or [Table](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html).
 
 ```python
 import pyarrow.dataset as ds
@@ -39,6 +39,15 @@ from graphique import GraphQL
 
 app = GraphQL(ds.dataset(...))
 ```
+
+Start like any ASGI app.
+
+```console
+uvicorn <package>:app
+strawberry server <package>:app (dev only)
+```
+
+Configuration options exist to provide a convenient no-code solution, but are subject to change in the future. Using a custom app is recommended for production usage.
 
 ### API
 #### types
@@ -49,7 +58,6 @@ app = GraphQL(ds.dataset(...))
 
 #### selection
 * `slice`: contiguous selection of rows
-* `search`: binary search if the table is sorted, i.e., provides an index
 * `filter`: select rows with simple predicates
 * `scan`: select rows and project columns with expressions
 

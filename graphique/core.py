@@ -153,7 +153,7 @@ class ListChunk(pa.lib.BaseListArray):
         return ListChunk.map_list(self, pc.quantile, **options)
 
     def index(self, **options) -> pa.Array:
-        """quantiles of each list scalar"""
+        """index for first occurrence of each list scalar"""
         return pa.array(pc.index(value, **options).as_py() for value in ListChunk.scalars(self))
 
 
