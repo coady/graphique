@@ -4,10 +4,9 @@ Default GraphQL service.
 import pyarrow.dataset as ds
 from .inputs import Expression
 from .middleware import GraphQL
-from .settings import COLUMNS, DEBUG, DICTIONARIES, FEDERATED, FILTERS, PARQUET_PATH
+from .settings import COLUMNS, DEBUG, FEDERATED, FILTERS, PARQUET_PATH
 
-format = ds.ParquetFileFormat(read_options={'dictionary_columns': DICTIONARIES})
-root = dataset = ds.dataset(PARQUET_PATH, format=format, partitioning='hive')
+root = dataset = ds.dataset(PARQUET_PATH, partitioning='hive')
 
 if isinstance(COLUMNS, dict):
     COLUMNS = {alias: ds.field(name) for alias, name in COLUMNS.items()}

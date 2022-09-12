@@ -23,14 +23,22 @@ Open http://localhost:8000/graphql to try out the API in [GraphiQL](https://gith
 outputs the graphql schema for a parquet data set.
 
 ### Configuration
-Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to [parquet dataset](https://arrow.apache.org/docs/python/dataset.html).
+Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to a [parquet dataset](https://arrow.apache.org/docs/python/dataset.html).
 
 * PARQUET_PATH: path to the parquet directory or file
 * FEDERATED = '': field name to extend type `Query` with a federated `Table` 
 * DEBUG = False: run service in debug mode, which includes timing
-* DICTIONARIES = []: names of columns to read as dictionaries
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
 * FILTERS = None: json `filter` query for which rows to read at startup
+
+For more options create a custom ASGI app. Call graphique's `GraphQL` on an arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html), [Scanner](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html), or [Table](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html).
+
+```python
+import pyarrow.dataset as ds
+from graphique import GraphQL
+
+app = GraphQL(ds.dataset(...))
+```
 
 ### API
 #### types

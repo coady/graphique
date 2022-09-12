@@ -68,12 +68,5 @@ def aliasclient(request):
 
 @pytest.fixture(scope='module')
 def executor():
-    app = load('alltypes.parquet', FILTERS='{}', DICTIONARIES='string')
-
-    def execute(query):
-        result = app.schema.execute_sync(query, root_value=app.root_value)
-        for error in result.errors or ():
-            raise ValueError(error)
-        return result.data
-
-    return execute
+    app = load('alltypes.parquet', FILTERS='{}')
+    return TestClient(app).execute

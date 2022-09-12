@@ -11,6 +11,7 @@ nav:
   - Introduction: index.md
   - GraphQL API: api.md
   - Example Schema: schema.md
+  - Example Queries: examples.ipynb
   - Core Reference: reference.md
 
 plugins:
@@ -20,3 +21,5 @@ plugins:
         python:
           rendering:
             show_root_heading: true
+  - mkdocs-jupyter:
+      execute: True

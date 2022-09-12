@@ -2,4 +2,4 @@
 
 ::: graphique.core.Table
 
-::: graphique.middleware.Dataset
+::: graphique.interface.Dataset
