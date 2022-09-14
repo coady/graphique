@@ -8,7 +8,7 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
 from .core import Column as C, Table as T
-from .inputs import Expression, Query, default_field
+from .inputs import Expression, Filter, default_field
 from .interface import Dataset
 from .models import Column, doc_field
 from .scalars import Long, scalar_map, type_map
@@ -105,7 +105,7 @@ def implement(root: Root, prefix: str = ''):
                 )
             return Row(**row)
 
-        @Query.resolve_types(types)
+        @Filter.resolve_types(types)
         def filter(self, info: Info, **queries) -> TypeName:  # type: ignore
             """Return table with rows which match all queries.
 

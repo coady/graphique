@@ -91,7 +91,7 @@ def default_field(
 
 
 @strawberry.input(description="predicates for scalars")
-class Query(Generic[T], Input):
+class Filter(Generic[T], Input):
     eq: Optional[List[Optional[T]]] = UNSET
     ne: Optional[T] = UNSET
     lt: Optional[T] = default_field(description="<")
@@ -109,9 +109,7 @@ class Query(Generic[T], Input):
     def resolve_types(cls, types: dict) -> Callable:
         """Return a decorator which transforms the type map into arguments."""
         defaults = dict.fromkeys(types, {})
-        annotations = {
-            name: Query[types[name]] for name in types if types[name] not in (list, dict)
-        }  # type: ignore
+        annotations = {name: cls[types[name]] for name in types if types[name] not in (list, dict)}
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
@@ -247,7 +245,8 @@ class NumericFunction(OrdinalFunction[T]):
 
 @operator.itemgetter(bool)
 @strawberry.input(
-    name='Function', description=f"[functions]({links.compute}#selecting-multiplexing) for booleans"
+    name='eanFunction',
+    description=f"[functions]({links.compute}#selecting-multiplexing) for booleans",
 )
 class BooleanFunction(Function[T]):
     and_kleene: Optional[Arguments[T]] = default_field(func=pc.and_kleene)
@@ -509,7 +508,7 @@ class Slice(Fields):
 
 @operator.itemgetter(str)
 @strawberry.input(
-    name='Function', description=f"[functions]({links.compute}#string-transforms) for strings"
+    name='ingFunction', description=f"[functions]({links.compute}#string-transforms) for strings"
 )
 class StringFunction(OrdinalFunction[T]):
     binary_join: Optional[Arguments[T]] = default_field(func=pc.binary_join)
@@ -792,7 +791,7 @@ class Expression:
 
     @classmethod
     @no_type_check
-    def from_query(cls, **queries: Query) -> 'Expression':
+    def from_query(cls, **queries: Filter) -> 'Expression':
         """Transform query syntax into an Expression input."""
         exprs = []
         for name, query in queries.items():
