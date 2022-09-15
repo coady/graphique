@@ -157,3 +157,11 @@ def test_federation(fedclient):
     table = data['zipcodes']['scan']['join']
     assert table['length'] == 42724
     assert set(table['schema']['names']) > {'zip', 'timezone', 'latitude'}
+
+    data = fedclient.execute(
+        '''{ _entities(representations: {__typename: "ZipcodesTable", zipcode: 90001}) {
+        ... on ZipcodesTable { length row { state } schema { names } } } }'''
+    )
+    assert data == {
+        '_entities': [{'length': 1, 'row': {'state': 'CA'}, 'schema': {'names': ['state']}}]
+    }

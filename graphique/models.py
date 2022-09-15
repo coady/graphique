@@ -3,6 +3,7 @@ GraphQL output types and resolvers.
 """
 import functools
 import inspect
+import itertools
 import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
@@ -21,9 +22,17 @@ from .scalars import Long, type_map
 T = TypeVar('T')
 
 
+def _selections(field):
+    for selection in field.selections:
+        if hasattr(selection, 'name'):
+            yield selection.name
+        else:
+            yield from _selections(selection)
+
+
 def selections(*fields) -> set:
     """Return set of field name selections from strawberry `SelectedField`."""
-    return {selection.name for field in fields for selection in field.selections}
+    return set(itertools.chain(*map(_selections, fields)))
 
 
 def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField:

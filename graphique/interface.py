@@ -15,10 +15,10 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Diff, Expression
+from .inputs import Aggregations, Diff, Expression, Filter, links
 from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
-from .inputs import StringFunction, StructFunction, TimeFunction, links
+from .inputs import StringFunction, StructFunction, TimeFunction
 from .models import Column, annotate, doc_field, selections
 from .scalars import Long
 
@@ -88,6 +88,42 @@ class Dataset:
             return self.table.select(self.references(info))
         scanner = self.scanner(info)
         return scanner.to_table() if length is None else scanner.head(length)
+
+    @classmethod
+    @no_type_check
+    def resolve_reference(cls, info, **keys) -> 'Dataset':
+        """Return table from federated keys."""
+        self = getattr(info.root_value, cls.field)
+        queries = {name: Filter(eq=[keys[name]]) for name in keys}
+        return self.filter(Info(info, None), **queries)
+
+    def filter(self, info: Info, **queries: Filter):
+        """Return table with rows which match all queries."""
+        table = self.table
+        prev = info.path.prev
+        search = isinstance(table, pa.Table) and (prev is None or prev.typename == 'Query')
+        for name in self.schema().index if search else []:
+            assert not table[name].null_count, f"search requires non-null column: {name}"
+            query = dict(queries.pop(name))
+            if not query:
+                break
+            if 'eq' in query:
+                table = T.is_in(table, name, *query.pop('eq'))
+            if 'ne' in query:
+                table = T.not_equal(table, name, query['ne'])
+            lower, upper = query.get('gt'), query.get('lt')
+            includes = {'include_lower': False, 'include_upper': False}
+            if 'ge' in query and (lower is None or query['ge'] > lower):
+                lower, includes['include_lower'] = query['ge'], True
+            if 'le' in query and (upper is None or query['le'] > upper):
+                upper, includes['include_upper'] = query['le'], True
+            if {lower, upper} != {None}:
+                table = T.range(table, name, lower, upper, **includes)
+            if query:
+                break
+        self = type(self)(table)
+        expr = Expression.from_query(**queries)
+        return self if expr.to_arrow() is None else self.scan(info, filter=expr)
 
     @doc_field
     def type(self) -> str:

@@ -4,7 +4,7 @@ from graphique import GraphQL
 
 fixtures = Path(__file__).parent / 'fixtures'
 roots = {
-    'zipcodes': ds.dataset(fixtures / 'zipcodes.parquet'),
+    'zipcodes': ds.dataset(fixtures / 'zipcodes.parquet').scanner(),
     'zip_db': ds.dataset(fixtures / 'zip_db.parquet'),
 }
-app = GraphQL(roots)
+app = GraphQL(roots, keys={'zipcodes': ['zipcode']})
