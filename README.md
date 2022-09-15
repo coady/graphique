@@ -31,13 +31,16 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
 * FILTERS = None: json `filter` query for which rows to read at startup
 
-For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html), [Scanner](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html), or [Table](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html).
+For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html), [Scanner](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html), or [Table](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html). The GraphQL `Table` type will be the root Query type.
+
+Supply a mapping of names to datasets for multiple roots, and to enable federation.
 
 ```python
 import pyarrow.dataset as ds
 from graphique import GraphQL
 
-app = GraphQL(ds.dataset(...))
+app = GraphQL(ds.dataset(...))  # on root
+app = GraphQL({<name>: ds.dataset(...), ...})  # on separate fields, and federated
 ```
 
 Start like any ASGI app.
@@ -66,6 +69,7 @@ Configuration options exist to provide a convenient no-code solution, but are su
 * `column`: access a column of any type by name
 * `row`: provides a field for each scalar of a single row
 * `apply`: transform columns by applying a function
+* `join`: join tables by key columns
 
 #### aggregation
 * `group`: group by given columns, transforming the others into list columns
@@ -110,6 +114,9 @@ dev
 * Dataset schema introspection
 * Dataset scanning
 * List aggregation, filtering, and sorting optimizations
+* Compute functions generalized
+* Multiple datasets and federation
+* Table joins
 
 0.9
 

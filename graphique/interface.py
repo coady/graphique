@@ -319,3 +319,39 @@ class Dataset:
         scanner = self.scanner(info, filter=filter.to_arrow(), columns=projection)
         oneshot = len(selections(*info.selected_fields)) > 1 and isinstance(self.table, ds.Scanner)
         return type(self)(scanner.to_table() if oneshot else scanner)
+
+    @doc_field(
+        right="name of right table; must be on root Query type",
+        keys="column names used as keys on the left side",
+        right_keys="column names used as keys on the right side; defaults to left side.",
+        join_type="""the kind of join: “left semi”, “right semi”, “left anti”, “right anti”, “inner”, “left outer”, “right outer”, “full outer”""",
+        left_suffix="add suffix to left column names; for preventing collisions",
+        right_suffix="add suffix to right column names; for preventing collisions.",
+        coalesce_keys="omit duplicate keys",
+    )
+    def join(
+        self,
+        info: Info,
+        right: str,
+        keys: List[str],
+        right_keys: Optional[List[str]] = None,
+        join_type: str = 'left outer',
+        left_suffix: str = '',
+        right_suffix: str = '',
+        coalesce_keys: bool = True,
+    ) -> 'Dataset':
+        """Return a [join](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.join) between this table and another one on the root Query type."""
+        left, right = (
+            root.table if isinstance(root.table, ds.Dataset) else root.select(info)
+            for root in (self, getattr(info.root_value, right))
+        )
+        table = left.join(
+            right,
+            keys=keys,
+            right_keys=right_keys,
+            join_type=join_type,
+            left_suffix=left_suffix,
+            right_suffix=right_suffix,
+            coalesce_keys=coalesce_keys,
+        )
+        return type(self)(table)

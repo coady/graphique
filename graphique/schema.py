@@ -7,7 +7,6 @@ from starlette.config import environ
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('parquet_path', help="path to parquet data set")
-parser.add_argument('--index', help="partition keys or sorted composite index", default='')
 parser.add_argument('--federated', help="field name for federated Table", default='')
 
 if __name__ == '__main__':

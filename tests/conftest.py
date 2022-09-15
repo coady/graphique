@@ -55,7 +55,8 @@ def dsclient(request):
 
 @pytest.fixture(scope='module')
 def fedclient(request):
-    app = load('alltypes.parquet', FEDERATED='a_table')
+    from .federated import app
+
     return TestClient(app)
 
 

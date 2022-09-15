@@ -138,6 +138,22 @@ def test_scan(dsclient):
 
 
 def test_federation(fedclient):
-    data = fedclient.execute('{ _service { sdl } aTable { length } }')
-    assert data['aTable']['length'] == 2
+    data = fedclient.execute('{ _service { sdl } zipcodes { length } zipDb { length } }')
     assert data['_service']['sdl']
+    assert data['zipcodes'] == {'length': 41700}
+    assert data['zipDb'] == {'length': 42724}
+
+    data = fedclient.execute(
+        '''{ zipcodes { scan(columns: {name: "zipcode", cast: "int64"}) {
+        join(right: "zip_db", keys: "zipcode", rightKeys: "zip") { length schema { names } } } } }'''
+    )
+    table = data['zipcodes']['scan']['join']
+    assert table['length'] == 41700
+    assert set(table['schema']['names']) > {'zipcode', 'timezone', 'latitude'}
+    data = fedclient.execute(
+        '''{ zipcodes { scan(columns: {alias: "zip", name: "zipcode", cast: "int64"}) {
+        join(right: "zip_db", keys: "zip", joinType: "right outer") { length schema { names } } } } }'''
+    )
+    table = data['zipcodes']['scan']['join']
+    assert table['length'] == 42724
+    assert set(table['schema']['names']) > {'zip', 'timezone', 'latitude'}
