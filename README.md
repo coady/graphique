@@ -18,7 +18,7 @@
 Open http://localhost:8000/graphql to try out the API in [GraphiQL](https://github.com/graphql/graphiql/tree/main/packages/graphiql#readme). There is a test fixture at `./tests/fixtures/zipcodes.parquet`.
 
 ```console
-% python3 -m graphique.schema ...
+% env PARQUET_PATH=... strawberry export-schema graphique.service:app.schema
 ```
 outputs the graphql schema for a parquet data set.
 
@@ -39,15 +39,14 @@ Supply a mapping of names to datasets for multiple roots, and to enable federati
 import pyarrow.dataset as ds
 from graphique import GraphQL
 
-app = GraphQL(ds.dataset(...))  # on root
-app = GraphQL({<name>: ds.dataset(...), ...}, keys=...)  # on separate fields, and federated
+app = GraphQL(ds.dataset(...))  # Table is root query type
+app = GraphQL({<name>: ds.dataset(...), ...}, keys=...)  # Tables on separate fields, and federated
 ```
 
 Start like any ASGI app.
 
 ```console
 uvicorn <package>:app
-strawberry server <package>:app (dev only)
 ```
 
 Configuration options exist to provide a convenient no-code solution, but are subject to change in the future. Using a custom app is recommended for production usage.

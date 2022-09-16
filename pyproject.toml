@@ -57,4 +57,3 @@ ignore_missing_imports = true
 [tool.coverage.run]
 source = ["graphique"]
 branch = true
-omit = ["graphique/schema.py"]

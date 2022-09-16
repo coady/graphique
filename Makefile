@@ -17,4 +17,4 @@ docs/schema.md: docs/schema.graphql
 		$? > $@
 
 docs/schema.graphql: graphique/*.py
-	python3 -m graphique.schema tests/fixtures/zipcodes.parquet > $@
+	PARQUET_PATH=tests/fixtures/zipcodes.parquet strawberry export-schema graphique.service:app.schema > $@
