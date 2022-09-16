@@ -6,6 +6,7 @@ from typing import Iterable, Mapping, Optional, Union
 import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry.asgi
+from strawberry.utils.str_converters import to_camel_case
 from strawberry.types import Info
 from .core import Column as C
 from .inputs import Filter, default_field
@@ -74,7 +75,7 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
     """Return type which extends the Dataset interface with knowledge of the schema."""
     schema = root.projected_schema if isinstance(root, ds.Scanner) else root.schema
     types = {field.name: type_map[C.scalar_type(field).id] for field in schema}
-    prefix = name.title()
+    prefix = to_camel_case(name.title())
     TypeName = prefix + 'Table'
 
     namespace = {name: default_field(name=name) for name in types}

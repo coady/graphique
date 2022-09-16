@@ -138,10 +138,12 @@ def test_scan(dsclient):
 
 
 def test_federation(fedclient):
-    data = fedclient.execute('{ _service { sdl } zipcodes { length } zipDb { length } }')
+    data = fedclient.execute(
+        '{ _service { sdl } zipcodes { __typename length } zipDb { __typename length } }'
+    )
     assert data['_service']['sdl']
-    assert data['zipcodes'] == {'length': 41700}
-    assert data['zipDb'] == {'length': 42724}
+    assert data['zipcodes'] == {'__typename': 'ZipcodesTable', 'length': 41700}
+    assert data['zipDb'] == {'__typename': 'ZipDbTable', 'length': 42724}
 
     data = fedclient.execute(
         '''{ zipcodes { scan(columns: {name: "zipcode", cast: "int64"}) {
