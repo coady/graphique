@@ -89,7 +89,7 @@ class ListChunk(pa.lib.BaseListArray):
         size = -index if index < 0 else index + 1
         if isinstance(self, pa.ChunkedArray):
             self = self.combine_chunks()
-        mask = np.asarray(pc.list_value_length(self).fill_null(0)) < size
+        mask = np.asarray(Column.fill_null(pc.list_value_length(self), 0)) < size
         offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
         return pc.list_flatten(self).take(pa.array(offsets + index, mask=mask))
 
@@ -121,14 +121,12 @@ class ListChunk(pa.lib.BaseListArray):
         groups = pc._group_by([pc.list_flatten(self)] * len(funcs), [indices], items)
         if len(groups) == len(self):  # no empty or null scalars
             return groups
-        mask = pc.list_value_length(self).cast('bool')
-        empties = pc.indices_nonzero(pc.invert(mask))
-        nulls = pc.indices_nonzero(mask.is_null())
-        indices = pa.concat_arrays([groups.field(-1).cast('uint64'), empties, nulls])
+        mask = pc.equal(pc.list_value_length(self), 0)
+        empties = pc.indices_nonzero(Column.fill_null(mask, True))
+        indices = pa.concat_arrays([groups.field(-1).cast('uint64'), empties])
         counters = [field.name for field in groups.type if 'count' in field.name]
         empties = pa.repeat(pa.scalar(dict.fromkeys(counters, 0), groups.type), len(empties))
-        nulls = pa.repeat(pa.scalar({}, groups.type), len(nulls))
-        return pa.concat_arrays([groups, empties, nulls]).take(pc.sort_indices(indices))
+        return pa.concat_arrays([groups, empties]).take(pc.sort_indices(indices))
 
     def min_max(self, **options) -> pa.Array:
         if pa.types.is_dictionary(self.type.value_type):
@@ -221,7 +219,7 @@ class Column(pa.ChunkedArray):
         """
         ends = [pa.array([True])]
         mask = predicate(Column.diff(self), *args) if args else Column.diff(self, predicate)
-        return pc.indices_nonzero(pa.concat_arrays(ends + mask.chunks + ends))
+        return pc.indices_nonzero(pa.chunked_array(ends + mask.chunks + ends))
 
     def min_max(self, **options):
         if pa.types.is_dictionary(self.type):
@@ -440,7 +438,7 @@ class Table(pa.Table):
         flattened = pa.table(columns, self.column_names)
         mask = ds.dataset(flattened).to_table(columns={'mask': expr})['mask'].combine_chunks()
         masks = type(first).from_arrays(first.offsets, mask)
-        counts = ListChunk.aggregate(masks, sum=None).field(0).fill_null(0)
+        counts = Column.fill_null(ListChunk.aggregate(masks, sum=None).field(0), 0)
         flattened = flattened.select(table.column_names).filter(mask)
         return Table.union(self, Table.from_counts(flattened, counts))
 
