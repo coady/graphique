@@ -131,11 +131,10 @@ def test_sort(table):
     assert (data['state'][0], data['county'][0]) == ('AK', 'Anchorage')
     data = T.sort(table, 'state', 'county', length=1).to_pydict()
     assert (data['state'], data['county']) == (['AK'], ['Aleutians East'])
-    data = T.sort(table, 'state', '-county', length=2).to_pydict()
-    assert data['state'] == ['AK'] * 2
-    assert data['county'] == ['Yukon Koyukuk'] * 2
-    mask = [False] * len(table)
-    assert not T.sort(table.filter(mask), 'state')
+    tbl = T.sort(table, 'state', '-county', length=2)
+    assert tbl.schema.pandas_metadata == {'index_columns': ['state']}
+    assert tbl['state'].to_pylist() == ['AK'] * 2
+    assert tbl['county'].to_pylist() == ['Yukon Koyukuk'] * 2
 
 
 def test_numeric():

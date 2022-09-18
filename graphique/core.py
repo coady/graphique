@@ -8,6 +8,7 @@ import bisect
 import contextlib
 import functools
 import itertools
+import json
 from concurrent import futures
 from dataclasses import dataclass
 from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
@@ -416,14 +417,21 @@ class Table(pa.Table):
         names = [name for name in self.column_names if Column.is_list_type(self[name])]
         return pa.table(list(map(apply, self.select(names))), names)
 
-    def sort(self, *names, length: int = None) -> pa.Table:
-        """Return table sorted by columns, optimized for fixed length."""
+    def sort_indices(self, *names, length: int = None) -> pa.Table:
+        """Return indices which would sort the table by columns, optimized for fixed length."""
         func = pc.sort_indices
         if length is not None:
             func = functools.partial(pc.select_k_unstable, k=length)
         keys = dict(map(sort_key, names))  # type: ignore
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
-        return self.take(func(table, sort_keys=keys.items()))
+        return func(table, sort_keys=keys.items())
+
+    def sort(self, *names, length: int = None) -> pa.Table:
+        """Return table sorted by columns, optimized for fixed length."""
+        table = self.take(Table.sort_indices(self, *names, length=length))
+        func = lambda name: not name.startswith('-') and not self[name].null_count  # noqa: E731
+        metadata = {'index_columns': list(itertools.takewhile(func, names))}
+        return table.replace_schema_metadata({'pandas': json.dumps(metadata)})
 
     def filter_list(self, expr: ds.Expression) -> 'Table':
         """Return table with list columns filtered within scalars."""
