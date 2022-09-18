@@ -376,7 +376,7 @@ class Dataset:
         right_suffix: str = '',
         coalesce_keys: bool = True,
     ) -> 'Dataset':
-        """Return a [join](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.join) between this table and another one on the root Query type."""
+        """Provisional: [join](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.join) this table with another table on the root Query type."""
         left, right = (
             root.table if isinstance(root.table, ds.Dataset) else root.select(info)
             for root in (self, getattr(info.root_value, right))
@@ -391,3 +391,8 @@ class Dataset:
             coalesce_keys=coalesce_keys,
         )
         return type(self)(table)
+
+    @doc_field
+    def take(self, info: Info, indices: List[Long]) -> 'Dataset':
+        """Provisional: select rows from indices."""
+        return type(self)(self.scanner(info).take(indices))

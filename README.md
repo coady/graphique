@@ -116,7 +116,7 @@ dev
 * List aggregation, filtering, and sorting optimizations
 * Compute functions generalized
 * Multiple datasets and federation
-* Table joins
+* Provisional dataset `join` and `take`
 
 0.9
 

@@ -426,9 +426,18 @@ class Table(pa.Table):
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
         return func(table, sort_keys=keys.items())
 
-    def sort(self, *names, length: int = None) -> pa.Table:
-        """Return table sorted by columns, optimized for fixed length."""
-        table = self.take(Table.sort_indices(self, *names, length=length))
+    def sort(self, *names, length: int = None, indices: str = '') -> pa.Table:
+        """Return table sorted by columns, optimized for fixed length.
+
+        Args:
+            names: columns to sort by
+            length: maximum number of rows to return
+            indices: include original indices in the table
+        """
+        indices_ = Table.sort_indices(self, *names, length=length)
+        table = self.take(indices_)
+        if indices:
+            table = table.append_column(indices, indices_)
         func = lambda name: not name.startswith('-') and not self[name].null_count  # noqa: E731
         metadata = {'index_columns': list(itertools.takewhile(func, names))}
         return table.replace_schema_metadata({'pandas': json.dumps(metadata)})

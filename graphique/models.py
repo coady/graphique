@@ -7,7 +7,7 @@ import itertools
 import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, Generic, List, Optional, TypeVar
+from typing import Callable, Generic, List, Optional, TypeVar, TYPE_CHECKING
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -19,6 +19,8 @@ from .core import Column as C
 from .inputs import links
 from .scalars import Long, type_map
 
+if TYPE_CHECKING:  # pragma: no cover
+    from .interface import Dataset
 T = TypeVar('T')
 
 
@@ -196,6 +198,11 @@ class NumericColumn(Column):
         options = {'buffer_size': buffer_size, 'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
 
+    @doc_field
+    def indices_nonzero(self) -> List[Long]:
+        """indices of the values in the array that are non-zero"""
+        return pc.indices_nonzero(self.array).to_pylist()
+
 
 @strawberry.type(description="column of booleans")
 class BooleanColumn(Column):
@@ -204,6 +211,7 @@ class BooleanColumn(Column):
     values = annotate(Column.values, List[Optional[bool]])
     unique = annotate(Column.unique, Set[bool])
     mode = annotate(NumericColumn.mode, Set[bool])
+    indices_nonzero = doc_field(NumericColumn.indices_nonzero)
 
     @doc_field
     def any(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
@@ -229,6 +237,14 @@ class IntColumn(NumericColumn):
     max = annotate(Column.max, Optional[int])
     drop_null = annotate(Column.drop_null, List[int])
 
+    @doc_field
+    def take_from(
+        self, info: Info, field: str
+    ) -> Annotated['Dataset', strawberry.lazy('.interface')]:
+        """Provisional: select indices from a table on the root Query type."""
+        root = getattr(info.root_value, field)
+        return type(root)(root.scanner(info).take(self.array.combine_chunks()))
+
 
 @strawberry.type(description="column of longs")
 class LongColumn(NumericColumn):
@@ -242,6 +258,7 @@ class LongColumn(NumericColumn):
     min = annotate(Column.min, Optional[Long])
     max = annotate(Column.max, Optional[Long])
     drop_null = annotate(Column.drop_null, List[Long])
+    take_from = doc_field(IntColumn.take_from)
 
 
 @strawberry.type(description="column of floats")
@@ -266,6 +283,7 @@ class DecimalColumn(Column):
     mode = annotate(NumericColumn.mode, Set[Decimal])
     min = annotate(Column.min, Optional[Decimal])
     max = annotate(Column.max, Optional[Decimal])
+    indices_nonzero = doc_field(NumericColumn.indices_nonzero)
 
 
 @strawberry.type(description="column of dates")

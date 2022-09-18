@@ -48,8 +48,6 @@ def test_columns(executor):
         data = execute(f'{{ {name} {{ dropNull }} }}')
         assert data == {name: {'dropNull': [0.0]}}
         assert execute(f'{{ {name} {{ min max }} }}')
-    assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
-    assert execute('{ decimal { min max } }')
 
     for name in ('date32', 'date64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['1970-01-01', None]}}
@@ -94,6 +92,7 @@ def test_boolean(executor):
     assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
     assert execute('{ bool { unique { length } } }') == {'bool': {'unique': {'length': 2}}}
     assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
+    assert execute('{ bool { indicesNonzero } }') == {'bool': {'indicesNonzero': []}}
 
     data = executor(
         '{ apply(boolean: {xor: {name: ["bool", "bool"]}}) { columns { bool { values } } } }'
@@ -104,6 +103,15 @@ def test_boolean(executor):
         { columns { bool { values } } } }'''
     )
     assert data == {'apply': {'columns': {'bool': {'values': [False, None]}}}}
+
+
+def test_decimal(executor):
+    def execute(query):
+        return executor(f'{{ columns {query} }}')['columns']
+
+    assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
+    assert execute('{ decimal { min max } }')
+    assert execute('{ decimal { indicesNonzero } }') == {'decimal': {'indicesNonzero': []}}
 
 
 def test_numeric(executor):
@@ -120,6 +128,8 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'tdigest': [0.0]}}}
         data = executor(f'{{ columns {{ {name} {{ product }} }} }}')
         assert data == {'columns': {name: {'product': 0.0}}}
+        data = executor(f'{{ columns {{ {name} {{ indicesNonzero }} }} }}')
+        assert data == {'columns': {name: {'indicesNonzero': []}}}
 
     data = executor(
         '{ apply(int: {minElementWise: {name: "int32"}}) { columns { int32 { values } } } }'

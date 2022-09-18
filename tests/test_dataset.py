@@ -55,6 +55,8 @@ def test_slice(dsclient):
     assert data == {'slice': {'length': 3}}
     data = dsclient.execute('{ slice { length } }')
     assert data == {'slice': {'length': 41700}}
+    data = dsclient.execute('{ take(indices: [0]) { row { zipcode } } }')
+    assert data == {'take': {'row': {'zipcode': 501}}}
 
 
 def test_group(dsclient):
@@ -167,3 +169,9 @@ def test_federation(fedclient):
     assert data == {
         '_entities': [{'length': 1, 'row': {'state': 'CA'}, 'schema': {'names': ['state']}}]
     }
+    data = fedclient.execute(
+        '''{ states { filter(state: {eq: "CA"}) { columns { indices {
+        takeFrom(field: "zipcodes") { __typename column(name: "state") { length } } } } } } }'''
+    )
+    table = data['states']['filter']['columns']['indices']['takeFrom']
+    assert table == {'__typename': 'ZipcodesTable', 'column': {'length': 2647}}
