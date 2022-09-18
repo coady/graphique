@@ -152,16 +152,16 @@ class Dataset:
     @doc_field(
         name="column name(s); multiple names access nested struct fields",
         cast=f"cast array to {links.type}",
+        safe="check for conversion errors on cast",
     )
-    def column(self, info: Info, name: List[str], cast: str = '') -> Column:
+    def column(self, info: Info, name: List[str], cast: str = '', safe: bool = True) -> Column:
         """Return column of any type by name.
 
         This is typically only needed for aliased columns added by `apply` or `aggregate`.
         If the column is in the schema, `columns` can be used instead.
         """
-        table = self.select(info)
-        (column,) = ds.dataset(table).to_table(columns={'': ds.field(*name)})
-        return Column.cast(column.cast(cast) if cast else column)
+        expr = Expression(name=name, cast=cast, safe=safe).to_arrow()  # type: ignore
+        return Column.cast(*self.scanner(info, columns={'': expr}).to_table())
 
     @doc_field(
         offset="number of rows to skip; negative value skips from the end",

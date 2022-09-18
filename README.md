@@ -111,7 +111,8 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 dev
 
 * Dataset schema introspection
-* Dataset scanning
+* Dataset scanning with selection and projection
+* Binary search on sorted columns
 * List aggregation, filtering, and sorting optimizations
 * Compute functions generalized
 * Multiple datasets and federation

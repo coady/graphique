@@ -703,7 +703,7 @@ used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.datas
 Expects one of: a field `name`, a scalar, or an operator with expressions. Single values can be passed for an
 [input `List`](https://spec.graphql.org/October2021/#sec-List.Input-Coercion).
 * `eq` with a list scalar is equivalent to `isin`
-* `eq` with a `null` scalars is equivalent `is_null`
+* `eq` with a `null` scalar is equivalent `is_null`
 * `ne` with a `null` scalar is equivalent to `is_valid`
 """
 )
@@ -711,6 +711,7 @@ class Expression:
     name: List[str] = default_field(list, description="field name(s)")
     alias: str = strawberry.field(default='', description="name for outermost columns")
     cast: str = strawberry.field(default='', description=f"cast as {links.type}")
+    safe: bool = strawberry.field(default=True, description="check for conversion errors on cast")
     value: Optional[JSON] = default_field(description="JSON scalar; also see typed scalars")
 
     base64: List[bytes] = default_field(list)
@@ -787,7 +788,8 @@ class Expression:
         if len(fields) > 1:
             raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
         (field,) = fields
-        return field.cast(self.cast) if self.cast and isinstance(field, ds.Expression) else field
+        cast = self.cast and isinstance(field, ds.Expression)
+        return field.cast(self.cast, self.safe) if cast else field
 
     @classmethod
     @no_type_check

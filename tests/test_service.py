@@ -64,6 +64,8 @@ def test_floats(client):
         row { latitude longitude } } }'''
     )
     assert data == {'apply': {'row': {'latitude': 41.0, 'longitude': 1}}}
+    data = client.execute('{ column(name: "latitude", cast: "int32", safe: false) { type } }')
+    assert data == {'column': {'type': 'int32'}}
 
 
 def test_strings(client):
@@ -236,6 +238,10 @@ def test_scan(client):
         '{ scan(filter: {inv: {eq: [{name: "state"}, {string: "CA"}]}}) { length } }'
     )
     assert data == {'scan': {'length': 39053}}
+    data = client.execute(
+        '{ scan(columns: {name: "latitude", cast: "int32", safe: false}) { column(name: "latitude") { type } } }'
+    )
+    assert data == {'scan': {'column': {'type': 'int32'}}}
 
 
 def test_apply(client):
