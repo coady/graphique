@@ -97,7 +97,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 
 ## Dependencies
 * pyarrow >=9
-* strawberry-graphql[asgi] >=0.128
+* strawberry-graphql[asgi] >=0.129
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 
 ## Tests
