@@ -38,6 +38,9 @@ def test_chunks():
     assert C.index(array, 'c') == 3
     assert C.index(array, 'a', start=3) == 4
     assert C.index(array, 'b', start=2) == -1
+    with pytest.raises(NotImplementedError):
+        pc._group_by([array], [array], [('hash_count', None)])
+    assert len(T.group(pa.table({'col': array}), 'col')) == 3
 
 
 def test_lists():

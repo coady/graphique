@@ -115,7 +115,7 @@ class ListChunk(pa.lib.BaseListArray):
         """Return aggregated scalars by grouping each hash function on the parent indices.
 
         If there are empty or null scalars, then the result must be padded with null defaults and
-        reordered. If the function is a `count` and the scalar is empty, then the default is 0.
+        reordered. If the function is a `count`, then the default is 0.
         """
         items = {f'hash_{name}': funcs[name] for name in funcs}.items()
         indices = pc.list_parent_indices(self)
@@ -370,6 +370,9 @@ class Table(pa.Table):
             args += [(self[agg.name], *agg.astuple(func)) for agg in funcs[func]]  # type: ignore
         values, hashes, options = zip(*args)
         keys = map(self.column, names)
+        keys = [  # type: ignore
+            key.unify_dictionaries() if pa.types.is_dictionary(key.type) else key for key in keys
+        ]
         arrays = iter(pc._group_by(values, keys, zip(hashes, options)).flatten())
         if none:
             next(arrays)
