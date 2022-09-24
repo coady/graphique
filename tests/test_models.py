@@ -263,7 +263,7 @@ def test_list(executor):
     )
     assert data['aggregate']['columns']['list'] == {'flatten': {'length': 0}}
     data = executor(
-        '''{ apply(list: {filter: {ne: [{name: "list"}, {int: 1}]}}) {
+        '''{ apply(list: {filter: {ne: [{name: "list"}, {value: 1}]}}) {
         columns { list { values { ... on IntColumn { values } } } } } }'''
     )
     column = data['apply']['columns']['list']
@@ -377,3 +377,5 @@ def test_base64(executor):
         columns { binary { values } } } }'''
     )
     assert data == {'apply': {'columns': {'binary': {'values': ['Xw==', None]}}}}
+    data = executor('{ scan(filter: {eq: [{name: "binary"}, {base64: "Xw=="}]}) { length } }')
+    assert data == {'scan': {'length': 0}}

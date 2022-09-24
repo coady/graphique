@@ -86,7 +86,7 @@ def test_strings(client):
     data = client.execute(
         '''{ filter(state: {eq: "CA"}) {
         apply(string: {utf8Length: {name: "city", alias: "size"}}) {
-        scan(filter: {gt: [{name: "size"}, {int: 23}]}) { length }
+        scan(filter: {gt: [{name: "size"}, {value: 23}]}) { length }
         column(name: "size") { ... on IntColumn { max } } } } }'''
     )
     assert data == {'filter': {'apply': {'scan': {'length': 1}, 'column': {'max': 24}}}}
@@ -227,7 +227,7 @@ def test_scan(client):
     assert data['scan']['columns']['zipcode']['unique']['values'] == [0]
     data = client.execute(
         '''{ scan(columns: {alias: "product", mul: [{name: "latitude"}, {name: "longitude"}]})
-        { scan(filter: {gt: [{name: "product"}, {float: 0}]}) { length } } }'''
+        { scan(filter: {gt: [{name: "product"}, {value: 0}]}) { length } } }'''
     )
     assert data['scan']['scan']['length'] == 0
     data = client.execute(
@@ -235,7 +235,7 @@ def test_scan(client):
     )
     assert data['scan']['column']['type'] == 'float'
     data = client.execute(
-        '{ scan(filter: {inv: {eq: [{name: "state"}, {string: "CA"}]}}) { length } }'
+        '{ scan(filter: {inv: {eq: [{name: "state"}, {value: "CA"}]}}) { length } }'
     )
     assert data == {'scan': {'length': 39053}}
     data = client.execute(
@@ -328,7 +328,7 @@ def test_group(client):
     assert table['columns']['county'] == {'min': 'Albany', 'max': 'Yates'}
     data = client.execute(
         '''{ group(by: ["state", "county"], counts: "counts") {
-        scan(filter: {gt: [{name: "counts"}, {int: 200}]}) {
+        scan(filter: {gt: [{name: "counts"}, {value: 200}]}) {
         aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
         min: column(name: "min") { ... on StringColumn { values } }
         max: column(name: "max") { ... on StringColumn { values } } } } } }'''
@@ -437,7 +437,7 @@ def test_partition(client):
     assert agg['columns']['state']['values'] == ['MA', 'RI']
     data = client.execute(
         '''{ partition(by: ["state"]) {
-        apply(list: {filter: {gt: [{name: "zipcode"}, {int: 90000}]}}) {
+        apply(list: {filter: {gt: [{name: "zipcode"}, {value: 90000}]}}) {
         column(name: "zipcode") { type } } } }'''
     )
     assert data['partition']['apply']['column']['type'] == 'list<item: int32>'

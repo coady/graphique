@@ -15,7 +15,7 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Diff, Expression, Filter, links
+from .inputs import Aggregations, Diff, Expression, Filter, Projection, links
 from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction
@@ -345,7 +345,7 @@ class Dataset:
 
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(
-        self, info: Info, filter: Expression = {}, columns: List[Expression] = []  # type: ignore
+        self, info: Info, filter: Expression = {}, columns: List[Projection] = []  # type: ignore
     ) -> 'Dataset':
         """Select rows and project columns without memory usage."""
         projection = {name: ds.field(name) for name in self.references(info, level=1)}

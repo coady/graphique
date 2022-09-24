@@ -709,21 +709,15 @@ Expects one of: a field `name`, a scalar, or an operator with expressions. Singl
 )
 class Expression:
     name: List[str] = default_field(list, description="field name(s)")
-    alias: str = strawberry.field(default='', description="name for outermost columns")
     cast: str = strawberry.field(default='', description=f"cast as {links.type}")
     safe: bool = strawberry.field(default=True, description="check for conversion errors on cast")
     value: Optional[JSON] = default_field(description="JSON scalar; also see typed scalars")
 
     base64: List[bytes] = default_field(list)
-    boolean: List[bool] = default_field(list)
     date_: List[date] = default_field(list, name='date')
     datetime_: List[datetime] = default_field(list, name='datetime')
     decimal: List[Decimal] = default_field(list)
     duration: List[timedelta] = default_field(list)
-    float_: List[float] = default_field(list, name='float')
-    int_: List[int] = default_field(list, name='int')
-    long: List[Long] = default_field(list)
-    string: List[str] = default_field(list)
     time_: List[time] = default_field(list, name='time')
 
     eq: List['Expression'] = default_field(list, description="==")
@@ -743,19 +737,7 @@ class Expression:
     inv: Optional['Expression'] = default_field(description="~")
 
     ops = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'add', 'mul', 'sub', 'truediv', 'and_', 'or_')
-    scalars = (
-        'base64',
-        'boolean',
-        'date_',
-        'datetime_',
-        'decimal',
-        'duration',
-        'float_',
-        'int_',
-        'long',
-        'string',
-        'time_',
-    )
+    scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
 
     def to_arrow(self) -> Optional[ds.Expression]:
         """Transform GraphQL expression into a dataset expression."""
@@ -800,3 +782,8 @@ class Expression:
             field = cls(name=[name])
             exprs += (cls(**{op: [field, cls(value=value)]}) for op, value in dict(query).items())
         return cls(and_=exprs)
+
+
+@strawberry.input(description="an `Expression` with an optional alias")
+class Projection(Expression):
+    alias: str = strawberry.field(default='', description="name of projected column")

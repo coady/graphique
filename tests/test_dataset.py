@@ -115,26 +115,26 @@ def test_scan(dsclient):
     )
     assert data == {'scan': {'length': 0}}
     data = dsclient.execute(
-        '{ scan(filter: {eq: [{name: "state"} {string: "CA", cast: "string"}]}) { length } }'
+        '{ scan(filter: {eq: [{name: "state"} {value: "CA", cast: "string"}]}) { length } }'
     )
     assert data == {'scan': {'length': 2647}}
     data = dsclient.execute(
-        '{ scan(filter: {eq: [{name: "state"} {string: ["CA", "OR"]}]}) { length } }'
+        '{ scan(filter: {eq: [{name: "state"} {value: ["CA", "OR"]}]}) { length } }'
     )
     assert data == {'scan': {'length': 3131}}
     with pytest.raises(ValueError, match="conflicting inputs"):
-        dsclient.execute('{ scan(filter: {name: "state", string: "CA"}) { length } }')
+        dsclient.execute('{ scan(filter: {name: "state", value: "CA"}) { length } }')
     with pytest.raises(ValueError, match="name or alias"):
         dsclient.execute('{ scan(columns: {}) { length } }')
     data = dsclient.execute(
-        '''{ scan(filter: {eq: [{name: "state"}, {string: "CA"}]})
-        { scan(filter: {eq: [{name: "county"}, {string: "Santa Clara"}]})
+        '''{ scan(filter: {eq: [{name: "state"}, {value: "CA"}]})
+        { scan(filter: {eq: [{name: "county"}, {value: "Santa Clara"}]})
         { length row { county } } } }'''
     )
     assert data == {'scan': {'scan': {'length': 108, 'row': {'county': 'Santa Clara'}}}}
     data = dsclient.execute(
-        '''{ scan(filter: {or: [{eq: [{name: "state"}, {string: "CA"}]},
-        {eq: [{name: "county"}, {string: "Santa Clara"}]}]}) { length } }'''
+        '''{ scan(filter: {or: [{eq: [{name: "state"}, {value: "CA"}]},
+        {eq: [{name: "county"}, {value: "Santa Clara"}]}]}) { length } }'''
     )
     assert data == {'scan': {'length': 2647}}
 
