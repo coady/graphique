@@ -136,7 +136,7 @@ def test_numeric(executor):
     data = executor('{ column(name: "float", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
     data = executor(
-        '{ apply(int: {negateChecked: {name: "int32"}}) { columns { int32 { values } } } }'
+        '{ apply(int: {checked: true, negate: {name: "int32"}}) { columns { int32 { values } } } }'
     )
     assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor(
@@ -209,7 +209,7 @@ def test_datetime(executor):
 
 def test_duration(executor):
     data = executor(
-        '''{ scan(columns: {alias: "diff", sub: [{name: "timestamp"}, {name: "timestamp"}]})
+        '''{ scan(columns: {alias: "diff", checked: true, subtract: [{name: "timestamp"}, {name: "timestamp"}]})
         { column(name: "diff") { ... on DurationColumn { values } } } }'''
     )
     assert data == {'scan': {'column': {'values': [0.0, None]}}}

@@ -285,8 +285,8 @@ class Dataset:
         """Return view of table with functions applied across columns.
 
         If no alias is provided, the column is replaced and should be of the same type.
-        If an alias is provided, a column is added and may be referenced in the `column` field,
-        in filter `predicates`, and in the `by` arguments of grouping and sorting.
+        If an alias is provided, a column is appended under that name.
+        Pending deprecation: applicable functions may be moved to `scan` expressions.
         """
         table = self.select(info)
         columns = {}
@@ -299,8 +299,11 @@ class Dataset:
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
         args = base64, date, datetime, decimal, duration, float, long, int, string, struct, time
         for value in map(dict, itertools.chain(*args)):
+            checked = value.pop('checked', False)
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
+                if checked:
+                    name += '_checked'
                 columns[name] = C.call(getattr(pc, func, C.digitize), *args, **kwargs)
         return type(self)(T.union(table, pa.table(columns)))
 

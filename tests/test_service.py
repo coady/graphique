@@ -221,12 +221,12 @@ def test_scan(client):
     )
     assert data['scan']['columns']['zipcode']['min'] == 1002
     data = client.execute(
-        '''{ scan(columns: {alias: "zipcode", sub: [{name: "zipcode"}, {name: "zipcode"}]})
+        '''{ scan(columns: {alias: "zipcode", subtract: [{name: "zipcode"}, {name: "zipcode"}]})
         { columns { zipcode { unique { values } } } } }'''
     )
     assert data['scan']['columns']['zipcode']['unique']['values'] == [0]
     data = client.execute(
-        '''{ scan(columns: {alias: "product", mul: [{name: "latitude"}, {name: "longitude"}]})
+        '''{ scan(columns: {alias: "product", multiply: [{name: "latitude"}, {name: "longitude"}]})
         { scan(filter: {gt: [{name: "product"}, {value: 0}]}) { length } } }'''
     )
     assert data['scan']['scan']['length'] == 0

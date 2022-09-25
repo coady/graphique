@@ -193,47 +193,28 @@ class Digitize(Arguments[T]):
 
 @strawberry.input(description=f"arithmetic [functions]({links.compute}#arithmetic-functions)")
 class NumericFunction(OrdinalFunction[T]):
+    checked: bool = strawberry.field(default=False, description="check for overflow errors")
     digitize: Optional[Digitize[T]] = default_field(func=Column.digitize)
-
-    add: Optional[Arguments[T]] = default_field(func=pc.power)
-    subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
-    multiply: Optional[Arguments[T]] = default_field(func=pc.multiply)
-    divide: Optional[Arguments[T]] = default_field(func=pc.divide)
     cumulative_sum: Optional[ElementWiseAggregate[T]] = default_field(func=pc.cumulative_sum)
-    cumulative_sum_checked: Optional[ElementWiseAggregate[T]] = default_field(
-        func=pc.cumulative_sum_checked
-    )
 
     power: Optional[Arguments[T]] = default_field(func=pc.power)
-    power_checked: Optional[Arguments[T]] = default_field(func=pc.power_checked)
     sqrt: Optional[Fields] = default_field(func=pc.sqrt)
-    sqrt_checked: Optional[Fields] = default_field(func=pc.sqrt_checked)
     ln: Optional[Fields] = default_field(func=pc.ln)
-    ln_checked: Optional[Fields] = default_field(func=pc.ln_checked)
     log1p: Optional[Fields] = default_field(func=pc.log1p)
-    log1p_checked: Optional[Fields] = default_field(func=pc.log1p_checked)
     logb: Optional[Arguments[T]] = default_field(func=pc.logb)
-    logb_checked: Optional[Arguments[T]] = default_field(func=pc.logb_checked)
 
     abs: Optional[Fields] = default_field(func=pc.abs)
-    abs_checked: Optional[Fields] = default_field(func=pc.abs_checked)
     negate: Optional[Fields] = default_field(func=pc.negate)
-    negate_checked: Optional[Fields] = default_field(func=pc.negate_checked)
     sign: Optional[Fields] = default_field(func=pc.sign)
     round: Optional[Round] = default_field(func=pc.round)
     round_to_multiple: Optional[RoundToMultiple] = default_field(func=pc.round_to_multiple)
 
     sin: Optional[Fields] = default_field(func=pc.sin)
-    sin_checked: Optional[Fields] = default_field(func=pc.sin_checked)
     cos: Optional[Fields] = default_field(func=pc.cos)
-    cos_checked: Optional[Fields] = default_field(func=pc.cos_checked)
     tan: Optional[Fields] = default_field(func=pc.tan)
-    tan_checked: Optional[Fields] = default_field(func=pc.tan_checked)
 
     asin: Optional[Fields] = default_field(func=pc.asin)
-    asin_checked: Optional[Fields] = default_field(func=pc.asin_checked)
     acos: Optional[Fields] = default_field(func=pc.acos)
-    acos_checked: Optional[Fields] = default_field(func=pc.acos_checked)
     atan: Optional[Fields] = default_field(func=pc.atan)
     atan2: Optional[Fields] = default_field(func=pc.atan2)
 
@@ -250,9 +231,7 @@ class IntFunction(NumericFunction[T]):
     bit_wise_xor: Optional[Arguments[T]] = default_field(func=pc.bit_wise_xor)
     bit_wise_not: Optional[Fields] = default_field(func=pc.bit_wise_not)
     shift_left: Optional[Arguments[T]] = default_field(func=pc.shift_left)
-    shift_left_checked: Optional[Arguments[T]] = default_field(func=pc.shift_left_checked)
     shift_right: Optional[Arguments[T]] = default_field(func=pc.shift_right)
-    shift_right_checked: Optional[Arguments[T]] = default_field(func=pc.shift_right_checked)
 
 
 @operator.itemgetter(Long)
@@ -690,6 +669,8 @@ class Expression:
     cast: str = strawberry.field(default='', description=f"cast as {links.type}")
     safe: bool = strawberry.field(default=True, description="check for conversion errors on cast")
     value: Optional[JSON] = default_field(description="JSON scalar; also see typed scalars")
+    kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
+    checked: bool = strawberry.field(default=False, description="check for overflow errors")
 
     base64: List[bytes] = default_field(list)
     date_: List[date] = default_field(list, name='date')
@@ -705,20 +686,19 @@ class Expression:
     gt: List['Expression'] = default_field(list, description=r"\>")
     ge: List['Expression'] = default_field(list, description=r"\>=")
 
-    add: List['Expression'] = default_field(list, description=r"\+")
-    mul: List['Expression'] = default_field(list, description=r"\*")
-    sub: List['Expression'] = default_field(list, description=r"\-")
-    truediv: List['Expression'] = default_field(list, name='div', description='/')
+    add: List['Expression'] = default_field(list, func=pc.add)
+    multiply: List['Expression'] = default_field(list, func=pc.multiply)
+    subtract: List['Expression'] = default_field(list, func=pc.subtract)
+    divide: List['Expression'] = default_field(list, func=pc.divide)
 
     and_: List['Expression'] = default_field(list, name='and', description="&")
     or_: List['Expression'] = default_field(list, name='or', description="|")
     inv: Optional['Expression'] = default_field(description="~")
     and_not: List['Expression'] = default_field(list, func=pc.and_not)
     xor: List['Expression'] = default_field(list, func=pc.xor)
-    kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
 
-    associatives = ('add', 'mul', 'and_', 'or_', 'xor')
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'sub', 'truediv', 'and_not')
+    associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'subtract', 'divide', 'and_not')
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
 
     def to_arrow(self) -> Optional[ds.Expression]:
@@ -762,6 +742,8 @@ class Expression:
     def getfunc(self, name):
         if self.kleene:
             name = name.rstrip('_') + '_kleene'
+        if self.checked:
+            name += '_checked'
         if name.endswith('_'):  # `and_` and `or_` functions differ from operators
             return getattr(operator, name)
         return getattr(pc if hasattr(pc, name) else operator, name)
