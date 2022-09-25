@@ -6,7 +6,7 @@ import inspect
 import operator
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, Generic, List, Optional, TypeVar, no_type_check
+from typing import Callable, Generic, Iterable, List, Optional, TypeVar, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -247,9 +247,6 @@ class LongFunction(NumericFunction[T]):
     name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for floats"
 )
 class FloatFunction(NumericFunction[T]):
-    is_finite: Optional[Fields] = default_field(func=pc.is_finite)
-    is_inf: Optional[Fields] = default_field(func=pc.is_inf)
-    is_nan: Optional[Fields] = default_field(func=pc.is_nan)
     floor: Optional[Fields] = default_field(func=pc.floor)
     ceil: Optional[Fields] = default_field(func=pc.ceil)
     trunc: Optional[Fields] = default_field(func=pc.trunc)
@@ -322,7 +319,6 @@ class DateFunction(TemporalFunction[T]):
     iso_week: Optional[Fields] = default_field(func=pc.iso_week)
     iso_year: Optional[Fields] = default_field(func=pc.iso_year)
     iso_calendar: Optional[Fields] = default_field(func=pc.iso_calendar)
-    is_leap_year: Optional[Fields] = default_field(func=pc.is_leap_year)
 
     years_between: Optional[Arguments[T]] = default_field(func=pc.years_between)
     quarters_between: Optional[Arguments[T]] = default_field(func=pc.quarters_between)
@@ -353,7 +349,6 @@ class DateTimeFunction(TemporalFunction[T]):
     iso_week: Optional[Fields] = default_field(func=pc.iso_week)
     iso_year: Optional[Fields] = default_field(func=pc.iso_year)
     iso_calendar: Optional[Fields] = default_field(func=pc.iso_calendar)
-    is_leap_year: Optional[Fields] = default_field(func=pc.is_leap_year)
 
     hour: Optional[Fields] = default_field(func=pc.hour)
     minute: Optional[Fields] = default_field(func=pc.minute)
@@ -382,8 +377,6 @@ class DateTimeFunction(TemporalFunction[T]):
     description=f"[functions]({links.compute}#temporal-component-extraction) for times",
 )
 class TimeFunction(TemporalFunction[T]):
-    subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
-
     hour: Optional[Fields] = default_field(func=pc.hour)
     minute: Optional[Fields] = default_field(func=pc.minute)
     second: Optional[Fields] = default_field(func=pc.second)
@@ -515,18 +508,6 @@ class StringFunction(OrdinalFunction[T]):
     extract_regex: Optional[Arguments[T]] = default_field(func=pc.extract_regex)
     strptime: Optional[Strptime] = default_field(func=pc.strptime)
     utf8_slice_codeunits: Optional[Slice] = default_field(func=pc.utf8_slice_codeunits)
-
-    string_is_ascii: Optional[Fields] = default_field(func=pc.string_is_ascii)
-    utf8_is_alnum: Optional[Fields] = default_field(func=pc.utf8_is_alnum)
-    utf8_is_alpha: Optional[Fields] = default_field(func=pc.utf8_is_alpha)
-    utf8_is_decimal: Optional[Fields] = default_field(func=pc.utf8_is_decimal)
-    utf8_is_digit: Optional[Fields] = default_field(func=pc.utf8_is_digit)
-    utf8_is_lower: Optional[Fields] = default_field(func=pc.utf8_is_lower)
-    utf8_is_numeric: Optional[Fields] = default_field(func=pc.utf8_is_numeric)
-    utf8_is_printable: Optional[Fields] = default_field(func=pc.utf8_is_printable)
-    utf8_is_space: Optional[Fields] = default_field(func=pc.utf8_is_space)
-    utf8_is_title: Optional[Fields] = default_field(func=pc.utf8_is_title)
-    utf8_is_upper: Optional[Fields] = default_field(func=pc.utf8_is_upper)
 
 
 @strawberry.input
@@ -671,6 +652,7 @@ class Expression:
     value: Optional[JSON] = default_field(description="JSON scalar; also see typed scalars")
     kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
     checked: bool = strawberry.field(default=False, description="check for overflow errors")
+    utf8: Optional['Utf8'] = default_field(description="Utf8 string functions.")
 
     base64: List[bytes] = default_field(list)
     date_: List[date] = default_field(list, name='date')
@@ -693,10 +675,17 @@ class Expression:
 
     and_: List['Expression'] = default_field(list, name='and', description="&")
     or_: List['Expression'] = default_field(list, name='or', description="|")
-    inv: Optional['Expression'] = default_field(description="~")
     and_not: List['Expression'] = default_field(list, func=pc.and_not)
     xor: List['Expression'] = default_field(list, func=pc.xor)
 
+    inv: Optional['Expression'] = default_field(description="~")
+    is_finite: Optional['Expression'] = default_field(func=pc.is_finite)
+    is_inf: Optional['Expression'] = default_field(func=pc.is_inf)
+    is_nan: Optional['Expression'] = default_field(func=pc.is_nan)
+    is_leap_year: Optional['Expression'] = default_field(func=pc.is_leap_year)
+    string_is_ascii: Optional['Expression'] = default_field(func=pc.string_is_ascii)
+
+    unaries = ('inv', 'is_finite', 'is_inf', 'is_nan', 'is_leap_year', 'string_is_ascii')
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
     variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'subtract', 'divide', 'and_not')
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
@@ -729,8 +718,12 @@ class Expression:
                 else:
                     field = self.getfunc(op)(*exprs)
                 fields.append(field)
-        if self.inv is not UNSET:
-            fields.append(~self.inv.to_arrow())  # type: ignore
+        if self.utf8 is not UNSET:
+            fields += self.utf8.to_fields()  # type: ignore
+        for op in self.unaries:
+            expr = getattr(self, op)
+            if expr is not UNSET:
+                fields.append(self.getfunc(op)(expr.to_arrow()))
         if not fields:
             return None
         if len(fields) > 1:
@@ -762,3 +755,26 @@ class Expression:
 @strawberry.input(description="an `Expression` with an optional alias")
 class Projection(Expression):
     alias: str = strawberry.field(default='', description="name of projected column")
+
+
+@strawberry.input(description="Utf8 string functions.")
+class Utf8:
+    is_alnum: Optional[Expression] = default_field(func=pc.utf8_is_alnum)
+    is_alpha: Optional[Expression] = default_field(func=pc.utf8_is_alpha)
+    is_decimal: Optional[Expression] = default_field(func=pc.utf8_is_decimal)
+    is_digit: Optional[Expression] = default_field(func=pc.utf8_is_digit)
+    is_lower: Optional[Expression] = default_field(func=pc.utf8_is_lower)
+    is_numeric: Optional[Expression] = default_field(func=pc.utf8_is_numeric)
+    is_printable: Optional[Expression] = default_field(func=pc.utf8_is_printable)
+    is_space: Optional[Expression] = default_field(func=pc.utf8_is_space)
+    is_title: Optional[Expression] = default_field(func=pc.utf8_is_title)
+    is_upper: Optional[Expression] = default_field(func=pc.utf8_is_upper)
+
+    unaries = ('is_alnum', 'is_alpha', 'is_decimal', 'is_digit', 'is_lower', 'is_numeric')
+    unaries += ('is_printable', 'is_space', 'is_title', 'is_upper')  # type: ignore
+
+    def to_fields(self) -> Iterable[ds.Expression]:
+        for op in self.unaries:
+            expr = getattr(self, op)
+            if expr is not UNSET:
+                yield getattr(pc, 'utf8_' + op)(expr.to_arrow())

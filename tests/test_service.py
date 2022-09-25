@@ -59,11 +59,10 @@ def test_floats(client):
         '{ apply(int: {logb: {name: "latitude", value: 3}}) { row { latitude } } }'
     )
     assert data == {'apply': {'row': {'latitude': pytest.approx(3.376188)}}}
-    data = client.execute(
-        '''{ apply(float: {round: {name: "latitude"}, isFinite: {name: "longitude"}}) {
-        row { latitude longitude } } }'''
-    )
-    assert data == {'apply': {'row': {'latitude': 41.0, 'longitude': 1}}}
+    data = client.execute('{ apply(float: {round: {name: "latitude"}}) {row { latitude } } }')
+    assert data == {'apply': {'row': {'latitude': 41.0}}}
+    data = client.execute('{ scan(filter: {isFinite: {name: "longitude"}}) { length } }')
+    assert data == {'scan': {'length': 41700}}
     data = client.execute('{ column(name: "latitude", cast: "int32", safe: false) { type } }')
     assert data == {'column': {'type': 'int32'}}
 
@@ -94,16 +93,10 @@ def test_strings(client):
     assert data == {'apply': {'row': {'city': 'hOLTSVILLE'}}}
     data = client.execute('{ apply(string: {utf8Capitalize: {name: "state"}}) { row { state } } }')
     assert data == {'apply': {'row': {'state': 'Ny'}}}
-    data = client.execute(
-        '''{ apply(string: {utf8IsLower: {name: "city"}})
-        { scan(filter: {name: "city"}) { length } } }'''
-    )
-    assert data == {'apply': {'scan': {'length': 0}}}
-    data = client.execute(
-        '''{ apply(string: {utf8IsTitle: {name: "city"}})
-        { scan(filter: {name: "city"}) { length } } }'''
-    )
-    assert data == {'apply': {'scan': {'length': 41700}}}
+    data = client.execute('{ scan(filter: {utf8: {isLower: {name: "city"}}}) { length } }')
+    assert data == {'scan': {'length': 0}}
+    data = client.execute('{ scan(filter: {utf8: {isTitle: {name: "city"}}}) { length } }')
+    assert data == {'scan': {'length': 41700}}
     data = client.execute(
         '''{ apply(string: {matchSubstring: {name: "city", value: "Mountain"}})
         { scan(filter: {name: "city"}) { length } } }'''
