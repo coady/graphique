@@ -32,11 +32,7 @@ class links:
 class Input:
     """Common utilities for input types."""
 
-    nullables: dict = {}
-
-    def __init_subclass__(cls):
-        for name in set(cls.nullables) & set(cls.__annotations__):
-            setattr(cls, name, default_field(description=cls.nullables[name]))
+    nullables: set = set()
 
     def keys(self):
         for name, value in self.__dict__.items():
@@ -92,17 +88,16 @@ def default_field(
 
 @strawberry.input(description="predicates for scalars")
 class Filter(Generic[T], Input):
-    eq: Optional[List[Optional[T]]] = UNSET
-    ne: Optional[T] = UNSET
+    eq: Optional[List[Optional[T]]] = default_field(
+        description="== or `isin`; `null` is equivalent to arrow `is_null`."
+    )
+    ne: Optional[T] = default_field(description="!=; `null` is equivalent to arrow `is_valid`.")
     lt: Optional[T] = default_field(description="<")
     le: Optional[T] = default_field(description="<=")
     gt: Optional[T] = default_field(description=r"\>")
     ge: Optional[T] = default_field(description=r"\>=")
 
-    nullables = {
-        'eq': "== or `isin`; `null` is equivalent to arrow `is_null`.",
-        'ne': "!=; `null` is equivalent to arrow `is_valid`.",
-    }
+    nullables = {'eq', 'ne'}
 
     @classmethod
     @no_type_check
@@ -241,19 +236,6 @@ class NumericFunction(OrdinalFunction[T]):
     acos_checked: Optional[Fields] = default_field(func=pc.acos_checked)
     atan: Optional[Fields] = default_field(func=pc.atan)
     atan2: Optional[Fields] = default_field(func=pc.atan2)
-
-
-@operator.itemgetter(bool)
-@strawberry.input(
-    name='eanFunction',
-    description=f"[functions]({links.compute}#selecting-multiplexing) for booleans",
-)
-class BooleanFunction(Function[T]):
-    and_kleene: Optional[Arguments[T]] = default_field(func=pc.and_kleene)
-    and_not: Optional[Arguments[T]] = default_field(func=pc.and_not)
-    and_not_kleene: Optional[Arguments[T]] = default_field(func=pc.and_not_kleene)
-    or_kleene: Optional[Arguments[T]] = default_field(func=pc.or_kleene)
-    xor: Optional[Arguments[T]] = default_field(func=pc.xor)
 
 
 @operator.itemgetter(int)
@@ -675,29 +657,25 @@ class Aggregations(Input):
     variance: List[VarianceAggregate] = default_field(list, func=pc.variance)
 
 
-@strawberry.input(description="discrete difference predicates; durations may be in float seconds")
+@strawberry.input(
+    description="""Discrete difference predicates.
+
+By default compares by not equal, Specifiying `null` with a predicate compares element-wise.
+A float computes the discrete difference first; durations may be in float seconds.
+"""
+)
 class Diff(Input):
     name: str
-    lt: Optional[float] = UNSET
-    le: Optional[float] = UNSET
-    gt: Optional[float] = UNSET
-    ge: Optional[float] = UNSET
-    predicates = {
-        'ne': pc.not_equal,
-        'lt': pc.less,
-        'le': pc.less_equal,
-        'gt': pc.greater,
-        'ge': pc.greater_equal,
-    }
-    nullables = dict.fromkeys(
-        predicates,
-        "`null` compares the arrays element-wise. A float computes the discrete difference first.",
-    )
+    less: Optional[float] = default_field(name='lt', description="<")
+    less_equal: Optional[float] = default_field(name='le', description="<=")
+    greater: Optional[float] = default_field(name='gt', description=r"\>")
+    greater_equal: Optional[float] = default_field(name='ge', description=r"\>=")
+
+    nullables = {'less', 'less_equal', 'greater', 'greater_equal'}
 
 
 @strawberry.input(
-    description="""
-[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
+    description="""[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
 used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html).
 
 Expects one of: a field `name`, a scalar, or an operator with expressions. Single values can be passed for an
@@ -735,8 +713,12 @@ class Expression:
     and_: List['Expression'] = default_field(list, name='and', description="&")
     or_: List['Expression'] = default_field(list, name='or', description="|")
     inv: Optional['Expression'] = default_field(description="~")
+    and_not: List['Expression'] = default_field(list, func=pc.and_not)
+    xor: List['Expression'] = default_field(list, func=pc.xor)
+    kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
 
-    ops = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'add', 'mul', 'sub', 'truediv', 'and_', 'or_')
+    associatives = ('add', 'mul', 'and_', 'or_', 'xor')
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'sub', 'truediv', 'and_not')
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
 
     def to_arrow(self) -> Optional[ds.Expression]:
@@ -752,7 +734,11 @@ class Expression:
                 fields.append(scalars[0] if len(scalars) == 1 else scalars)
         if self.value is not UNSET:
             fields.append(self.value)
-        for op in self.ops:
+        for op in self.associatives:
+            exprs = [expr.to_arrow() for expr in getattr(self, op)]
+            if exprs:
+                fields.append(functools.reduce(self.getfunc(op), exprs))
+        for op in self.variadics:
             exprs = [expr.to_arrow() for expr in getattr(self, op)]
             if exprs:
                 if op == 'eq' and isinstance(exprs[-1], list):
@@ -761,7 +747,7 @@ class Expression:
                     field, _ = exprs
                     field = field.is_null() if op == 'eq' else field.is_valid()
                 else:
-                    field = functools.reduce(getattr(operator, op), exprs)
+                    field = self.getfunc(op)(*exprs)
                 fields.append(field)
         if self.inv is not UNSET:
             fields.append(~self.inv.to_arrow())  # type: ignore
@@ -772,6 +758,13 @@ class Expression:
         (field,) = fields
         cast = self.cast and isinstance(field, ds.Expression)
         return field.cast(self.cast, self.safe) if cast else field
+
+    def getfunc(self, name):
+        if self.kleene:
+            name = name.rstrip('_') + '_kleene'
+        if name.endswith('_'):  # `and_` and `or_` functions differ from operators
+            return getattr(operator, name)
+        return getattr(pc if hasattr(pc, name) else operator, name)
 
     @classmethod
     @no_type_check

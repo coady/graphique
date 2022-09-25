@@ -16,7 +16,7 @@ import strawberry.asgi
 from strawberry.types import Info
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Diff, Expression, Filter, Projection, links
-from .inputs import Base64Function, BooleanFunction, DateFunction, DateTimeFunction, DecimalFunction
+from .inputs import Base64Function, DateFunction, DateTimeFunction, DecimalFunction
 from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
 from .inputs import StringFunction, StructFunction, TimeFunction
 from .models import Column, annotate, doc_field, selections
@@ -224,8 +224,8 @@ class Dataset:
         names = list(itertools.takewhile(lambda name: name not in funcs, by))
         predicates = {}
         for name in by[len(names) :]:  # noqa: E203
-            ((func, value),) = funcs.pop(name, {'ne': None}).items()
-            predicates[name] = (Diff.predicates[func],)
+            ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
+            predicates[name] = (getattr(pc, func),)
             if value is not None:
                 if pa.types.is_timestamp(C.scalar_type(table[name])):
                     value = timedelta(seconds=value)
@@ -270,7 +270,6 @@ class Dataset:
         self,
         info: Info,
         base64: List[Base64Function] = [],
-        boolean: List[BooleanFunction] = [],
         date: List[DateFunction] = [],
         datetime: List[DateTimeFunction] = [],
         decimal: List[DecimalFunction] = [],
@@ -298,8 +297,8 @@ class Dataset:
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
-        args = boolean, date, datetime, decimal, duration, float, long, int, string, struct, time
-        for value in map(dict, itertools.chain(base64, *args)):
+        args = base64, date, datetime, decimal, duration, float, long, int, string, struct, time
+        for value in map(dict, itertools.chain(*args)):
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = C.call(getattr(pc, func, C.digitize), *args, **kwargs)

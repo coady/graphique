@@ -94,15 +94,13 @@ def test_boolean(executor):
     assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
     assert execute('{ bool { indicesNonzero } }') == {'bool': {'indicesNonzero': []}}
 
+    data = executor('{ scan(filter: {xor: [{name: "bool"}, {inv: {name: "bool"}}]}) { length } }')
+    assert data == {'scan': {'length': 1}}
     data = executor(
-        '{ apply(boolean: {xor: {name: ["bool", "bool"]}}) { columns { bool { values } } } }'
-    )
-    assert data == {'apply': {'columns': {'bool': {'values': [False, None]}}}}
-    data = executor(
-        '''{ apply(boolean: {andNotKleene: {name: ["bool", "bool"]}})
+        '''{ scan(columns: {alias: "bool", andNot: [{inv: {name: "bool"}}, {name: "bool"}], kleene: true})
         { columns { bool { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'bool': {'values': [False, None]}}}}
+    assert data == {'scan': {'columns': {'bool': {'values': [True, None]}}}}
 
 
 def test_decimal(executor):
@@ -332,12 +330,12 @@ def test_selections(executor):
 
 def test_conditions(executor):
     data = executor(
-        '''{ apply(boolean: {ifElse: {name: ["bool", "int32", "float"]}}) {
+        '''{ apply(int: {ifElse: {name: ["bool", "int32", "float"]}}) {
         column(name: "bool") { type } } }'''
     )
     assert data == {'apply': {'column': {'type': 'float'}}}
     with pytest.raises(ValueError, match="no kernel"):
-        executor('{ apply(boolean: {ifElse: {name: ["struct", "int32", "float"]}}) { type } }')
+        executor('{ apply(int: {ifElse: {name: ["struct", "int32", "float"]}}) { type } }')
 
 
 def test_long(executor):
