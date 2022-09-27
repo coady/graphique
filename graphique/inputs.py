@@ -193,30 +193,11 @@ class Digitize(Arguments[T]):
 
 @strawberry.input(description=f"arithmetic [functions]({links.compute}#arithmetic-functions)")
 class NumericFunction(OrdinalFunction[T]):
-    checked: bool = strawberry.field(default=False, description="check for overflow errors")
     digitize: Optional[Digitize[T]] = default_field(func=Column.digitize)
     cumulative_sum: Optional[ElementWiseAggregate[T]] = default_field(func=pc.cumulative_sum)
 
-    power: Optional[Arguments[T]] = default_field(func=pc.power)
-    sqrt: Optional[Fields] = default_field(func=pc.sqrt)
-    ln: Optional[Fields] = default_field(func=pc.ln)
-    log1p: Optional[Fields] = default_field(func=pc.log1p)
-    logb: Optional[Arguments[T]] = default_field(func=pc.logb)
-
-    abs: Optional[Fields] = default_field(func=pc.abs)
-    negate: Optional[Fields] = default_field(func=pc.negate)
-    sign: Optional[Fields] = default_field(func=pc.sign)
     round: Optional[Round] = default_field(func=pc.round)
     round_to_multiple: Optional[RoundToMultiple] = default_field(func=pc.round_to_multiple)
-
-    sin: Optional[Fields] = default_field(func=pc.sin)
-    cos: Optional[Fields] = default_field(func=pc.cos)
-    tan: Optional[Fields] = default_field(func=pc.tan)
-
-    asin: Optional[Fields] = default_field(func=pc.asin)
-    acos: Optional[Fields] = default_field(func=pc.acos)
-    atan: Optional[Fields] = default_field(func=pc.atan)
-    atan2: Optional[Fields] = default_field(func=pc.atan2)
 
 
 @operator.itemgetter(int)
@@ -225,13 +206,6 @@ class NumericFunction(OrdinalFunction[T]):
 )
 class IntFunction(NumericFunction[T]):
     choose: Optional[Fields] = default_field(func=pc.choose)
-
-    bit_wise_and: Optional[Arguments[T]] = default_field(func=pc.bit_wise_and)
-    bit_wise_or: Optional[Arguments[T]] = default_field(func=pc.bit_wise_or)
-    bit_wise_xor: Optional[Arguments[T]] = default_field(func=pc.bit_wise_xor)
-    bit_wise_not: Optional[Fields] = default_field(func=pc.bit_wise_not)
-    shift_left: Optional[Arguments[T]] = default_field(func=pc.shift_left)
-    shift_right: Optional[Arguments[T]] = default_field(func=pc.shift_right)
 
 
 @operator.itemgetter(Long)
@@ -247,9 +221,7 @@ class LongFunction(NumericFunction[T]):
     name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for floats"
 )
 class FloatFunction(NumericFunction[T]):
-    floor: Optional[Fields] = default_field(func=pc.floor)
-    ceil: Optional[Fields] = default_field(func=pc.ceil)
-    trunc: Optional[Fields] = default_field(func=pc.trunc)
+    ...
 
 
 DecimalFunction = Function[Decimal]
@@ -304,7 +276,6 @@ class TemporalFunction(Function[T]):
 )
 class DateFunction(TemporalFunction[T]):
     strftime: Optional[Strftime] = default_field(func=pc.strftime)
-    subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
 
     year: Optional[Fields] = default_field(func=pc.year)
     us_year: Optional[Fields] = default_field(func=pc.us_year)
@@ -333,7 +304,6 @@ class DateFunction(TemporalFunction[T]):
 )
 class DateTimeFunction(TemporalFunction[T]):
     strftime: Optional[Strftime] = default_field(func=pc.strftime)
-    subtract: Optional[Arguments[T]] = default_field(func=pc.subtract)
     assume_timezone: Optional[AssumeTimezone] = default_field(func=pc.assume_timezone)
 
     year: Optional[Fields] = default_field(func=pc.year)
@@ -414,12 +384,8 @@ class ReplaceSlice(Generic[T], Fields):
     name='Function', description=f"[functions]({links.compute}#string-transforms) for binaries"
 )
 class Base64Function(Function[T]):
-    binary_join: Optional[Arguments[T]] = default_field(func=pc.binary_join)
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
-    binary_length: Optional[Fields] = default_field(func=pc.binary_length)
     binary_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.binary_replace_slice)
-    binary_repeat: Optional[Arguments[int]] = default_field(func=pc.binary_repeat)
-    binary_reverse: Optional[Fields] = default_field(func=pc.binary_reverse)
 
 
 @strawberry.input
@@ -465,9 +431,7 @@ class Slice(Fields):
     name='ingFunction', description=f"[functions]({links.compute}#string-transforms) for strings"
 )
 class StringFunction(OrdinalFunction[T]):
-    binary_join: Optional[Arguments[T]] = default_field(func=pc.binary_join)
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
-    binary_length: Optional[Fields] = default_field(func=pc.binary_length)
 
     ends_with: Optional[MatchSubstring[T]] = default_field(func=pc.ends_with)
     starts_with: Optional[MatchSubstring[T]] = default_field(func=pc.starts_with)
@@ -479,14 +443,6 @@ class StringFunction(OrdinalFunction[T]):
         func=pc.match_substring_regex
     )
     match_like: Optional[MatchSubstring[T]] = default_field(func=pc.match_like)
-
-    utf8_capitalize: Optional[Fields] = default_field(func=pc.utf8_capitalize)
-    utf8_length: Optional[Fields] = default_field(func=pc.utf8_length)
-    utf8_lower: Optional[Fields] = default_field(func=pc.utf8_lower)
-    utf8_upper: Optional[Fields] = default_field(func=pc.utf8_upper)
-    utf8_swapcase: Optional[Fields] = default_field(func=pc.utf8_swapcase)
-    utf8_title: Optional[Fields] = default_field(func=pc.utf8_title)
-    utf8_reverse: Optional[Fields] = default_field(func=pc.utf8_reverse)
 
     utf8_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.utf8_replace_slice)
     utf8_split_whitespace: Optional[Split] = default_field(func=pc.utf8_split_whitespace)
@@ -652,7 +608,10 @@ class Expression:
     value: Optional[JSON] = default_field(description="JSON scalar; also see typed scalars")
     kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
     checked: bool = strawberry.field(default=False, description="check for overflow errors")
-    utf8: Optional['Utf8'] = default_field(description="Utf8 string functions.")
+
+    utf8: Optional['Utf8'] = default_field(description="utf8 string functions")
+    binary: Optional['Binary'] = default_field(description="binary functions")
+    bit_wise: Optional['BitWise'] = default_field(description="bit-wise functions")
 
     base64: List[bytes] = default_field(list)
     date_: List[date] = default_field(list, name='date')
@@ -672,6 +631,28 @@ class Expression:
     multiply: List['Expression'] = default_field(list, func=pc.multiply)
     subtract: List['Expression'] = default_field(list, func=pc.subtract)
     divide: List['Expression'] = default_field(list, func=pc.divide)
+    abs: Optional['Expression'] = default_field(func=pc.abs)
+    negate: Optional['Expression'] = default_field(func=pc.negate)
+    sign: Optional['Expression'] = default_field(func=pc.sign)
+    power: List['Expression'] = default_field(list, func=pc.power)
+    ln: Optional['Expression'] = default_field(func=pc.ln)
+    log1p: Optional['Expression'] = default_field(func=pc.log1p)
+    logb: List['Expression'] = default_field(list, func=pc.logb)
+
+    shift_left: List['Expression'] = default_field(list, func=pc.shift_left)
+    shift_right: List['Expression'] = default_field(list, func=pc.shift_right)
+
+    ceil: Optional['Expression'] = default_field(func=pc.ceil)
+    floor: Optional['Expression'] = default_field(func=pc.floor)
+    trunc: Optional['Expression'] = default_field(func=pc.trunc)
+
+    sin: Optional['Expression'] = default_field(func=pc.sin)
+    cos: Optional['Expression'] = default_field(func=pc.cos)
+    tan: Optional['Expression'] = default_field(func=pc.tan)
+    asin: Optional['Expression'] = default_field(func=pc.asin)
+    acos: Optional['Expression'] = default_field(func=pc.acos)
+    atan: Optional['Expression'] = default_field(func=pc.atan)
+    atan2: List['Expression'] = default_field(list, func=pc.atan2)
 
     and_: List['Expression'] = default_field(list, name='and', description="&")
     or_: List['Expression'] = default_field(list, name='or', description="|")
@@ -686,8 +667,11 @@ class Expression:
     string_is_ascii: Optional['Expression'] = default_field(func=pc.string_is_ascii)
 
     unaries = ('inv', 'is_finite', 'is_inf', 'is_nan', 'is_leap_year', 'string_is_ascii')
+    unaries += ('abs', 'negate', 'sign', 'ln', 'log1p', 'ceil', 'floor', 'trunc')  # type: ignore
+    unaries += ('sin', 'cos', 'tan', 'asin', 'acos', 'atan')  # type: ignore
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'subtract', 'divide', 'and_not')
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'subtract', 'divide', 'power', 'logb')
+    variadics += ('shift_left', 'shift_right', 'atan2', 'and_not')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
 
     def to_arrow(self) -> Optional[ds.Expression]:
@@ -696,13 +680,11 @@ class Expression:
         if self.name:
             fields.append(ds.field(*self.name))
         for name in self.scalars:
-            scalars = getattr(self, name)
-            if self.cast:
-                scalars = [pa.scalar(scalar, self.cast) for scalar in scalars]
+            scalars = list(map(self.getscalar, getattr(self, name)))
             if scalars:
                 fields.append(scalars[0] if len(scalars) == 1 else scalars)
         if self.value is not UNSET:
-            fields.append(self.value)
+            fields.append(self.getscalar(self.value))
         for op in self.associatives:
             exprs = [expr.to_arrow() for expr in getattr(self, op)]
             if exprs:
@@ -718,12 +700,13 @@ class Expression:
                 else:
                     field = self.getfunc(op)(*exprs)
                 fields.append(field)
-        if self.utf8 is not UNSET:
-            fields += self.utf8.to_fields()  # type: ignore
+        for group in (self.utf8, self.binary, self.bit_wise):
+            if group is not UNSET:
+                fields += group.to_fields()  # type: ignore
         for op in self.unaries:
             expr = getattr(self, op)
             if expr is not UNSET:
-                fields.append(self.getfunc(op)(expr.to_arrow()))
+                fields.append(self.getfunc(op)(expr.to_arrow()))  # type: ignore
         if not fields:
             return None
         if len(fields) > 1:
@@ -731,6 +714,11 @@ class Expression:
         (field,) = fields
         cast = self.cast and isinstance(field, ds.Expression)
         return field.cast(self.cast, self.safe) if cast else field
+
+    def getscalar(self, value):
+        if self.cast:
+            return pa.scalar(value, self.cast)
+        return value if isinstance(value, (list, type(None))) else pc.scalar(value)
 
     def getfunc(self, name):
         if self.kleene:
@@ -757,8 +745,23 @@ class Projection(Expression):
     alias: str = strawberry.field(default='', description="name of projected column")
 
 
+class FieldGroup:
+    """Fields grouped by naming conventions."""
+
+    prefix: str = ''
+
+    def to_fields(self) -> Iterable[ds.Expression]:
+        for field in self._type_definition.fields:  # type: ignore
+            exprs = getattr(self, field.name)
+            func = getattr(pc, self.prefix + field.name.rstrip('_'))
+            if isinstance(exprs, Expression):
+                yield func(exprs.to_arrow())
+            elif exprs:
+                yield func(*[expr.to_arrow() for expr in exprs])
+
+
 @strawberry.input(description="Utf8 string functions.")
-class Utf8:
+class Utf8(FieldGroup):
     is_alnum: Optional[Expression] = default_field(func=pc.utf8_is_alnum)
     is_alpha: Optional[Expression] = default_field(func=pc.utf8_is_alpha)
     is_decimal: Optional[Expression] = default_field(func=pc.utf8_is_decimal)
@@ -770,11 +773,33 @@ class Utf8:
     is_title: Optional[Expression] = default_field(func=pc.utf8_is_title)
     is_upper: Optional[Expression] = default_field(func=pc.utf8_is_upper)
 
-    unaries = ('is_alnum', 'is_alpha', 'is_decimal', 'is_digit', 'is_lower', 'is_numeric')
-    unaries += ('is_printable', 'is_space', 'is_title', 'is_upper')  # type: ignore
+    capitalize: Optional[Expression] = default_field(func=pc.utf8_capitalize)
+    length: Optional[Expression] = default_field(func=pc.utf8_length)
+    lower: Optional[Expression] = default_field(func=pc.utf8_lower)
+    upper: Optional[Expression] = default_field(func=pc.utf8_upper)
+    swapcase: Optional[Expression] = default_field(func=pc.utf8_swapcase)
+    title: Optional[Expression] = default_field(func=pc.utf8_title)
+    reverse: Optional[Expression] = default_field(func=pc.utf8_reverse)
 
-    def to_fields(self) -> Iterable[ds.Expression]:
-        for op in self.unaries:
-            expr = getattr(self, op)
-            if expr is not UNSET:
-                yield getattr(pc, 'utf8_' + op)(expr.to_arrow())
+    prefix = 'utf8_'
+
+
+@strawberry.input(description="Binary functions.")
+class Binary(FieldGroup):
+    length: Optional[Expression] = default_field(func=pc.binary_length)
+    reverse: Optional[Expression] = default_field(func=pc.binary_reverse)
+
+    join: List[Expression] = default_field(list, func=pc.binary_join)
+    repeat: List[Expression] = default_field(list, func=pc.binary_repeat)
+
+    prefix = 'binary_'
+
+
+@strawberry.input(description="Bit-wise functions.")
+class BitWise(FieldGroup):
+    and_: List[Expression] = default_field(list, name='and', func=pc.bit_wise_and)
+    or_: List[Expression] = default_field(list, name='or', func=pc.bit_wise_or)
+    xor: List[Expression] = default_field(list, func=pc.bit_wise_xor)
+    not_: List[Expression] = default_field(list, name='not', func=pc.bit_wise_not)
+
+    prefix = 'bit_wise_'

@@ -299,11 +299,8 @@ class Dataset:
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
         args = base64, date, datetime, decimal, duration, float, long, int, string, struct, time
         for value in map(dict, itertools.chain(*args)):
-            checked = value.pop('checked', False)
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
-                if checked:
-                    name += '_checked'
                 columns[name] = C.call(getattr(pc, func, C.digitize), *args, **kwargs)
         return type(self)(T.union(table, pa.table(columns)))
 

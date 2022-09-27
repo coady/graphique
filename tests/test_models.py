@@ -136,21 +136,24 @@ def test_numeric(executor):
     data = executor('{ column(name: "float", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
     data = executor(
-        '{ apply(int: {checked: true, negate: {name: "int32"}}) { columns { int32 { values } } } }'
+        '''{ scan(columns: {alias: "int32", negate: {checked: true, name: "int32"}}) {
+        columns { int32 { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
+    assert data == {'scan': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor(
         '{ apply(float: {coalesce: {name: ["float", "int32"]}}) { columns { float { values } } } }'
     )
     assert data == {'apply': {'columns': {'float': {'values': [0.0, None]}}}}
     data = executor(
-        '{ apply(int: {bitWiseNot: {name: "int32"}}) { columns { int32 { values } } } }'
+        '''{ scan(columns: {bitWise: {not: {name: "int32"}}, alias: "int32"}) {
+        columns { int32 { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'int32': {'values': [-1, None]}}}}
+    assert data == {'scan': {'columns': {'int32': {'values': [-1, None]}}}}
     data = executor(
-        '{ apply(int: {bitWiseOr: {name: ["int32", "int64"]}}) { columns { int32 { values } } } }'
+        '''{ scan(columns: {bitWise: {or: [{name: "int32"}, {name: "int64"}]}, alias: "int32"}) {
+        columns { int32 { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
+    assert data == {'scan': {'columns': {'int32': {'values': [0, None]}}}}
 
 
 @pytest.mark.skipif(sys.version_info < (3, 9), reason="requires python3.9 or pytz")
@@ -276,10 +279,10 @@ def test_list(executor):
     assert data['aggregate']['column']['values'] == [pytest.approx((2 / 3) ** 0.5), None]
     assert data['aggregate']['var']['values'] == [1, None]
     data = executor(
-        '''{ partition(by: "int32") { apply(base64: {binaryJoin: {name: "binary", value: ""}}) {
+        '''{ partition(by: "int32") { scan(columns: {binary: {join: [{name: "binary"}, {base64: ""}]}, alias: "binary"}) {
         column(name: "binary") { ... on Base64Column { values } } } } }'''
     )
-    assert data == {'partition': {'apply': {'column': {'values': [None]}}}}
+    assert data == {'partition': {'scan': {'column': {'values': [None]}}}}
     data = executor('{ columns { list { value { type } } } }')
     assert data == {'columns': {'list': {'value': {'type': 'int32'}}}}
 
@@ -345,10 +348,15 @@ def test_long(executor):
 
 def test_base64(executor):
     data = executor(
-        '''{ apply(base64: {binaryLength: {name: "binary"}}) {
+        '''{ scan(columns: {alias: "binary", binary: {length: {name: "binary"}}}) {
         column(name: "binary") { ...on IntColumn { values } } } }'''
     )
-    assert data == {'apply': {'column': {'values': [0, None]}}}
+    assert data == {'scan': {'column': {'values': [0, None]}}}
+    data = executor(
+        '''{ scan(columns: {alias: "binary", binary: {repeat: [{name: "binary"}, {value: 2}]}}) {
+        columns { binary { values } } } }'''
+    )
+    assert data == {'scan': {'columns': {'binary': {'values': ['', None]}}}}
     data = executor(
         '{ apply(base64: {fillNullForward: {name: "binary"}}) { columns { binary { values } } } }'
     )
