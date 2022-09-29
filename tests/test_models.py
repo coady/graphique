@@ -160,20 +160,21 @@ def test_numeric(executor):
 def test_datetime(executor):
     for name in ('timestamp', 'date32'):
         data = executor(
-            f'''{{ apply(datetime: {{year: {{name: "{name}", alias: "year"}}}})
+            f'''{{ scan(columns: {{alias: "year", temporal: {{year: {{name: "{name}"}}}}}})
             {{ column(name: "year") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
-        assert data == {'apply': {'column': {'values': [1970, None]}}}
+        assert data == {'scan': {'column': {'values': [1970, None]}}}
         data = executor(
-            f'''{{ apply(datetime: {{quarter: {{name: "{name}", alias: "quarter"}}}})
+            f'''{{ scan(columns: {{alias: "quarter", temporal: {{quarter: {{name: "{name}"}}}}}})
             {{ column(name: "quarter") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
-        assert data == {'apply': {'column': {'values': [1, None]}}}
+        assert data == {'scan': {'column': {'values': [1, None]}}}
         data = executor(
-            f'''{{ apply(datetime: {{yearsBetween: {{name: ["{name}", "{name}"]}}}})
+            f'''{{ scan(columns: {{alias: "{name}",
+            temporal: {{yearsBetween: [{{name: "{name}"}}, {{name: "{name}"}}]}}}})
             {{ column(name: "{name}") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
-        assert data == {'apply': {'column': {'values': [0, None]}}}
+        assert data == {'scan': {'column': {'values': [0, None]}}}
     data = executor(
         '''{ apply(datetime: {strftime: {name: "timestamp"}}) {
         column(name: "timestamp") { type } } }'''
@@ -181,20 +182,21 @@ def test_datetime(executor):
     assert data == {'apply': {'column': {'type': 'string'}}}
     for name in ('timestamp', 'time32'):
         data = executor(
-            f'''{{ apply(datetime: {{hour: {{name: "{name}", alias: "hour"}}}})
+            f'''{{ scan(columns: {{alias: "hour", temporal: {{hour: {{name: "{name}"}}}}}})
             {{ column(name: "hour") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
-        assert data == {'apply': {'column': {'values': [0, None]}}}
+        assert data == {'scan': {'column': {'values': [0, None]}}}
         data = executor(
-            f'''{{ apply(datetime: {{subsecond: {{name: "{name}", alias: "subsecond"}}}})
+            f'''{{ scan(columns: {{alias: "subsecond", temporal: {{subsecond: {{name: "{name}"}}}}}})
             {{ column(name: "subsecond") {{ ... on FloatColumn {{ values }} }} }} }}'''
         )
-        assert data == {'apply': {'column': {'values': [0.0, None]}}}
+        assert data == {'scan': {'column': {'values': [0.0, None]}}}
         data = executor(
-            f'''{{ apply(datetime: {{hoursBetween: {{name: ["{name}", "{name}"]}}}})
-            {{ column(name: "{name}") {{ ... on LongColumn {{ values }} }} }} }}'''
+            f'''{{ scan(columns: {{alias: "hours",
+            temporal: {{hoursBetween: [{{name: "{name}"}}, {{name: "{name}"}}]}}}})
+            {{ column(name: "hours") {{ ... on LongColumn {{ values }} }} }} }}'''
         )
-        assert data == {'apply': {'column': {'values': [0, None]}}}
+        assert data == {'scan': {'column': {'values': [0, None]}}}
     with pytest.raises(ValueError):
         executor('{ columns { time64 { between(unit: "hours") { values } } } }')
     data = executor(

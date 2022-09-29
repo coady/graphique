@@ -277,24 +277,8 @@ class TemporalFunction(Function[T]):
 class DateFunction(TemporalFunction[T]):
     strftime: Optional[Strftime] = default_field(func=pc.strftime)
 
-    year: Optional[Fields] = default_field(func=pc.year)
-    us_year: Optional[Fields] = default_field(func=pc.us_year)
-    year_month_day: Optional[Fields] = default_field(func=pc.year_month_day)
-    quarter: Optional[Fields] = default_field(func=pc.quarter)
-    month: Optional[Fields] = default_field(func=pc.month)
     week: Optional[Week] = default_field(func=pc.week)
-    us_week: Optional[Fields] = default_field(func=pc.us_week)
-    day: Optional[Fields] = default_field(func=pc.day)
     day_of_week: Optional[DayOfWeek[T]] = default_field(func=pc.day_of_week)
-    day_of_year: Optional[Fields] = default_field(func=pc.day_of_year)
-    iso_week: Optional[Fields] = default_field(func=pc.iso_week)
-    iso_year: Optional[Fields] = default_field(func=pc.iso_year)
-    iso_calendar: Optional[Fields] = default_field(func=pc.iso_calendar)
-
-    years_between: Optional[Arguments[T]] = default_field(func=pc.years_between)
-    quarters_between: Optional[Arguments[T]] = default_field(func=pc.quarters_between)
-    weeks_between: Optional[DayOfWeek[T]] = default_field(func=pc.weeks_between)
-    days_between: Optional[Arguments[T]] = default_field(func=pc.days_between)
 
 
 @operator.itemgetter(datetime)
@@ -306,39 +290,8 @@ class DateTimeFunction(TemporalFunction[T]):
     strftime: Optional[Strftime] = default_field(func=pc.strftime)
     assume_timezone: Optional[AssumeTimezone] = default_field(func=pc.assume_timezone)
 
-    year: Optional[Fields] = default_field(func=pc.year)
-    us_year: Optional[Fields] = default_field(func=pc.us_year)
-    year_month_day: Optional[Fields] = default_field(func=pc.year_month_day)
-    quarter: Optional[Fields] = default_field(func=pc.quarter)
-    month: Optional[Fields] = default_field(func=pc.month)
     week: Optional[Week] = default_field(func=pc.week)
-    us_week: Optional[Fields] = default_field(func=pc.us_week)
-    day: Optional[Fields] = default_field(func=pc.day)
     day_of_week: Optional[DayOfWeek[T]] = default_field(func=pc.day_of_week)
-    day_of_year: Optional[Fields] = default_field(func=pc.day_of_year)
-    iso_week: Optional[Fields] = default_field(func=pc.iso_week)
-    iso_year: Optional[Fields] = default_field(func=pc.iso_year)
-    iso_calendar: Optional[Fields] = default_field(func=pc.iso_calendar)
-
-    hour: Optional[Fields] = default_field(func=pc.hour)
-    minute: Optional[Fields] = default_field(func=pc.minute)
-    second: Optional[Fields] = default_field(func=pc.second)
-    subsecond: Optional[Fields] = default_field(func=pc.subsecond)
-    millisecond: Optional[Fields] = default_field(func=pc.millisecond)
-    microsecond: Optional[Fields] = default_field(func=pc.microsecond)
-    nanosecond: Optional[Fields] = default_field(func=pc.nanosecond)
-
-    years_between: Optional[Arguments[T]] = default_field(func=pc.years_between)
-    quarters_between: Optional[Arguments[T]] = default_field(func=pc.quarters_between)
-    weeks_between: Optional[DayOfWeek[T]] = default_field(func=pc.weeks_between)
-    days_between: Optional[Arguments[T]] = default_field(func=pc.days_between)
-
-    hours_between: Optional[Arguments[T]] = default_field(func=pc.hours_between)
-    minutes_between: Optional[Arguments[T]] = default_field(func=pc.minutes_between)
-    seconds_between: Optional[Arguments[T]] = default_field(func=pc.seconds_between)
-    milliseconds_between: Optional[Arguments[T]] = default_field(func=pc.milliseconds_between)
-    microseconds_between: Optional[Arguments[T]] = default_field(func=pc.microseconds_between)
-    nanoseconds_between: Optional[Arguments[T]] = default_field(func=pc.nanoseconds_between)
 
 
 @operator.itemgetter(time)
@@ -347,20 +300,7 @@ class DateTimeFunction(TemporalFunction[T]):
     description=f"[functions]({links.compute}#temporal-component-extraction) for times",
 )
 class TimeFunction(TemporalFunction[T]):
-    hour: Optional[Fields] = default_field(func=pc.hour)
-    minute: Optional[Fields] = default_field(func=pc.minute)
-    second: Optional[Fields] = default_field(func=pc.second)
-    subsecond: Optional[Fields] = default_field(func=pc.subsecond)
-    millisecond: Optional[Fields] = default_field(func=pc.millisecond)
-    microsecond: Optional[Fields] = default_field(func=pc.microsecond)
-    nanosecond: Optional[Fields] = default_field(func=pc.nanosecond)
-
-    hours_between: Optional[Arguments[T]] = default_field(func=pc.hours_between)
-    minutes_between: Optional[Arguments[T]] = default_field(func=pc.minutes_between)
-    seconds_between: Optional[Arguments[T]] = default_field(func=pc.seconds_between)
-    milliseconds_between: Optional[Arguments[T]] = default_field(func=pc.milliseconds_between)
-    microseconds_between: Optional[Arguments[T]] = default_field(func=pc.microseconds_between)
-    nanoseconds_between: Optional[Arguments[T]] = default_field(func=pc.nanoseconds_between)
+    ...
 
 
 DurationFunction = Function[Duration]
@@ -609,10 +549,6 @@ class Expression:
     kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
     checked: bool = strawberry.field(default=False, description="check for overflow errors")
 
-    utf8: Optional['Utf8'] = default_field(description="utf8 string functions")
-    binary: Optional['Binary'] = default_field(description="binary functions")
-    bit_wise: Optional['BitWise'] = default_field(description="bit-wise functions")
-
     base64: List[bytes] = default_field(list)
     date_: List[date] = default_field(list, name='date')
     datetime_: List[datetime] = default_field(list, name='datetime')
@@ -626,19 +562,18 @@ class Expression:
     le: List['Expression'] = default_field(list, description="<=")
     gt: List['Expression'] = default_field(list, description=r"\>")
     ge: List['Expression'] = default_field(list, description=r"\>=")
+    inv: Optional['Expression'] = default_field(description="~")
 
-    add: List['Expression'] = default_field(list, func=pc.add)
-    multiply: List['Expression'] = default_field(list, func=pc.multiply)
-    subtract: List['Expression'] = default_field(list, func=pc.subtract)
-    divide: List['Expression'] = default_field(list, func=pc.divide)
     abs: Optional['Expression'] = default_field(func=pc.abs)
+    add: List['Expression'] = default_field(list, func=pc.add)
+    divide: List['Expression'] = default_field(list, func=pc.divide)
+    multiply: List['Expression'] = default_field(list, func=pc.multiply)
     negate: Optional['Expression'] = default_field(func=pc.negate)
-    sign: Optional['Expression'] = default_field(func=pc.sign)
     power: List['Expression'] = default_field(list, func=pc.power)
-    ln: Optional['Expression'] = default_field(func=pc.ln)
-    log1p: Optional['Expression'] = default_field(func=pc.log1p)
-    logb: List['Expression'] = default_field(list, func=pc.logb)
+    sign: Optional['Expression'] = default_field(func=pc.sign)
+    subtract: List['Expression'] = default_field(list, func=pc.subtract)
 
+    bit_wise: Optional['BitWise'] = default_field(description="bit-wise functions")
     shift_left: List['Expression'] = default_field(list, func=pc.shift_left)
     shift_right: List['Expression'] = default_field(list, func=pc.shift_right)
 
@@ -646,32 +581,41 @@ class Expression:
     floor: Optional['Expression'] = default_field(func=pc.floor)
     trunc: Optional['Expression'] = default_field(func=pc.trunc)
 
-    sin: Optional['Expression'] = default_field(func=pc.sin)
-    cos: Optional['Expression'] = default_field(func=pc.cos)
-    tan: Optional['Expression'] = default_field(func=pc.tan)
-    asin: Optional['Expression'] = default_field(func=pc.asin)
+    ln: Optional['Expression'] = default_field(func=pc.ln)
+    log1p: Optional['Expression'] = default_field(func=pc.log1p)
+    logb: List['Expression'] = default_field(list, func=pc.logb)
+
     acos: Optional['Expression'] = default_field(func=pc.acos)
+    asin: Optional['Expression'] = default_field(func=pc.asin)
     atan: Optional['Expression'] = default_field(func=pc.atan)
     atan2: List['Expression'] = default_field(list, func=pc.atan2)
+    cos: Optional['Expression'] = default_field(func=pc.cos)
+    sin: Optional['Expression'] = default_field(func=pc.sin)
+    tan: Optional['Expression'] = default_field(func=pc.tan)
 
     and_: List['Expression'] = default_field(list, name='and', description="&")
-    or_: List['Expression'] = default_field(list, name='or', description="|")
     and_not: List['Expression'] = default_field(list, func=pc.and_not)
+    or_: List['Expression'] = default_field(list, name='or', description="|")
     xor: List['Expression'] = default_field(list, func=pc.xor)
 
-    inv: Optional['Expression'] = default_field(description="~")
+    utf8: Optional['Utf8'] = default_field(description="utf8 string functions")
+    string_is_ascii: Optional['Expression'] = default_field(func=pc.string_is_ascii)
+
+    binary: Optional['Binary'] = default_field(description="binary functions")
+
     is_finite: Optional['Expression'] = default_field(func=pc.is_finite)
     is_inf: Optional['Expression'] = default_field(func=pc.is_inf)
     is_nan: Optional['Expression'] = default_field(func=pc.is_nan)
-    is_leap_year: Optional['Expression'] = default_field(func=pc.is_leap_year)
-    string_is_ascii: Optional['Expression'] = default_field(func=pc.string_is_ascii)
+    true_unless_null: Optional['Expression'] = default_field(func=pc.true_unless_null)
 
-    unaries = ('inv', 'is_finite', 'is_inf', 'is_nan', 'is_leap_year', 'string_is_ascii')
-    unaries += ('abs', 'negate', 'sign', 'ln', 'log1p', 'ceil', 'floor', 'trunc')  # type: ignore
-    unaries += ('sin', 'cos', 'tan', 'asin', 'acos', 'atan')  # type: ignore
+    temporal: Optional['Temporal'] = default_field(description="temporal functions")
+
+    unaries = ('inv', 'abs', 'negate', 'sign', 'ceil', 'floor', 'trunc')
+    unaries += ('ln', 'log1p', 'acos', 'asin', 'atan', 'cos', 'sin', 'tan')  # type: ignore
+    unaries += ('string_is_ascii', 'is_finite', 'is_inf', 'is_nan')  # type: ignore
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'subtract', 'divide', 'power', 'logb')
-    variadics += ('shift_left', 'shift_right', 'atan2', 'and_not')  # type: ignore
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract')
+    variadics += ('shift_left', 'shift_right', 'logb', 'atan2', 'and_not')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
 
     def to_arrow(self) -> Optional[ds.Expression]:
@@ -700,7 +644,7 @@ class Expression:
                 else:
                     field = self.getfunc(op)(*exprs)
                 fields.append(field)
-        for group in (self.utf8, self.binary, self.bit_wise):
+        for group in (self.bit_wise, self.utf8, self.binary, self.temporal):
             if group is not UNSET:
                 fields += group.to_fields()  # type: ignore
         for op in self.unaries:
@@ -776,10 +720,10 @@ class Utf8(FieldGroup):
     capitalize: Optional[Expression] = default_field(func=pc.utf8_capitalize)
     length: Optional[Expression] = default_field(func=pc.utf8_length)
     lower: Optional[Expression] = default_field(func=pc.utf8_lower)
-    upper: Optional[Expression] = default_field(func=pc.utf8_upper)
+    reverse: Optional[Expression] = default_field(func=pc.utf8_reverse)
     swapcase: Optional[Expression] = default_field(func=pc.utf8_swapcase)
     title: Optional[Expression] = default_field(func=pc.utf8_title)
-    reverse: Optional[Expression] = default_field(func=pc.utf8_reverse)
+    upper: Optional[Expression] = default_field(func=pc.utf8_upper)
 
     prefix = 'utf8_'
 
@@ -787,10 +731,10 @@ class Utf8(FieldGroup):
 @strawberry.input(description="Binary functions.")
 class Binary(FieldGroup):
     length: Optional[Expression] = default_field(func=pc.binary_length)
+    repeat: List[Expression] = default_field(list, func=pc.binary_repeat)
     reverse: Optional[Expression] = default_field(func=pc.binary_reverse)
 
     join: List[Expression] = default_field(list, func=pc.binary_join)
-    repeat: List[Expression] = default_field(list, func=pc.binary_repeat)
 
     prefix = 'binary_'
 
@@ -798,8 +742,50 @@ class Binary(FieldGroup):
 @strawberry.input(description="Bit-wise functions.")
 class BitWise(FieldGroup):
     and_: List[Expression] = default_field(list, name='and', func=pc.bit_wise_and)
+    not_: List[Expression] = default_field(list, name='not', func=pc.bit_wise_not)
     or_: List[Expression] = default_field(list, name='or', func=pc.bit_wise_or)
     xor: List[Expression] = default_field(list, func=pc.bit_wise_xor)
-    not_: List[Expression] = default_field(list, name='not', func=pc.bit_wise_not)
 
     prefix = 'bit_wise_'
+
+
+@strawberry.input(description="Temporal functions.")
+class Temporal(FieldGroup):
+    day: Optional[Expression] = default_field(func=pc.day)
+    day_of_year: Optional[Expression] = default_field(func=pc.day_of_year)
+    hour: Optional[Expression] = default_field(func=pc.hour)
+    iso_week: Optional[Expression] = default_field(func=pc.iso_week)
+    iso_year: Optional[Expression] = default_field(func=pc.iso_year)
+    iso_calendar: Optional[Expression] = default_field(func=pc.iso_calendar)
+    is_leap_year: Optional[Expression] = default_field(func=pc.is_leap_year)
+
+    microsecond: Optional[Expression] = default_field(func=pc.microsecond)
+    millisecond: Optional[Expression] = default_field(func=pc.millisecond)
+    minute: Optional[Expression] = default_field(func=pc.minute)
+    month: Optional[Expression] = default_field(func=pc.month)
+    nanosecond: Optional[Expression] = default_field(func=pc.nanosecond)
+    quarter: Optional[Expression] = default_field(func=pc.quarter)
+    second: Optional[Expression] = default_field(func=pc.second)
+    subsecond: Optional[Expression] = default_field(func=pc.subsecond)
+    us_week: Optional[Expression] = default_field(func=pc.us_week)
+    us_year: Optional[Expression] = default_field(func=pc.us_year)
+    year: Optional[Expression] = default_field(func=pc.year)
+    year_month_day: Optional[Expression] = default_field(func=pc.year_month_day)
+
+    day_time_interval_between: List[Expression] = default_field(
+        list, func=pc.day_time_interval_between
+    )
+    days_between: List[Expression] = default_field(list, func=pc.days_between)
+    hours_between: List[Expression] = default_field(list, func=pc.hours_between)
+    microseconds_between: List[Expression] = default_field(list, func=pc.microseconds_between)
+    milliseconds_between: List[Expression] = default_field(list, func=pc.milliseconds_between)
+    minutes_between: List[Expression] = default_field(list, func=pc.minutes_between)
+    month_day_nano_interval_between: List[Expression] = default_field(
+        list, func=pc.month_day_nano_interval_between
+    )
+    month_interval_between: List[Expression] = default_field(list, func=pc.month_interval_between)
+    nanoseconds_between: List[Expression] = default_field(list, func=pc.nanoseconds_between)
+    quarters_between: List[Expression] = default_field(list, func=pc.quarters_between)
+    seconds_between: List[Expression] = default_field(list, func=pc.seconds_between)
+    weeks_between: List[Expression] = default_field(list, func=pc.weeks_between)
+    years_between: List[Expression] = default_field(list, func=pc.years_between)
