@@ -17,7 +17,7 @@ from strawberry.types import Info
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Diff, Expression, Filter, Projection, links
 from .inputs import Base64Function, DateFunction, DateTimeFunction, DecimalFunction
-from .inputs import DurationFunction, FloatFunction, IntFunction, LongFunction, ListFunction
+from .inputs import DurationFunction, ListFunction, NumericFunction
 from .inputs import StringFunction, StructFunction, TimeFunction
 from .models import Column, annotate, doc_field, selections
 from .scalars import Long
@@ -274,9 +274,8 @@ class Dataset:
         datetime: List[DateTimeFunction] = [],
         decimal: List[DecimalFunction] = [],
         duration: List[DurationFunction] = [],
-        float: List[FloatFunction] = [],
-        int: List[IntFunction] = [],
-        long: List[LongFunction] = [],
+        float: List[NumericFunction[float]] = [],
+        int: List[NumericFunction[int]] = [],
         list: List[ListFunction] = [],
         string: List[StringFunction] = [],
         struct: List[StructFunction] = [],
@@ -297,7 +296,7 @@ class Dataset:
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
-        args = base64, date, datetime, decimal, duration, float, long, int, string, struct, time
+        args = base64, date, datetime, decimal, duration, float, int, string, struct, time
         for value in map(dict, itertools.chain(*args)):
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)

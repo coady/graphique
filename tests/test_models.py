@@ -141,9 +141,10 @@ def test_numeric(executor):
     )
     assert data == {'scan': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor(
-        '{ apply(float: {coalesce: {name: ["float", "int32"]}}) { columns { float { values } } } }'
+        '''{ scan(columns: {alias: "float", coalesce: [{name: "float"}, {name: "int32"}]}) {
+        columns { float { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'float': {'values': [0.0, None]}}}}
+    assert data == {'scan': {'columns': {'float': {'values': [0.0, None]}}}}
     data = executor(
         '''{ scan(columns: {bitWise: {not: {name: "int32"}}, alias: "int32"}) {
         columns { int32 { values } } } }'''
@@ -302,7 +303,9 @@ def test_struct(executor):
     data = executor('{ row { struct } columns { struct { value } } }')
     assert data['row']['struct'] == data['columns']['struct']['value'] == {'x': 0, 'y': None}
     with pytest.raises(ValueError, match="must be BOOL"):
-        executor('{ apply(struct: {caseWhen: {name: ["struct", "int32", "float"]}}) { type } }')
+        executor(
+            '{ scan(filter: {caseWhen: [{name: "struct"}, {name: "int32"}, {name: "float"}]}) {type } }'
+        )
 
 
 def test_dictionary(executor):
@@ -322,10 +325,10 @@ def test_dictionary(executor):
     )
     assert data == {'group': {'aggregate': {'column': {'values': [1, 0]}}}}
     data = executor(
-        '''{ apply(string: {coalesce: {name: "string", value: ""}}) {
+        '''{ scan(columns: {alias: "string", coalesce: [{name: "string"}, {value: ""}]}) {
         columns { string { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'string': {'values': ['', '']}}}}
+    assert data == {'scan': {'columns': {'string': {'values': ['', '']}}}}
 
 
 def test_selections(executor):
@@ -335,12 +338,15 @@ def test_selections(executor):
 
 def test_conditions(executor):
     data = executor(
-        '''{ apply(int: {ifElse: {name: ["bool", "int32", "float"]}}) {
+        '''{ scan(columns: {alias: "bool", ifElse: [{name: "bool"}, {name: "int32"}, {name: "float"}]}) {
         column(name: "bool") { type } } }'''
     )
-    assert data == {'apply': {'column': {'type': 'float'}}}
+    assert data == {'scan': {'column': {'type': 'float'}}}
     with pytest.raises(ValueError, match="no kernel"):
-        executor('{ apply(int: {ifElse: {name: ["struct", "int32", "float"]}}) { type } }')
+        executor(
+            '''{ scan(columns: {alias: "bool",
+            ifElse: [{name: "struct"}, {name: "int32"}, {name: "float"}]}) { type } }'''
+        )
 
 
 def test_long(executor):
@@ -364,15 +370,10 @@ def test_base64(executor):
     )
     assert data == {'apply': {'columns': {'binary': {'values': ['', '']}}}}
     data = executor(
-        '''{ apply(base64: {coalesce: {name: "binary", value: "Xw=="}}) {
+        '''{ scan(columns: {alias: "binary", coalesce: [{name: "binary"}, {base64: "Xw=="}]}) {
         columns { binary { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
-    data = executor(
-        '''{ apply(base64: {coalesce: {name: [null, "binary"], value: "Xw=="}}) {
-        columns { binary { values } } } }'''
-    )
-    assert data == {'apply': {'columns': {'binary': {'values': ['Xw==', 'Xw==']}}}}
+    assert data == {'scan': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
     data = executor(
         '''{ apply(base64: {binaryJoinElementWise: {
         name: ["binary", "binary"], value: "Xw==", nullHandling: "replace"}}) {

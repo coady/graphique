@@ -150,11 +150,8 @@ class SetLookup(Arguments[T]):
 
 @strawberry.input(description=f"applied [functions]({links.compute})")
 class Function(Generic[T], Input):
-    coalesce: Optional[Arguments[T]] = default_field(func=pc.coalesce)
     fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
     fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
-    if_else: Optional[Arguments[T]] = default_field(func=pc.if_else)
-    replace_with_mask: Optional[Fields] = default_field(func=pc.replace_with_mask)
     index_in: Optional[SetLookup[T]] = default_field(func=pc.index_in)
 
 
@@ -196,30 +193,6 @@ class NumericFunction(OrdinalFunction[T]):
 
     round: Optional[Round] = default_field(func=pc.round)
     round_to_multiple: Optional[RoundToMultiple] = default_field(func=pc.round_to_multiple)
-
-
-@operator.itemgetter(int)
-@strawberry.input(
-    name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for ints"
-)
-class IntFunction(NumericFunction[T]):
-    choose: Optional[Fields] = default_field(func=pc.choose)
-
-
-@operator.itemgetter(Long)
-@strawberry.input(
-    name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for floats"
-)
-class LongFunction(NumericFunction[T]):
-    choose: Optional[Fields] = default_field(func=pc.choose)
-
-
-@operator.itemgetter(float)
-@strawberry.input(
-    name='Function', description=f"[functions]({links.compute}#arithmetic-functions) for floats"
-)
-class FloatFunction(NumericFunction[T]):
-    ...
 
 
 DecimalFunction = Function[Decimal]
@@ -413,7 +386,6 @@ class StructField(Fields):
 class StructFunction(Input):
     fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
     fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
-    case_when: Optional[Fields] = default_field(func=pc.case_when)
     struct_field: Optional[StructField] = default_field(func=pc.struct_field)
 
 
@@ -606,7 +578,14 @@ class Expression:
     is_nan: Optional['Expression'] = default_field(func=pc.is_nan)
     true_unless_null: Optional['Expression'] = default_field(func=pc.true_unless_null)
 
+    case_when: List['Expression'] = default_field([], func=pc.case_when)
+    choose: List['Expression'] = default_field([], func=pc.choose)
+    coalesce: List['Expression'] = default_field([], func=pc.coalesce)
+    if_else: List['Expression'] = default_field([], func=pc.if_else)
+
     temporal: Optional['Temporal'] = default_field(description="temporal functions")
+
+    replace_with_mask: List['Expression'] = default_field([], func=pc.replace_with_mask)
 
     unaries = ('inv', 'abs', 'negate', 'sign', 'ceil', 'floor', 'trunc')
     unaries += ('ln', 'log1p', 'acos', 'asin', 'atan', 'cos', 'sin', 'tan')  # type: ignore
@@ -614,6 +593,7 @@ class Expression:
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
     variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract')
     variadics += ('shift_left', 'shift_right', 'logb', 'atan2', 'and_not')  # type: ignore
+    variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
 
     def to_arrow(self) -> Optional[ds.Expression]:
