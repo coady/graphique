@@ -7,7 +7,8 @@ import collections
 import inspect
 import itertools
 import types
-from datetime import timedelta
+from datetime import time, timedelta
+from decimal import Decimal
 from typing import Iterable, Iterator, List, Mapping, Optional, Union, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -16,11 +17,11 @@ import strawberry.asgi
 from strawberry.types import Info
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Diff, Expression, Filter, Projection, links
-from .inputs import Base64Function, DateFunction, DateTimeFunction, DecimalFunction
-from .inputs import DurationFunction, ListFunction, NumericFunction
-from .inputs import StringFunction, StructFunction, TimeFunction
+from .inputs import Base64Function, DateFunction, DateTimeFunction
+from .inputs import Function, ListFunction, NumericFunction
+from .inputs import StringFunction, StructFunction, TemporalFunction
 from .models import Column, annotate, doc_field, selections
-from .scalars import Long
+from .scalars import Duration, Long
 
 Root = Union[ds.Dataset, ds.Scanner, pa.Table]
 
@@ -272,14 +273,14 @@ class Dataset:
         base64: List[Base64Function] = [],
         date: List[DateFunction] = [],
         datetime: List[DateTimeFunction] = [],
-        decimal: List[DecimalFunction] = [],
-        duration: List[DurationFunction] = [],
+        decimal: List[Function[Decimal]] = [],
+        duration: List[Function[Duration]] = [],
         float: List[NumericFunction[float]] = [],
         int: List[NumericFunction[int]] = [],
         list: List[ListFunction] = [],
         string: List[StringFunction] = [],
         struct: List[StructFunction] = [],
-        time: List[TimeFunction] = [],
+        time: List[TemporalFunction[time]] = [],
     ) -> 'Dataset':
         """Return view of table with functions applied across columns.
 

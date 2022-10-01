@@ -130,9 +130,10 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'indicesNonzero': []}}}
 
     data = executor(
-        '{ apply(int: {minElementWise: {name: "int32"}}) { columns { int32 { values } } } }'
+        '''{ scan(columns: {alias: "int32", elementWise: {min: {name: "int32"}}}) {
+        columns { int32 { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'int32': {'values': [0, None]}}}}
+    assert data == {'scan': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor('{ column(name: "float", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
     data = executor(

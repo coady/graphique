@@ -19,7 +19,7 @@ from strawberry.scalars import Base64, JSON
 from strawberry.types.fields.resolver import StrawberryResolver
 from typing_extensions import Annotated
 from .core import ListChunk, Column
-from .scalars import Duration, Long, classproperty
+from .scalars import Long, classproperty
 
 T = TypeVar('T')
 
@@ -138,32 +138,16 @@ class Arguments(Generic[T], Fields):
         )
 
 
-@strawberry.input
-class SetLookup(Arguments[T]):
-    skip_nulls: bool = False
-
-    def serialize(self, table):
-        """Return (name, args, kwargs) suitable for computing."""
-        name, (values, *value_set), kwargs = super().serialize(table)
-        return name, (values, pa.array(value_set, self.cast or None)), kwargs
-
-
 @strawberry.input(description=f"applied [functions]({links.compute})")
 class Function(Generic[T], Input):
     fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
     fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
-    index_in: Optional[SetLookup[T]] = default_field(func=pc.index_in)
 
 
 @strawberry.input
-class ElementWiseAggregate(Arguments[T]):
-    skip_nulls: bool = True
-
-
-@strawberry.input
-class OrdinalFunction(Function[T]):
-    min_element_wise: Optional[ElementWiseAggregate[T]] = default_field(func=pc.min_element_wise)
-    max_element_wise: Optional[ElementWiseAggregate[T]] = default_field(func=pc.max_element_wise)
+class Cumulative(Fields):
+    start: float = 0.0
+    skip_nulls: bool = False
 
 
 @strawberry.input
@@ -187,15 +171,12 @@ class Digitize(Arguments[T]):
 
 
 @strawberry.input(description=f"arithmetic [functions]({links.compute}#arithmetic-functions)")
-class NumericFunction(OrdinalFunction[T]):
+class NumericFunction(Function[T]):
     digitize: Optional[Digitize[T]] = default_field(func=Column.digitize)
-    cumulative_sum: Optional[ElementWiseAggregate[T]] = default_field(func=pc.cumulative_sum)
+    cumulative_sum: Optional[Cumulative] = default_field(func=pc.cumulative_sum)
 
     round: Optional[Round] = default_field(func=pc.round)
     round_to_multiple: Optional[RoundToMultiple] = default_field(func=pc.round_to_multiple)
-
-
-DecimalFunction = Function[Decimal]
 
 
 @strawberry.input
@@ -265,18 +246,6 @@ class DateTimeFunction(TemporalFunction[T]):
     day_of_week: Optional[DayOfWeek[T]] = default_field(func=pc.day_of_week)
 
 
-@operator.itemgetter(time)
-@strawberry.input(
-    name='Function',
-    description=f"[functions]({links.compute}#temporal-component-extraction) for times",
-)
-class TimeFunction(TemporalFunction[T]):
-    ...
-
-
-DurationFunction = Function[Duration]
-
-
 @strawberry.input
 class Join(Arguments[T]):
     null_handling: str = 'emit_null'
@@ -341,7 +310,7 @@ class Slice(Fields):
 @strawberry.input(
     name='ingFunction', description=f"[functions]({links.compute}#string-transforms) for strings"
 )
-class StringFunction(OrdinalFunction[T]):
+class StringFunction(Function[T]):
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
 
     ends_with: Optional[MatchSubstring[T]] = default_field(func=pc.ends_with)
@@ -563,6 +532,8 @@ class Expression:
     sin: Optional['Expression'] = default_field(func=pc.sin)
     tan: Optional['Expression'] = default_field(func=pc.tan)
 
+    element_wise: Optional['ElementWise'] = default_field(description="element-wise functions")
+
     and_: List['Expression'] = default_field([], name='and', description="&")
     and_not: List['Expression'] = default_field([], func=pc.and_not)
     or_: List['Expression'] = default_field([], name='or', description="|")
@@ -572,6 +543,7 @@ class Expression:
     string_is_ascii: Optional['Expression'] = default_field(func=pc.string_is_ascii)
 
     binary: Optional['Binary'] = default_field(description="binary functions")
+    set_lookup: Optional['SetLookup'] = default_field(description="set lookup functions")
 
     is_finite: Optional['Expression'] = default_field(func=pc.is_finite)
     is_inf: Optional['Expression'] = default_field(func=pc.is_inf)
@@ -595,6 +567,7 @@ class Expression:
     variadics += ('shift_left', 'shift_right', 'logb', 'atan2', 'and_not')  # type: ignore
     variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
+    groups = ('bit_wise', 'element_wise', 'utf8', 'binary', 'set_lookup', 'temporal')
 
     def to_arrow(self) -> Optional[ds.Expression]:
         """Transform GraphQL expression into a dataset expression."""
@@ -622,7 +595,7 @@ class Expression:
                 else:
                     field = self.getfunc(op)(*exprs)
                 fields.append(field)
-        for group in (self.bit_wise, self.utf8, self.binary, self.temporal):
+        for group in operator.attrgetter(*self.groups)(self):
             if group is not UNSET:
                 fields += group.to_fields()  # type: ignore
         for op in self.unaries:
@@ -668,18 +641,23 @@ class Projection(Expression):
 
 
 class FieldGroup:
-    """Fields grouped by naming conventions."""
+    """Fields grouped by naming conventions or common options."""
 
     prefix: str = ''
 
     def to_fields(self) -> Iterable[ds.Expression]:
+        funcs, arguments, options = [], [], {}
         for field in self._type_definition.fields:  # type: ignore
-            exprs = getattr(self, field.name)
-            func = getattr(pc, self.prefix + field.name.rstrip('_'))
-            if isinstance(exprs, Expression):
-                yield func(exprs.to_arrow())
-            elif exprs:
-                yield func(*[expr.to_arrow() for expr in exprs])
+            value = getattr(self, field.name)
+            if isinstance(value, Expression):
+                value = [value]
+            if not isinstance(value, (list, type(UNSET))):
+                options[field.name] = value
+            elif value:
+                funcs.append(getattr(pc, self.prefix + field.name.rstrip('_')))
+                arguments.append([expr.to_arrow() for expr in value])
+        for func, args in zip(funcs, arguments):
+            yield func(*args, **options)
 
 
 @strawberry.input(description="Utf8 string functions.")
@@ -767,3 +745,20 @@ class Temporal(FieldGroup):
     seconds_between: List[Expression] = default_field([], func=pc.seconds_between)
     weeks_between: List[Expression] = default_field([], func=pc.weeks_between)
     years_between: List[Expression] = default_field([], func=pc.years_between)
+
+
+@strawberry.input(description="Element-wise functions.")
+class ElementWise(FieldGroup):
+    min_element_wise: List[Expression] = default_field([], name='min', func=pc.min_element_wise)
+    max_element_wise: List[Expression] = default_field([], name='max', func=pc.max_element_wise)
+    skip_nulls: bool = True
+
+
+@strawberry.input(description="Set lookup functions.")
+class SetLookup(FieldGroup):
+    index_in: List[Expression] = default_field([], func=pc.index_in)
+    skip_nulls: bool = False
+
+    def to_fields(self) -> Iterable[ds.Expression]:
+        values, value_set = [expr.to_arrow() for expr in self.index_in]
+        yield pc.index_in(values, pa.array(value_set), skip_nulls=self.skip_nulls)

@@ -45,10 +45,10 @@ def test_floats(client):
     (quantile,) = data['columns']['latitude']['quantile']
     assert quantile == pytest.approx(39.12054)
     data = client.execute(
-        '''{ apply(float: {minElementWise: {name: ["latitude", "longitude"]}}) {
+        '''{ scan(columns: {alias: "latitude", elementWise: {min: [{name: "latitude"}, {name: "longitude"}]}}) {
         columns { latitude { min } } } }'''
     )
-    assert data == {'apply': {'columns': {'latitude': {'min': pytest.approx(-174.213333)}}}}
+    assert data == {'scan': {'columns': {'latitude': {'min': pytest.approx(-174.213333)}}}}
     data = client.execute(
         f'''{{ apply(int: {{digitize: {{name: "latitude", bins: {list(range(90))} }}}})
         {{ columns {{ latitude {{ min max unique {{ length }} }} }} }} }}'''
@@ -115,10 +115,10 @@ def test_strings(client):
     )
     assert data == {'apply': {'scan': {'length': 42}}}
     data = client.execute(
-        '''{ apply(string: {indexIn: {name: "state", value: ["CA", "OR"]}})
-        { column(name: "state") { ... on IntColumn { unique { values } } } } }'''
+        '''{ scan(columns: {alias: "idx", setLookup: {indexIn: [{name: "state"}, {value: ["CA", "OR"]}]}})
+        { column(name: "idx") { ... on IntColumn { unique { values } } } } }'''
     )
-    assert data == {'apply': {'column': {'unique': {'values': [None, 0, 1]}}}}
+    assert data == {'scan': {'column': {'unique': {'values': [None, 0, 1]}}}}
 
 
 def test_string_methods(client):
@@ -236,19 +236,24 @@ def test_scan(client):
         '{ scan(columns: {name: "latitude", cast: "int32", safe: false}) { column(name: "latitude") { type } } }'
     )
     assert data == {'scan': {'column': {'type': 'int32'}}}
+    data = client.execute(
+        '''{ scan(columns: {alias: "longitude", elementWise: {max: [{name: "longitude"}, {name: "latitude"}]}})
+        { columns { longitude { min } } } }'''
+    )
+    assert data['scan']['columns']['longitude']['min'] == pytest.approx(17.963333)
+    data = client.execute(
+        '''{ scan(columns: {alias: "latitude", elementWise: {min: [{name: "longitude"}, {name: "latitude"}]}})
+        { columns { latitude { max } } } }'''
+    )
+    assert data['scan']['columns']['latitude']['max'] == pytest.approx(-65.301389)
+    data = client.execute(
+        '''{ scan(columns: {alias: "state", elementWise: {min: [{name: "state"}, {name: "county"}], skipNulls: false}})
+        { columns { state { values } } } }'''
+    )
+    assert data['scan']['columns']['state']['values'][0] == 'NY'
 
 
 def test_apply(client):
-    data = client.execute(
-        '''{ apply(float: {maxElementWise: {name: ["longitude", "latitude"]}})
-        { columns { longitude { min } } } }'''
-    )
-    assert data['apply']['columns']['longitude']['min'] == pytest.approx(17.963333)
-    data = client.execute(
-        '''{ apply(float: {minElementWise: {name: ["latitude", "longitude"]}})
-        { columns { latitude { max } } } }'''
-    )
-    assert data['apply']['columns']['latitude']['max'] == pytest.approx(-65.301389)
     data = client.execute(
         '''{ apply(string: {findSubstring: {name: "city", value: "mountain"}})
         { column(name: "city") { ... on IntColumn { unique { values } } } } }'''
@@ -265,10 +270,10 @@ def test_apply(client):
     )
     assert data['apply']['columns']['state']['values'][0] == 'NY Suffolk'
     data = client.execute(
-        '''{ apply(string: {minElementWise: {name: ["state", "county"], skipNulls: false}})
-        { columns { state { values } } } }'''
+        '''{ apply(float: {cumulativeSum: {name: "zipcode", skipNulls: false}})
+        { columns { zipcode { value(index: -1) } } } }'''
     )
-    assert data['apply']['columns']['state']['values'][0] == 'NY'
+    assert data == {'apply': {'columns': {'zipcode': {'value': 2066562337}}}}
 
 
 def test_sort(client):
