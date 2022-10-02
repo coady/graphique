@@ -18,7 +18,7 @@ from strawberry.field import StrawberryField
 from strawberry.scalars import Base64, JSON
 from strawberry.types.fields.resolver import StrawberryResolver
 from typing_extensions import Annotated
-from .core import ListChunk, Column
+from .core import ListChunk
 from .scalars import Long, classproperty
 
 T = TypeVar('T')
@@ -138,12 +138,6 @@ class Arguments(Generic[T], Fields):
         )
 
 
-@strawberry.input(description=f"applied [functions]({links.compute})")
-class Function(Generic[T], Input):
-    fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
-    fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
-
-
 @strawberry.input
 class Cumulative(Fields):
     start: float = 0.0
@@ -165,16 +159,13 @@ class RoundToMultiple(Fields):
 @strawberry.input(
     description="numpy [digitize](https://numpy.org/doc/stable/reference/generated/numpy.digitize.html)"
 )
-class Digitize(Arguments[T]):
-    bins: List[T]
+class Digitize(Fields):
+    bins: List[float]
     right: bool = False
 
 
 @strawberry.input(description=f"arithmetic [functions]({links.compute}#arithmetic-functions)")
-class NumericFunction(Function[T]):
-    digitize: Optional[Digitize[T]] = default_field(func=Column.digitize)
-    cumulative_sum: Optional[Cumulative] = default_field(func=pc.cumulative_sum)
-
+class NumericFunction(Generic[T], Input):
     round: Optional[Round] = default_field(func=pc.round)
     round_to_multiple: Optional[RoundToMultiple] = default_field(func=pc.round_to_multiple)
 
@@ -215,7 +206,7 @@ class RoundTemporal(Fields):
 
 
 @strawberry.input
-class TemporalFunction(Function[T]):
+class TemporalFunction(Generic[T], Input):
     ceil_temporal: Optional[RoundTemporal] = default_field(func=pc.ceil_temporal)
     floor_temporal: Optional[RoundTemporal] = default_field(func=pc.floor_temporal)
     round_temporal: Optional[RoundTemporal] = default_field(func=pc.round_temporal)
@@ -263,7 +254,7 @@ class ReplaceSlice(Generic[T], Fields):
 @strawberry.input(
     name='Function', description=f"[functions]({links.compute}#string-transforms) for binaries"
 )
-class Base64Function(Function[T]):
+class Base64Function(Generic[T], Input):
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
     binary_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.binary_replace_slice)
 
@@ -310,7 +301,7 @@ class Slice(Fields):
 @strawberry.input(
     name='ingFunction', description=f"[functions]({links.compute}#string-transforms) for strings"
 )
-class StringFunction(Function[T]):
+class StringFunction(Generic[T], Input):
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
 
     ends_with: Optional[MatchSubstring[T]] = default_field(func=pc.ends_with)
@@ -347,18 +338,6 @@ class StringFunction(Function[T]):
 
 
 @strawberry.input
-class StructField(Fields):
-    indices: List[int]
-
-
-@strawberry.input(description=f"[functions]({links.compute}#selecting-multiplexing) for structs")
-class StructFunction(Input):
-    fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
-    fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
-    struct_field: Optional[StructField] = default_field(func=pc.struct_field)
-
-
-@strawberry.input
 class Element(Fields):
     index: int
 
@@ -388,8 +367,6 @@ class Quantile(Fields):
 @strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for list")
 class ListFunction(Input):
     element: Optional[Element] = default_field(func=ListChunk.element)
-    fill_null_backward: Optional[Fields] = default_field(func=pc.fill_null_backward)
-    fill_null_forward: Optional[Fields] = default_field(func=pc.fill_null_forward)
     filter: 'Expression' = default_field({}, description="filter within list scalars")
     index: Optional[Index] = default_field(func=pc.index)
     mode: Optional[Mode] = default_field(func=pc.mode)
@@ -757,8 +734,10 @@ class ElementWise(FieldGroup):
 @strawberry.input(description="Set lookup functions.")
 class SetLookup(FieldGroup):
     index_in: List[Expression] = default_field([], func=pc.index_in)
+    is_in: List[Expression] = default_field([], func=pc.is_in)
     skip_nulls: bool = False
 
     def to_fields(self) -> Iterable[ds.Expression]:
-        values, value_set = [expr.to_arrow() for expr in self.index_in]
-        yield pc.index_in(values, pa.array(value_set), skip_nulls=self.skip_nulls)
+        for exprs in filter(None, [self.index_in, self.is_in]):
+            values, value_set = [expr.to_arrow() for expr in exprs]
+            yield pc.index_in(values, pa.array(value_set), skip_nulls=self.skip_nulls)

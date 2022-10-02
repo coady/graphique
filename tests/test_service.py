@@ -50,7 +50,7 @@ def test_floats(client):
     )
     assert data == {'scan': {'columns': {'latitude': {'min': pytest.approx(-174.213333)}}}}
     data = client.execute(
-        f'''{{ apply(int: {{digitize: {{name: "latitude", bins: {list(range(90))} }}}})
+        f'''{{ apply(digitize: {{name: "latitude", bins: {list(range(90))}}})
         {{ columns {{ latitude {{ min max unique {{ length }} }} }} }} }}'''
     )
     latitudes = data['apply']['columns']['latitude']
@@ -270,7 +270,7 @@ def test_apply(client):
     )
     assert data['apply']['columns']['state']['values'][0] == 'NY Suffolk'
     data = client.execute(
-        '''{ apply(float: {cumulativeSum: {name: "zipcode", skipNulls: false}})
+        '''{ apply(cumulativeSum: {name: "zipcode", skipNulls: false})
         { columns { zipcode { value(index: -1) } } } }'''
     )
     assert data == {'apply': {'columns': {'zipcode': {'value': 2066562337}}}}

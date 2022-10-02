@@ -8,20 +8,19 @@ import inspect
 import itertools
 import types
 from datetime import time, timedelta
-from decimal import Decimal
-from typing import Iterable, Iterator, List, Mapping, Optional, Union, no_type_check
+from typing import Callable, Iterable, Iterator, List, Mapping, Optional, Union, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
+from typing_extensions import Annotated
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Diff, Expression, Filter, Projection, links
-from .inputs import Base64Function, DateFunction, DateTimeFunction
-from .inputs import Function, ListFunction, NumericFunction
-from .inputs import StringFunction, StructFunction, TemporalFunction
+from .inputs import Aggregations, Cumulative, Diff, Digitize, Expression, Fields, Filter, Projection
+from .inputs import links, Base64Function, DateFunction, DateTimeFunction, ListFunction
+from .inputs import NumericFunction, StringFunction, TemporalFunction
 from .models import Column, annotate, doc_field, selections
-from .scalars import Duration, Long
+from .scalars import Long
 
 Root = Union[ds.Dataset, ds.Scanner, pa.Table]
 
@@ -39,6 +38,12 @@ def references(field) -> Iterator:
     else:
         for name in ('name', 'arguments', 'selections'):
             yield from references(getattr(field, name, []))
+
+
+def doc_argument(annotation, func: Callable, **kwargs):
+    """Use function doc for argument description."""
+    kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
+    return Annotated[annotation, strawberry.argument(**kwargs)]
 
 
 @strawberry.type(description="dataset schema")
@@ -270,16 +275,16 @@ class Dataset:
     def apply(
         self,
         info: Info,
+        digitize: doc_argument(List[Digitize], func=C.digitize) = [],
+        cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
+        fill_null_backward: doc_argument(List[Fields], func=pc.fill_null_backward) = [],
+        fill_null_forward: doc_argument(List[Fields], func=pc.fill_null_forward) = [],
         base64: List[Base64Function] = [],
         date: List[DateFunction] = [],
         datetime: List[DateTimeFunction] = [],
-        decimal: List[Function[Decimal]] = [],
-        duration: List[Function[Duration]] = [],
         float: List[NumericFunction[float]] = [],
-        int: List[NumericFunction[int]] = [],
         list: List[ListFunction] = [],
         string: List[StringFunction] = [],
-        struct: List[StructFunction] = [],
         time: List[TemporalFunction[time]] = [],
     ) -> 'Dataset':
         """Return view of table with functions applied across columns.
@@ -297,11 +302,16 @@ class Dataset:
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
-        args = base64, date, datetime, decimal, duration, float, int, string, struct, time
-        for value in map(dict, itertools.chain(*args)):
+        for value in map(dict, itertools.chain(base64, date, datetime, float, string, time)):
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
-                columns[name] = C.call(getattr(pc, func, C.digitize), *args, **kwargs)
+                columns[name] = getattr(pc, func)(*args, **kwargs)
+        args = digitize, cumulative_sum, fill_null_backward, fill_null_forward
+        funcs = C.digitize, pc.cumulative_sum, pc.fill_null_backward, pc.fill_null_forward
+        for fields, func in zip(args, funcs):
+            for field in fields:
+                name, args, kwargs = field.serialize(table)
+                columns[name] = func(*args, **kwargs)
         return type(self)(T.union(table, pa.table(columns)))
 
     @doc_field

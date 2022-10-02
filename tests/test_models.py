@@ -367,7 +367,7 @@ def test_base64(executor):
     )
     assert data == {'scan': {'columns': {'binary': {'values': ['', None]}}}}
     data = executor(
-        '{ apply(base64: {fillNullForward: {name: "binary"}}) { columns { binary { values } } } }'
+        '{ apply(fillNullForward: {name: "binary"}) { columns { binary { values } } } }'
     )
     assert data == {'apply': {'columns': {'binary': {'values': ['', '']}}}}
     data = executor(
