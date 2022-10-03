@@ -260,11 +260,6 @@ class Base64Function(Generic[T], Input):
 
 
 @strawberry.input
-class MatchSubstring(Arguments[T]):
-    ignore_case: bool = False
-
-
-@strawberry.input
 class Split(Arguments[T]):
     max_splits: Optional[int] = None
     reverse: bool = False
@@ -274,13 +269,6 @@ class Split(Arguments[T]):
 class Pad(Fields):
     width: int
     padding: str = ''
-
-
-@strawberry.input
-class ReplaceSubstring(Fields):
-    pattern: str
-    replacement: str
-    max_replacements: Optional[int] = None
 
 
 @strawberry.input
@@ -304,34 +292,13 @@ class Slice(Fields):
 class StringFunction(Generic[T], Input):
     binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
 
-    ends_with: Optional[MatchSubstring[T]] = default_field(func=pc.ends_with)
-    starts_with: Optional[MatchSubstring[T]] = default_field(func=pc.starts_with)
-    find_substring: Optional[MatchSubstring[T]] = default_field(func=pc.find_substring)
-    find_substring_regex: Optional[MatchSubstring[T]] = default_field(func=pc.find_substring_regex)
-    count_substring: Optional[MatchSubstring[T]] = default_field(func=pc.count_substring)
-    match_substring: Optional[MatchSubstring[T]] = default_field(func=pc.match_substring)
-    match_substring_regex: Optional[MatchSubstring[T]] = default_field(
-        func=pc.match_substring_regex
-    )
-    match_like: Optional[MatchSubstring[T]] = default_field(func=pc.match_like)
-
     utf8_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.utf8_replace_slice)
     utf8_split_whitespace: Optional[Split] = default_field(func=pc.utf8_split_whitespace)
     split_pattern: Optional[Split] = default_field(func=pc.split_pattern)
     split_pattern_regex: Optional[Split] = default_field(func=pc.split_pattern_regex)
-    utf8_ltrim: Optional[Arguments[T]] = default_field(func=pc.utf8_ltrim)
-    utf8_ltrim_whitespace: Optional[Fields] = default_field(func=pc.utf8_ltrim_whitespace)
-    utf8_rtrim: Optional[Arguments[T]] = default_field(func=pc.utf8_rtrim)
-    utf8_rtrim_whitespace: Optional[Fields] = default_field(func=pc.utf8_rtrim_whitespace)
-    utf8_trim: Optional[Arguments[T]] = default_field(func=pc.utf8_trim)
-    utf8_trim_whitespace: Optional[Fields] = default_field(func=pc.utf8_trim_whitespace)
     utf8_center: Optional[Pad] = default_field(func=pc.utf8_center)
     utf8_lpad: Optional[Pad] = default_field(func=pc.utf8_lpad)
     utf8_rpad: Optional[Pad] = default_field(func=pc.utf8_rpad)
-    replace_substring: Optional[ReplaceSubstring] = default_field(func=pc.replace_substring)
-    replace_substring_regex: Optional[ReplaceSubstring] = default_field(
-        func=pc.replace_substring_regex
-    )
     extract_regex: Optional[Arguments[T]] = default_field(func=pc.extract_regex)
     strptime: Optional[Strptime] = default_field(func=pc.strptime)
     utf8_slice_codeunits: Optional[Slice] = default_field(func=pc.utf8_slice_codeunits)
@@ -518,6 +485,7 @@ class Expression:
 
     utf8: Optional['Utf8'] = default_field(description="utf8 string functions")
     string_is_ascii: Optional['Expression'] = default_field(func=pc.string_is_ascii)
+    substring: Optional['MatchSubstring'] = default_field(description="match substring functions")
 
     binary: Optional['Binary'] = default_field(description="binary functions")
     set_lookup: Optional['SetLookup'] = default_field(description="set lookup functions")
@@ -544,7 +512,7 @@ class Expression:
     variadics += ('shift_left', 'shift_right', 'logb', 'atan2', 'and_not')  # type: ignore
     variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
-    groups = ('bit_wise', 'element_wise', 'utf8', 'binary', 'set_lookup', 'temporal')
+    groups = ('bit_wise', 'element_wise', 'utf8', 'substring', 'binary', 'set_lookup', 'temporal')
 
     def to_arrow(self) -> Optional[ds.Expression]:
         """Transform GraphQL expression into a dataset expression."""
@@ -631,10 +599,14 @@ class FieldGroup:
             if not isinstance(value, (list, type(UNSET))):
                 options[field.name] = value
             elif value:
-                funcs.append(getattr(pc, self.prefix + field.name.rstrip('_')))
+                funcs.append(self.getfunc(field.name))
                 arguments.append([expr.to_arrow() for expr in value])
         for func, args in zip(funcs, arguments):
-            yield func(*args, **options)
+            keys = set(options) & set(inspect.signature(func).parameters)
+            yield func(*args, **{key: options[key] for key in keys})
+
+    def getfunc(self, name):
+        return getattr(pc, self.prefix + name.rstrip('_'))
 
 
 @strawberry.input(description="Utf8 string functions.")
@@ -658,7 +630,17 @@ class Utf8(FieldGroup):
     title: Optional[Expression] = default_field(func=pc.utf8_title)
     upper: Optional[Expression] = default_field(func=pc.utf8_upper)
 
+    ltrim: Optional[Expression] = default_field(func=pc.utf8_ltrim)
+    rtrim: Optional[Expression] = default_field(func=pc.utf8_rtrim)
+    trim: Optional[Expression] = default_field(func=pc.utf8_trim)
+    characters: str = default_field('', description="trim options; by default trims whitespace")
+
     prefix = 'utf8_'
+
+    def getfunc(self, name):
+        if name.endswith('trim') and not self.characters:
+            name += '_whitespace'
+        return getattr(pc, self.prefix + name)
 
 
 @strawberry.input(description="Binary functions.")
@@ -680,6 +662,26 @@ class BitWise(FieldGroup):
     xor: List[Expression] = default_field([], func=pc.bit_wise_xor)
 
     prefix = 'bit_wise_'
+
+
+@strawberry.input(description="Match substring functions.")
+class MatchSubstring(FieldGroup):
+    count_substring: Optional[Expression] = default_field(name='count', func=pc.count_substring)
+    ends_with: Optional[Expression] = default_field(func=pc.ends_with)
+    find_substring: Optional[Expression] = default_field(name='find', func=pc.find_substring)
+    match_substring: Optional[Expression] = default_field(name='match', func=pc.match_substring)
+    starts_with: Optional[Expression] = default_field(func=pc.starts_with)
+    replace_substring: Optional[Expression] = default_field(
+        name='replace', func=pc.replace_substring
+    )
+    pattern: str
+    ignore_case: bool = False
+    regex: bool = False
+    replacement: str = ''
+    max_replacements: Optional[int] = None
+
+    def getfunc(self, name):
+        return getattr(pc, name + ('_regex' * self.regex))
 
 
 @strawberry.input(description="Temporal functions.")

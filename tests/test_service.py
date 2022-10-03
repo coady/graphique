@@ -100,20 +100,20 @@ def test_strings(client):
     data = client.execute('{ scan(filter: {utf8: {isTitle: {name: "city"}}}) { length } }')
     assert data == {'scan': {'length': 41700}}
     data = client.execute(
-        '''{ apply(string: {matchSubstring: {name: "city", value: "Mountain"}})
+        '''{ scan(columns: {alias: "city", substring: {match: {name: "city"}, pattern: "Mountain"}})
         { scan(filter: {name: "city"}) { length } } }'''
     )
-    assert data == {'apply': {'scan': {'length': 88}}}
+    assert data == {'scan': {'scan': {'length': 88}}}
     data = client.execute(
-        '''{ apply(string: {matchSubstring: {name: "city", value: "mountain", ignoreCase: true}})
-        { scan(filter: {name: "city"}) { length } } }'''
+        '''{ scan(filter: {substring: {match: {name: "city"}, pattern: "mountain", ignoreCase: true}})
+        { length } }'''
     )
-    assert data == {'apply': {'scan': {'length': 88}}}
+    assert data == {'scan': {'length': 88}}
     data = client.execute(
-        '''{ apply(string: {matchSubstringRegex: {name: "city", value: "^Mountain"}})
-        { scan(filter: {name: "city"}) { length } } }'''
+        '''{ scan(filter: {substring: {match: {name: "city"}, pattern: "^Mountain", regex: true}})
+        { length } }'''
     )
-    assert data == {'apply': {'scan': {'length': 42}}}
+    assert data == {'scan': {'length': 42}}
     data = client.execute(
         '''{ scan(columns: {alias: "idx", setLookup: {indexIn: [{name: "state"}, {value: ["CA", "OR"]}]}})
         { column(name: "idx") { ... on IntColumn { unique { values } } } } }'''
@@ -128,11 +128,15 @@ def test_string_methods(client):
     )
     assert data == {'apply': {'columns': {'city': {'type': 'list<item: string>'}}}}
     data = client.execute(
-        '''{ apply(string: {utf8Trim: {name: "state", value: "C"}}) {
+        '''{ scan(columns: {alias: "state", utf8: {trim: {name: "state"}, characters: "C"}}) {
         columns { state { values } } } }'''
     )
-    states = data['apply']['columns']['state']['values']
+    states = data['scan']['columns']['state']['values']
     assert 'CA' not in states and 'A' in states
+    data = client.execute(
+        '{ scan(columns: {alias: "state", utf8: {ltrim: {name: "state"}}}) { length } }'
+    )
+    assert data == {'scan': {'length': 41700}}
     data = client.execute(
         '{ apply(string: {utf8Center: {name: "state", width: 4, padding: "_"}}) { row { state } } }'
     )
@@ -147,10 +151,10 @@ def test_string_methods(client):
     )
     assert data == {'apply': {'row': {'state': 'N'}}}
     data = client.execute(
-        '''{ apply(string: {replaceSubstring: {name: "state", pattern: "C", replacement: "A"}})
+        '''{ scan(columns: {alias: "state", substring: {replace: {name: "state"}, pattern: "C", replacement: "A"}})
         { columns { state { values } } } }'''
     )
-    assert 'AA' in data['apply']['columns']['state']['values']
+    assert 'AA' in data['scan']['columns']['state']['values']
 
 
 def test_search(client):
@@ -255,15 +259,15 @@ def test_scan(client):
 
 def test_apply(client):
     data = client.execute(
-        '''{ apply(string: {findSubstring: {name: "city", value: "mountain"}})
+        '''{ scan(columns: {alias: "city", substring: {find: {name: "city"}, pattern: "mountain"}})
         { column(name: "city") { ... on IntColumn { unique { values } } } } }'''
     )
-    assert data['apply']['column']['unique']['values'] == [-1]
+    assert data['scan']['column']['unique']['values'] == [-1]
     data = client.execute(
-        '''{ apply(string: {countSubstring: {name: "city", value: "mountain", ignoreCase: true}})
+        '''{ scan(columns: {alias: "city", substring: {count: {name: "city"}, pattern: "mountain", ignoreCase: true}})
         { column(name: "city") { ... on IntColumn { unique { values } } } } }'''
     )
-    assert data['apply']['column']['unique']['values'] == [0, 1]
+    assert data['scan']['column']['unique']['values'] == [0, 1]
     data = client.execute(
         '''{ apply(string: {binaryJoinElementWise: {name: ["state", "county"], value: " "}})
         { columns { state { values } } } }'''
