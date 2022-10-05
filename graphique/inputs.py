@@ -15,7 +15,7 @@ from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
 from strawberry.field import StrawberryField
-from strawberry.scalars import Base64, JSON
+from strawberry.scalars import JSON
 from strawberry.types.fields.resolver import StrawberryResolver
 from typing_extensions import Annotated
 from .core import ListChunk
@@ -238,28 +238,6 @@ class DateTimeFunction(TemporalFunction[T]):
 
 
 @strawberry.input
-class Join(Arguments[T]):
-    null_handling: str = 'emit_null'
-    null_replacement: str = ''
-
-
-@strawberry.input
-class ReplaceSlice(Generic[T], Fields):
-    start: int
-    stop: int
-    replacement: T
-
-
-@operator.itemgetter(Base64)
-@strawberry.input(
-    name='Function', description=f"[functions]({links.compute}#string-transforms) for binaries"
-)
-class Base64Function(Generic[T], Input):
-    binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
-    binary_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.binary_replace_slice)
-
-
-@strawberry.input
 class Split(Arguments[T]):
     max_splits: Optional[int] = None
     reverse: bool = False
@@ -290,9 +268,6 @@ class Slice(Fields):
     name='ingFunction', description=f"[functions]({links.compute}#string-transforms) for strings"
 )
 class StringFunction(Generic[T], Input):
-    binary_join_element_wise: Optional[Join[T]] = default_field(func=pc.binary_join_element_wise)
-
-    utf8_replace_slice: Optional[ReplaceSlice] = default_field(func=pc.utf8_replace_slice)
     utf8_split_whitespace: Optional[Split] = default_field(func=pc.utf8_split_whitespace)
     split_pattern: Optional[Split] = default_field(func=pc.split_pattern)
     split_pattern_regex: Optional[Split] = default_field(func=pc.split_pattern_regex)
@@ -476,7 +451,9 @@ class Expression:
     sin: Optional['Expression'] = default_field(func=pc.sin)
     tan: Optional['Expression'] = default_field(func=pc.tan)
 
-    element_wise: Optional['ElementWise'] = default_field(description="element-wise functions")
+    element_wise: Optional['ElementWise'] = default_field(
+        description="element-wise aggregate functions"
+    )
 
     and_: List['Expression'] = default_field([], name='and', description="&")
     and_not: List['Expression'] = default_field([], func=pc.and_not)
@@ -635,6 +612,11 @@ class Utf8(FieldGroup):
     trim: Optional[Expression] = default_field(func=pc.utf8_trim)
     characters: str = default_field('', description="trim options; by default trims whitespace")
 
+    replace_slice: Optional[Expression] = default_field(func=pc.utf8_replace_slice)
+    start: int = 0
+    stop: int = 0
+    replacement: str = ''
+
     prefix = 'utf8_'
 
     def getfunc(self, name):
@@ -650,6 +632,14 @@ class Binary(FieldGroup):
     reverse: Optional[Expression] = default_field(func=pc.binary_reverse)
 
     join: List[Expression] = default_field([], func=pc.binary_join)
+    join_element_wise: List[Expression] = default_field([], func=pc.binary_join_element_wise)
+    null_handling: str = 'emit_null'
+    null_replacement: str = ''
+
+    replace_slice: Optional[Expression] = default_field(func=pc.binary_replace_slice)
+    start: int = 0
+    stop: int = 0
+    replacement: bytes = b''
 
     prefix = 'binary_'
 
@@ -726,7 +716,7 @@ class Temporal(FieldGroup):
     years_between: List[Expression] = default_field([], func=pc.years_between)
 
 
-@strawberry.input(description="Element-wise functions.")
+@strawberry.input(description="Element-wise aggregate functions.")
 class ElementWise(FieldGroup):
     min_element_wise: List[Expression] = default_field([], name='min', func=pc.min_element_wise)
     max_element_wise: List[Expression] = default_field([], name='max', func=pc.max_element_wise)

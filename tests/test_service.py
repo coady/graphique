@@ -142,10 +142,10 @@ def test_string_methods(client):
     )
     assert data == {'apply': {'row': {'state': '_NY_'}}}
     data = client.execute(
-        '''{ apply(string: {utf8ReplaceSlice: {name: "state", start: 0, stop: 2, replacement: ""}})
+        '''{ scan(columns: {alias: "state", utf8: {replaceSlice: {name: "state"}, start: 0, stop: 2, replacement: ""}})
         { columns { state { unique { values } } } } }'''
     )
-    assert data == {'apply': {'columns': {'state': {'unique': {'values': ['']}}}}}
+    assert data == {'scan': {'columns': {'state': {'unique': {'values': ['']}}}}}
     data = client.execute(
         '{ apply(string: {utf8SliceCodeunits: {name: "state", start: 0, stop: 1}}) { row { state } } }'
     )
@@ -269,10 +269,10 @@ def test_apply(client):
     )
     assert data['scan']['column']['unique']['values'] == [0, 1]
     data = client.execute(
-        '''{ apply(string: {binaryJoinElementWise: {name: ["state", "county"], value: " "}})
-        { columns { state { values } } } }'''
+        '''{ scan(columns: {alias: "state", binary: {joinElementWise: [
+        {name: "state"}, {name: "county"}, {value: " "}]}}) { columns { state { values } } } }'''
     )
-    assert data['apply']['columns']['state']['values'][0] == 'NY Suffolk'
+    assert data['scan']['columns']['state']['values'][0] == 'NY Suffolk'
     data = client.execute(
         '''{ apply(cumulativeSum: {name: "zipcode", skipNulls: false})
         { columns { zipcode { value(index: -1) } } } }'''

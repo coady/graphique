@@ -17,7 +17,7 @@ from strawberry.types import Info
 from typing_extensions import Annotated
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Cumulative, Diff, Digitize, Expression, Fields, Filter, Projection
-from .inputs import links, Base64Function, DateFunction, DateTimeFunction, ListFunction
+from .inputs import links, DateFunction, DateTimeFunction, ListFunction
 from .inputs import NumericFunction, StringFunction, TemporalFunction
 from .models import Column, annotate, doc_field, selections
 from .scalars import Long
@@ -279,7 +279,6 @@ class Dataset:
         cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
         fill_null_backward: doc_argument(List[Fields], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(List[Fields], func=pc.fill_null_forward) = [],
-        base64: List[Base64Function] = [],
         date: List[DateFunction] = [],
         datetime: List[DateTimeFunction] = [],
         float: List[NumericFunction[float]] = [],
@@ -302,7 +301,7 @@ class Dataset:
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
-        for value in map(dict, itertools.chain(base64, date, datetime, float, string, time)):
+        for value in map(dict, itertools.chain(date, datetime, float, string, time)):
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(pc, func)(*args, **kwargs)

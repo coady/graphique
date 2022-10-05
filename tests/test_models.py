@@ -376,16 +376,15 @@ def test_base64(executor):
     )
     assert data == {'scan': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
     data = executor(
-        '''{ apply(base64: {binaryJoinElementWise: {
-        name: ["binary", "binary"], value: "Xw==", nullHandling: "replace"}}) {
+        '''{ scan(columns: {alias: "binary", binary: {joinElementWise: [
+        {name: "binary"}, {name: "binary"}, {base64: "Xw=="}], nullHandling: "replace"}}) {
         columns { binary { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'binary': {'values': ['Xw==', 'Xw==']}}}}
+    assert data == {'scan': {'columns': {'binary': {'values': ['Xw==', 'Xw==']}}}}
     data = executor(
-        '''{ apply(base64: {binaryReplaceSlice:
-        {name: "binary", start: 0, stop: 1, replacement: "Xw=="}}) {
-        columns { binary { values } } } }'''
+        '''{ scan(columns: {alias: "binary", binary: {replaceSlice: {name: "binary"}
+        start: 0, stop: 1, replacement: "Xw=="}}) { columns { binary { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'binary': {'values': ['Xw==', None]}}}}
+    assert data == {'scan': {'columns': {'binary': {'values': ['Xw==', None]}}}}
     data = executor('{ scan(filter: {eq: [{name: "binary"}, {base64: "Xw=="}]}) { length } }')
     assert data == {'scan': {'length': 0}}
