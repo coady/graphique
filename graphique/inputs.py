@@ -144,30 +144,12 @@ class Cumulative(Fields):
     skip_nulls: bool = False
 
 
-@strawberry.input
-class Round(Fields):
-    ndigits: int = 0
-    round_mode: str = 'half_to_even'
-
-
-@strawberry.input
-class RoundToMultiple(Fields):
-    multiple: float = 1.0
-    round_mode: str = 'half_to_even'
-
-
 @strawberry.input(
     description="numpy [digitize](https://numpy.org/doc/stable/reference/generated/numpy.digitize.html)"
 )
 class Digitize(Fields):
     bins: List[float]
     right: bool = False
-
-
-@strawberry.input(description=f"arithmetic [functions]({links.compute}#arithmetic-functions)")
-class NumericFunction(Generic[T], Input):
-    round: Optional[Round] = default_field(func=pc.round)
-    round_to_multiple: Optional[RoundToMultiple] = default_field(func=pc.round_to_multiple)
 
 
 @strawberry.input
@@ -435,21 +417,13 @@ class Expression:
     shift_left: List['Expression'] = default_field([], func=pc.shift_left)
     shift_right: List['Expression'] = default_field([], func=pc.shift_right)
 
-    ceil: Optional['Expression'] = default_field(func=pc.ceil)
-    floor: Optional['Expression'] = default_field(func=pc.floor)
-    trunc: Optional['Expression'] = default_field(func=pc.trunc)
+    rounding: Optional['Rounding'] = default_field(description="rounding functions")
 
     ln: Optional['Expression'] = default_field(func=pc.ln)
     log1p: Optional['Expression'] = default_field(func=pc.log1p)
     logb: List['Expression'] = default_field([], func=pc.logb)
 
-    acos: Optional['Expression'] = default_field(func=pc.acos)
-    asin: Optional['Expression'] = default_field(func=pc.asin)
-    atan: Optional['Expression'] = default_field(func=pc.atan)
-    atan2: List['Expression'] = default_field([], func=pc.atan2)
-    cos: Optional['Expression'] = default_field(func=pc.cos)
-    sin: Optional['Expression'] = default_field(func=pc.sin)
-    tan: Optional['Expression'] = default_field(func=pc.tan)
+    trig: Optional['Trig'] = default_field(description="trigonometry functions")
 
     element_wise: Optional['ElementWise'] = default_field(
         description="element-wise aggregate functions"
@@ -481,15 +455,15 @@ class Expression:
 
     replace_with_mask: List['Expression'] = default_field([], func=pc.replace_with_mask)
 
-    unaries = ('inv', 'abs', 'negate', 'sign', 'ceil', 'floor', 'trunc')
-    unaries += ('ln', 'log1p', 'acos', 'asin', 'atan', 'cos', 'sin', 'tan')  # type: ignore
+    unaries = ('inv', 'abs', 'negate', 'sign', 'ln', 'log1p')
     unaries += ('string_is_ascii', 'is_finite', 'is_inf', 'is_nan')  # type: ignore
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
     variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract')
-    variadics += ('shift_left', 'shift_right', 'logb', 'atan2', 'and_not')  # type: ignore
+    variadics += ('shift_left', 'shift_right', 'logb', 'and_not')  # type: ignore
     variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
-    groups = ('bit_wise', 'element_wise', 'utf8', 'substring', 'binary', 'set_lookup', 'temporal')
+    groups = ('bit_wise', 'element_wise', 'rounding', 'trig', 'utf8', 'substring', 'binary')
+    groups += ('set_lookup', 'temporal')  # type: ignore
 
     def to_arrow(self) -> Optional[ds.Expression]:
         """Transform GraphQL expression into a dataset expression."""
@@ -584,6 +558,39 @@ class FieldGroup:
 
     def getfunc(self, name):
         return getattr(pc, self.prefix + name.rstrip('_'))
+
+
+@strawberry.input(description="Roudning functions.")
+class Rounding(FieldGroup):
+    ceil: Optional['Expression'] = default_field(func=pc.ceil)
+    floor: Optional['Expression'] = default_field(func=pc.floor)
+    trunc: Optional['Expression'] = default_field(func=pc.trunc)
+
+    round: Optional['Expression'] = default_field(func=pc.round)
+    ndigits: int = 0
+    round_mode: str = 'half_to_even'
+    multiple: float = 1.0
+
+    def getfunc(self, name):
+        if name == 'round' and self.multiple != 1.0:
+            name = 'round_to_multiple'
+        return getattr(pc, name)
+
+
+@strawberry.input(description="Trigonometry functions.")
+class Trig(FieldGroup):
+    checked: bool = strawberry.field(default=False, description="check for overflow errors")
+
+    acos: Optional['Expression'] = default_field(func=pc.acos)
+    asin: Optional['Expression'] = default_field(func=pc.asin)
+    atan: Optional['Expression'] = default_field(func=pc.atan)
+    atan2: List['Expression'] = default_field([], func=pc.atan2)
+    cos: Optional['Expression'] = default_field(func=pc.cos)
+    sin: Optional['Expression'] = default_field(func=pc.sin)
+    tan: Optional['Expression'] = default_field(func=pc.tan)
+
+    def getfunc(self, name):
+        return getattr(pc, name + ('_checked' * self.checked))
 
 
 @strawberry.input(description="Utf8 string functions.")

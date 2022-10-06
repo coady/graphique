@@ -59,8 +59,18 @@ def test_floats(client):
         '{ scan(columns: {alias: "latitude", logb: [{name: "latitude"}, {value: 3}]}) { row { latitude } } }'
     )
     assert data == {'scan': {'row': {'latitude': pytest.approx(3.376188)}}}
-    data = client.execute('{ apply(float: {round: {name: "latitude"}}) {row { latitude } } }')
-    assert data == {'apply': {'row': {'latitude': 41.0}}}
+    data = client.execute(
+        '{ scan(columns: {alias: "latitude", rounding: {round: {name: "latitude"}}}) {row { latitude } } }'
+    )
+    assert data == {'scan': {'row': {'latitude': 41.0}}}
+    data = client.execute(
+        '{ scan(columns: {alias: "latitude", rounding: {round: {name: "latitude"}, multiple: 2.0}}) {row { latitude } } }'
+    )
+    assert data == {'scan': {'row': {'latitude': 40.0}}}
+    data = client.execute(
+        '{ scan(columns: {alias: "latitude", trig: {sin: {name: "latitude"}}}) {row { latitude } } }'
+    )
+    assert data == {'scan': {'row': {'latitude': pytest.approx(0.02273553)}}}
     data = client.execute('{ scan(filter: {isFinite: {name: "longitude"}}) { length } }')
     assert data == {'scan': {'length': 41700}}
     data = client.execute('{ column(name: "latitude", cast: "int32", safe: false) { type } }')
