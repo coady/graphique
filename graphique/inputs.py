@@ -153,73 +153,6 @@ class Digitize(Fields):
 
 
 @strawberry.input
-class Week(Fields):
-    week_starts_monday: bool = True
-    count_from_zero: bool = False
-    first_week_is_fully_in_year: bool = False
-
-
-@strawberry.input
-class DayOfWeek(Arguments[T]):
-    count_from_zero: bool = True
-    week_start: int = 1
-
-
-@strawberry.input
-class Strftime(Fields):
-    format: str = '%Y-%m-%dT%H:%M:%S'
-    locale: str = 'C'
-
-
-@strawberry.input
-class AssumeTimezone(Fields):
-    timezone: str
-    ambiguous: str = 'raise'
-    nonexistent: str = 'raise'
-
-
-@strawberry.input
-class RoundTemporal(Fields):
-    multiple: int = 1
-    unit: str = 'day'
-    week_starts_monday: bool = True
-    ceil_is_strictly_greater: bool = False
-    calendar_based_origin: bool = False
-
-
-@strawberry.input
-class TemporalFunction(Generic[T], Input):
-    ceil_temporal: Optional[RoundTemporal] = default_field(func=pc.ceil_temporal)
-    floor_temporal: Optional[RoundTemporal] = default_field(func=pc.floor_temporal)
-    round_temporal: Optional[RoundTemporal] = default_field(func=pc.round_temporal)
-
-
-@operator.itemgetter(date)
-@strawberry.input(
-    name='Function',
-    description=f"[functions]({links.compute}#temporal-component-extraction) for dates",
-)
-class DateFunction(TemporalFunction[T]):
-    strftime: Optional[Strftime] = default_field(func=pc.strftime)
-
-    week: Optional[Week] = default_field(func=pc.week)
-    day_of_week: Optional[DayOfWeek[T]] = default_field(func=pc.day_of_week)
-
-
-@operator.itemgetter(datetime)
-@strawberry.input(
-    name='Function',
-    description=f"[functions]({links.compute}#temporal-component-extraction) for datetimes",
-)
-class DateTimeFunction(TemporalFunction[T]):
-    strftime: Optional[Strftime] = default_field(func=pc.strftime)
-    assume_timezone: Optional[AssumeTimezone] = default_field(func=pc.assume_timezone)
-
-    week: Optional[Week] = default_field(func=pc.week)
-    day_of_week: Optional[DayOfWeek[T]] = default_field(func=pc.day_of_week)
-
-
-@strawberry.input
 class Split(Arguments[T]):
     max_splits: Optional[int] = None
     reverse: bool = False
@@ -721,6 +654,31 @@ class Temporal(FieldGroup):
     seconds_between: List[Expression] = default_field([], func=pc.seconds_between)
     weeks_between: List[Expression] = default_field([], func=pc.weeks_between)
     years_between: List[Expression] = default_field([], func=pc.years_between)
+
+    ceil_temporal: Optional[Expression] = default_field(name='ceil', func=pc.ceil_temporal)
+    floor_temporal: Optional[Expression] = default_field(name='floor', func=pc.floor_temporal)
+    round_temporal: Optional[Expression] = default_field(name='round', func=pc.round_temporal)
+    multiple: int = 1
+    unit: str = 'day'
+    week_starts_monday: bool = True
+    ceil_is_strictly_greater: bool = False
+    calendar_based_origin: bool = False
+
+    week: Optional[Expression] = default_field(func=pc.week)
+    count_from_zero: Optional[bool] = UNSET
+    first_week_is_fully_in_year: bool = False
+
+    day_of_week: Optional[Expression] = default_field(func=pc.day_of_week)
+    week_start: int = 1
+
+    strftime: Optional[Expression] = default_field(func=pc.strftime)
+    format: str = '%Y-%m-%dT%H:%M:%S'
+    locale: str = 'C'
+
+    assume_timezone: Optional[Expression] = default_field(func=pc.assume_timezone)
+    timezone: str = ''
+    ambiguous: str = 'raise'
+    nonexistent: str = 'raise'
 
 
 @strawberry.input(description="Element-wise aggregate functions.")

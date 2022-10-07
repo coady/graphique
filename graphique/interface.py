@@ -7,7 +7,7 @@ import collections
 import inspect
 import itertools
 import types
-from datetime import time, timedelta
+from datetime import timedelta
 from typing import Callable, Iterable, Iterator, List, Mapping, Optional, Union, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -17,8 +17,7 @@ from strawberry.types import Info
 from typing_extensions import Annotated
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Cumulative, Diff, Digitize, Expression, Fields, Filter, Projection
-from .inputs import links, DateFunction, DateTimeFunction, ListFunction
-from .inputs import StringFunction, TemporalFunction
+from .inputs import links, ListFunction, StringFunction
 from .models import Column, annotate, doc_field, selections
 from .scalars import Long
 
@@ -279,11 +278,8 @@ class Dataset:
         cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
         fill_null_backward: doc_argument(List[Fields], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(List[Fields], func=pc.fill_null_forward) = [],
-        date: List[DateFunction] = [],
-        datetime: List[DateTimeFunction] = [],
         list: List[ListFunction] = [],
         string: List[StringFunction] = [],
-        time: List[TemporalFunction[time]] = [],
     ) -> 'Dataset':
         """Return view of table with functions applied across columns.
 
@@ -300,7 +296,7 @@ class Dataset:
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
-        for value in map(dict, itertools.chain(date, datetime, string, time)):
+        for value in map(dict, string):
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(pc, func)(*args, **kwargs)

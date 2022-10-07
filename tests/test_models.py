@@ -178,10 +178,10 @@ def test_datetime(executor):
         )
         assert data == {'scan': {'column': {'values': [0, None]}}}
     data = executor(
-        '''{ apply(datetime: {strftime: {name: "timestamp"}}) {
+        '''{ scan(columns: {alias: "timestamp", temporal: {strftime: {name: "timestamp"}}}) {
         column(name: "timestamp") { type } } }'''
     )
-    assert data == {'apply': {'column': {'type': 'string'}}}
+    assert data == {'scan': {'column': {'type': 'string'}}}
     for name in ('timestamp', 'time32'):
         data = executor(
             f'''{{ scan(columns: {{alias: "hour", temporal: {{hour: {{name: "{name}"}}}}}})
@@ -202,16 +202,16 @@ def test_datetime(executor):
     with pytest.raises(ValueError):
         executor('{ columns { time64 { between(unit: "hours") { values } } } }')
     data = executor(
-        '''{ apply(datetime: {assumeTimezone: {name: "timestamp", timezone: "UTC"}}) {
+        '''{ scan(columns: {alias: "timestamp", temporal: {assumeTimezone: {name: "timestamp"}, timezone: "UTC"}}) {
         columns { timestamp { values } } } }'''
     )
-    dates = data['apply']['columns']['timestamp']['values']
+    dates = data['scan']['columns']['timestamp']['values']
     assert dates == ['1970-01-01T00:00:00+00:00', None]
     data = executor(
-        '''{ apply(time: {roundTemporal: {name: "time32", unit: "hour"}}) {
+        '''{ scan(columns: {alias: "time32", temporal: {round: {name: "time32"}, unit: "hour"}}) {
         columns { time32 { values } } } }'''
     )
-    assert data == {'apply': {'columns': {'time32': {'values': ['00:00:00', None]}}}}
+    assert data == {'scan': {'columns': {'time32': {'values': ['00:00:00', None]}}}}
 
 
 def test_duration(executor):
