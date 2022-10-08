@@ -133,10 +133,15 @@ def test_strings(client):
 
 def test_string_methods(client):
     data = client.execute(
-        '''{ apply(string: {splitPattern: {name: "city", value: "-", maxSplits: 1}}) {
+        '''{ scan(columns: {alias: "city", substring: {split: {name: "city"}, pattern: "-", maxSplits: 1}}) {
         columns { city { type } } } }'''
     )
-    assert data == {'apply': {'columns': {'city': {'type': 'list<item: string>'}}}}
+    assert data == {'scan': {'columns': {'city': {'type': 'list<item: string>'}}}}
+    data = client.execute(
+        '''{ scan(columns: {alias: "city", substring: {split: {name: "city"}}}) {
+        columns { city { type } } } }'''
+    )
+    assert data == {'scan': {'columns': {'city': {'type': 'list<item: string>'}}}}
     data = client.execute(
         '''{ scan(columns: {alias: "state", utf8: {trim: {name: "state"}, characters: "C"}}) {
         columns { state { values } } } }'''
@@ -148,18 +153,19 @@ def test_string_methods(client):
     )
     assert data == {'scan': {'length': 41700}}
     data = client.execute(
-        '{ apply(string: {utf8Center: {name: "state", width: 4, padding: "_"}}) { row { state } } }'
+        '''{ scan(columns: {alias: "state", utf8: {center: {name: "state"}, width: 4, padding: "_"}})
+        { row { state } } }'''
     )
-    assert data == {'apply': {'row': {'state': '_NY_'}}}
+    assert data == {'scan': {'row': {'state': '_NY_'}}}
     data = client.execute(
         '''{ scan(columns: {alias: "state", utf8: {replaceSlice: {name: "state"}, start: 0, stop: 2, replacement: ""}})
         { columns { state { unique { values } } } } }'''
     )
     assert data == {'scan': {'columns': {'state': {'unique': {'values': ['']}}}}}
     data = client.execute(
-        '{ apply(string: {utf8SliceCodeunits: {name: "state", start: 0, stop: 1}}) { row { state } } }'
+        '{ scan(columns: {alias: "state", utf8: {sliceCodeunits: {name: "state"}, start: 0, stop: 1}}) { row { state } } }'
     )
-    assert data == {'apply': {'row': {'state': 'N'}}}
+    assert data == {'scan': {'row': {'state': 'N'}}}
     data = client.execute(
         '''{ scan(columns: {alias: "state", substring: {replace: {name: "state"}, pattern: "C", replacement: "A"}})
         { columns { state { values } } } }'''

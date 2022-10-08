@@ -106,40 +106,23 @@ class Filter(Generic[T], Input):
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
-@strawberry.input(description="positional function arguments without scalars")
-class Fields:
-    name: List[Optional[str]] = strawberry.field(description="column name(s)")
+@strawberry.input(description="Field options for applied functions.")
+class Field:
+    name: str = strawberry.field(description="column name")
     alias: str = strawberry.field(default='', description="output column name")
 
     def serialize(self, table):
         """Return (name, args, kwargs) suitable for computing."""
         exclude = {'name', 'alias'}
         return (
-            self.alias or self.name[0],
-            map(table.column, self.name),
-            {name: value for name, value in self.__dict__.items() if name not in exclude},
-        )
-
-
-@strawberry.input(description="positional function arguments with typed scalar")
-class Arguments(Generic[T], Fields):
-    value: List[Optional[T]] = default_field([], description="scalar value(s)")
-    cast: str = strawberry.field(default='', description=f"cast scalar to {links.type}")
-
-    def serialize(self, table):
-        """Return (name, args, kwargs) suitable for computing."""
-        exclude = {'name', 'alias', 'value', 'cast'}
-        values = (pa.scalar(value, self.cast) if self.cast else value for value in self.value)
-        args = [table[name] if name else next(values) for name in self.name]
-        return (
-            self.alias or next(filter(None, self.name)),
-            args + list(values),
+            self.alias or self.name,
+            table.select([self.name]),
             {name: value for name, value in self.__dict__.items() if name not in exclude},
         )
 
 
 @strawberry.input
-class Cumulative(Fields):
+class Cumulative(Field):
     start: float = 0.0
     skip_nulls: bool = False
 
@@ -147,88 +130,46 @@ class Cumulative(Fields):
 @strawberry.input(
     description="numpy [digitize](https://numpy.org/doc/stable/reference/generated/numpy.digitize.html)"
 )
-class Digitize(Fields):
+class Digitize(Field):
     bins: List[float]
     right: bool = False
 
 
 @strawberry.input
-class Split(Arguments[T]):
-    max_splits: Optional[int] = None
-    reverse: bool = False
-
-
-@strawberry.input
-class Pad(Fields):
-    width: int
-    padding: str = ''
-
-
-@strawberry.input
-class Strptime(Fields):
-    format: str
-    unit: str
-    error_is_null: bool = False
-
-
-@strawberry.input
-class Slice(Fields):
-    start: int
-    stop: Optional[int] = None
-    step: int = 1
-
-
-@operator.itemgetter(str)
-@strawberry.input(
-    name='ingFunction', description=f"[functions]({links.compute}#string-transforms) for strings"
-)
-class StringFunction(Generic[T], Input):
-    utf8_split_whitespace: Optional[Split] = default_field(func=pc.utf8_split_whitespace)
-    split_pattern: Optional[Split] = default_field(func=pc.split_pattern)
-    split_pattern_regex: Optional[Split] = default_field(func=pc.split_pattern_regex)
-    utf8_center: Optional[Pad] = default_field(func=pc.utf8_center)
-    utf8_lpad: Optional[Pad] = default_field(func=pc.utf8_lpad)
-    utf8_rpad: Optional[Pad] = default_field(func=pc.utf8_rpad)
-    extract_regex: Optional[Arguments[T]] = default_field(func=pc.extract_regex)
-    strptime: Optional[Strptime] = default_field(func=pc.strptime)
-    utf8_slice_codeunits: Optional[Slice] = default_field(func=pc.utf8_slice_codeunits)
-
-
-@strawberry.input
-class Element(Fields):
+class Element(Field):
     index: int
 
 
 @strawberry.input
-class Index(Fields):
+class Index(Field):
     value: JSON
     start: Long = 0
     end: Optional[Long] = None
 
 
 @strawberry.input
-class Mode(Fields):
+class Mode(Field):
     n: int = 1
     skip_nulls: bool = True
     min_count: int = 1
 
 
 @strawberry.input
-class Quantile(Fields):
+class Quantile(Field):
     q: List[float] = (0.5,)  # type: ignore
     interpolation: str = 'linear'
     skip_nulls: bool = True
     min_count: int = 1
 
 
-@strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for list")
+@strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for lists")
 class ListFunction(Input):
     element: Optional[Element] = default_field(func=ListChunk.element)
     filter: 'Expression' = default_field({}, description="filter within list scalars")
     index: Optional[Index] = default_field(func=pc.index)
     mode: Optional[Mode] = default_field(func=pc.mode)
     quantile: Optional[Quantile] = default_field(func=pc.quantile)
-    value_length: Optional[Fields] = default_field(func=pc.list_value_length)
+    value_length: Optional[Field] = default_field(func=pc.list_value_length)
 
 
 @strawberry.input(
@@ -469,7 +410,7 @@ class Projection(Expression):
     alias: str = strawberry.field(default='', description="name of projected column")
 
 
-class FieldGroup:
+class Fields:
     """Fields grouped by naming conventions or common options."""
 
     prefix: str = ''
@@ -494,7 +435,7 @@ class FieldGroup:
 
 
 @strawberry.input(description="Roudning functions.")
-class Rounding(FieldGroup):
+class Rounding(Fields):
     ceil: Optional['Expression'] = default_field(func=pc.ceil)
     floor: Optional['Expression'] = default_field(func=pc.floor)
     trunc: Optional['Expression'] = default_field(func=pc.trunc)
@@ -511,7 +452,7 @@ class Rounding(FieldGroup):
 
 
 @strawberry.input(description="Trigonometry functions.")
-class Trig(FieldGroup):
+class Trig(Fields):
     checked: bool = strawberry.field(default=False, description="check for overflow errors")
 
     acos: Optional['Expression'] = default_field(func=pc.acos)
@@ -527,7 +468,7 @@ class Trig(FieldGroup):
 
 
 @strawberry.input(description="Utf8 string functions.")
-class Utf8(FieldGroup):
+class Utf8(Fields):
     is_alnum: Optional[Expression] = default_field(func=pc.utf8_is_alnum)
     is_alpha: Optional[Expression] = default_field(func=pc.utf8_is_alpha)
     is_decimal: Optional[Expression] = default_field(func=pc.utf8_is_decimal)
@@ -553,9 +494,17 @@ class Utf8(FieldGroup):
     characters: str = default_field('', description="trim options; by default trims whitespace")
 
     replace_slice: Optional[Expression] = default_field(func=pc.utf8_replace_slice)
+    slice_codeunits: Optional[Expression] = default_field(func=pc.utf8_slice_codeunits)
     start: int = 0
-    stop: int = 0
+    stop: Optional[int] = UNSET
+    step: int = 1
     replacement: str = ''
+
+    center: Optional[Expression] = default_field(func=pc.utf8_center)
+    lpad: Optional[Expression] = default_field(func=pc.utf8_lpad)
+    rpad: Optional[Expression] = default_field(func=pc.utf8_rpad)
+    width: int = 0
+    padding: str = ''
 
     prefix = 'utf8_'
 
@@ -566,7 +515,7 @@ class Utf8(FieldGroup):
 
 
 @strawberry.input(description="Binary functions.")
-class Binary(FieldGroup):
+class Binary(Fields):
     length: Optional[Expression] = default_field(func=pc.binary_length)
     repeat: List[Expression] = default_field([], func=pc.binary_repeat)
     reverse: Optional[Expression] = default_field(func=pc.binary_reverse)
@@ -585,7 +534,7 @@ class Binary(FieldGroup):
 
 
 @strawberry.input(description="Bit-wise functions.")
-class BitWise(FieldGroup):
+class BitWise(Fields):
     and_: List[Expression] = default_field([], name='and', func=pc.bit_wise_and)
     not_: List[Expression] = default_field([], name='not', func=pc.bit_wise_not)
     or_: List[Expression] = default_field([], name='or', func=pc.bit_wise_or)
@@ -595,7 +544,7 @@ class BitWise(FieldGroup):
 
 
 @strawberry.input(description="Match substring functions.")
-class MatchSubstring(FieldGroup):
+class MatchSubstring(Fields):
     count_substring: Optional[Expression] = default_field(name='count', func=pc.count_substring)
     ends_with: Optional[Expression] = default_field(func=pc.ends_with)
     find_substring: Optional[Expression] = default_field(name='find', func=pc.find_substring)
@@ -604,18 +553,24 @@ class MatchSubstring(FieldGroup):
     replace_substring: Optional[Expression] = default_field(
         name='replace', func=pc.replace_substring
     )
-    pattern: str
+    split_pattern: Optional[Expression] = default_field(name='split', func=pc.split_pattern)
+    extract: Optional[Expression] = default_field(func=pc.extract_regex)
+    pattern: str = ''
     ignore_case: bool = False
     regex: bool = False
     replacement: str = ''
     max_replacements: Optional[int] = None
+    max_splits: Optional[int] = None
+    reverse: bool = False
 
     def getfunc(self, name):
+        if name == 'split_pattern' and not self.pattern:
+            name = 'utf8_split_whitespace'
         return getattr(pc, name + ('_regex' * self.regex))
 
 
 @strawberry.input(description="Temporal functions.")
-class Temporal(FieldGroup):
+class Temporal(Fields):
     day: Optional[Expression] = default_field(func=pc.day)
     day_of_year: Optional[Expression] = default_field(func=pc.day_of_year)
     hour: Optional[Expression] = default_field(func=pc.hour)
@@ -672,8 +627,10 @@ class Temporal(FieldGroup):
     week_start: int = 1
 
     strftime: Optional[Expression] = default_field(func=pc.strftime)
+    strptime: Optional[Expression] = default_field(func=pc.strptime)
     format: str = '%Y-%m-%dT%H:%M:%S'
     locale: str = 'C'
+    error_is_null: bool = False
 
     assume_timezone: Optional[Expression] = default_field(func=pc.assume_timezone)
     timezone: str = ''
@@ -682,14 +639,14 @@ class Temporal(FieldGroup):
 
 
 @strawberry.input(description="Element-wise aggregate functions.")
-class ElementWise(FieldGroup):
+class ElementWise(Fields):
     min_element_wise: List[Expression] = default_field([], name='min', func=pc.min_element_wise)
     max_element_wise: List[Expression] = default_field([], name='max', func=pc.max_element_wise)
     skip_nulls: bool = True
 
 
 @strawberry.input(description="Set lookup functions.")
-class SetLookup(FieldGroup):
+class SetLookup(Fields):
     index_in: List[Expression] = default_field([], func=pc.index_in)
     is_in: List[Expression] = default_field([], func=pc.is_in)
     skip_nulls: bool = False

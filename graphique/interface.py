@@ -16,8 +16,8 @@ import strawberry.asgi
 from strawberry.types import Info
 from typing_extensions import Annotated
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Cumulative, Diff, Digitize, Expression, Fields, Filter, Projection
-from .inputs import links, ListFunction, StringFunction
+from .inputs import Aggregations, Cumulative, Diff, Digitize, Expression, Field, Filter, Projection
+from .inputs import links, ListFunction
 from .models import Column, annotate, doc_field, selections
 from .scalars import Long
 
@@ -276,16 +276,16 @@ class Dataset:
         info: Info,
         digitize: doc_argument(List[Digitize], func=C.digitize) = [],
         cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
-        fill_null_backward: doc_argument(List[Fields], func=pc.fill_null_backward) = [],
-        fill_null_forward: doc_argument(List[Fields], func=pc.fill_null_forward) = [],
+        fill_null_backward: doc_argument(List[Field], func=pc.fill_null_backward) = [],
+        fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
         list: List[ListFunction] = [],
-        string: List[StringFunction] = [],
     ) -> 'Dataset':
         """Return view of table with functions applied across columns.
 
         If no alias is provided, the column is replaced and should be of the same type.
         If an alias is provided, a column is appended under that name.
-        Pending deprecation: applicable functions may be moved to `scan` expressions.
+        Applied function load arrays into memory as needed; see `scan` for more functions, which
+        do not require loading.
         """
         table = self.select(info)
         columns = {}
@@ -296,10 +296,6 @@ class Dataset:
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
-        for value in map(dict, string):
-            for func, field in value.items():
-                name, args, kwargs = field.serialize(table)
-                columns[name] = getattr(pc, func)(*args, **kwargs)
         args = digitize, cumulative_sum, fill_null_backward, fill_null_forward
         funcs = C.digitize, pc.cumulative_sum, pc.fill_null_backward, pc.fill_null_forward
         for fields, func in zip(args, funcs):
