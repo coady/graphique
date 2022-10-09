@@ -56,7 +56,7 @@ def test_floats(client):
     latitudes = data['apply']['columns']['latitude']
     assert latitudes == {'min': 18.0, 'max': 72.0, 'unique': {'length': 52}}
     data = client.execute(
-        '{ scan(columns: {alias: "latitude", logb: [{name: "latitude"}, {value: 3}]}) { row { latitude } } }'
+        '{ scan(columns: {alias: "latitude", log: {logb: [{name: "latitude"}, {value: 3}]}}) { row { latitude } } }'
     )
     assert data == {'scan': {'row': {'latitude': pytest.approx(3.376188)}}}
     data = client.execute(

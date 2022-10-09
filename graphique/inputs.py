@@ -288,17 +288,9 @@ class Expression:
     subtract: List['Expression'] = default_field([], func=pc.subtract)
 
     bit_wise: Optional['BitWise'] = default_field(description="bit-wise functions")
-    shift_left: List['Expression'] = default_field([], func=pc.shift_left)
-    shift_right: List['Expression'] = default_field([], func=pc.shift_right)
-
     rounding: Optional['Rounding'] = default_field(description="rounding functions")
-
-    ln: Optional['Expression'] = default_field(func=pc.ln)
-    log1p: Optional['Expression'] = default_field(func=pc.log1p)
-    logb: List['Expression'] = default_field([], func=pc.logb)
-
+    log: Optional['Log'] = default_field(description="logarithmic functions")
     trig: Optional['Trig'] = default_field(description="trigonometry functions")
-
     element_wise: Optional['ElementWise'] = default_field(
         description="element-wise aggregate functions"
     )
@@ -329,14 +321,12 @@ class Expression:
 
     replace_with_mask: List['Expression'] = default_field([], func=pc.replace_with_mask)
 
-    unaries = ('inv', 'abs', 'negate', 'sign', 'ln', 'log1p')
-    unaries += ('string_is_ascii', 'is_finite', 'is_inf', 'is_nan')  # type: ignore
+    unaries = ('inv', 'abs', 'negate', 'sign', 'string_is_ascii', 'is_finite', 'is_inf', 'is_nan')
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract')
-    variadics += ('shift_left', 'shift_right', 'logb', 'and_not')  # type: ignore
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract', 'and_not')
     variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
-    groups = ('bit_wise', 'element_wise', 'rounding', 'trig', 'utf8', 'substring', 'binary')
+    groups = ('bit_wise', 'rounding', 'log', 'trig', 'element_wise', 'utf8', 'substring', 'binary')
     groups += ('set_lookup', 'temporal')  # type: ignore
 
     def to_arrow(self) -> Optional[ds.Expression]:
@@ -431,16 +421,29 @@ class Fields:
             yield func(*args, **{key: options[key] for key in keys})
 
     def getfunc(self, name):
-        return getattr(pc, self.prefix + name.rstrip('_'))
+        return getattr(pc, self.prefix + name)
 
 
-@strawberry.input(description="Roudning functions.")
+@strawberry.input(description="Bit-wise functions.")
+class BitWise(Fields):
+    and_: List[Expression] = default_field([], name='and', func=pc.bit_wise_and)
+    not_: List[Expression] = default_field([], name='not', func=pc.bit_wise_not)
+    or_: List[Expression] = default_field([], name='or', func=pc.bit_wise_or)
+    xor: List[Expression] = default_field([], func=pc.bit_wise_xor)
+    shift_left: List[Expression] = default_field([], func=pc.shift_left)
+    shift_right: List[Expression] = default_field([], func=pc.shift_right)
+
+    def getfunc(self, name):
+        return getattr(pc, name if name.startswith('shift') else 'bit_wise_' + name.rstrip('_'))
+
+
+@strawberry.input(description="Rounding functions.")
 class Rounding(Fields):
-    ceil: Optional['Expression'] = default_field(func=pc.ceil)
-    floor: Optional['Expression'] = default_field(func=pc.floor)
-    trunc: Optional['Expression'] = default_field(func=pc.trunc)
+    ceil: Optional[Expression] = default_field(func=pc.ceil)
+    floor: Optional[Expression] = default_field(func=pc.floor)
+    trunc: Optional[Expression] = default_field(func=pc.trunc)
 
-    round: Optional['Expression'] = default_field(func=pc.round)
+    round: Optional[Expression] = default_field(func=pc.round)
     ndigits: int = 0
     round_mode: str = 'half_to_even'
     multiple: float = 1.0
@@ -451,20 +454,34 @@ class Rounding(Fields):
         return getattr(pc, name)
 
 
+@strawberry.input(description="Logarithmic functions.")
+class Log(Fields):
+    ln: Optional[Expression] = default_field(func=pc.ln)
+    log1p: Optional[Expression] = default_field(func=pc.log1p)
+    logb: List[Expression] = default_field([], func=pc.logb)
+
+
 @strawberry.input(description="Trigonometry functions.")
 class Trig(Fields):
     checked: bool = strawberry.field(default=False, description="check for overflow errors")
 
-    acos: Optional['Expression'] = default_field(func=pc.acos)
-    asin: Optional['Expression'] = default_field(func=pc.asin)
-    atan: Optional['Expression'] = default_field(func=pc.atan)
-    atan2: List['Expression'] = default_field([], func=pc.atan2)
-    cos: Optional['Expression'] = default_field(func=pc.cos)
-    sin: Optional['Expression'] = default_field(func=pc.sin)
-    tan: Optional['Expression'] = default_field(func=pc.tan)
+    acos: Optional[Expression] = default_field(func=pc.acos)
+    asin: Optional[Expression] = default_field(func=pc.asin)
+    atan: Optional[Expression] = default_field(func=pc.atan)
+    atan2: List[Expression] = default_field([], func=pc.atan2)
+    cos: Optional[Expression] = default_field(func=pc.cos)
+    sin: Optional[Expression] = default_field(func=pc.sin)
+    tan: Optional[Expression] = default_field(func=pc.tan)
 
     def getfunc(self, name):
         return getattr(pc, name + ('_checked' * self.checked))
+
+
+@strawberry.input(description="Element-wise aggregate functions.")
+class ElementWise(Fields):
+    min_element_wise: List[Expression] = default_field([], name='min', func=pc.min_element_wise)
+    max_element_wise: List[Expression] = default_field([], name='max', func=pc.max_element_wise)
+    skip_nulls: bool = True
 
 
 @strawberry.input(description="Utf8 string functions.")
@@ -506,12 +523,10 @@ class Utf8(Fields):
     width: int = 0
     padding: str = ''
 
-    prefix = 'utf8_'
-
     def getfunc(self, name):
         if name.endswith('trim') and not self.characters:
             name += '_whitespace'
-        return getattr(pc, self.prefix + name)
+        return getattr(pc, 'utf8_' + name)
 
 
 @strawberry.input(description="Binary functions.")
@@ -531,16 +546,6 @@ class Binary(Fields):
     replacement: bytes = b''
 
     prefix = 'binary_'
-
-
-@strawberry.input(description="Bit-wise functions.")
-class BitWise(Fields):
-    and_: List[Expression] = default_field([], name='and', func=pc.bit_wise_and)
-    not_: List[Expression] = default_field([], name='not', func=pc.bit_wise_not)
-    or_: List[Expression] = default_field([], name='or', func=pc.bit_wise_or)
-    xor: List[Expression] = default_field([], func=pc.bit_wise_xor)
-
-    prefix = 'bit_wise_'
 
 
 @strawberry.input(description="Match substring functions.")
@@ -636,13 +641,6 @@ class Temporal(Fields):
     timezone: str = ''
     ambiguous: str = 'raise'
     nonexistent: str = 'raise'
-
-
-@strawberry.input(description="Element-wise aggregate functions.")
-class ElementWise(Fields):
-    min_element_wise: List[Expression] = default_field([], name='min', func=pc.min_element_wise)
-    max_element_wise: List[Expression] = default_field([], name='max', func=pc.max_element_wise)
-    skip_nulls: bool = True
 
 
 @strawberry.input(description="Set lookup functions.")
