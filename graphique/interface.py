@@ -297,7 +297,7 @@ class Dataset:
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
         args = digitize, cumulative_sum, fill_null_backward, fill_null_forward
-        funcs = C.digitize, pc.cumulative_sum, pc.fill_null_backward, pc.fill_null_forward
+        funcs = C.digitize, pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward
         for fields, func in zip(args, funcs):
             for field in fields:
                 name, args, kwargs = field.serialize(table)

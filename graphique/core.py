@@ -169,10 +169,6 @@ class Column(pa.ChunkedArray):
     def is_list_type(self):
         return pa.types.is_list(self.type) or pa.types.is_large_list(self.type)
 
-    def decode(self) -> pa.ChunkedArray:
-        """Native `dictionary_decode` is only on `DictionaryArray`."""
-        return self.cast(self.type.value_type) if pa.types.is_dictionary(self.type) else self
-
     def combine_dictionaries(self) -> tuple:
         if not pa.types.is_dictionary(self.type):
             return self, None
@@ -189,13 +185,21 @@ class Column(pa.ChunkedArray):
         offsets = list(itertools.accumulate(map(len, self.iterchunks())))
         return pa.chunked_array(map(np.arange, [0] + offsets, offsets))
 
-    def call(func: Callable, *args, **kwargs) -> pa.ChunkedArray:
-        """Call compute function with support for dictionary arrays."""
-        with contextlib.suppress(NotImplementedError):
-            return func(*args, **kwargs)
-        dictionary, indices = Column.combine_dictionaries(args[0])
-        array = func(dictionary, *args[1:], **kwargs)
-        return array if indices is None else array.take(indices)
+    def call_indices(self, func: Callable) -> pa.ChunkedArray:
+        dictionary, indices = Column.combine_dictionaries(self)
+        if indices is None:
+            return func(dictionary)
+        return pa.chunked_array(
+            pa.DictionaryArray.from_arrays(chunk, dictionary) for chunk in func(indices).chunks
+        )
+
+    def fill_null_backward(self) -> pa.ChunkedArray:
+        """`fill_null_backward` with dictionary support."""
+        return Column.call_indices(self, pc.fill_null_backward)
+
+    def fill_null_forward(self) -> pa.ChunkedArray:
+        """`fill_null_forward` with dictionary support."""
+        return Column.call_indices(self, pc.fill_null_forward)
 
     def fill_null(self, value) -> pa.ChunkedArray:
         """Optimized `fill_null` to check `null_count`."""
@@ -370,9 +374,8 @@ class Table(pa.Table):
             args += [(self[agg.name], *agg.astuple(func)) for agg in funcs[func]]  # type: ignore
         values, hashes, options = zip(*args)
         keys = map(self.column, names)
-        keys = [  # type: ignore
-            key.unify_dictionaries() if pa.types.is_dictionary(key.type) else key for key in keys
-        ]
+        if isinstance(self, pa.Table):
+            keys = (key.unify_dictionaries() for key in keys)  # type: ignore
         arrays = iter(pc._group_by(values, keys, zip(hashes, options)).flatten())
         if none:
             next(arrays)

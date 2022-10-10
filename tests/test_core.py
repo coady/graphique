@@ -11,14 +11,11 @@ def test_dictionary(table):
     assert C.min(array) == 'AK'
     assert C.max(array) == 'WY'
     assert C.min_max(array[:0]) == {'min': None, 'max': None}
-    assert sum(C.call(pc.match_substring, array, "ca", ignore_case=True).to_pylist()) == 2647
-    assert "ca" in C.call(pc.utf8_lower, array).unique().to_pylist()
     table = pa.table({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
-    array = C.call(pc.add, pa.chunked_array([[0, 0]]).dictionary_encode(), 1)
-    assert array.to_pylist() == [1, 1]
     array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()
-    assert C.fill_null(array, "c").to_pylist() == C.fill_null(C.decode(array), "c").to_pylist()
+    assert C.fill_null_backward(array) == array
+    assert C.fill_null_forward(array)[-1].as_py() == 'b'
     assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
     assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
     dictionary, ind = C.combine_dictionaries(pa.chunked_array([], 'string').dictionary_encode())
@@ -40,7 +37,9 @@ def test_chunks():
     assert C.index(array, 'b', start=2) == -1
     with pytest.raises(NotImplementedError):
         pc._group_by([array], [array], [('hash_count', None)])
-    assert len(T.group(pa.table({'col': array}), 'col')) == 3
+    table = pa.table({'col': array})
+    assert len(T.group(table, 'col')) == 3
+    assert len(T.map_batch(table, T.group, 'col')) == 4
 
 
 def test_lists():
