@@ -175,3 +175,20 @@ def test_federation(fedclient):
     )
     table = data['states']['filter']['columns']['indices']['takeFrom']
     assert table == {'__typename': 'ZipcodesTable', 'column': {'length': 2647}}
+
+
+def test_sorted(fedclient):
+    data = fedclient.execute(
+        '{ states { filter(state: {eq: "CA"}, county: {eq: "Santa Clara"}) { length } } }'
+    )
+    assert data == {'states': {'filter': {'length': 108}}}
+    data = fedclient.execute(
+        '{ states { filter(state: {eq: ["CA", "OR"]}, county: {eq: "Santa Clara"}) { length } } }'
+    )
+    assert data == {'states': {'filter': {'length': 108}}}
+    data = fedclient.execute(
+        '{ states { filter(state: {le: "CA"}, county: {eq: "Santa Clara"}) { length } } }'
+    )
+    assert data == {'states': {'filter': {'length': 108}}}
+    data = fedclient.execute('{ states { filter { filter(state: {eq: "CA"}) { length } } } }')
+    assert data == {'states': {'filter': {'filter': {'length': 2647}}}}

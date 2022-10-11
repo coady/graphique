@@ -110,10 +110,8 @@ class Dataset:
         for name in self.schema().index if search else []:
             assert not table[name].null_count, f"search requires non-null column: {name}"
             query = dict(queries.pop(name))
-            if not query:
-                break
             if 'eq' in query:
-                table = T.is_in(table, name, *query.pop('eq'))
+                table = T.is_in(table, name, *query['eq'])
             if 'ne' in query:
                 table = T.not_equal(table, name, query['ne'])
             lower, upper = query.get('gt'), query.get('lt')
@@ -124,7 +122,7 @@ class Dataset:
                 upper, includes['include_upper'] = query['le'], True
             if {lower, upper} != {None}:
                 table = T.range(table, name, lower, upper, **includes)
-            if query:
+            if len(query.pop('eq', [])) != 1 or query:
                 break
         self = type(self)(table)
         expr = Expression.from_query(**queries)
