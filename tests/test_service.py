@@ -51,10 +51,9 @@ def test_floats(client):
     assert data == {'scan': {'columns': {'latitude': {'min': pytest.approx(-174.213333)}}}}
     data = client.execute(
         f'''{{ apply(digitize: {{name: "latitude", bins: {list(range(90))}}})
-        {{ columns {{ latitude {{ min max unique {{ length }} }} }} }} }}'''
+        {{ column(name: "latitude") {{ ... on LongColumn {{ min max unique {{ length }} }} }} }} }}'''
     )
-    latitudes = data['apply']['columns']['latitude']
-    assert latitudes == {'min': 18.0, 'max': 72.0, 'unique': {'length': 52}}
+    assert data == {'apply': {'column': {'min': 18, 'max': 72, 'unique': {'length': 52}}}}
     data = client.execute(
         '{ scan(columns: {alias: "latitude", log: {logb: [{name: "latitude"}, {value: 3}]}}) { row { latitude } } }'
     )
@@ -133,15 +132,15 @@ def test_strings(client):
 
 def test_string_methods(client):
     data = client.execute(
-        '''{ scan(columns: {alias: "city", substring: {split: {name: "city"}, pattern: "-", maxSplits: 1}}) {
-        columns { city { type } } } }'''
+        '''{ scan(columns: {alias: "split", substring: {split: {name: "city"}, pattern: "-", maxSplits: 1}}) {
+        column(name: "split") { type } } }'''
     )
-    assert data == {'scan': {'columns': {'city': {'type': 'list<item: string>'}}}}
+    assert data == {'scan': {'column': {'type': 'list<item: string>'}}}
     data = client.execute(
-        '''{ scan(columns: {alias: "city", substring: {split: {name: "city"}}}) {
-        columns { city { type } } } }'''
+        '''{ scan(columns: {alias: "split", substring: {split: {name: "city"}}}) {
+        column(name: "split") { type } } }'''
     )
-    assert data == {'scan': {'columns': {'city': {'type': 'list<item: string>'}}}}
+    assert data == {'scan': {'column': {'type': 'list<item: string>'}}}
     data = client.execute(
         '''{ scan(columns: {alias: "state", utf8: {trim: {name: "state"}, characters: "C"}}) {
         columns { state { values } } } }'''

@@ -102,7 +102,22 @@ class Dataset:
         queries = {name: Filter(eq=[keys[name]]) for name in keys}
         return self.filter(Info(info, None), **queries)
 
-    def filter(self, info: Info, **queries: Filter):
+    def columns(self, info: Info) -> dict:
+        """fields for each column"""
+        table = self.select(info)
+        return {name: Column.cast(table[name]) for name in table.column_names}
+
+    def row(self, info: Info, index: int = 0) -> dict:
+        """Return scalar values at index."""
+        table = self.select(info, index + 1 if index >= 0 else None)
+        row = {}
+        for name in table.column_names:
+            scalar = table[name][index]
+            columnar = isinstance(scalar, pa.ListScalar)
+            row[name] = Column.fromscalar(scalar) if columnar else scalar.as_py()
+        return row
+
+    def filter(self, info: Info, **queries: Filter) -> 'Dataset':
         """Return table with rows which match all queries."""
         table = self.table
         prev = info.path.prev

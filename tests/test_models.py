@@ -152,10 +152,10 @@ def test_numeric(executor):
     )
     assert data == {'scan': {'columns': {'int32': {'values': [-1, None]}}}}
     data = executor(
-        '''{ scan(columns: {bitWise: {or: [{name: "int32"}, {name: "int64"}]}, alias: "int32"}) {
-        columns { int32 { values } } } }'''
+        '''{ scan(columns: {bitWise: {or: [{name: "int32"}, {name: "int64"}]}, alias: "int64"}) {
+        columns { int64 { values } } } }'''
     )
-    assert data == {'scan': {'columns': {'int32': {'values': [0, None]}}}}
+    assert data == {'scan': {'columns': {'int64': {'values': [0, None]}}}}
 
 
 @pytest.mark.skipif(sys.version_info < (3, 9), reason="requires python3.9 or pytz")

@@ -102,25 +102,12 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
         @doc_field
         def columns(self, info: Info) -> Columns:  # type: ignore
             """fields for each column"""
-            table = self.select(info)
-            columns = {
-                name: Columns.__annotations__[name](table[name]) for name in table.column_names
-            }
-            return Columns(**columns)
+            return Columns(**super().columns(info))
 
         @doc_field
         def row(self, info: Info, index: Long = 0) -> Row:  # type: ignore
             """Return scalar values at index."""
-            table = self.select(info, index + 1 if index >= 0 else None)
-            row = {}
-            for name in table.column_names:
-                scalar = table[name][index]
-                row[name] = (
-                    Column.fromscalar(scalar)
-                    if isinstance(scalar, pa.ListScalar)
-                    else scalar.as_py()
-                )
-            return Row(**row)
+            return Row(**super().row(info, index))
 
         @Filter.resolve_types(types)
         def filter(self, info: Info, **queries) -> TypeName:  # type: ignore
