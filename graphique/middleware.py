@@ -27,48 +27,43 @@ class TimingExtension(strawberry.extensions.Extension):
 
 
 class GraphQL(strawberry.asgi.GraphQL):
-    """ASGI GraphQL object with root value(s).
+    """ASGI GraphQL app with root value(s).
 
     Args:
-        root_value: a single root is attached as the Query type
-            a mapping attaches roots to each field name, and enables federation
-        keys: a mapping of optional federation keys for multiple roots
+        root: root dataset to attach as the Query type
         debug: enable timing extension
+        kwargs: additional `asgi.GraphQL` options
     """
 
-    def __init__(
-        self,
-        root: Union[Root, Mapping[str, Root]],
-        keys: Mapping[str, Iterable] = {},
-        debug: bool = False,
-        **kwargs,
-    ):
-        options = dict(
-            types=Column.type_map.values(),  # type: ignore
-            extensions=[TimingExtension] * bool(debug),
-            scalar_overrides=scalar_map,
-        )
-        if isinstance(root, Mapping):
-            root_value = federated(root, keys)
+    options = dict(types=Column.type_map.values(), scalar_overrides=scalar_map)  # type: ignore
+
+    def __init__(self, root: Root, debug: bool = False, **kwargs):
+        options = dict(self.options, extensions=[TimingExtension] * bool(debug))
+        if type(root).__name__ == 'Query':
+            self.root_value = root
             options['enable_federation_2'] = True
-            schema = strawberry.federation.Schema(type(root_value), **options)
+            schema = strawberry.federation.Schema(type(self.root_value), **options)
         else:
-            assert not keys, "federation keys required named roots"
-            root_value = implemented(root)
-            schema = strawberry.Schema(type(root_value), **options)
+            self.root_value = implemented(root)
+            schema = strawberry.Schema(type(self.root_value), **options)
         super().__init__(schema, debug=debug, **kwargs)
-        self.root_value = root_value
 
     async def get_root_value(self, request):
         return self.root_value
 
+    @classmethod
+    def federated(cls, roots: Mapping[str, Root], keys: Mapping[str, Iterable] = {}, **kwargs):
+        """Construct GraphQL app with multiple federated datasets.
 
-def federated(roots: Mapping[str, Root], keys: Mapping[str, Iterable] = {}):
-    """Return root Query with multiple datasets implemented."""
-    root_values = {name: implemented(roots[name], name, keys.get(name, ())) for name in roots}
-    annotations = {name: type(root_values[name]) for name in root_values}
-    Query = type('Query', (), {'__annotations__': annotations})
-    return strawberry.type(Query)(**root_values)
+        Args:
+            roots: mapping of field names to root datasets
+            keys: mapping of optional federation keys for each root
+            kwargs: additional `asgi.GraphQL` options
+        """
+        root_values = {name: implemented(roots[name], name, keys.get(name, ())) for name in roots}
+        annotations = {name: type(root_values[name]) for name in root_values}
+        Query = type('Query', (), {'__annotations__': annotations})
+        return cls(strawberry.type(Query)(**root_values), **kwargs)
 
 
 def implemented(root: Root, name: str = '', keys: Iterable = ()):

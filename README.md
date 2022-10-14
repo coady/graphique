@@ -40,7 +40,7 @@ import pyarrow.dataset as ds
 from graphique import GraphQL
 
 app = GraphQL(ds.dataset(...))  # Table is root query type
-app = GraphQL({<name>: ds.dataset(...), ...}, keys=...)  # Tables on separate fields, and federated
+app = GraphQL.federated({<name>: ds.dataset(...), ...}, keys={...})  # Tables on federated fields
 ```
 
 Start like any ASGI app.

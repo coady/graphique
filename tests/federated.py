@@ -9,4 +9,4 @@ roots = {
     'states': core.Table.sort(dataset.to_table(), 'state', 'county', indices='indices'),
     'zip_db': ds.dataset(fixtures / 'zip_db.parquet'),
 }
-app = GraphQL(roots, keys={'zipcodes': ['zipcode']})
+app = GraphQL.federated(roots, keys={'zipcodes': ['zipcode']})
