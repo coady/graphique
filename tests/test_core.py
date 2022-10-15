@@ -1,7 +1,6 @@
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
-import pyarrow.dataset as ds
 import pytest
 from graphique.core import Agg, ListChunk, Column as C, Table as T
 
@@ -72,7 +71,7 @@ def test_group(table):
     groups = T.group(table, 'state', list=[Agg('county'), Agg('city')])
     assert len(groups) == 52
     assert groups['state'][0].as_py() == 'NY'
-    table = T.filter_list(groups, ds.field('county') == ds.field('city'))
+    table = T.filter_list(groups, pc.field('county') == pc.field('city'))
     assert len(pc.list_flatten(table['city'])) == 2805
     mins = T.matched(groups, C.min, 'state', 'county')
     assert mins['state'].to_pylist() == ['AK']

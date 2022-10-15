@@ -469,7 +469,7 @@ class Table(pa.Table):
         for name in names:
             if Column.is_list_type(self[name]):
                 self = self.append_column('', getattr(ListChunk, func.__name__)(self[name]))
-                self = Table.filter_list(self, ds.field(name) == ds.field('')).drop([''])
+                self = Table.filter_list(self, pc.field(name) == pc.field('')).drop([''])
             else:
-                self = ds.dataset(self).to_table(filter=ds.field(name) == func(self[name]))
+                self = ds.dataset(self).to_table(filter=pc.field(name) == func(self[name]))
         return self

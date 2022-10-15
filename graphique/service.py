@@ -1,6 +1,7 @@
 """
 Default GraphQL service.
 """
+import pyarrow.compute as pc
 import pyarrow.dataset as ds
 from .inputs import Expression
 from .middleware import GraphQL
@@ -9,7 +10,7 @@ from .settings import COLUMNS, DEBUG, FEDERATED, FILTERS, PARQUET_PATH
 root = dataset = ds.dataset(PARQUET_PATH, partitioning='hive')
 
 if isinstance(COLUMNS, dict):
-    COLUMNS = {alias: ds.field(name) for alias, name in COLUMNS.items()}
+    COLUMNS = {alias: pc.field(name) for alias, name in COLUMNS.items()}
 if FILTERS is not None:
     root = dataset.to_table(columns=COLUMNS, filter=Expression.from_query(**FILTERS).to_arrow())
 elif COLUMNS:

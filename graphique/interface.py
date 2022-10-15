@@ -360,7 +360,7 @@ class Dataset:
         self, info: Info, filter: Expression = {}, columns: List[Projection] = []  # type: ignore
     ) -> 'Dataset':
         """Select rows and project columns without memory usage."""
-        projection = {name: ds.field(name) for name in self.references(info, level=1)}
+        projection = {name: pc.field(name) for name in self.references(info, level=1)}
         projection.update({col.alias or '.'.join(col.name): col.to_arrow() for col in columns})
         if '' in projection:
             raise ValueError("projected columns need a name or alias")

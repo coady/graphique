@@ -333,7 +333,7 @@ class Expression:
         """Transform GraphQL expression into a dataset expression."""
         fields = []
         if self.name:
-            fields.append(ds.field(*self.name))
+            fields.append(pc.field(*self.name))
         for name in self.scalars:
             scalars = list(map(self.getscalar, getattr(self, name)))
             if scalars:

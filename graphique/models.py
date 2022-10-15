@@ -377,7 +377,7 @@ class StructColumn(Column):
     def column(self, name: List[str]) -> Column:
         """Return struct field as a column."""
         dataset = ds.dataset(pa.table({'': self.array}))
-        return self.cast(*dataset.to_table(columns={'': ds.field('', *name)}))
+        return self.cast(*dataset.to_table(columns={'': pc.field('', *name)}))
 
 
 Column.type_map = {  # type: ignore
