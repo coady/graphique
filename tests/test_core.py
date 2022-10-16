@@ -37,7 +37,11 @@ def test_chunks():
     with pytest.raises(NotImplementedError):
         pc._group_by([array], [array], [('hash_count', None)])
     table = pa.table({'col': array})
-    assert len(T.group(table, 'col')) == 3
+    tbl = T.group(table, 'col', count_distinct=[Agg('col', 'count')], list=[Agg('col', 'list')])
+    assert tbl['col'].type == 'string'
+    assert tbl['count'].to_pylist() == [1] * 3
+    counts, _ = ListChunk.aggregate(tbl['list'], count_distinct=None).flatten()
+    assert counts.to_pylist() == [1] * 3
     assert len(T.map_batch(table, T.group, 'col')) == 4
 
 

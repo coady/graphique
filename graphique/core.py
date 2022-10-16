@@ -74,6 +74,11 @@ def sort_key(name: str) -> tuple:
     return name.lstrip('-'), ('descending' if name.startswith('-') else 'ascending')
 
 
+def decode(array: pa.Array) -> pa.Array:
+    """Decode dictionary array."""
+    return array.dictionary_decode() if isinstance(array, pa.DictionaryArray) else array
+
+
 class ListChunk(pa.lib.BaseListArray):
     value_length = pc.list_value_length
 
@@ -376,6 +381,10 @@ class Table(pa.Table):
         keys = map(self.column, names)
         if isinstance(self, pa.Table):
             keys = (key.unify_dictionaries() for key in keys)  # type: ignore
+            values = (
+                value.unify_dictionaries() if 'distinct' in func else value
+                for value, func in zip(values, hashes)
+            )
         arrays = iter(pc._group_by(values, keys, zip(hashes, options)).flatten())
         if none:
             next(arrays)
@@ -390,7 +399,7 @@ class Table(pa.Table):
             columns.update({agg.alias: table[agg.name] for agg in lists})
         for aggs in funcs.values():
             columns.update(zip([agg.alias for agg in aggs], arrays))
-        columns.update(zip(names, arrays))
+        columns.update(zip(names, map(decode, arrays)))
         return type(self).from_pydict(columns)
 
     def list_value_length(self) -> pa.Array:
