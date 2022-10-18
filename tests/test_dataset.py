@@ -1,5 +1,6 @@
 import pytest
 from graphique import middleware
+from .conftest import load
 
 
 def test_extension(capsys):
@@ -140,6 +141,7 @@ def test_scan(dsclient):
 
 
 def test_federation(fedclient):
+    assert load('zipcodes.parquet', FEDERATED='test').root_value.test
     data = fedclient.execute(
         '{ _service { sdl } zipcodes { __typename length } zipDb { __typename length } }'
     )

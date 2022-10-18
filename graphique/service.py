@@ -16,4 +16,7 @@ if FILTERS is not None:
 elif COLUMNS:
     root = dataset.scanner(columns=COLUMNS)
 
-app = GraphQL({FEDERATED: root} if FEDERATED else root, debug=DEBUG)
+if FEDERATED:
+    app = GraphQL.federated({FEDERATED: root}, debug=DEBUG)
+else:
+    app = GraphQL(root, debug=DEBUG)
