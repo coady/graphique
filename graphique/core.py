@@ -34,6 +34,7 @@ class Agg:
         'max': pc.ScalarAggregateOptions,
         'mean': pc.ScalarAggregateOptions,
         'min': pc.ScalarAggregateOptions,
+        'min_max': pc.ScalarAggregateOptions,
         'one': pc.ScalarAggregateOptions,  # no options
         'product': pc.ScalarAggregateOptions,
         'stddev': pc.VarianceOptions,
@@ -42,7 +43,7 @@ class Agg:
         'variance': pc.VarianceOptions,
     }
 
-    associatives = {'all', 'any', 'count', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
+    associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -50,8 +51,6 @@ class Agg:
         self.options = options
 
     def astuple(self, func: str) -> tuple:
-        if func == 'tdigest' and set(self.options) <= {'skip_nulls', 'min_count'}:
-            func = 'approximate_median'
         return f'hash_{func}', self.option_map[func](**self.options)
 
 

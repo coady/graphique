@@ -51,6 +51,7 @@ def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField
 class Column:
     def __init__(self, array):
         self.array = array
+        self.min_max = functools.lru_cache(maxsize=None)(functools.partial(C.min_max, array))
 
     def __init_subclass__(cls):
         cls.__init__ = Column.__init__
@@ -107,11 +108,11 @@ class Column:
 
     def min(self, skip_nulls: bool = True, min_count: int = 0):
         """minimum value"""
-        return C.min(self.array, skip_nulls=skip_nulls, min_count=min_count)
+        return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['min']
 
     def max(self, skip_nulls: bool = True, min_count: int = 0):
         """maximum value"""
-        return C.max(self.array, skip_nulls=skip_nulls, min_count=min_count)
+        return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['max']
 
     def drop_null(self):
         """remove missing values from an array"""
@@ -180,7 +181,7 @@ class NumericColumn(Column):
         interpolation: str = 'linear',
         skip_nulls: bool = True,
         min_count: int = 0,
-    ) -> List[float]:
+    ) -> List[Optional[float]]:
         """Return list of quantiles for values, defaulting to the median."""
         options = {'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.quantile(self.array, q=q, interpolation=interpolation, **options).to_pylist()
@@ -193,7 +194,7 @@ class NumericColumn(Column):
         buffer_size: int = 500,
         skip_nulls: bool = True,
         min_count: int = 0,
-    ) -> List[float]:
+    ) -> List[Optional[float]]:
         """Return list of approximate quantiles for values, defaulting to the median."""
         options = {'buffer_size': buffer_size, 'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
