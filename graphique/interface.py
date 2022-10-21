@@ -85,7 +85,8 @@ class Dataset:
         dataset = ds.dataset(self.table) if isinstance(self.table, pa.Table) else self.table
         if isinstance(dataset, ds.Dataset):
             return dataset.scanner(**options)
-        return ds.Scanner.from_batches(dataset.to_batches(), dataset.projected_schema, **options)
+        options['schema'] = dataset.projected_schema
+        return ds.Scanner.from_batches(dataset.to_batches(), **options)
 
     def select(self, info: Info, length: int = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
