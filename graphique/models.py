@@ -12,12 +12,13 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry
+from strawberry.annotation import StrawberryAnnotation
 from strawberry.field import StrawberryField
 from strawberry.types import Info
 from typing_extensions import Annotated
 from .core import Column as C
 from .inputs import links
-from .scalars import Long, type_map
+from .scalars import Duration, Long, type_map
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
@@ -51,10 +52,9 @@ def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField
 class Column:
     def __init__(self, array):
         self.array = array
-        self.min_max = functools.lru_cache(maxsize=None)(functools.partial(C.min_max, array))
 
     def __init_subclass__(cls):
-        cls.__init__ = Column.__init__
+        cls.__init__ = cls.__init__
 
     @doc_field
     def type(self) -> str:
@@ -75,52 +75,10 @@ class Column:
     def fromscalar(cls, scalar: pa.ListScalar) -> Optional['Column']:
         return None if scalar.values is None else cls.cast(pa.chunked_array([scalar.values]))
 
-    def unique(self, info: Info):
-        """unique values and counts"""
-        if 'counts' in selections(*info.selected_fields):
-            return Set(*self.array.value_counts().flatten())
-        return Set(self.array.unique())
-
     @doc_field
     def count(self, mode: str = 'only_valid') -> Long:
         """Return number of valid or null values."""
         return pc.count(self.array, mode=mode).as_py()
-
-    @doc_field
-    def count_distinct(self, mode: str = 'only_valid') -> Long:
-        """Return number of unique values."""
-        return pc.count_distinct(self.array, mode=mode).as_py()
-
-    def index(self, value, start: Long = 0, end: Optional[Long] = None) -> Long:
-        """Return first index of occurrence of value; -1 indicates not found.
-
-        May be faster than `count` for membership test.
-        """
-        return C.index(self.array, value, start, end)
-
-    def value(self, index: Long = 0):
-        """scalar value at index"""
-        return self.array[index].as_py()
-
-    def values(self):
-        """list of values"""
-        return self.array.to_pylist()
-
-    def min(self, skip_nulls: bool = True, min_count: int = 0):
-        """minimum value"""
-        return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['min']
-
-    def max(self, skip_nulls: bool = True, min_count: int = 0):
-        """maximum value"""
-        return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['max']
-
-    def drop_null(self):
-        """remove missing values from an array"""
-        return self.array.drop_null().to_pylist()
-
-    def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0):
-        """mode of the values"""
-        return Set(*pc.mode(self.array, n, skip_nulls=skip_nulls, min_count=min_count).flatten())
 
 
 @strawberry.type(description="unique values")
@@ -147,12 +105,73 @@ def annotate(func, return_type, **annotations):
 
 
 @strawberry.type
-class NumericColumn(Column):
-    def sum(self, skip_nulls: bool = True, min_count: int = 0):
+class NominalColumn(Generic[T], Column):
+    @doc_field
+    def count_distinct(self, mode: str = 'only_valid') -> Long:
+        """Return number of unique values."""
+        return pc.count_distinct(self.array, mode=mode).as_py()
+
+    @doc_field
+    def value(self, index: Long = 0) -> Optional[T]:
+        """scalar value at index"""
+        return self.array[index].as_py()
+
+    @doc_field
+    def values(self) -> List[Optional[T]]:
+        """list of values"""
+        return self.array.to_pylist()
+
+    @doc_field
+    def drop_null(self) -> List[T]:
+        """remove missing values from an array"""
+        return self.array.drop_null().to_pylist()
+
+
+@strawberry.type
+class OrdinalColumn(NominalColumn[T]):
+    def __init__(self, array):
+        super().__init__(array)
+        self.min_max = functools.lru_cache(maxsize=None)(functools.partial(C.min_max, array))
+
+    @doc_field
+    def unique(self, info: Info) -> Set[T]:
+        """unique values and counts"""
+        if 'counts' in selections(*info.selected_fields):
+            return Set(*self.array.value_counts().flatten())
+        return Set(self.array.unique())
+
+    @doc_field
+    def min(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+        """minimum value"""
+        return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['min']
+
+    @doc_field
+    def max(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+        """maximum value"""
+        return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['max']
+
+    def index(self, value, start: Long = 0, end: Optional[Long] = None) -> Long:
+        """Return first index of occurrence of value; -1 indicates not found.
+
+        May be faster than `count` for membership test.
+        """
+        return C.index(self.array, value, start, end)
+
+
+@strawberry.type
+class IntervalColumn(OrdinalColumn[T]):
+    @doc_field
+    def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0) -> Set[T]:
+        """mode of the values"""
+        return Set(*pc.mode(self.array, n, skip_nulls=skip_nulls, min_count=min_count).flatten())
+
+    @doc_field
+    def sum(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
         """sum of the values"""
         return pc.sum(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
-    def product(self, skip_nulls: bool = True, min_count: int = 0):
+    @doc_field
+    def product(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
         """product of the values"""
         return pc.product(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
@@ -161,6 +180,14 @@ class NumericColumn(Column):
         """mean of the values"""
         return pc.mean(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
+    @doc_field
+    def indices_nonzero(self) -> List[Long]:
+        """indices of the values in the array that are non-zero"""
+        return pc.indices_nonzero(self.array).to_pylist()
+
+
+@strawberry.type
+class RatioColumn(IntervalColumn[T]):
     @doc_field
     def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
         """standard deviation of the values"""
@@ -199,20 +226,14 @@ class NumericColumn(Column):
         options = {'buffer_size': buffer_size, 'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
 
-    @doc_field
-    def indices_nonzero(self) -> List[Long]:
-        """indices of the values in the array that are non-zero"""
-        return pc.indices_nonzero(self.array).to_pylist()
+
+def generic_type(cls, **kwargs):
+    return lambda tp: StrawberryAnnotation(strawberry.type(tp, **kwargs)[cls]).resolve()
 
 
-@strawberry.type(description="column of booleans")
-class BooleanColumn(Column):
-    index = annotate(Column.index, Long, value=bool)
-    value = annotate(Column.value, Optional[bool])
-    values = annotate(Column.values, List[Optional[bool]])
-    unique = annotate(Column.unique, Set[bool])
-    mode = annotate(NumericColumn.mode, Set[bool])
-    indices_nonzero = doc_field(NumericColumn.indices_nonzero)
+@generic_type(bool, name='eanColumn', description="column of booleans")
+class BooleanColumn(IntervalColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=bool)
 
     @doc_field
     def any(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
@@ -225,18 +246,9 @@ class BooleanColumn(Column):
         return pc.all(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
 
-@strawberry.type(description="column of ints")
-class IntColumn(NumericColumn):
-    index = annotate(Column.index, Long, value=int)
-    value = annotate(Column.value, Optional[int])
-    values = annotate(Column.values, List[Optional[int]])
-    unique = annotate(Column.unique, Set[int])
-    sum = annotate(NumericColumn.sum, Optional[int])
-    product = annotate(NumericColumn.product, Optional[int])
-    mode = annotate(NumericColumn.mode, Set[int])
-    min = annotate(Column.min, Optional[int])
-    max = annotate(Column.max, Optional[int])
-    drop_null = annotate(Column.drop_null, List[int])
+@generic_type(int, name='Column', description="column of ints")
+class IntColumn(RatioColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=int)
 
     @doc_field
     def take_from(
@@ -247,104 +259,50 @@ class IntColumn(NumericColumn):
         return type(root)(root.scanner(info).take(self.array.combine_chunks()))
 
 
-@strawberry.type(description="column of longs")
-class LongColumn(NumericColumn):
-    index = annotate(Column.index, Long, value=Long)
-    value = annotate(Column.value, Optional[Long])
-    values = annotate(Column.values, List[Optional[Long]])
-    unique = annotate(Column.unique, Set[Long])
-    sum = annotate(NumericColumn.sum, Optional[Long])
-    product = annotate(NumericColumn.product, Optional[Long])
-    mode = annotate(NumericColumn.mode, Set[Long])
-    min = annotate(Column.min, Optional[Long])
-    max = annotate(Column.max, Optional[Long])
-    drop_null = annotate(Column.drop_null, List[Long])
+@generic_type(Long, name='Column', description="column of longs")
+class LongColumn(RatioColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=Long)
     take_from = doc_field(IntColumn.take_from)
 
 
-@strawberry.type(description="column of floats")
-class FloatColumn(NumericColumn):
-    index = annotate(Column.index, Long, value=float)
-    value = annotate(Column.value, Optional[float])
-    values = annotate(Column.values, List[Optional[float]])
-    unique = annotate(Column.unique, Set[float])
-    sum = annotate(NumericColumn.sum, Optional[float])
-    product = annotate(NumericColumn.product, Optional[float])
-    mode = annotate(NumericColumn.mode, Set[float])
-    min = annotate(Column.min, Optional[float])
-    max = annotate(Column.max, Optional[float])
-    drop_null = annotate(Column.drop_null, List[float])
+@generic_type(float, name='Column', description="column of floats")
+class FloatColumn(RatioColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=float)
 
 
-@strawberry.type(description="column of decimals")
-class DecimalColumn(Column):
-    values = annotate(Column.values, List[Optional[Decimal]])
-    value = annotate(Column.value, Optional[Decimal])
-    unique = annotate(Column.unique, Set[Decimal])
-    mode = annotate(NumericColumn.mode, Set[Decimal])
-    min = annotate(Column.min, Optional[Decimal])
-    max = annotate(Column.max, Optional[Decimal])
-    indices_nonzero = doc_field(NumericColumn.indices_nonzero)
+@generic_type(Decimal, name='Column', description="column of decimals")
+class DecimalColumn(IntervalColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=timedelta)
 
 
-@strawberry.type(description="column of dates")
-class DateColumn(Column):
-    index = annotate(Column.index, Long, value=date)
-    value = annotate(Column.value, Optional[date])
-    values = annotate(Column.values, List[Optional[date]])
-    unique = annotate(Column.unique, Set[date])
-    min = annotate(Column.min, Optional[date])
-    max = annotate(Column.max, Optional[date])
-    drop_null = annotate(Column.drop_null, List[date])
+@generic_type(date, name='Column', description="column of dates")
+class DateColumn(OrdinalColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=date)
 
 
-@strawberry.type(description="column of datetimes")
-class DateTimeColumn(Column):
-    index = annotate(Column.index, Long, value=datetime)
-    value = annotate(Column.value, Optional[datetime])
-    values = annotate(Column.values, List[Optional[datetime]])
-    unique = annotate(Column.unique, Set[datetime])
-    min = annotate(Column.min, Optional[datetime])
-    max = annotate(Column.max, Optional[datetime])
-    drop_null = annotate(Column.drop_null, List[datetime])
+@generic_type(datetime, name='Column', description="column of datetimes")
+class DatetimeColumn(OrdinalColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=datetime)
 
 
-@strawberry.type(description="column of times")
-class TimeColumn(Column):
-    index = annotate(Column.index, Long, value=time)
-    value = annotate(Column.value, Optional[time])
-    values = annotate(Column.values, List[Optional[time]])
-    unique = annotate(Column.unique, Set[time])
-    min = annotate(Column.min, Optional[time])
-    max = annotate(Column.max, Optional[time])
-    drop_null = annotate(Column.drop_null, List[time])
+@generic_type(time, name='Column', description="column of times")
+class TimeColumn(OrdinalColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=time)
 
 
-@strawberry.type(description="column of durations")
-class DurationColumn(Column):
-    index = annotate(Column.index, Long, value=timedelta)
-    value = annotate(Column.value, Optional[timedelta])
-    values = annotate(Column.values, List[Optional[timedelta]])
+@generic_type(Duration, name='Column', description="column of durations")
+class DurationColumn(NominalColumn[T]):
+    ...
 
 
-@strawberry.type(description="column of binaries")
-class Base64Column(Column):
-    index = annotate(Column.index, Long, value=bytes)
-    value = annotate(Column.value, Optional[bytes])
-    values = annotate(Column.values, List[Optional[bytes]])
-    unique = annotate(Column.unique, Set[bytes])
-    drop_null = annotate(Column.drop_null, List[bytes])
+@generic_type(strawberry.scalars.Base64, name='Column', description="column of binaries")
+class Base64Column(OrdinalColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=bytes)
 
 
-@strawberry.type(description="column of strings")
-class StringColumn(Column):
-    index = annotate(Column.index, Long, value=str)
-    value = annotate(Column.value, Optional[str])
-    values = annotate(Column.values, List[Optional[str]])
-    unique = annotate(Column.unique, Set[str])
-    min = annotate(Column.min, Optional[str])
-    max = annotate(Column.max, Optional[str])
-    drop_null = annotate(Column.drop_null, List[str])
+@generic_type(str, name='ingColumn', description="column of strings")
+class StringColumn(OrdinalColumn[T]):
+    index = annotate(OrdinalColumn.index, Long, value=str)
 
 
 @strawberry.type(description="column of lists")
@@ -367,7 +325,7 @@ class ListColumn(Column):
 
 @strawberry.type(description="column of structs")
 class StructColumn(Column):
-    value = annotate(Column.value, Optional[dict])
+    value = annotate(NominalColumn.value, Optional[dict])
 
     @doc_field
     def names(self) -> List[str]:
@@ -388,7 +346,7 @@ Column.type_map = {  # type: ignore
     float: FloatColumn,
     Decimal: DecimalColumn,
     date: DateColumn,
-    datetime: DateTimeColumn,
+    datetime: DatetimeColumn,
     time: TimeColumn,
     timedelta: DurationColumn,
     bytes: Base64Column,
