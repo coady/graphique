@@ -14,6 +14,7 @@ import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.arguments import StrawberryArgument
+from strawberry.schema_directive import Location
 from strawberry.field import StrawberryField
 from strawberry.scalars import JSON
 from strawberry.types.fields.resolver import StrawberryResolver
@@ -77,19 +78,38 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     )
 
 
-def default_field(default=UNSET, func: Callable = None, **kwargs) -> StrawberryField:
+@strawberry.schema_directive(
+    locations=[Location.ARGUMENT_DEFINITION, Location.INPUT_FIELD_DEFINITION],
+    description=inspect.cleandoc(
+        """
+This input is optional, not nullable.
+If the client insists on sending an explicit null value, the behavior is undefined.
+"""
+    ),
+)
+class optional:
+    ...
+
+
+def default_field(
+    default=UNSET, func: Callable = None, nullable: bool = False, **kwargs
+) -> StrawberryField:
     """Use dataclass `default_factory` for `UNSET` or mutables."""
     if func is not None:
         kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
+    if not nullable and default is UNSET:
+        kwargs.setdefault('directives', []).append(optional())
     return strawberry.field(default_factory=type(default), **kwargs)
 
 
 @strawberry.input(description="predicates for scalars")
 class Filter(Generic[T], Input):
     eq: Optional[List[Optional[T]]] = default_field(
-        description="== or `isin`; `null` is equivalent to arrow `is_null`."
+        description="== or `isin`; `null` is equivalent to arrow `is_null`.", nullable=True
     )
-    ne: Optional[T] = default_field(description="!=; `null` is equivalent to arrow `is_valid`.")
+    ne: Optional[T] = default_field(
+        description="!=; `null` is equivalent to arrow `is_valid`.", nullable=True
+    )
     lt: Optional[T] = default_field(description="<")
     le: Optional[T] = default_field(description="<=")
     gt: Optional[T] = default_field(description=r"\>")
@@ -228,24 +248,27 @@ class Aggregations(Input):
 
 
 @strawberry.input(
-    description="""Discrete difference predicates.
+    description=inspect.cleandoc(
+        """Discrete difference predicates.
 
 By default compares by not equal, Specifiying `null` with a predicate compares element-wise.
 A float computes the discrete difference first; durations may be in float seconds.
 """
+    )
 )
 class Diff(Input):
     name: str
-    less: Optional[float] = default_field(name='lt', description="<")
-    less_equal: Optional[float] = default_field(name='le', description="<=")
-    greater: Optional[float] = default_field(name='gt', description=r"\>")
-    greater_equal: Optional[float] = default_field(name='ge', description=r"\>=")
+    less: Optional[float] = default_field(name='lt', description="<", nullable=True)
+    less_equal: Optional[float] = default_field(name='le', description="<=", nullable=True)
+    greater: Optional[float] = default_field(name='gt', description=r"\>", nullable=True)
+    greater_equal: Optional[float] = default_field(name='ge', description=r"\>=", nullable=True)
 
     nullables = {'less', 'less_equal', 'greater', 'greater_equal'}
 
 
 @strawberry.input(
-    description="""[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
+    description=inspect.cleandoc(
+        """[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
 used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html).
 
 Expects one of: a field `name`, a scalar, or an operator with expressions. Single values can be passed for an
@@ -254,12 +277,15 @@ Expects one of: a field `name`, a scalar, or an operator with expressions. Singl
 * `eq` with a `null` scalar is equivalent `is_null`
 * `ne` with a `null` scalar is equivalent to `is_valid`
 """
+    )
 )
 class Expression:
     name: List[str] = default_field([], description="field name(s)")
     cast: str = strawberry.field(default='', description=f"cast as {links.type}")
     safe: bool = strawberry.field(default=True, description="check for conversion errors on cast")
-    value: Optional[JSON] = default_field(description="JSON scalar; also see typed scalars")
+    value: Optional[JSON] = default_field(
+        description="JSON scalar; also see typed scalars", nullable=True
+    )
     kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
     checked: bool = strawberry.field(default=False, description="check for overflow errors")
 

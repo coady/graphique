@@ -6,10 +6,11 @@ from typing import Iterable, Mapping, Optional, Union
 import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry.asgi
+from strawberry import UNSET
 from strawberry.utils.str_converters import to_camel_case
 from strawberry.types import Info
 from .core import Column as C
-from .inputs import Filter, default_field
+from .inputs import Filter
 from .interface import Dataset
 from .models import Column, doc_field
 from .scalars import Long, scalar_map, type_map
@@ -73,12 +74,12 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
     prefix = to_camel_case(name.title())
     TypeName = prefix + 'Table'
 
-    namespace = {name: default_field(name=name) for name in types}
+    namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
     annotations = {name: Column.type_map[types[name]] for name in types}  # type: ignore
     cls = type(prefix + 'Columns', (), dict(namespace, __annotations__=annotations))
     Columns = strawberry.type(cls, description="fields for each column")
 
-    namespace = {name: default_field(name=name) for name in types}
+    namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
     annotations = {name: Optional[Column if cls is list else cls] for name, cls in types.items()}
     cls = type(prefix + 'Row', (), dict(namespace, __annotations__=annotations))
     Row = strawberry.type(cls, description="scalar fields")

@@ -65,4 +65,6 @@ GraphQL continues the long tradition of confusing ["optional" with "nullable"](h
 Arrow has first-class support for nulls, so array scalars are nullable. Non-null scalars are used where relevant.
 
 ### Input
-Default values and non-null types are used wherever possible. When an input is optional and has no natural default, there's still the issue of distinguishing whether an explicit null input is expected or is semantically different. The input's description field will describe null behavior when expected. Otherwise explicit null behavior is undefined, and assume it errors.
+Default values and non-null types are used wherever possible. When an input is optional and has no natural default, there are two cases to distinguish:
+* if null is expected and semantically different, the input's description explains null behavior
+* otherwise the input has an `@optional` directive, and explicit null behavior is undefined
