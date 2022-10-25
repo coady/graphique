@@ -1,4 +1,2 @@
 -r ../requirements.in
-starlette>=0.21
-httpx
 pytest-cov

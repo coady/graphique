@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 from graphique import middleware
 from .conftest import load
@@ -140,8 +141,13 @@ def test_scan(dsclient):
     assert data == {'scan': {'length': 2647}}
 
 
+def test_root(fedclient):
+    app = load('zipcodes.parquet', FEDERATED='test')
+    assert asyncio.run(app.get_root_value(None)) is app.root_value
+    assert app.root_value.test
+
+
 def test_federation(fedclient):
-    assert load('zipcodes.parquet', FEDERATED='test').root_value.test
     data = fedclient.execute(
         '{ _service { sdl } zipcodes { __typename length } zipDb { __typename length } }'
     )

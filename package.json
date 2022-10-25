@@ -1,5 +1,5 @@
 {
   "devDependencies": {
-    "graphql-markdown": "^6.0.0"
+    "graphql-markdown": ">=7"
   }
 }

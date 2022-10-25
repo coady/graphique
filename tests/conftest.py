@@ -5,7 +5,6 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.dataset as ds
 import pytest
-from starlette import testclient
 
 fixtures = Path(__file__).parent / 'fixtures'
 
@@ -14,14 +13,15 @@ def pytest_report_header(config):
     return f'pyarrow {pa.__version__}'
 
 
-class TestClient(testclient.TestClient):
-    def execute(self, query, **variables):
-        response = self.post('/graphql', json={'query': query, 'variables': variables})
-        response.raise_for_status()
-        result = response.json()
-        for error in result.get('errors', []):
+class TestClient:
+    def __init__(self, app):
+        self.app = app
+
+    def execute(self, query):
+        result = self.app.schema.execute_sync(query, root_value=self.app.root_value)
+        for error in result.errors or []:
             raise ValueError(error)
-        return result['data']
+        return result.data
 
 
 def load(path, **vars):
@@ -54,14 +54,14 @@ def dsclient(request):
 
 
 @pytest.fixture(scope='module')
-def fedclient(request):
+def fedclient():
     from .federated import app
 
     return TestClient(app)
 
 
 @pytest.fixture(scope='module')
-def aliasclient(request):
+def aliasclient():
     columns = {'snakeId': 'snake_id', 'camelId': 'camelId'}
     app = load('alltypes.parquet', COLUMNS=json.dumps(columns))
     return TestClient(app)
