@@ -103,7 +103,11 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
         @doc_field
         def row(self, info: Info, index: Long = 0) -> Row:  # type: ignore
             """Return scalar values at index."""
-            return Row(**super().row(info, index))
+            row = super().row(info, index)
+            for name, value in row.items():
+                if isinstance(value, Column) and Column not in Row.__annotations__[name].__args__:
+                    raise TypeError(f"Field `{name}` cannot represent `Column` value")
+            return Row(**row)
 
         @Filter.resolve_types(types)
         def filter(self, info: Info, **queries) -> TypeName:  # type: ignore

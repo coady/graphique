@@ -333,6 +333,8 @@ def test_group(client):
         client.execute('{ group { length } }')
     with pytest.raises(ValueError, match="list"):
         client.execute('{ group(by: ["state"]) { tables { length } } }')
+    with pytest.raises(ValueError, match="cannot represent"):
+        client.execute('{ group(by: "state") { row { city } } }')
     data = client.execute(
         '''{ group(by: ["state"]) { length tables { length
         columns { state { values } county { min max } } }
