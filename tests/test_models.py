@@ -110,6 +110,7 @@ def test_decimal(executor):
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
     assert execute('{ decimal { min max } }')
     assert execute('{ decimal { indicesNonzero } }') == {'decimal': {'indicesNonzero': []}}
+    assert execute('{ decimal { index(value: 0) } }')
 
 
 def test_numeric(executor):

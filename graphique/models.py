@@ -48,6 +48,12 @@ def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField
     return strawberry.field(func, description=inspect.getdoc(func))
 
 
+def compute_field(func: Callable):
+    """Wrap compute function with its description."""
+    doc = inspect.getdoc(getattr(pc, func.__name__))
+    return strawberry.field(func, description=doc.splitlines()[0])  # type: ignore
+
+
 @strawberry.interface(description="column interface")
 class Column:
     def __init__(self, array):
@@ -56,14 +62,13 @@ class Column:
     def __init_subclass__(cls):
         cls.__init__ = cls.__init__
 
-    @doc_field
+    @strawberry.field(description=links.type)
     def type(self) -> str:
-        f"""{links.type}"""
         return str(self.array.type)
 
     @doc_field
     def length(self) -> Long:
-        """number of rows"""
+        """array length"""
         return len(self.array)
 
     @classmethod
@@ -75,24 +80,9 @@ class Column:
     def fromscalar(cls, scalar: pa.ListScalar) -> Optional['Column']:
         return None if scalar.values is None else cls.cast(pa.chunked_array([scalar.values]))
 
-    @doc_field
+    @compute_field
     def count(self, mode: str = 'only_valid') -> Long:
-        """Return number of valid or null values."""
         return pc.count(self.array, mode=mode).as_py()
-
-
-@strawberry.type(description="unique values")
-class Set(Generic[T]):
-    length = doc_field(Column.length)
-    counts: List[Long] = strawberry.field(description="list of counts")
-
-    def __init__(self, array, counts=pa.array([])):
-        self.array, self.counts = array, counts.to_pylist()
-
-    @doc_field
-    def values(self) -> List[Optional[T]]:
-        """list of values"""
-        return self.array.to_pylist()
 
 
 def annotate(func, return_type, **annotations):
@@ -106,9 +96,8 @@ def annotate(func, return_type, **annotations):
 
 @strawberry.type
 class NominalColumn(Generic[T], Column):
-    @doc_field
+    @compute_field
     def count_distinct(self, mode: str = 'only_valid') -> Long:
-        """Return number of unique values."""
         return pc.count_distinct(self.array, mode=mode).as_py()
 
     @doc_field
@@ -121,10 +110,19 @@ class NominalColumn(Generic[T], Column):
         """list of values"""
         return self.array.to_pylist()
 
-    @doc_field
+    @compute_field
     def drop_null(self) -> List[T]:
-        """remove missing values from an array"""
         return self.array.drop_null().to_pylist()
+
+
+@strawberry.type(description="unique values and counts")
+class Set(Generic[T]):
+    length = doc_field(Column.length)
+    values = doc_field(NominalColumn.values)
+    counts: List[Long] = strawberry.field(description="list of counts")
+
+    def __init__(self, array, counts=pa.array([])):
+        self.array, self.counts = array, counts.to_pylist()
 
 
 @strawberry.type
@@ -133,9 +131,8 @@ class OrdinalColumn(NominalColumn[T]):
         super().__init__(array)
         self.min_max = functools.lru_cache(maxsize=None)(functools.partial(C.min_max, array))
 
-    @doc_field
+    @strawberry.field(description=Set._type_definition.description)  # type: ignore
     def unique(self, info: Info) -> Set[T]:
-        """unique values and counts"""
         if 'counts' in selections(*info.selected_fields):
             return Set(*self.array.value_counts().flatten())
         return Set(self.array.unique())
@@ -151,57 +148,47 @@ class OrdinalColumn(NominalColumn[T]):
         return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['max']
 
     def index(self, value, start: Long = 0, end: Optional[Long] = None) -> Long:
-        """Return first index of occurrence of value; -1 indicates not found.
-
-        May be faster than `count` for membership test.
-        """
+        """Find the index of the first occurrence of a given value."""
         return C.index(self.array, value, start, end)
 
 
 @strawberry.type
 class IntervalColumn(OrdinalColumn[T]):
-    @doc_field
+    @compute_field
     def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0) -> Set[T]:
-        """mode of the values"""
         return Set(*pc.mode(self.array, n, skip_nulls=skip_nulls, min_count=min_count).flatten())
 
-    @doc_field
+    @compute_field
     def sum(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
-        """sum of the values"""
         return pc.sum(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
-    @doc_field
+    @compute_field
     def product(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
-        """product of the values"""
         return pc.product(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
-    @doc_field
+    @compute_field
     def mean(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
-        """mean of the values"""
         return pc.mean(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
-    @doc_field
+    @compute_field
     def indices_nonzero(self) -> List[Long]:
-        """indices of the values in the array that are non-zero"""
         return pc.indices_nonzero(self.array).to_pylist()
 
 
 @strawberry.type
 class RatioColumn(IntervalColumn[T]):
-    @doc_field
+    @compute_field
     def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
-        """standard deviation of the values"""
         return pc.stddev(self.array, ddof=ddof, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
-    @doc_field
+    @compute_field
     def variance(
         self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0
     ) -> Optional[float]:
-        """variance of the values"""
         options = {'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.variance(self.array, ddof=ddof, **options).as_py()
 
-    @doc_field
+    @compute_field
     def quantile(
         self,
         q: List[float] = [0.5],
@@ -209,11 +196,10 @@ class RatioColumn(IntervalColumn[T]):
         skip_nulls: bool = True,
         min_count: int = 0,
     ) -> List[Optional[float]]:
-        """Return list of quantiles for values, defaulting to the median."""
         options = {'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.quantile(self.array, q=q, interpolation=interpolation, **options).to_pylist()
 
-    @doc_field
+    @compute_field
     def tdigest(
         self,
         q: List[float] = [0.5],
@@ -222,7 +208,6 @@ class RatioColumn(IntervalColumn[T]):
         skip_nulls: bool = True,
         min_count: int = 0,
     ) -> List[Optional[float]]:
-        """Return list of approximate quantiles for values, defaulting to the median."""
         options = {'buffer_size': buffer_size, 'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
 
@@ -235,14 +220,12 @@ def generic_type(cls, **kwargs):
 class BooleanColumn(IntervalColumn[T]):
     index = annotate(OrdinalColumn.index, Long, value=bool)
 
-    @doc_field
+    @compute_field
     def any(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
-        """whether all values evaluate to true"""
         return pc.any(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
-    @doc_field
+    @compute_field
     def all(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
-        """whether any values evaluate to true"""
         return pc.all(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
 
@@ -272,7 +255,7 @@ class FloatColumn(RatioColumn[T]):
 
 @generic_type(Decimal, name='Column', description="column of decimals")
 class DecimalColumn(IntervalColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=timedelta)
+    index = annotate(OrdinalColumn.index, Long, value=Decimal)
 
 
 @generic_type(date, name='Column', description="column of dates")
