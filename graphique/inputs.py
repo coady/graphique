@@ -397,9 +397,7 @@ class Expression:
         return field.cast(self.cast, self.safe) if cast else field
 
     def getscalar(self, value):
-        if self.cast:
-            return pa.scalar(value, self.cast)
-        return value if isinstance(value, (list, type(None))) else pc.scalar(value)
+        return pa.scalar(value, self.cast) if self.cast else value
 
     def getfunc(self, name):
         if self.kleene:

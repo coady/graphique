@@ -96,7 +96,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ```
 
 ## Dependencies
-* pyarrow >=9
+* pyarrow >=10
 * strawberry-graphql[asgi] >=0.134.4
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 
@@ -110,6 +110,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ## Changes
 dev
 
+* Pyarrow >=10 required
 * Dataset schema introspection
 * Dataset scanning with selection and projection
 * Binary search on sorted columns
