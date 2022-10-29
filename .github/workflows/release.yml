@@ -14,9 +14,7 @@ jobs:
       with:
         python-version: 3.x
     - run: pip install build wheel -r docs/requirements.in
-    # avoid .tar.gz name conflicts with previous project until v1.0
-    - run: python setup.py sdist --formats zip
-    - run: python -m build -nw
+    - run: python -m build -n
     - run: npm install
     - run: make html
     - run: python -m mkdocs gh-deploy --force

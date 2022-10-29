@@ -108,7 +108,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ```
 
 ## Changes
-dev
+1.0
 
 * Pyarrow >=10 required
 * Dataset schema introspection
