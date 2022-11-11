@@ -88,7 +88,7 @@ class Dataset:
         options['schema'] = dataset.projected_schema
         return ds.Scanner.from_batches(dataset.to_batches(), **options)
 
-    def select(self, info: Info, length: int = None) -> pa.Table:
+    def select(self, info: Info, length: Optional[int] = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
         if isinstance(self.table, pa.Table):
             return self.table.select(self.references(info))

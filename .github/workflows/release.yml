@@ -17,7 +17,7 @@ jobs:
     - run: python -m build -n
     - run: npm install
     - run: make html
-    - run: python -m mkdocs gh-deploy --force
+    - run: PYTHONPATH=$PWD python -m mkdocs gh-deploy --force
     - uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_TOKEN }}

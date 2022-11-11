@@ -224,7 +224,7 @@ class Column(pa.ChunkedArray):
 
         Args:
             predicate: binary function applied to adjacent values
-            args: apply binary function to scalar, using `subtract` as the difference function
+            *args: apply binary function to scalar, using `subtract` as the difference function
         """
         ends = [pa.array([True])]
         mask = predicate(Column.diff(self), *args) if args else Column.diff(self, predicate)
@@ -333,8 +333,8 @@ class Table(pa.Table):
         """Return table partitioned by discrete differences and corresponding counts.
 
         Args:
-            names: columns to partition by `not_equal` which will return scalars
-            predicates: inequality predicates with optional args which will return list arrays;
+            *names: columns to partition by `not_equal` which will return scalars
+            **predicates: inequality predicates with optional args which will return list arrays;
                 if the predicate has args, it will be called on the differences
         """
         offsets = pa.chunked_array(
@@ -358,11 +358,11 @@ class Table(pa.Table):
         """Group by and aggregate.
 
         Args:
-            names: columns to group by
+            *names: columns to group by
             counts: alias for optional row counts
             first: columns to take first value
             last: columns to take last value
-            funcs: aggregate funcs with columns options
+            **funcs: aggregate funcs with columns options
         """
         none = not (counts or first or last or any(funcs.values()))
         column = self[names[0]]
@@ -410,7 +410,7 @@ class Table(pa.Table):
             raise ValueError(f"list columns have different value lengths: {lists}")
         return counts.chunk(0)
 
-    def sort_list(self, *names, length: int = None) -> pa.Table:
+    def sort_list(self, *names: str, length: Optional[int] = None) -> pa.Table:
         """Return table with list columns sorted within scalars."""
         keys = dict(map(sort_key, names))  # type: ignore
         columns = {name: Column.sort_values(pc.list_flatten(self[name])) for name in keys}
@@ -431,7 +431,7 @@ class Table(pa.Table):
         names = [name for name in self.column_names if Column.is_list_type(self[name])]
         return pa.table(list(map(apply, self.select(names))), names)
 
-    def sort_indices(self, *names, length: int = None) -> pa.Table:
+    def sort_indices(self, *names: str, length: Optional[int] = None) -> pa.Table:
         """Return indices which would sort the table by columns, optimized for fixed length."""
         func = pc.sort_indices
         if length is not None:
@@ -440,11 +440,11 @@ class Table(pa.Table):
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
         return func(table, sort_keys=keys.items())
 
-    def sort(self, *names, length: int = None, indices: str = '') -> pa.Table:
+    def sort(self, *names: str, length: Optional[int] = None, indices: str = '') -> pa.Table:
         """Return table sorted by columns, optimized for fixed length.
 
         Args:
-            names: columns to sort by
+            *names: columns to sort by
             length: maximum number of rows to return
             indices: include original indices in the table
         """

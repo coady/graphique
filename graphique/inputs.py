@@ -78,21 +78,22 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
     )
 
 
-@strawberry.schema_directive(
+def use_doc(decorator: Callable, **kwargs):
+    return lambda func: decorator(description=inspect.getdoc(func), **kwargs)(func)
+
+
+@use_doc(
+    strawberry.schema_directive,
     locations=[Location.ARGUMENT_DEFINITION, Location.INPUT_FIELD_DEFINITION],
-    description=inspect.cleandoc(
-        """
-This input is optional, not nullable.
-If the client insists on sending an explicit null value, the behavior is undefined.
-"""
-    ),
 )
 class optional:
-    ...
+    """This input is optional, not nullable.
+    If the client insists on sending an explicit null value, the behavior is undefined.
+    """
 
 
 def default_field(
-    default=UNSET, func: Callable = None, nullable: bool = False, **kwargs
+    default=UNSET, func: Optional[Callable] = None, nullable: bool = False, **kwargs
 ) -> StrawberryField:
     """Use dataclass `default_factory` for `UNSET` or mutables."""
     if func is not None:
@@ -247,16 +248,14 @@ class Aggregations(Input):
     variance: List[VarianceAggregate] = default_field([], func=pc.variance)
 
 
-@strawberry.input(
-    description=inspect.cleandoc(
-        """Discrete difference predicates.
-
-By default compares by not equal, Specifiying `null` with a predicate compares element-wise.
-A float computes the discrete difference first; durations may be in float seconds.
-"""
-    )
-)
+@use_doc(strawberry.input)
 class Diff(Input):
+    """Discrete difference predicates.
+
+    By default compares by not equal, Specifiying `null` with a predicate compares element-wise.
+    A float computes the discrete difference first; durations may be in float seconds.
+    """
+
     name: str
     less: Optional[float] = default_field(name='lt', description="<", nullable=True)
     less_equal: Optional[float] = default_field(name='le', description="<=", nullable=True)
@@ -266,20 +265,18 @@ class Diff(Input):
     nullables = {'less', 'less_equal', 'greater', 'greater_equal'}
 
 
-@strawberry.input(
-    description=inspect.cleandoc(
-        """[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
-used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html).
-
-Expects one of: a field `name`, a scalar, or an operator with expressions. Single values can be passed for an
-[input `List`](https://spec.graphql.org/October2021/#sec-List.Input-Coercion).
-* `eq` with a list scalar is equivalent to `isin`
-* `eq` with a `null` scalar is equivalent `is_null`
-* `ne` with a `null` scalar is equivalent to `is_valid`
-"""
-    )
-)
+@use_doc(strawberry.input)
 class Expression:
+    """[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
+    used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html).
+
+    Expects one of: a field `name`, a scalar, or an operator with expressions. Single values can be passed for an
+    [input `List`](https://spec.graphql.org/October2021/#sec-List.Input-Coercion).
+    * `eq` with a list scalar is equivalent to `isin`
+    * `eq` with a `null` scalar is equivalent `is_null`
+    * `ne` with a `null` scalar is equivalent to `is_valid`
+    """
+
     name: List[str] = default_field([], description="field name(s)")
     cast: str = strawberry.field(default='', description=f"cast as {links.type}")
     safe: bool = strawberry.field(default=True, description="check for conversion errors on cast")
