@@ -70,12 +70,7 @@ def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) 
         )
         for name, annotation in annotations.items()
     ]
-    return StrawberryField(
-        python_name=func.__name__,
-        type_annotation=StrawberryAnnotation(func.__annotations__['return']),
-        description=inspect.getdoc(func),
-        base_resolver=resolver,
-    )
+    return StrawberryField(description=inspect.getdoc(func), base_resolver=resolver)
 
 
 def use_doc(decorator: Callable, **kwargs):

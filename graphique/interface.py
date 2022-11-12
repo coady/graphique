@@ -3,6 +3,7 @@ Primary Dataset interface.
 
 Doesn't require knowledge of the schema.
 """
+# mypy: disable-error-code=valid-type
 import collections
 import inspect
 import itertools
@@ -14,11 +15,11 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
-from typing_extensions import Annotated
+from typing_extensions import Annotated, Self
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregations, Cumulative, Diff, Digitize, Expression, Field, Filter, Projection
 from .inputs import links, ListFunction
-from .models import Column, annotate, doc_field, selections
+from .models import Column, doc_field, selections
 from .scalars import Long
 
 Root = Union[ds.Dataset, ds.Scanner, pa.Table]
@@ -61,16 +62,10 @@ class Dataset:
         self.table = table
 
     def __init_subclass__(cls):
-        """Downcast fields which return an `Dataset` to its implemented type."""
-        for name, func in inspect.getmembers(cls, inspect.isfunction):
-            if func.__annotations__.get('return') in ('Dataset', List['Dataset']):
-                clone = types.FunctionType(func.__code__, func.__globals__)
-                clone.__annotations__.update({'return': cls, 'info': Info})
-                if name == 'aggregate':
-                    field = Aggregations.resolver(clone)
-                else:
-                    field = annotate(func, List[cls] if name == 'tables' else cls)
-                setattr(cls, name, field)
+        """Downcast wrapped fields with their implemented type."""
+        clone = types.FunctionType(cls.aggregate.__code__, cls.aggregate.__globals__)
+        clone.__annotations__.update({'return': cls, 'info': Info})
+        cls.aggregate = Aggregations.resolver(clone)
 
     def references(self, info: Info, level: int = 0) -> set:
         """Return set of every possible future column reference."""
@@ -97,7 +92,7 @@ class Dataset:
 
     @classmethod
     @no_type_check
-    def resolve_reference(cls, info, **keys) -> 'Dataset':
+    def resolve_reference(cls, info, **keys) -> Self:
         """Return table from federated keys."""
         self = getattr(info.root_value, cls.field)
         queries = {name: Filter(eq=[keys[name]]) for name in keys}
@@ -118,7 +113,7 @@ class Dataset:
             row[name] = Column.fromscalar(scalar) if columnar else scalar.as_py()
         return row
 
-    def filter(self, info: Info, **queries: Filter) -> 'Dataset':
+    def filter(self, info: Info, **queries: Filter) -> Self:
         """Return table with rows which match all queries."""
         table = self.table
         prev = info.path.prev
@@ -189,7 +184,7 @@ class Dataset:
     )
     def slice(
         self, info: Info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
-    ) -> 'Dataset':
+    ) -> Self:
         """Return zero-copy slice of table."""
         table = self.select(info, length and (offset + length if offset >= 0 else None))
         table = table[offset:][:length]  # `slice` bug: ARROW-15412
@@ -202,7 +197,7 @@ class Dataset:
     )
     def group(
         self, info: Info, by: List[str], counts: str = '', aggregate: Aggregations = {}  # type: ignore
-    ) -> 'Dataset':
+    ) -> Self:
         """Return table grouped by columns, with stable ordering.
 
         Columns which are not aggregated are transformed into list columns.
@@ -231,7 +226,7 @@ class Dataset:
     @no_type_check
     def partition(
         self, info: Info, by: List[str], diffs: List[Diff] = [], counts: str = ''
-    ) -> 'Dataset':
+    ) -> Self:
         """Return table partitioned by discrete differences of the values.
 
         Differs from `group` by relying on adjacency, and is typically faster.
@@ -256,7 +251,7 @@ class Dataset:
         by="column names; prefix with `-` for descending order",
         length="maximum number of rows to return; may be significantly faster but is unstable",
     )
-    def sort(self, info: Info, by: List[str], length: Optional[Long] = None) -> 'Dataset':
+    def sort(self, info: Info, by: List[str], length: Optional[Long] = None) -> Self:
         """Return table slice sorted by specified columns.
 
         Sorting on list columns will sort within scalars, all of which must have the same lengths.
@@ -272,13 +267,13 @@ class Dataset:
         return type(self)(table)
 
     @doc_field(by="column names")
-    def min(self, info: Info, by: List[str]) -> 'Dataset':
+    def min(self, info: Info, by: List[str]) -> Self:
         """Return table with minimum values per column."""
         table = self.select(info)
         return type(self)(T.matched(table, C.min, *by))
 
     @doc_field(by="column names")
-    def max(self, info: Info, by: List[str]) -> 'Dataset':
+    def max(self, info: Info, by: List[str]) -> Self:
         """Return table with maximum values per column."""
         table = self.select(info)
         return type(self)(T.matched(table, C.max, *by))
@@ -293,7 +288,7 @@ class Dataset:
         fill_null_backward: doc_argument(List[Field], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
         list: List[ListFunction] = [],
-    ) -> 'Dataset':
+    ) -> Self:
         """Return view of table with functions applied across columns.
 
         If no alias is provided, the column is replaced and should be of the same type.
@@ -319,7 +314,7 @@ class Dataset:
         return type(self)(T.union(table, pa.table(columns)))
 
     @doc_field
-    def tables(self, info: Info) -> List['Dataset']:  # type: ignore
+    def tables(self, info: Info) -> List[Self]:  # type: ignore
         """Return a list of tables by splitting list columns, typically used after grouping.
 
         At least one list column must be referenced, and all list columns must have the same lengths.
@@ -359,7 +354,7 @@ class Dataset:
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(
         self, info: Info, filter: Expression = {}, columns: List[Projection] = []  # type: ignore
-    ) -> 'Dataset':
+    ) -> Self:
         """Select rows and project columns without memory usage."""
         projection = {name: pc.field(name) for name in self.references(info, level=1)}
         projection.update({col.alias or '.'.join(col.name): col.to_arrow() for col in columns})
@@ -388,7 +383,7 @@ class Dataset:
         left_suffix: str = '',
         right_suffix: str = '',
         coalesce_keys: bool = True,
-    ) -> 'Dataset':
+    ) -> Self:
         """Provisional: [join](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.join) this table with another table on the root Query type."""
         left, right = (
             root.table if isinstance(root.table, ds.Dataset) else root.select(info)
@@ -406,6 +401,6 @@ class Dataset:
         return type(self)(table)
 
     @doc_field
-    def take(self, info: Info, indices: List[Long]) -> 'Dataset':
+    def take(self, info: Info, indices: List[Long]) -> Self:
         """Provisional: select rows from indices."""
         return type(self)(self.scanner(info).take(indices))
