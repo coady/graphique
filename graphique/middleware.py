@@ -72,7 +72,6 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
     schema = root.projected_schema if isinstance(root, ds.Scanner) else root.schema
     types = {field.name: type_map[C.scalar_type(field).id] for field in schema}
     prefix = to_camel_case(name.title())
-    TypeName = prefix + 'Table'
 
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
     annotations = {name: Column.type_map[types[name]] for name in types}  # type: ignore
@@ -84,16 +83,10 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
     cls = type(prefix + 'Row', (), dict(namespace, __annotations__=annotations))
     Row = strawberry.type(cls, description="scalar fields")
 
-    options = dict(name=TypeName, description="a column-oriented table")
-    if name:
-        decorator = strawberry.federation.type(keys=keys, **options)
-    else:
-        decorator = strawberry.type(**options)
-
-    @decorator
     class Table(Dataset):
         __init__ = Dataset.__init__
         field = name
+        filter = Filter.resolve_types(types)(Dataset.filter)
 
         @doc_field
         def columns(self, info: Info) -> Columns:  # type: ignore
@@ -109,13 +102,7 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
                     raise TypeError(f"Field `{name}` cannot represent `Column` value")
             return Row(**row)
 
-        @Filter.resolve_types(types)
-        def filter(self, info: Info, **queries) -> TypeName:  # type: ignore
-            """Return table with rows which match all queries.
-
-            See `scan(filter: ...)` for more advanced queries.
-            """
-            return super().filter(info, **queries)
-
-    globals()[TypeName] = Table  # hack namespace to resolve recursive type
-    return Table(root)
+    options = dict(name=prefix + 'Table', description="a column-oriented table")
+    if name:
+        return strawberry.federation.type(Table, keys=keys, **options)(root)
+    return strawberry.type(Table, **options)(root)

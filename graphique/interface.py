@@ -7,7 +7,6 @@ Doesn't require knowledge of the schema.
 import collections
 import inspect
 import itertools
-import types
 from datetime import timedelta
 from typing import Callable, Iterable, Iterator, List, Mapping, Optional, Union, no_type_check
 import pyarrow as pa
@@ -63,9 +62,9 @@ class Dataset:
 
     def __init_subclass__(cls):
         """Downcast wrapped fields with their implemented type."""
-        clone = types.FunctionType(cls.aggregate.__code__, cls.aggregate.__globals__)
-        clone.__annotations__.update({'return': cls, 'info': Info})
-        cls.aggregate = Aggregations.resolver(clone)
+        cls.aggregate = Aggregations.resolver(cls.aggregate)
+        for field in (cls.aggregate, cls.filter):
+            field.base_resolver.type_annotation = cls
 
     def references(self, info: Info, level: int = 0) -> set:
         """Return set of every possible future column reference."""
@@ -114,7 +113,10 @@ class Dataset:
         return row
 
     def filter(self, info: Info, **queries: Filter) -> Self:
-        """Return table with rows which match all queries."""
+        """Return table with rows which match all queries.
+
+        See `scan(filter: ...)` for more advanced queries.
+        """
         table = self.table
         prev = info.path.prev
         search = isinstance(table, pa.Table) and (prev is None or prev.typename == 'Query')
