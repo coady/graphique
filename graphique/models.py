@@ -85,15 +85,6 @@ class Column:
         return pc.count(self.array, mode=mode).as_py()
 
 
-def annotate(func, return_type, **annotations):
-    """Return field from an annotated clone of the function."""
-    clone = types.FunctionType(func.__code__, func.__globals__)
-    annotations['return'] = return_type
-    clone.__annotations__.update(func.__annotations__, **annotations)
-    clone.__defaults__ = func.__defaults__
-    return strawberry.field(clone, description=inspect.getdoc(func))
-
-
 @strawberry.type
 class NominalColumn(Generic[T], Column):
     @compute_field
@@ -131,6 +122,10 @@ class OrdinalColumn(NominalColumn[T]):
         super().__init__(array)
         self.min_max = functools.lru_cache(maxsize=None)(functools.partial(C.min_max, array))
 
+    def __init_subclass__(cls):
+        super().__init_subclass__()
+        cls.index = doc_field(cls.index)  # strawberry#2285: copy field to avoid side-effects
+
     @strawberry.field(description=Set._type_definition.description)  # type: ignore
     def unique(self, info: Info) -> Set[T]:
         if 'counts' in selections(*info.selected_fields):
@@ -147,7 +142,7 @@ class OrdinalColumn(NominalColumn[T]):
         """maximum value"""
         return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['max']
 
-    def index(self, value, start: Long = 0, end: Optional[Long] = None) -> Long:
+    def index(self, value: T, start: Long = 0, end: Optional[Long] = None) -> Long:
         """Find the index of the first occurrence of a given value."""
         return C.index(self.array, value, start, end)
 
@@ -212,14 +207,8 @@ class RatioColumn(IntervalColumn[T]):
         return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
 
 
-def generic_type(cls, **kwargs):
-    return lambda tp: StrawberryAnnotation(strawberry.type(tp, **kwargs)[cls]).resolve()
-
-
-@generic_type(bool, name='eanColumn', description="column of booleans")
+@strawberry.type(name='eanColumn', description="column of booleans")
 class BooleanColumn(IntervalColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=bool)
-
     @compute_field
     def any(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
         return pc.any(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
@@ -229,10 +218,8 @@ class BooleanColumn(IntervalColumn[T]):
         return pc.all(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
 
-@generic_type(int, name='Column', description="column of ints")
+@strawberry.type(name='Column', description="column of ints")
 class IntColumn(RatioColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=int)
-
     @doc_field
     def take_from(
         self, info: Info, field: str
@@ -240,52 +227,6 @@ class IntColumn(RatioColumn[T]):
         """Provisional: select indices from a table on the root Query type."""
         root = getattr(info.root_value, field)
         return type(root)(root.scanner(info).take(self.array.combine_chunks()))
-
-
-@generic_type(Long, name='Column', description="column of longs")
-class LongColumn(RatioColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=Long)
-    take_from = doc_field(IntColumn.take_from)
-
-
-@generic_type(float, name='Column', description="column of floats")
-class FloatColumn(RatioColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=float)
-
-
-@generic_type(Decimal, name='Column', description="column of decimals")
-class DecimalColumn(IntervalColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=Decimal)
-
-
-@generic_type(date, name='Column', description="column of dates")
-class DateColumn(OrdinalColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=date)
-
-
-@generic_type(datetime, name='Column', description="column of datetimes")
-class DatetimeColumn(OrdinalColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=datetime)
-
-
-@generic_type(time, name='Column', description="column of times")
-class TimeColumn(OrdinalColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=time)
-
-
-@generic_type(Duration, name='Column', description="column of durations")
-class DurationColumn(NominalColumn[T]):
-    ...
-
-
-@generic_type(strawberry.scalars.Base64, name='Column', description="column of binaries")
-class Base64Column(OrdinalColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=bytes)
-
-
-@generic_type(str, name='ingColumn', description="column of strings")
-class StringColumn(OrdinalColumn[T]):
-    index = annotate(OrdinalColumn.index, Long, value=str)
 
 
 @strawberry.type(description="column of lists")
@@ -308,7 +249,10 @@ class ListColumn(Column):
 
 @strawberry.type(description="column of structs")
 class StructColumn(Column):
-    value = annotate(NominalColumn.value, Optional[dict])
+    @doc_field
+    def value(self, index: Long = 0) -> Optional[dict]:
+        """scalar json object at index"""
+        return self.array[index].as_py()
 
     @doc_field
     def names(self) -> List[str]:
@@ -322,18 +266,25 @@ class StructColumn(Column):
         return self.cast(*dataset.to_table(columns={'': pc.field('', *name)}))
 
 
+# strawberry#2154: extra types must be explicitly resolved
+def generic_column(base, scalar, description, name='Column'):
+    cls = strawberry.type(types.new_class(name, (base[T],)), description=description)
+    return StrawberryAnnotation(cls[scalar]).resolve()
+
+
 Column.type_map = {  # type: ignore
-    bool: BooleanColumn,
-    int: IntColumn,
-    Long: LongColumn,
-    float: FloatColumn,
-    Decimal: DecimalColumn,
-    date: DateColumn,
-    datetime: DatetimeColumn,
-    time: TimeColumn,
-    timedelta: DurationColumn,
-    bytes: Base64Column,
-    str: StringColumn,
+    bool: StrawberryAnnotation(BooleanColumn[bool]).resolve(),
+    int: StrawberryAnnotation(IntColumn[int]).resolve(),
+    Long: generic_column(IntColumn, Long, "column of longs"),
+    float: generic_column(RatioColumn, float, "column of floats"),
+    Decimal: generic_column(IntervalColumn, Decimal, "column of decimals"),
+    date: generic_column(OrdinalColumn, date, "column of dates"),
+    datetime: generic_column(OrdinalColumn, datetime, "column of datetimes"),
+    time: generic_column(OrdinalColumn, time, "column of times"),
+    # strawberry#1921: scalar python names are prepended to column name
+    timedelta: generic_column(NominalColumn, Duration, "column of durations"),
+    bytes: generic_column(OrdinalColumn, strawberry.scalars.Base64, "column of binaries"),
+    str: generic_column(OrdinalColumn, str, "column of strings", name='ingColumn'),
     list: ListColumn,
     dict: StructColumn,
 }
