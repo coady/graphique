@@ -179,3 +179,6 @@ def test_not_implemented():
         pc._group_by([array.dictionary_encode()], [array], [('hash_min', None)])
     with pytest.raises(NotImplementedError):
         pc._group_by([array], [array], [('hash_any', None)])
+    func = 'hash_max', pc.ScalarAggregateOptions(min_count=4)
+    values, _ = pc._group_by([list('abc')], [[0, 1, 0]], [func]).flatten()
+    assert values.to_pylist() == list('cb')  # min_count has no effect

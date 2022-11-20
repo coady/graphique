@@ -204,7 +204,6 @@ class CountAggregate(Aggregate):
 @strawberry.input(description=f"options for scalar [aggregation]({links.compute}#aggregations)")
 class ScalarAggregate(Aggregate):
     skip_nulls: bool = True
-    min_count: int = 1
 
 
 @strawberry.input(description=f"options for variance [aggregation]({links.compute}#aggregations)")
