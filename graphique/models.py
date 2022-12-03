@@ -12,7 +12,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry
-from strawberry.annotation import StrawberryAnnotation
 from strawberry.field import StrawberryField
 from strawberry.types import Info
 from typing_extensions import Annotated
@@ -85,7 +84,7 @@ class Column:
         return pc.count(self.array, mode=mode).as_py()
 
 
-@strawberry.type
+@strawberry.type(name='Column', description="column of durations")
 class NominalColumn(Generic[T], Column):
     @compute_field
     def count_distinct(self, mode: str = 'only_valid') -> Long:
@@ -147,7 +146,7 @@ class OrdinalColumn(NominalColumn[T]):
         return C.index(self.array, value, start, end)
 
 
-@strawberry.type
+@strawberry.type(name='Column', description="column of decimals")
 class IntervalColumn(OrdinalColumn[T]):
     @compute_field
     def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0) -> Set[T]:
@@ -170,7 +169,7 @@ class IntervalColumn(OrdinalColumn[T]):
         return pc.indices_nonzero(self.array).to_pylist()
 
 
-@strawberry.type
+@strawberry.type(name='Column', description="column of floats")
 class RatioColumn(IntervalColumn[T]):
     @compute_field
     def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
@@ -266,23 +265,21 @@ class StructColumn(Column):
         return self.cast(*dataset.to_table(columns={'': pc.field('', *name)}))
 
 
-# strawberry#2154: extra types must be explicitly resolved
 def generic_column(base, scalar, description, name='Column'):
-    cls = strawberry.type(types.new_class(name, (base[T],)), description=description)
-    return StrawberryAnnotation(cls[scalar]).resolve()
+    return strawberry.type(types.new_class(name, (base[T],)), description=description)[scalar]
 
 
 Column.type_map = {  # type: ignore
-    bool: StrawberryAnnotation(BooleanColumn[bool]).resolve(),
-    int: StrawberryAnnotation(IntColumn[int]).resolve(),
+    bool: BooleanColumn[bool],
+    int: IntColumn[int],
     Long: generic_column(IntColumn, Long, "column of longs"),
-    float: generic_column(RatioColumn, float, "column of floats"),
-    Decimal: generic_column(IntervalColumn, Decimal, "column of decimals"),
+    float: RatioColumn[float],
+    Decimal: IntervalColumn[Decimal],
     date: generic_column(OrdinalColumn, date, "column of dates"),
     datetime: generic_column(OrdinalColumn, datetime, "column of datetimes"),
     time: generic_column(OrdinalColumn, time, "column of times"),
     # strawberry#1921: scalar python names are prepended to column name
-    timedelta: generic_column(NominalColumn, Duration, "column of durations"),
+    timedelta: NominalColumn[Duration],
     bytes: generic_column(OrdinalColumn, strawberry.scalars.Base64, "column of binaries"),
     str: generic_column(OrdinalColumn, str, "column of strings", name='ingColumn'),
     list: ListColumn,
