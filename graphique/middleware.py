@@ -36,13 +36,13 @@ class GraphQL(strawberry.asgi.GraphQL):
         kwargs: additional `asgi.GraphQL` options
     """
 
-    options = dict(types=Column.type_map.values(), scalar_overrides=scalar_map)  # type: ignore
+    options = dict(types=Column.registry.values(), scalar_overrides=scalar_map)
 
     def __init__(self, root: Root, debug: bool = False, **kwargs):
         options = dict(self.options, extensions=[TimingExtension] * bool(debug))
         if type(root).__name__ == 'Query':
             self.root_value = root
-            options['enable_federation_2'] = True
+            options['enable_federation_2'] = True  # type: ignore
             schema = strawberry.federation.Schema(type(self.root_value), **options)
         else:
             self.root_value = implemented(root)
@@ -74,7 +74,7 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
     prefix = to_camel_case(name.title())
 
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
-    annotations = {name: Column.type_map[types[name]] for name in types}  # type: ignore
+    annotations = {name: Column.registry[types[name]] for name in types}  # type: ignore
     cls = type(prefix + 'Columns', (), dict(namespace, __annotations__=annotations))
     Columns = strawberry.type(cls, description="fields for each column")
 
