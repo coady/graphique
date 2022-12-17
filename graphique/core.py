@@ -365,9 +365,8 @@ class Table(pa.Table):
             last: columns to take last value
             **funcs: aggregate funcs with columns options
         """
-        none = not (counts or first or last or any(funcs.values()))
         column = self[names[0]]
-        args = [(column, 'hash_count', pc.CountOptions(mode='all'))] if none or counts else []
+        args = [(column, 'hash_count', pc.CountOptions(mode='all'))] if counts else []
         if first or last:
             args.append((Column.indices(column), 'hash_min_max', None))
         lists: Sequence[Agg] = []
@@ -377,7 +376,7 @@ class Table(pa.Table):
             lists = funcs.pop('list')
         for func in funcs:
             args += [(self[agg.name], *agg.astuple(func)) for agg in funcs[func]]  # type: ignore
-        values, hashes, options = zip(*args)
+        values, hashes, options = zip(*args) if args else [()] * 3
         keys = map(self.column, names)
         if isinstance(self, pa.Table):
             keys = (key.unify_dictionaries() for key in keys)  # type: ignore
@@ -386,8 +385,6 @@ class Table(pa.Table):
                 for value, func in zip(values, hashes)
             )
         arrays = iter(pc._group_by(values, keys, zip(hashes, options)).flatten())
-        if none:
-            next(arrays)
         columns = {counts: next(arrays)} if counts else {}
         if first or last:
             for aggs, indices in zip([first, last], next(arrays).flatten()):
@@ -480,5 +477,5 @@ class Table(pa.Table):
                 self = self.append_column('', getattr(ListChunk, func.__name__)(self[name]))
                 self = Table.filter_list(self, pc.field(name) == pc.field('')).drop([''])
             else:
-                self = ds.dataset(self).to_table(filter=pc.field(name) == func(self[name]))
+                self = self.filter(pc.field(name) == func(self[name]))
         return self
