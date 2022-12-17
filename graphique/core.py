@@ -171,7 +171,8 @@ class Column(pa.ChunkedArray):
         return self.type.value_type if pa.types.is_dictionary(self.type) else self.type
 
     def is_list_type(self):
-        return pa.types.is_list(self.type) or pa.types.is_large_list(self.type)
+        funcs = pa.types.is_list, pa.types.is_large_list, pa.types.is_fixed_size_list
+        return any(func(self.type) for func in funcs)
 
     def combine_dictionaries(self) -> tuple:
         if not pa.types.is_dictionary(self.type):

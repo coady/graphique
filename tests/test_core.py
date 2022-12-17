@@ -62,6 +62,7 @@ def test_lists():
     array = pa.ListArray.from_arrays([0, 2, 3], pa.array(["a", "b", None]).dictionary_encode())
     assert ListChunk.min(array).to_pylist() == ["a", None]
     assert ListChunk.max(array).to_pylist() == ["b", None]
+    assert C.is_list_type(pa.FixedSizeListArray.from_arrays([], 1))
 
 
 def test_membership():
