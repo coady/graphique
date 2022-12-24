@@ -143,14 +143,6 @@ class Cumulative(Field):
     skip_nulls: bool = False
 
 
-@strawberry.input(
-    description="numpy [digitize](https://numpy.org/doc/stable/reference/generated/numpy.digitize.html)"
-)
-class Digitize(Field):
-    bins: List[float]
-    right: bool = False
-
-
 @strawberry.input
 class Element(Field):
     index: int
@@ -661,10 +653,18 @@ class Temporal(Fields):
 @strawberry.input(description="Set lookup functions.")
 class SetLookup(Fields):
     index_in: List[Expression] = default_field([], func=pc.index_in)
-    is_in: List[Expression] = default_field([], func=pc.is_in)
+    digitize: List[Expression] = default_field(
+        [],
+        description="numpy [digitize](https://numpy.org/doc/stable/reference/generated/numpy.digitize.html)",
+    )
     skip_nulls: bool = False
+    right: bool = False
 
     def to_fields(self) -> Iterable[ds.Expression]:
-        for exprs in filter(None, [self.index_in, self.is_in]):
-            values, value_set = [expr.to_arrow() for expr in exprs]
+        if self.index_in:
+            values, value_set = [expr.to_arrow() for expr in self.index_in]
             yield pc.index_in(values, pa.array(value_set), skip_nulls=self.skip_nulls)
+        if self.digitize:
+            values, value_set = [expr.to_arrow() for expr in self.digitize]
+            args = values.cast('float64'), list(map(float, value_set)), self.right  # type: ignore
+            yield ds.Expression._call('digitize', list(args))

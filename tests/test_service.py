@@ -50,10 +50,10 @@ def test_floats(client):
     )
     assert data == {'scan': {'columns': {'latitude': {'min': pytest.approx(-174.213333)}}}}
     data = client.execute(
-        f'''{{ apply(digitize: {{name: "latitude", bins: {list(range(90))}}})
-        {{ column(name: "latitude") {{ ... on LongColumn {{ min max unique {{ length }} }} }} }} }}'''
+        '''{scan(columns: {alias: "l", setLookup: {digitize: [{name: "latitude"}, {value: [40]}]}}) {
+        column(name: "l") { ... on LongColumn { unique { values counts } } } } }'''
     )
-    assert data == {'apply': {'column': {'min': 18, 'max': 72, 'unique': {'length': 52}}}}
+    assert data == {"scan": {"column": {"unique": {"values": [1, 0], "counts": [17955, 23745]}}}}
     data = client.execute(
         '{ scan(columns: {alias: "latitude", log: {logb: [{name: "latitude"}, {value: 3}]}}) { row { latitude } } }'
     )

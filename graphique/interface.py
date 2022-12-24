@@ -16,7 +16,7 @@ import strawberry.asgi
 from strawberry.types import Info
 from typing_extensions import Annotated, Self
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Cumulative, Diff, Digitize, Expression, Field, Filter, Projection
+from .inputs import Aggregations, Cumulative, Diff, Expression, Field, Filter, Projection
 from .inputs import links, ListFunction
 from .models import Column, doc_field, selections
 from .scalars import Long
@@ -285,7 +285,6 @@ class Dataset:
     def apply(
         self,
         info: Info,
-        digitize: doc_argument(List[Digitize], func=C.digitize) = [],
         cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
         fill_null_backward: doc_argument(List[Field], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
@@ -307,8 +306,8 @@ class Dataset:
             for func, field in value.items():
                 name, args, kwargs = field.serialize(table)
                 columns[name] = getattr(ListChunk, func)(*args, **kwargs)
-        args = digitize, cumulative_sum, fill_null_backward, fill_null_forward
-        funcs = C.digitize, pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward
+        args = cumulative_sum, fill_null_backward, fill_null_forward
+        funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward
         for fields, func in zip(args, funcs):
             for field in fields:
                 name, args, kwargs = field.serialize(table)

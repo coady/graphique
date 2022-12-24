@@ -1,4 +1,3 @@
-import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
@@ -148,9 +147,10 @@ def test_sort(table):
 
 
 def test_numeric():
-    array = pa.chunked_array([range(5)])
-    assert C.digitize(array, range(0, 5, 2)).to_pylist() == [1, 1, 2, 2, 3]
-    assert C.digitize(array, np.arange(0, 5, 2), right=True).to_pylist() == [0, 1, 1, 2, 2]
+    array = pa.array([0.0, 10.0, 20.0])
+    scalar = pa.scalar([10.0])
+    assert pc.call_function('digitize', [array, scalar, False]).to_pylist() == [0, 1, 1]
+    assert pc.call_function('digitize', [array, scalar, True]).to_pylist() == [0, 0, 1]
 
 
 def test_not_implemented():

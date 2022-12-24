@@ -7,11 +7,12 @@ Their methods are called as functions.
 import bisect
 import contextlib
 import functools
+import inspect
 import itertools
 import json
 from concurrent import futures
 from dataclasses import dataclass
-from typing import Callable, Iterable, Iterator, Optional, Sequence, Union
+from typing import Callable, Iterable, Iterator, Optional, Sequence, Union, get_type_hints
 import numpy as np  # type: ignore
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -76,6 +77,23 @@ def sort_key(name: str) -> tuple:
 def decode(array: pa.Array) -> pa.Array:
     """Decode dictionary array."""
     return array.dictionary_decode() if isinstance(array, pa.DictionaryArray) else array
+
+
+def register(func: Callable) -> pc.Function:
+    """Register user defined scalar function."""
+    doc = inspect.getdoc(func)
+    doc = {'summary': doc.splitlines()[0], 'description': doc}  # type: ignore
+    annotations = dict(get_type_hints(func))
+    pc.register_scalar_function(func, func.__name__, doc, annotations, annotations.pop('return'))
+    return pc.get_function(func.__name__)
+
+
+@register
+def digitize(
+    ctx, array: pa.float64(), bins: pa.list_(pa.float64()), right: pa.bool_()  # type: ignore
+) -> pa.int64():  # type: ignore
+    """Return the indices of the bins to which each value in input array belongs."""
+    return pa.array(np.digitize(array, bins.values, right.as_py()))
 
 
 class ListChunk(pa.lib.BaseListArray):
@@ -163,10 +181,6 @@ class ListChunk(pa.lib.BaseListArray):
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 
-    def map(self, func: Callable, **kwargs) -> pa.ChunkedArray:
-        map_ = threader.map if self.num_chunks > 1 else map
-        return pa.chunked_array(map_(functools.partial(func, **kwargs), self.iterchunks()))  # type: ignore
-
     def scalar_type(self):
         return self.type.value_type if pa.types.is_dictionary(self.type) else self.type
 
@@ -243,12 +257,6 @@ class Column(pa.ChunkedArray):
     def max(self, **options):
         """Return max of the values."""
         return Column.min_max(self, **options)['max']
-
-    def digitize(self, bins: Iterable, right=False) -> pa.ChunkedArray:
-        """Return the indices of the bins to which each value in input array belongs."""
-        if not isinstance(bins, (pa.Array, np.ndarray)):
-            bins = pa.array(bins, self.type)
-        return Column.map(self, np.digitize, bins=bins, right=bool(right))
 
     def index(self, value, start=0, end=None) -> int:
         """Return the first index of a value."""
