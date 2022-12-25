@@ -97,8 +97,6 @@ def digitize(
 
 
 class ListChunk(pa.lib.BaseListArray):
-    value_length = pc.list_value_length
-
     def from_counts(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
         """Return list array by converting counts into offsets."""
         offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum_checked(counts)])

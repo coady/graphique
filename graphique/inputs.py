@@ -172,12 +172,10 @@ class Quantile(Field):
 
 @strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for lists")
 class ListFunction(Input):
-    element: Optional[Element] = default_field(func=ListChunk.element)
     filter: 'Expression' = default_field({}, description="filter within list scalars")
     index: Optional[Index] = default_field(func=pc.index)
     mode: Optional[Mode] = default_field(func=pc.mode)
     quantile: Optional[Quantile] = default_field(func=pc.quantile)
-    value_length: Optional[Field] = default_field(func=pc.list_value_length)
 
 
 @strawberry.input(
@@ -330,13 +328,15 @@ class Expression:
 
     replace_with_mask: List['Expression'] = default_field([], func=pc.replace_with_mask)
 
+    list: Optional['Lists'] = default_field(description="list array functions")
+
     unaries = ('inv', 'abs', 'negate', 'sign', 'string_is_ascii', 'is_finite', 'is_inf', 'is_nan')
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
     variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract', 'and_not')
     variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
     groups = ('bit_wise', 'rounding', 'log', 'trig', 'element_wise', 'utf8', 'substring', 'binary')
-    groups += ('set_lookup', 'temporal')  # type: ignore
+    groups += ('set_lookup', 'temporal', 'list')  # type: ignore
 
     def to_arrow(self) -> Optional[ds.Expression]:
         """Transform GraphQL expression into a dataset expression."""
@@ -668,3 +668,11 @@ class SetLookup(Fields):
             values, value_set = [expr.to_arrow() for expr in self.digitize]
             args = values.cast('float64'), list(map(float, value_set)), self.right  # type: ignore
             yield ds.Expression._call('digitize', list(args))
+
+
+@strawberry.input(description="List array functions.")
+class Lists(Fields):
+    element: List[Expression] = default_field([], func=pc.list_element)
+    value_length: Optional[Expression] = default_field(func=pc.list_value_length)
+
+    prefix = 'list_'

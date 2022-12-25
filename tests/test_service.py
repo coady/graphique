@@ -338,12 +338,12 @@ def test_group(client):
     data = client.execute(
         '''{ group(by: ["state"]) { length tables { length
         columns { state { values } county { min max } } }
-        apply(list: {valueLength: {name: "county", alias: "c"}}) {
+        scan(columns: {list: {valueLength: {name: "county"}}, alias: "c"}) {
         column(name: "c") { ... on IntColumn { values } } } } }'''
     )
     assert len(data['group']['tables']) == data['group']['length'] == 52
     table = data['group']['tables'][0]
-    assert table['length'] == data['group']['apply']['column']['values'][0] == 2205
+    assert table['length'] == data['group']['scan']['column']['values'][0] == 2205
     assert set(table['columns']['state']['values']) == {'NY'}
     assert table['columns']['county'] == {'min': 'Albany', 'max': 'Yates'}
     data = client.execute(

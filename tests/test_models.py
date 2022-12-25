@@ -259,10 +259,10 @@ def test_list(executor):
     )
     assert data == {'apply': {'column': {'values': [1, -1]}}}
     data = executor(
-        '''{ apply(list: {element: {name: "list", index: 1}}) {
-        column(name: "list") { ... on IntColumn { values } } } }'''
+        '''{ scan(columns: {list: {element: [{name: "list"}, {value: 1}]}, alias: "value"}) {
+        column(name: "value") { ... on IntColumn { values } } } }'''
     )
-    assert data == {'apply': {'column': {'values': [1, None]}}}
+    assert data == {'scan': {'column': {'values': [1, None]}}}
     data = executor(
         '''{ aggregate(distinct: {name: "list", mode: "only_null"})
         { columns { list { flatten { length } } } } }'''
