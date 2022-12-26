@@ -225,6 +225,13 @@ def test_duration(executor):
         '''{ partition(by: ["timestamp"] diffs: [{name: "timestamp", gt: 0.0}]) { length } }'''
     )
     assert data == {'partition': {'length': 1}}
+    data = executor(
+        '''{ scan(columns: {alias: "diff", temporal:
+        {monthDayNanoIntervalBetween: [{name: "timestamp"}, {name: "timestamp"}]}})
+        { column(name: "diff") { ... on IntervalColumn { values { months days nanoseconds } } } } }'''
+    )
+    value = {'months': 0, 'days': 0, 'nanoseconds': 0}
+    assert data == {'scan': {'column': {'values': [value, None]}}}
 
 
 def test_list(executor):

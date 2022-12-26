@@ -18,7 +18,7 @@ from strawberry.types import Info
 from typing_extensions import Annotated
 from .core import Column as C
 from .inputs import links
-from .scalars import Duration, Long, type_map
+from .scalars import Duration, Interval, Long, type_map
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
@@ -96,6 +96,7 @@ class Column:
 
 
 @operator.methodcaller('register', timedelta, Duration, description="column of durations")
+@operator.methodcaller('register', Interval, description="column of intervals")
 @strawberry.type(name='Column')
 class NominalColumn(Generic[T], Column):
     @compute_field

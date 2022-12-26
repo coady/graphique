@@ -183,3 +183,6 @@ def test_not_implemented():
     func = 'hash_max', pc.ScalarAggregateOptions(min_count=4)
     values, _ = pc._group_by([list('abc')], [[0, 1, 0]], [func]).flatten()
     assert values.to_pylist() == list('cb')  # min_count has no effect
+    value = pa.MonthDayNano([1, 2, 3])
+    with pytest.raises(NotImplementedError):
+        pc.equal(value, value)

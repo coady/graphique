@@ -13,6 +13,13 @@ def parse_long(value) -> int:
     raise TypeError(f"Long cannot represent value: {value}")
 
 
+@strawberry.type(description="month day nano interval")
+class Interval:
+    months: int = 0
+    days: int = 0
+    nanoseconds: 'Long' = 0  # type: ignore
+
+
 Long = strawberry.scalar(int, name='Long', description="64-bit int", parse_value=parse_long)
 Duration = strawberry.scalar(  # pragma: no branch
     timedelta,
@@ -44,6 +51,7 @@ type_map = {
     pa.lib.Type_TIME32: time,
     pa.lib.Type_TIME64: time,
     pa.lib.Type_DURATION: timedelta,
+    pa.lib.Type_INTERVAL_MONTH_DAY_NANO: Interval,
     pa.lib.Type_BINARY: bytes,
     pa.lib.Type_FIXED_SIZE_BINARY: bytes,
     pa.lib.Type_LARGE_BINARY: bytes,

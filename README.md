@@ -111,6 +111,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 dev
 
 * Scannable functions added
+* Month day nano interval array
 
 1.0
 
