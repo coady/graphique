@@ -165,6 +165,12 @@ class Dataset:
         """number of rows"""
         return len(self.table) if hasattr(self.table, '__len__') else self.table.count_rows()
 
+    @doc_field
+    def any(self, info: Info, length: Long = 1) -> bool:
+        """Provisional: return whether there are at least `length` rows."""
+        table = self.select(info, length)
+        return len(table) >= length
+
     @doc_field(
         name="column name(s); multiple names access nested struct fields",
         cast=f"cast array to {links.type}",
