@@ -112,6 +112,7 @@ dev
 
 * Scannable functions added
 * Month day nano interval array
+* `min` and `max` fields memory optimized
 
 1.0
 

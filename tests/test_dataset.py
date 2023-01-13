@@ -143,6 +143,13 @@ def test_scan(dsclient):
     assert data == {'scan': {'length': 2647}}
 
 
+def test_min_max(dsclient):
+    data = dsclient.execute('{ min(by: ["state"]) { length row { state } } }')
+    assert data == {'min': {'length': 273, 'row': {'state': 'AK'}}}
+    data = dsclient.execute('{ max(by: ["state", "county"]) { length row { state county } } }')
+    assert data == {'max': {'length': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
+
+
 def test_root(fedclient):
     app = load('zipcodes.parquet', FEDERATED='test')
     assert asyncio.run(app.get_root_value(None)) is app.root_value

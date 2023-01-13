@@ -274,17 +274,28 @@ class Dataset:
             table = T.sort_list(table, *lists, length=length)
         return type(self)(table)
 
+    def min_max(self, info: Info, by: List[str], func: Callable) -> Self:
+        table, name = self.table, by[0]
+        schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
+        if isinstance(table, pa.Table) or C.is_list_type(schema.field(name)):
+            table = self.select(info)
+        else:
+            # TODO(ARROW-16212): replace with user defined function for multiple kernels
+            batches = self.scanner(info).to_batches()
+            table = pa.Table.from_batches(
+                batch.filter(pc.equal(batch[name], func(batch[name]))) for batch in batches
+            )
+        return type(self)(T.matched(table, func, *by))
+
     @doc_field(by="column names")
     def min(self, info: Info, by: List[str]) -> Self:
         """Return table with minimum values per column."""
-        table = self.select(info)
-        return type(self)(T.matched(table, C.min, *by))
+        return self.min_max(info, by, C.min)
 
     @doc_field(by="column names")
     def max(self, info: Info, by: List[str]) -> Self:
         """Return table with maximum values per column."""
-        table = self.select(info)
-        return type(self)(T.matched(table, C.max, *by))
+        return self.min_max(info, by, C.max)
 
     @doc_field
     @no_type_check
