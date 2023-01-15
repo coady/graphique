@@ -179,7 +179,7 @@ class Dataset:
     def column(self, info: Info, name: List[str], cast: str = '', safe: bool = True) -> Column:
         """Return column of any type by name.
 
-        This is typically only needed for aliased columns added by `apply` or `aggregate`.
+        This is typically only needed for aliased or casted columns.
         If the column is in the schema, `columns` can be used instead.
         """
         expr = Expression(name=name, cast=cast, safe=safe).to_arrow()  # type: ignore
@@ -307,12 +307,10 @@ class Dataset:
         fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
         list: List[ListFunction] = [],
     ) -> Self:
-        """Return view of table with functions applied across columns.
+        """Return view of table with vector functions applied across columns.
 
-        If no alias is provided, the column is replaced and should be of the same type.
-        If an alias is provided, a column is appended under that name.
-        Applied function load arrays into memory as needed; see `scan` for more functions, which
-        do not require loading.
+        Applied function load arrays into memory as needed. See `scan` for scalar functions,
+        which do not require loading.
         """
         table = self.select(info)
         columns = {}
@@ -333,7 +331,7 @@ class Dataset:
 
     @doc_field
     def tables(self, info: Info) -> List[Self]:  # type: ignore
-        """Return a list of tables by splitting list columns, typically used after grouping.
+        """Return a list of tables by splitting list columns.
 
         At least one list column must be referenced, and all list columns must have the same lengths.
         """
@@ -348,7 +346,7 @@ class Dataset:
     @Aggregations.resolver
     @no_type_check
     def aggregate(self, info: Info, **fields) -> 'Dataset':
-        """Return table with aggregate functions applied to list columns, typically used after grouping.
+        """Return table with aggregate functions applied to list columns.
 
         Columns which are aliased or change type can be accessed by the `column` field.
         """

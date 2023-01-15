@@ -33,7 +33,7 @@ class GraphQL(strawberry.asgi.GraphQL):
     Args:
         root: root dataset to attach as the Query type
         debug: enable timing extension
-        kwargs: additional `asgi.GraphQL` options
+        **kwargs: additional `asgi.GraphQL` options
     """
 
     options = dict(types=Column.registry.values(), scalar_overrides=scalar_map)
@@ -59,7 +59,7 @@ class GraphQL(strawberry.asgi.GraphQL):
         Args:
             roots: mapping of field names to root datasets
             keys: mapping of optional federation keys for each root
-            kwargs: additional `asgi.GraphQL` options
+            **kwargs: additional `asgi.GraphQL` options
         """
         root_values = {name: implemented(roots[name], name, keys.get(name, ())) for name in roots}
         annotations = {name: type(root_values[name]) for name in root_values}

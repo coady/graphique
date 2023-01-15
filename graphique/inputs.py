@@ -144,11 +144,6 @@ class Cumulative(Field):
 
 
 @strawberry.input
-class Element(Field):
-    index: int
-
-
-@strawberry.input
 class Index(Field):
     value: JSON
     start: Long = 0

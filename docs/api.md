@@ -1,5 +1,5 @@
 ## Types
-A typed schema is automatically generated from the arrow table and its columns. However, advanced usage of tables often creates new columns - or changes the type of existing ones - and therefore falls outside the schema.
+A typed schema is automatically generated from the arrow table and its columns. However, advanced usage of tables often creates new columns - or changes the type of existing ones - and therefore falls outside the schema. Field which create columns also allow aliasing, otherwise the column is replaced.
 
 ### Output
 A column within the schema can be accessed by `Table.columns`.
@@ -40,11 +40,11 @@ Input types don't have the equivalent of inline fragments, but GraphQL is conver
 Note list inputs allow passing a single value, [coercing the input](https://spec.graphql.org/October2021/#sec-List.Input-Coercion) to a list of 1.
 
 ## Aggregation
-Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partition` leverage that feature to transform un-grouped columns into ListColumns, which can be accessed via inline fragments and further aggregated. `Table.group` can also aggregate immediately with arrow hash functions. The reason for two different aggregate modes is the trade-off between speed and flexibility. From slowest to fastest:
+Arrow ListArrays are supported as ListColumns. `Table.group` and `Table.partition` leverage that feature to transform un-grouped columns into ListColumns, which can be accessed via inline fragments and further aggregated. `Table.group` can also aggregate immediately with arrow hash functions. The reason for two different aggregate modes is that hash aggregation is faster, but lists are fully supported types. From slowest to fastest:
 
 * `Table.tables` returns a list of tables based on the list scalars.
-* `Table.apply(list: {...})` applies general functions to the list scalars.
-* `Table.aggregate` applies reduce functions to the list scalars.
+* `Table.apply(list: {...})` applies vector functions to the list scalars.
+* `Table.aggregate` applies scalar aggregate functions to the list scalars.
 * `Table.group(aggregate: {...})` uses arrow hash aggregate functions.
 
 ListColumns support sorting and filtering within their list scalars. They must all have the same value lengths, which is the case when the result of grouping, but list arrays may also be from the original dataset.
@@ -66,5 +66,6 @@ Arrow has first-class support for nulls, so array scalars are nullable. Non-null
 
 ### Input
 Default values and non-null types are used wherever possible. When an input is optional and has no natural default, there are two cases to distinguish:
+
 * if null is expected and semantically different, the input's description explains null behavior
 * otherwise the input has an `@optional` directive, and explicit null behavior is undefined
