@@ -369,12 +369,12 @@ def test_group(client):
     data = client.execute(
         '''{ scan(columns: {name: "zipcode", cast: "bool"})
         { group(by: ["state"]) { slice(length: 3) {
-        aggregate(any: [{name: "zipcode", alias: "a"}], all: [{name: "zipcode", alias: "b"}]) {
+        scan(columns: [{alias: "a", list: {any: {name: "zipcode"}}}, {alias: "b", list: {all: {name: "zipcode"}}}]) {
         a: column(name: "a") { ... on BooleanColumn { values } }
         b: column(name: "b") { ... on BooleanColumn { values } }
         column(name: "zipcode") { type } } } } } }'''
     )
-    assert data['scan']['group']['slice']['aggregate'] == {
+    assert data['scan']['group']['slice']['scan'] == {
         'a': {'values': [True, True, True]},
         'b': {'values': [True, True, True]},
         'column': {'type': 'list<item: bool>'},

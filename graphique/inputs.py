@@ -669,5 +669,13 @@ class SetLookup(Fields):
 class Lists(Fields):
     element: List[Expression] = default_field([], func=pc.list_element)
     value_length: Optional[Expression] = default_field(func=pc.list_value_length)
+    # user defined functions
+    all: Optional[Expression] = default_field(func=pc.all)
+    any: Optional[Expression] = default_field(func=pc.any)
 
     prefix = 'list_'
+
+    def getfunc(self, name):
+        if name in ('element', 'value_length'):  # built-ins
+            return super().getfunc(name)
+        return lambda *args: ds.Expression._call(self.prefix + name, list(args))
