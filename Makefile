@@ -3,7 +3,7 @@ check:
 
 lint:
 	python3 -m black --check .
-	flake8 --exclude .venv --ignore E501
+	flake8 --ignore E501 graphique tests
 	mypy -p graphique
 
 html: docs/schema.md

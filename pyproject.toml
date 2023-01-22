@@ -7,7 +7,7 @@ name = "graphique"
 dynamic = ["version"]
 description = "GraphQL service for arrow tables and parquet data sets."
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = {file = "LICENSE.txt"}
 authors = [{name = "Aric Coady", email = "aric.coady@gmail.com"}]
 keywords = ["graphql", "arrow", "parquet"]
@@ -18,10 +18,10 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Database :: Database Engines/Servers",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP :: Indexing/Search",

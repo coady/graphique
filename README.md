@@ -110,6 +110,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ## Changes
 dev
 
+* Python >=3.8 required
 * Scannable functions added
 * Month day nano interval array
 * `min` and `max` fields memory optimized
