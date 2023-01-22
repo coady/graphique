@@ -16,12 +16,14 @@ import strawberry.asgi
 from strawberry.types import Info
 from typing_extensions import Annotated, Self
 from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregations, Cumulative, Diff, Expression, Field, Filter, Projection
-from .inputs import links, ListFunction
+from .inputs import Aggregate, CountAggregate, Cumulative, Diff, Expression, Field, Filter
+from .inputs import HashAggregates, ListFunction, Projection, ScalarAggregate, TDigestAggregate
+from .inputs import VarianceAggregate, links
 from .models import Column, doc_field, selections
 from .scalars import Long
 
 Root = Union[ds.Dataset, ds.Scanner, pa.Table]
+list_deprecation = "List functions will be moved to `scan(...: {list: ...})`"
 
 
 def references(field) -> Iterator:
@@ -59,12 +61,6 @@ class Schema:
 class Dataset:
     def __init__(self, table: Root):
         self.table = table
-
-    def __init_subclass__(cls):
-        """Downcast wrapped fields with their implemented type."""
-        cls.aggregate = Aggregations.resolver(cls.aggregate)
-        for field in (cls.aggregate, cls.filter):
-            field.base_resolver.type_annotation = cls
 
     def references(self, info: Info, level: int = 0) -> set:
         """Return set of every possible future column reference."""
@@ -204,7 +200,7 @@ class Dataset:
         aggregate="grouped aggregation functions",
     )
     def group(
-        self, info: Info, by: List[str], counts: str = '', aggregate: Aggregations = {}  # type: ignore
+        self, info: Info, by: List[str], counts: str = '', aggregate: HashAggregates = {}  # type: ignore
     ) -> Self:
         """Return table grouped by columns, with stable ordering.
 
@@ -305,7 +301,9 @@ class Dataset:
         cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
         fill_null_backward: doc_argument(List[Field], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
-        list: List[ListFunction] = [],
+        list: Annotated[
+            List[ListFunction], strawberry.argument(deprecation_reason=list_deprecation)
+        ] = [],
     ) -> Self:
         """Return view of table with vector functions applied across columns.
 
@@ -343,19 +341,37 @@ class Dataset:
             row.update({name: table[name][index].values for name in lists})
             yield type(self)(pa.table(row))
 
-    @Aggregations.resolver
-    @no_type_check
-    def aggregate(self, info: Info, **fields) -> 'Dataset':
-        """Return table with aggregate functions applied to list columns.
-
-        Columns which are aliased or change type can be accessed by the `column` field.
-        """
+    @doc_field
+    def aggregate(
+        self,
+        info: Info,
+        approximate_median: doc_argument(List[ScalarAggregate], func=pc.approximate_median) = [],
+        count: doc_argument(List[CountAggregate], func=pc.count) = [],
+        count_distinct: doc_argument(List[CountAggregate], func=pc.count_distinct) = [],
+        distinct: Annotated[
+            List[CountAggregate],
+            strawberry.argument(description="distinct values within each scalar"),
+        ] = [],
+        first: doc_argument(List[Aggregate], func=ListChunk.first) = [],
+        last: doc_argument(List[Aggregate], func=ListChunk.last) = [],
+        max: doc_argument(List[ScalarAggregate], func=pc.max) = [],
+        mean: doc_argument(List[ScalarAggregate], func=pc.mean) = [],
+        min: doc_argument(List[ScalarAggregate], func=pc.min) = [],
+        product: doc_argument(List[ScalarAggregate], func=pc.product) = [],
+        stddev: doc_argument(List[VarianceAggregate], func=pc.stddev) = [],
+        sum: doc_argument(List[ScalarAggregate], func=pc.sum) = [],
+        tdigest: doc_argument(List[TDigestAggregate], func=pc.tdigest) = [],
+        variance: doc_argument(List[VarianceAggregate], func=pc.variance) = [],
+    ) -> Self:
+        """Return table with scalar aggregate functions applied to list columns."""
         table = self.select(info)
         columns = {name: table[name] for name in table.column_names}
-        agg_fields = collections.defaultdict(dict)
-        for key in fields:
+        agg_fields: dict = collections.defaultdict(dict)
+        keys: tuple = 'approximate_median', 'count', 'count_distinct', 'distinct', 'first', 'last'
+        keys += 'max', 'mean', 'min', 'product', 'stddev', 'sum', 'tdigest', 'variance'
+        for key in keys:
             func = getattr(ListChunk, key, None)
-            for field in fields[key]:
+            for field in locals()[key]:
                 agg = Agg(**dict(field))
                 if func is None or key == 'sum':  # `sum` is a method on `Array``
                     agg_fields[agg.name][key] = agg
@@ -366,6 +382,8 @@ class Dataset:
             arrays = ListChunk.aggregate(table[name], **funcs).flatten()
             columns.update(zip([agg.alias for agg in aggs.values()], arrays))
         return type(self)(pa.table(columns))
+
+    aggregate.deprecation_reason = list_deprecation
 
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(

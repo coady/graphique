@@ -18,9 +18,8 @@ from strawberry.schema_directive import Location
 from strawberry.field import StrawberryField
 from strawberry.scalars import JSON
 from strawberry.types.fields.resolver import StrawberryResolver
-from typing_extensions import Annotated
 from .core import ListChunk
-from .scalars import Long, classproperty
+from .scalars import Long
 
 T = TypeVar('T')
 
@@ -45,17 +44,6 @@ class Input:
     def __getitem__(self, name):
         value = getattr(self, name)
         return dict(value) if hasattr(value, 'keys') else value
-
-    @classproperty
-    def resolver(cls) -> Callable:
-        """a decorator which flattens an input type's fields into arguments"""
-        annotations = dict(cls.__annotations__)
-        defaults = {name: getattr(cls, name) for name in annotations if hasattr(cls, name)}
-        for field in cls._type_definition.fields:  # type: ignore
-            argument = strawberry.argument(description=field.description)
-            annotations[field.name] = Annotated[annotations[field.name], argument]
-            defaults[field.name] = field.default_factory()
-        return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
 def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) -> StrawberryField:
@@ -204,7 +192,7 @@ class TDigestAggregate(ScalarAggregate):
 
 
 @strawberry.input
-class Aggregations(Input):
+class HashAggregates(Input):
     all: List[ScalarAggregate] = default_field([], func=pc.all)
     any: List[ScalarAggregate] = default_field([], func=pc.any)
     approximate_median: List[ScalarAggregate] = default_field([], func=pc.approximate_median)

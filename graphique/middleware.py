@@ -102,6 +102,7 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
                     raise TypeError(f"Field `{name}` cannot represent `Column` value")
             return Row(**row)
 
+    Table.filter.base_resolver.type_annotation = Table
     options = dict(name=prefix + 'Table', description="a column-oriented table")
     if name:
         return strawberry.federation.type(Table, keys=keys, **options)(root)

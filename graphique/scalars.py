@@ -62,10 +62,3 @@ type_map = {
     pa.lib.Type_LARGE_LIST: list,
     pa.lib.Type_STRUCT: dict,
 }
-
-
-class classproperty(property):
-    """A property bound to a class."""
-
-    def __get__(self, instance, owner):
-        return self.fget(owner)
