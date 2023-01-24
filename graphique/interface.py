@@ -17,8 +17,8 @@ from strawberry.types import Info
 from typing_extensions import Annotated, Self
 from .core import Agg, Column as C, ListChunk, Table as T
 from .inputs import Aggregate, CountAggregate, Cumulative, Diff, Expression, Field, Filter
-from .inputs import HashAggregates, ListFunction, Projection, ScalarAggregate, TDigestAggregate
-from .inputs import VarianceAggregate, links
+from .inputs import HashAggregates, ListFunction, Projection, ScalarAggregate, ScalarAggregates
+from .inputs import TDigestAggregate, VarianceAggregate, links
 from .models import Column, doc_field, selections
 from .scalars import Long
 
@@ -207,11 +207,9 @@ class Dataset:
         Columns which are not aggregated are transformed into list columns.
         See `column`, `aggregate`, and `tables` for further usage of list columns.
         """
-        scalars, aggs = set(by), {}
-        for func, values in dict(aggregate).items():
-            if values:
-                aggs[func] = [Agg(**dict(value)) for value in values]
-                scalars.update(agg.alias for agg in aggs[func])
+        scalars, aggs = set(by), dict(aggregate)
+        for values in aggs.values():
+            scalars.update(agg.alias for agg in values)
         lists = self.references(info, level=1) - scalars - {counts}
         if isinstance(self.table, pa.Table) or lists or not set(aggs) <= Agg.associatives:
             table = self.select(info)
@@ -221,6 +219,54 @@ class Dataset:
                 aggs.setdefault('sum', []).append(Agg(counts))
                 counts = ''
         return type(self)(T.group(table, *by, counts=counts, list=list(map(Agg, lists)), **aggs))
+
+    @doc_field(
+        keys="selected fragments",
+        counts="optionally include counts in an aliased column",
+        aggregate="scalar aggregation functions",
+        filter="selected rows (within fragment)",
+        columns="projected columns",
+    )
+    @no_type_check
+    def fragments(
+        self,
+        info: Info,
+        keys: Expression = {},
+        counts: str = '',
+        aggregate: ScalarAggregates = {},
+        filter: Expression = {},
+        columns: List[Projection] = [],
+    ) -> Self:
+        """Provisional: return table from scanning fragments and grouping by partitions.
+
+        Requires a partitioned dataset. Faster and less memory intensive than `group`.
+        """
+        schema = self.table.partitioning.schema  # requires a Dataset
+        filter, aggs = filter.to_arrow(), dict(aggregate)
+        projection = {agg.name: agg.name for value in aggs.values() for agg in value}
+        projection.update(self.project(info, columns))
+        for name in schema.names:
+            projection.pop(name, None)
+        columns = collections.defaultdict(list)
+        for fragment in self.table.get_fragments(filter=keys.to_arrow()):
+            row = ds._get_partition_keys(fragment.partition_expression)
+            if projection:
+                table = fragment.to_table(filter=filter, columns=projection)
+                row.update(T.aggregate(table, counts=counts, **aggs))
+            elif counts:
+                row[counts] = fragment.count_rows()
+            for name, value in row.items():
+                columns[name].append(
+                    value.combine_chunks() if isinstance(value, pa.ChunkedArray) else value
+                )
+        for name, values in columns.items():
+            if isinstance(values[0], pa.Scalar):
+                columns[name] = C.from_scalars(values)
+            elif isinstance(values[0], pa.Array):
+                columns[name] = ListChunk.from_scalars(values)
+        for name, tp in zip(schema.names, schema.types):
+            columns[name] = pa.array(columns[name], tp)
+        return type(self)(pa.table(columns))
 
     @doc_field(
         by="column names",
@@ -385,16 +431,20 @@ class Dataset:
 
     aggregate.deprecation_reason = list_deprecation
 
+    def project(self, info: Info, columns: List[Projection]) -> dict:
+        """Return projected columns, including all references from below fields."""
+        projection = {name: pc.field(name) for name in self.references(info, level=1)}
+        projection.update({col.alias or '.'.join(col.name): col.to_arrow() for col in columns})
+        if '' in projection:
+            raise ValueError(f"projected columns need a name or alias: {projection['']}")
+        return projection
+
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(
         self, info: Info, filter: Expression = {}, columns: List[Projection] = []  # type: ignore
     ) -> Self:
         """Select rows and project columns without memory usage."""
-        projection = {name: pc.field(name) for name in self.references(info, level=1)}
-        projection.update({col.alias or '.'.join(col.name): col.to_arrow() for col in columns})
-        if '' in projection:
-            raise ValueError("projected columns need a name or alias")
-        scanner = self.scanner(info, filter=filter.to_arrow(), columns=projection)
+        scanner = self.scanner(info, filter=filter.to_arrow(), columns=self.project(info, columns))
         oneshot = len(selections(*info.selected_fields)) > 1 and isinstance(self.table, ds.Scanner)
         return type(self)(scanner.to_table() if oneshot else scanner)
 

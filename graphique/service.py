@@ -7,7 +7,7 @@ from .inputs import Expression
 from .middleware import GraphQL
 from .settings import COLUMNS, DEBUG, FEDERATED, FILTERS, PARQUET_PATH
 
-root = dataset = ds.dataset(PARQUET_PATH, partitioning='hive')
+root = dataset = ds.dataset(PARQUET_PATH, partitioning='hive' if PARQUET_PATH.is_dir() else None)
 
 if isinstance(COLUMNS, dict):
     COLUMNS = {alias: pc.field(name) for alias, name in COLUMNS.items()}

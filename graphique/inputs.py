@@ -18,7 +18,7 @@ from strawberry.schema_directive import Location
 from strawberry.field import StrawberryField
 from strawberry.scalars import JSON
 from strawberry.types.fields.resolver import StrawberryResolver
-from .core import ListChunk
+from .core import Agg, ListChunk
 from .scalars import Long
 
 T = TypeVar('T')
@@ -192,27 +192,39 @@ class TDigestAggregate(ScalarAggregate):
 
 
 @strawberry.input
-class HashAggregates(Input):
+class ScalarAggregates(Input):
     all: List[ScalarAggregate] = default_field([], func=pc.all)
     any: List[ScalarAggregate] = default_field([], func=pc.any)
     approximate_median: List[ScalarAggregate] = default_field([], func=pc.approximate_median)
     count: List[CountAggregate] = default_field([], func=pc.count)
     count_distinct: List[CountAggregate] = default_field([], func=pc.count_distinct)
-    distinct: List[CountAggregate] = default_field(
-        [], description="distinct values within each scalar"
-    )
-    first: List[Aggregate] = default_field([], func=ListChunk.first)
-    last: List[Aggregate] = default_field([], func=ListChunk.last)
     max: List[ScalarAggregate] = default_field([], func=pc.max)
     mean: List[ScalarAggregate] = default_field([], func=pc.mean)
     min: List[ScalarAggregate] = default_field([], func=pc.min)
     min_max: List[ScalarAggregate] = default_field([], func=pc.min_max)
-    one: List[Aggregate] = default_field([], description="arbitrary value within each scalar")
     product: List[ScalarAggregate] = default_field([], func=pc.product)
     stddev: List[VarianceAggregate] = default_field([], func=pc.stddev)
     sum: List[ScalarAggregate] = default_field([], func=pc.sum)
     tdigest: List[TDigestAggregate] = default_field([], func=pc.tdigest)
     variance: List[VarianceAggregate] = default_field([], func=pc.variance)
+
+    def keys(self):
+        for key in super().keys():
+            if super().__getitem__(key):
+                yield key
+
+    def __getitem__(self, name):
+        return [Agg(**value) for value in super().__getitem__(name)]
+
+
+@strawberry.input
+class HashAggregates(ScalarAggregates):
+    distinct: List[CountAggregate] = default_field(
+        [], description="distinct values within each scalar"
+    )
+    first: List[Aggregate] = default_field([], func=ListChunk.first)
+    last: List[Aggregate] = default_field([], func=ListChunk.last)
+    one: List[Aggregate] = default_field([], description="arbitrary value within each scalar")
 
 
 @use_doc(strawberry.input)

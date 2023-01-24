@@ -103,6 +103,10 @@ class ListChunk(pa.lib.BaseListArray):
         cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
         return cls.from_arrays(offsets, values)
 
+    def from_scalars(values: Iterable) -> pa.LargeListArray:
+        """Return list array from array scalars."""
+        return ListChunk.from_counts(pa.array(map(len, values)), pa.concat_arrays(values))
+
     def element(self, index: int) -> pa.Array:
         """element at index of each list scalar; defaults to null"""
         with contextlib.suppress(ValueError):
@@ -129,7 +133,7 @@ class ListChunk(pa.lib.BaseListArray):
     def map_list(self, func: Callable, **kwargs) -> pa.lib.BaseListArray:
         """Return list array by mapping function across scalars, with null handling."""
         values = [func(value, **kwargs) for value in ListChunk.scalars(self)]
-        return ListChunk.from_counts(pa.array(map(len, values)), pa.concat_arrays(values))
+        return ListChunk.from_scalars(values)
 
     def aggregate(self, **funcs: Optional[pc.FunctionOptions]) -> pa.StructArray:
         """Return aggregated scalars by grouping each hash function on the parent indices.
@@ -173,7 +177,8 @@ class ListChunk(pa.lib.BaseListArray):
 
     def index(self, **options) -> pa.Array:
         """index for first occurrence of each list scalar"""
-        return pa.array(pc.index(value, **options).as_py() for value in ListChunk.scalars(self))
+        values = [pc.index(value, **options) for value in ListChunk.scalars(self)]
+        return Column.from_scalars(values)
 
     @register
     def list_all(ctx, self: pa.list_(pa.bool_())) -> pa.bool_():  # type: ignore
@@ -188,6 +193,10 @@ class ListChunk(pa.lib.BaseListArray):
 
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
+
+    def from_scalars(values: Sequence) -> pa.Array:
+        """Return array from arrow scalars."""
+        return pa.array((value.as_py() for value in values), values[0].type)
 
     def scalar_type(self):
         return self.type.value_type if pa.types.is_dictionary(self.type) else self.type
@@ -414,6 +423,16 @@ class Table(pa.Table):
             columns.update(zip([agg.alias for agg in aggs], arrays))
         columns.update(zip(names, map(decode, arrays)))
         return type(self).from_pydict(columns)
+
+    def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
+        """Return aggregated scalars as a row of data."""
+        row = {name: self[name] for name in self.column_names}
+        if counts:
+            row[counts] = len(self)
+        for key in funcs:
+            func = getattr(pc, key)
+            row.update({agg.alias: func(self[agg.name], **agg.options) for agg in funcs[key]})
+        return row
 
     def list_value_length(self) -> pa.Array:
         lists = {name for name in self.column_names if Column.is_list_type(self[name])}

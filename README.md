@@ -112,6 +112,8 @@ dev
 
 * Python >=3.8 required
 * Scannable functions added
+* List aggregations deprecaated
+* Group by fragments
 * Month day nano interval array
 * `min` and `max` fields memory optimized
 

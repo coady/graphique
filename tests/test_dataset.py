@@ -95,6 +95,24 @@ def test_group(dsclient):
     }
 
 
+def test_fragments(partclient):
+    data = partclient.execute('{ fragments { columns { part { values } } } }')
+    assert data == {'fragments': {'columns': {'part': {'values': [0]}}}}
+    data = partclient.execute('{ fragments(keys: {eq: [{name: "part"}, {value: 1}]}) { length } }')
+    assert data == {'fragments': {'length': 0}}
+    data = partclient.execute(
+        '{ fragments(counts: "c") { length column(name: "c") { ... on LongColumn { values } } } }'
+    )
+    assert data == {'fragments': {'length': 1, 'column': {'values': [41700]}}}
+    data = partclient.execute(
+        '''{ fragments(filter: {ge: [{name: "state"}, {value: "CA"}]}
+        aggregate: {min: {name: "state"}}) { columns { state { values } } } }'''
+    )
+    assert data == {'fragments': {'columns': {'state': {'values': ['CA']}}}}
+    data = partclient.execute('{ fragments { column(name: "state") { type length } } }')
+    assert data == {'fragments': {'column': {'type': 'large_list<item: string>', 'length': 1}}}
+
+
 def test_schema(dsclient):
     schema = dsclient.execute('{ schema { names types partitioning } }')['schema']
     assert set(schema['names']) >= {'zipcode', 'state', 'county'}

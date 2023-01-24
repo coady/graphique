@@ -54,6 +54,12 @@ def dsclient(request):
 
 
 @pytest.fixture(scope='module')
+def partclient(request):
+    app = load('partitioned')
+    return TestClient(app)
+
+
+@pytest.fixture(scope='module')
 def fedclient():
     from .federated import app
 
