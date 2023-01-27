@@ -432,6 +432,9 @@ class Table(pa.Table):
         for key in funcs:
             func = getattr(pc, key)
             row.update({agg.alias: func(self[agg.name], **agg.options) for agg in funcs[key]})
+        for name, value in row.items():
+            if isinstance(value, pa.ChunkedArray):
+                row[name] = value.combine_chunks()
         return row
 
     def list_value_length(self) -> pa.Array:

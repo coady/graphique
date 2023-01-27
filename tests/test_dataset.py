@@ -111,6 +111,16 @@ def test_fragments(partclient):
     assert data == {'fragments': {'columns': {'state': {'values': ['CA']}}}}
     data = partclient.execute('{ fragments { column(name: "state") { type length } } }')
     assert data == {'fragments': {'column': {'type': 'large_list<item: string>', 'length': 1}}}
+    data = partclient.execute(
+        '''{ fragments(counts: "c", filter: {eq: [{name: "state"}, {value: "CA"}]}) {
+        column(name: "c") { ... on LongColumn { values } } } }'''
+    )
+    assert data == {'fragments': {'column': {'values': [2647]}}}
+    data = partclient.execute(
+        '''{ fragments(aggregate: {min: {alias: "south", name: "latitude"}}) {
+        column(name: "south") { ... on FloatColumn { values } } } }'''
+    )
+    assert data == {'fragments': {'column': {'values': [pytest.approx(17.96333)]}}}
 
 
 def test_schema(dsclient):

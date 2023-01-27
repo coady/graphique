@@ -243,22 +243,21 @@ class Dataset:
         """
         schema = self.table.partitioning.schema  # requires a Dataset
         filter, aggs = filter.to_arrow(), dict(aggregate)
-        projection = {agg.name: agg.name for value in aggs.values() for agg in value}
+        projection = {agg.name: ds.field(agg.name) for value in aggs.values() for agg in value}
         projection.update(self.project(info, columns))
         for name in schema.names:
             projection.pop(name, None)
         columns = collections.defaultdict(list)
         for fragment in self.table.get_fragments(filter=keys.to_arrow()):
+            # TODO(apache/arrow#33825): `get_partition_keys` will be public
             row = ds._get_partition_keys(fragment.partition_expression)
             if projection:
                 table = fragment.to_table(filter=filter, columns=projection)
                 row.update(T.aggregate(table, counts=counts, **aggs))
             elif counts:
-                row[counts] = fragment.count_rows()
-            for name, value in row.items():
-                columns[name].append(
-                    value.combine_chunks() if isinstance(value, pa.ChunkedArray) else value
-                )
+                row[counts] = fragment.count_rows(filter=filter)
+            for name in row:
+                columns[name].append(row[name])
         for name, values in columns.items():
             if isinstance(values[0], pa.Scalar):
                 columns[name] = C.from_scalars(values)

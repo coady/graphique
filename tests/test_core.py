@@ -116,7 +116,7 @@ def test_aggregate(table):
     assert groups['latitude'][0].as_py() == [pytest.approx(42.34672)]
     row = T.aggregate(table, min=[Agg('state')])
     assert row['state'].as_py() == 'AK'
-    assert row['zipcode'] == table['zipcode']
+    assert row['zipcode'] == table['zipcode'].combine_chunks()
     row = T.aggregate(table, counts='counts', quantile=[Agg('zipcode')])
     assert row['counts'] == 41700
     assert row['zipcode'].to_pylist() == [48817.5]
