@@ -7,7 +7,7 @@ lint:
 	mypy -p graphique
 
 html: docs/schema.md
-	PYTHONPATH=$(PWD) python3 -m mkdocs build
+	python -m mkdocs build
 
 docs/schema.md: docs/schema.graphql
 	./node_modules/.bin/graphql-markdown \

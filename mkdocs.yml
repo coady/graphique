@@ -22,5 +22,4 @@ plugins:
           options:
             show_root_heading: true
   - mkdocs-jupyter:
-      execute: true
       allow_errors: false
