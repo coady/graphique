@@ -15,7 +15,7 @@
 % env PARQUET_PATH=... uvicorn graphique.service:app
 ```
 
-Open http://localhost:8000/graphql to try out the API in [GraphiQL](https://github.com/graphql/graphiql/tree/main/packages/graphiql#readme). There is a test fixture at `./tests/fixtures/zipcodes.parquet`.
+Open http://localhost:8000/ to try out the API in [GraphiQL](https://github.com/graphql/graphiql/tree/main/packages/graphiql#readme). There is a test fixture at `./tests/fixtures/zipcodes.parquet`.
 
 ```console
 % env PARQUET_PATH=... strawberry export-schema graphique.service:app.schema
@@ -96,7 +96,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ```
 
 ## Dependencies
-* pyarrow >=10
+* pyarrow >=11
 * strawberry-graphql[asgi,cli] >=0.149.2
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 
@@ -110,6 +110,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ## Changes
 dev
 
+* Pyarrow >=11 required
 * Python >=3.8 required
 * Scannable functions added
 * List aggregations deprecaated

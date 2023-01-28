@@ -1,2 +1,2 @@
-pyarrow>=10
+pyarrow>=11
 strawberry-graphql[asgi,cli]>=0.149.2
