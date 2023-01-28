@@ -320,6 +320,15 @@ class Dataset:
         schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
         if isinstance(table, pa.Table) or C.is_list_type(schema.field(name)):
             table = self.select(info)
+        elif getattr(table, 'partitioning', None) and name in table.partitioning.schema.names:
+            values = pa.array(
+                ds._get_partition_keys(fragment.partition_expression)[name]
+                for fragment in table.get_fragments()
+            )
+            scanner = self.scanner(info, filter=ds.field(name) == func(values))
+            if len(by) == 1:
+                return type(self)(scanner)
+            table, by = scanner.to_table(), by[1:]
         else:
             # TODO(ARROW-16212): replace with user defined function for multiple kernels
             batches = self.scanner(info).to_batches()

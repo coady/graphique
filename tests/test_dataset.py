@@ -121,6 +121,10 @@ def test_fragments(partclient):
         column(name: "south") { ... on FloatColumn { values } } } }'''
     )
     assert data == {'fragments': {'column': {'values': [pytest.approx(17.96333)]}}}
+    data = partclient.execute('{ min(by: "part") { row { part } } }')
+    assert data == {'min': {'row': {'part': 0}}}
+    data = partclient.execute('{ max(by: ["part", "zipcode"]) { row { zipcode } } }')
+    assert data == {'max': {'row': {'zipcode': 99950}}}
 
 
 def test_schema(dsclient):
