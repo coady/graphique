@@ -271,6 +271,11 @@ def test_list(executor):
     )
     assert data == {'scan': {'column': {'values': [1, None]}}}
     data = executor(
+        '''{ scan(columns: {list: {slice: {name: "list"}, stop: 1}, alias: "value"}) {
+        column(name: "value") { ... on ListColumn { flatten { ... on IntColumn { values } } } } } }'''
+    )
+    assert data == {'scan': {'column': {'flatten': {'values': [0]}}}}
+    data = executor(
         '''{ aggregate(distinct: {name: "list", mode: "only_null"})
         { columns { list { flatten { length } } } } }'''
     )

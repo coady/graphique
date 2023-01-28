@@ -656,9 +656,15 @@ class Lists(Fields):
     all: Optional[Expression] = default_field(func=pc.all)
     any: Optional[Expression] = default_field(func=pc.any)
 
+    slice: Optional[Expression] = default_field(func=pc.list_slice)
+    start: int = 0
+    stop: Optional[int] = None
+    step: int = 1
+    return_fixed_size_list: Optional[bool] = None
+
     prefix = 'list_'
 
     def getfunc(self, name):
-        if name in ('element', 'value_length'):  # built-ins
+        if name in ('element', 'value_length', 'slice'):  # built-ins
             return super().getfunc(name)
         return lambda *args: ds.Expression._call(self.prefix + name, list(args))
