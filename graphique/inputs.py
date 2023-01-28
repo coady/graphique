@@ -110,19 +110,15 @@ class Filter(Generic[T], Input):
         return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
 
 
-@strawberry.input(description="Field options for applied functions.")
-class Field:
+@strawberry.input(description=f"name and optional alias for [compute functions]({links.compute})")
+class Field(Agg):
     name: str = strawberry.field(description="column name")
     alias: str = strawberry.field(default='', description="output column name")
 
-    def serialize(self, table):
-        """Return (name, args, kwargs) suitable for computing."""
-        exclude = {'name', 'alias'}
-        return (
-            self.alias or self.name,
-            table.select([self.name]),
-            {name: value for name, value in self.__dict__.items() if name not in exclude},
-        )
+    __init__ = Agg.__init__
+
+    def __init_subclass__(cls):
+        cls.__init__ = cls.__init__
 
 
 @strawberry.input
@@ -161,21 +157,13 @@ class ListFunction(Input):
     quantile: Optional[Quantile] = default_field(func=pc.quantile)
 
 
-@strawberry.input(
-    description=f"names and optional aliases for [aggregation]({links.compute}#aggregations)"
-)
-class Aggregate(Input):
-    name: str
-    alias: str = ''
-
-
 @strawberry.input(description=f"options for count [aggregation]({links.compute}#aggregations)")
-class CountAggregate(Aggregate):
+class CountAggregate(Field):
     mode: str = 'only_valid'
 
 
 @strawberry.input(description=f"options for scalar [aggregation]({links.compute}#aggregations)")
-class ScalarAggregate(Aggregate):
+class ScalarAggregate(Field):
     skip_nulls: bool = True
 
 
@@ -209,12 +197,7 @@ class ScalarAggregates(Input):
     variance: List[VarianceAggregate] = default_field([], func=pc.variance)
 
     def keys(self):
-        for key in super().keys():
-            if super().__getitem__(key):
-                yield key
-
-    def __getitem__(self, name):
-        return [Agg(**value) for value in super().__getitem__(name)]
+        return (key for key in super().keys() if self[key])
 
 
 @strawberry.input
@@ -222,9 +205,9 @@ class HashAggregates(ScalarAggregates):
     distinct: List[CountAggregate] = default_field(
         [], description="distinct values within each scalar"
     )
-    first: List[Aggregate] = default_field([], func=ListChunk.first)
-    last: List[Aggregate] = default_field([], func=ListChunk.last)
-    one: List[Aggregate] = default_field([], description="arbitrary value within each scalar")
+    first: List[Field] = default_field([], func=ListChunk.first)
+    last: List[Field] = default_field([], func=ListChunk.last)
+    one: List[Field] = default_field([], description="arbitrary value within each scalar")
 
 
 @use_doc(strawberry.input)

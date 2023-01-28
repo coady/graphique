@@ -15,8 +15,8 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
 from typing_extensions import Annotated, Self
-from .core import Agg, Column as C, ListChunk, Table as T
-from .inputs import Aggregate, CountAggregate, Cumulative, Diff, Expression, Field, Filter
+from .core import Column as C, ListChunk, Table as T
+from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
 from .inputs import HashAggregates, ListFunction, Projection, ScalarAggregate, ScalarAggregates
 from .inputs import TDigestAggregate, VarianceAggregate, links
 from .models import Column, doc_field, selections
@@ -211,14 +211,14 @@ class Dataset:
         for values in aggs.values():
             scalars.update(agg.alias for agg in values)
         lists = self.references(info, level=1) - scalars - {counts}
-        if isinstance(self.table, pa.Table) or lists or not set(aggs) <= Agg.associatives:
+        if isinstance(self.table, pa.Table) or lists or not set(aggs) <= Field.associatives:
             table = self.select(info)
         else:  # scan in parallel when possible
             table = T.map_batch(self.scanner(info), T.group, *by, counts=counts, **aggs)
             if counts:
-                aggs.setdefault('sum', []).append(Agg(counts))
+                aggs.setdefault('sum', []).append(Field(counts))
                 counts = ''
-        return type(self)(T.group(table, *by, counts=counts, list=list(map(Agg, lists)), **aggs))
+        return type(self)(T.group(table, *by, counts=counts, list=list(map(Field, lists)), **aggs))
 
     @doc_field(
         keys="selected fragments",
@@ -371,14 +371,12 @@ class Dataset:
             if expr is not None:
                 table = T.filter_list(table, expr)
             for func, field in value.items():
-                name, args, kwargs = field.serialize(table)
-                columns[name] = getattr(ListChunk, func)(*args, **kwargs)
+                columns[field.alias] = getattr(ListChunk, func)(table[field.name], **field.options)
         args = cumulative_sum, fill_null_backward, fill_null_forward
         funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward
         for fields, func in zip(args, funcs):
             for field in fields:
-                name, args, kwargs = field.serialize(table)
-                columns[name] = func(*args, **kwargs)
+                columns[field.alias] = func(table[field.name], **field.options)
         return type(self)(T.union(table, pa.table(columns)))
 
     @doc_field
@@ -406,8 +404,8 @@ class Dataset:
             List[CountAggregate],
             strawberry.argument(description="distinct values within each scalar"),
         ] = [],
-        first: doc_argument(List[Aggregate], func=ListChunk.first) = [],
-        last: doc_argument(List[Aggregate], func=ListChunk.last) = [],
+        first: doc_argument(List[Field], func=ListChunk.first) = [],
+        last: doc_argument(List[Field], func=ListChunk.last) = [],
         max: doc_argument(List[ScalarAggregate], func=pc.max) = [],
         mean: doc_argument(List[ScalarAggregate], func=pc.mean) = [],
         min: doc_argument(List[ScalarAggregate], func=pc.min) = [],
@@ -425,8 +423,7 @@ class Dataset:
         keys += 'max', 'mean', 'min', 'product', 'stddev', 'sum', 'tdigest', 'variance'
         for key in keys:
             func = getattr(ListChunk, key, None)
-            for field in locals()[key]:
-                agg = Agg(**dict(field))
+            for agg in locals()[key]:
                 if func is None or key == 'sum':  # `sum` is a method on `Array``
                     agg_fields[agg.name][key] = agg
                 else:
