@@ -15,9 +15,9 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
 from typing_extensions import Annotated, Self
-from .core import Column as C, ListChunk, Table as T
+from .core import Column as C, ListChunk, Table as T, sort_key
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
-from .inputs import HashAggregates, ListFunction, Projection, ScalarAggregate
+from .inputs import HashAggregates, ListFunction, Projection, ScalarAggregate, Sort
 from .inputs import TDigestAggregate, VarianceAggregate, VectorAggregates, links
 from .models import Column, doc_field, selections
 from .scalars import Long
@@ -226,6 +226,7 @@ class Dataset:
         aggregate="scalar aggregation functions",
         filter="selected rows (within fragment)",
         columns="projected columns",
+        sort="sort and select rows (within fragments)",
     )
     @no_type_check
     def fragments(
@@ -236,6 +237,7 @@ class Dataset:
         aggregate: VectorAggregates = {},
         filter: Expression = {},
         columns: List[Projection] = [],
+        sort: Optional[Sort] = None,
     ) -> Self:
         """Provisional: return table from scanning fragments and grouping by partitions.
 
@@ -244,6 +246,8 @@ class Dataset:
         schema = self.table.partitioning.schema  # requires a Dataset
         filter, aggs = filter.to_arrow(), dict(aggregate)
         projection = {agg.name: ds.field(agg.name) for value in aggs.values() for agg in value}
+        if sort:
+            projection.update({name: ds.field(name) for name in dict(map(sort_key, sort.by))})
         projection.update(self.project(info, columns))
         for name in schema.names:
             projection.pop(name, None)
@@ -256,6 +260,10 @@ class Dataset:
                 row.update(T.aggregate(table, counts=counts, **aggs))
             elif counts:
                 row[counts] = fragment.count_rows(filter=filter)
+            arrays = {name: value for name, value in row.items() if isinstance(value, pa.Array)}
+            if sort:
+                table = T.sort(pa.table(arrays), *sort.by, length=sort.length)
+                row.update({name: table[name].combine_chunks() for name in table.column_names})
             for name in row:
                 columns[name].append(row[name])
         for name, values in columns.items():

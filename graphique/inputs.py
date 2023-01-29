@@ -161,6 +161,12 @@ class Quantile(Field):
     min_count: int = 1
 
 
+@strawberry.input
+class Sort:
+    by: List[str]
+    length: Long
+
+
 @strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for lists")
 class ListFunction(Input):
     filter: 'Expression' = default_field({}, description="filter within list scalars")

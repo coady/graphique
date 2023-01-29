@@ -130,6 +130,11 @@ def test_fragments(partclient):
         column(name: "latitude") { ... on ListColumn { values { ... on FloatColumn { values } } } } } }'''
     )
     assert data == {'fragments': {'column': {'values': [{'values': [pytest.approx(39.12055)]}]}}}
+    data = partclient.execute(
+        '''{ fragments(sort: {by: "-zipcode", length: 3}) {
+        column(name: "zipcode") { ... on ListColumn { values { ... on IntColumn { values } } } } } }'''
+    )
+    assert data == {'fragments': {'column': {'values': [{'values': [99950, 99929, 99928]}]}}}
 
 
 def test_schema(dsclient):
