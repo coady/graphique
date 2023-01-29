@@ -108,7 +108,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ```
 
 ## Changes
-dev
+1.1
 
 * Pyarrow >=11 required
 * Python >=3.8 required
