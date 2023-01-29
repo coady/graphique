@@ -125,6 +125,11 @@ def test_fragments(partclient):
     assert data == {'min': {'row': {'part': 0}}}
     data = partclient.execute('{ max(by: ["part", "zipcode"]) { row { zipcode } } }')
     assert data == {'max': {'row': {'zipcode': 99950}}}
+    data = partclient.execute(
+        '''{ fragments(aggregate: {quantile: {name: "latitude"}}) {
+        column(name: "latitude") { ... on ListColumn { values { ... on FloatColumn { values } } } } } }'''
+    )
+    assert data == {'fragments': {'column': {'values': [{'values': [pytest.approx(39.12055)]}]}}}
 
 
 def test_schema(dsclient):

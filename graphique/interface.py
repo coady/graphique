@@ -17,8 +17,8 @@ from strawberry.types import Info
 from typing_extensions import Annotated, Self
 from .core import Column as C, ListChunk, Table as T
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
-from .inputs import HashAggregates, ListFunction, Projection, ScalarAggregate, ScalarAggregates
-from .inputs import TDigestAggregate, VarianceAggregate, links
+from .inputs import HashAggregates, ListFunction, Projection, ScalarAggregate
+from .inputs import TDigestAggregate, VarianceAggregate, VectorAggregates, links
 from .models import Column, doc_field, selections
 from .scalars import Long
 
@@ -233,7 +233,7 @@ class Dataset:
         info: Info,
         keys: Expression = {},
         counts: str = '',
-        aggregate: ScalarAggregates = {},
+        aggregate: VectorAggregates = {},
         filter: Expression = {},
         columns: List[Projection] = [],
     ) -> Self:

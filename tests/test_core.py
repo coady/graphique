@@ -120,6 +120,10 @@ def test_aggregate(table):
     row = T.aggregate(table, counts='counts', quantile=[Agg('zipcode')])
     assert row['counts'] == 41700
     assert row['zipcode'].to_pylist() == [48817.5]
+    row = T.aggregate(table, element=[Agg('zipcode', index=-1)])
+    assert row['zipcode'].as_py() == 99950
+    row = T.aggregate(table, slice=[Agg('zipcode', start=-3, stop=None, step=1)])
+    assert row['zipcode'].to_pylist() == [99928, 99929, 99950]
 
 
 def test_partition(table):

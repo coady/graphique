@@ -54,6 +54,15 @@ class Agg:
     def astuple(self, func: str) -> tuple:
         return f'hash_{func}', self.option_map[func](**self.options)
 
+    @classmethod
+    def getfunc(cls, name: str) -> Callable:
+        """Return callable with named parameters for keyword arguments."""
+        if name == 'element':
+            return lambda array, index: array[index]
+        if name == 'slice':
+            return lambda array, start, stop, step: array[start:stop:step]
+        return getattr(pc, name)
+
 
 @dataclass(frozen=True)
 class Compare:
@@ -430,7 +439,7 @@ class Table(pa.Table):
         if counts:
             row[counts] = len(self)
         for key in funcs:
-            func = getattr(pc, key)
+            func = Agg.getfunc(key)
             row.update({agg.alias: func(self[agg.name], **agg.options) for agg in funcs[key]})
         for name, value in row.items():
             if isinstance(value, pa.ChunkedArray):
