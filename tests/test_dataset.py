@@ -135,6 +135,10 @@ def test_fragments(partclient):
         column(name: "zipcode") { ... on ListColumn { values { ... on IntColumn { values } } } } } }'''
     )
     assert data == {'fragments': {'column': {'values': [{'values': [99950, 99929, 99928]}]}}}
+    data = partclient.execute(
+        '{ group(by: ["part"], aggregate: {max: {name: "zipcode"}}) { row { part zipcode } } }'
+    )
+    assert data == {'group': {'row': {'part': 0, 'zipcode': 99950}}}
 
 
 def test_schema(dsclient):

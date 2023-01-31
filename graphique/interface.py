@@ -213,8 +213,11 @@ class Dataset:
         lists = self.references(info, level=1) - scalars - {counts}
         if isinstance(self.table, pa.Table) or lists or not set(aggs) <= Field.associatives:
             table = self.select(info)
-        else:  # scan in parallel when possible
-            table = T.map_batch(self.scanner(info), T.group, *by, counts=counts, **aggs)
+        else:  # scan fragments or batches when possible
+            if set(by) <= set(self.schema().partitioning):
+                table = self.fragments(info, Expression(), counts, aggregate, Expression()).table
+            else:
+                table = T.map_batch(self.scanner(info), T.group, *by, counts=counts, **aggs)
             if counts:
                 aggs.setdefault('sum', []).append(Field(counts))
                 counts = ''
@@ -328,7 +331,7 @@ class Dataset:
         schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
         if isinstance(table, pa.Table) or C.is_list_type(schema.field(name)):
             table = self.select(info)
-        elif getattr(table, 'partitioning', None) and name in table.partitioning.schema.names:
+        elif name in self.schema().partitioning:
             values = pa.array(
                 ds._get_partition_keys(fragment.partition_expression)[name]
                 for fragment in table.get_fragments()
