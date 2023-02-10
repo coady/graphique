@@ -461,14 +461,16 @@ class Dataset:
     ) -> Self:
         """Select rows and project columns without memory usage."""
         scanner = self.scanner(info, filter=filter.to_arrow(), columns=self.project(info, columns))
-        oneshot = len(selections(*info.selected_fields)) > 1 and isinstance(self.table, ds.Scanner)
+        selected = selections(*info.selected_fields)
+        selected['type'] = selected['schema'] = 0
+        oneshot = sum(selected.values()) > 1 and isinstance(self.table, ds.Scanner)
         return type(self)(scanner.to_table() if oneshot else scanner)
 
     @doc_field(
         right="name of right table; must be on root Query type",
         keys="column names used as keys on the left side",
         right_keys="column names used as keys on the right side; defaults to left side.",
-        join_type="""the kind of join: “left semi”, “right semi”, “left anti”, “right anti”, “inner”, “left outer”, “right outer”, “full outer”""",
+        join_type="the kind of join: 'left semi', 'right semi', 'left anti', 'right anti', 'inner', 'left outer', 'right outer', 'full outer'",
         left_suffix="add suffix to left column names; for preventing collisions",
         right_suffix="add suffix to right column names; for preventing collisions.",
         coalesce_keys="omit duplicate keys",

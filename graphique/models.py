@@ -1,6 +1,7 @@
 """
 GraphQL output types and resolvers.
 """
+import collections
 import functools
 import inspect
 import itertools
@@ -33,9 +34,9 @@ def _selections(field):
             yield from _selections(selection)
 
 
-def selections(*fields) -> set:
-    """Return set of field name selections from strawberry `SelectedField`."""
-    return set(itertools.chain(*map(_selections, fields)))
+def selections(*fields) -> dict:
+    """Return counts of field name selections from strawberry `SelectedField`."""
+    return collections.Counter(itertools.chain(*map(_selections, fields)))
 
 
 def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField:

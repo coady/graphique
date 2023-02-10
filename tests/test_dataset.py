@@ -146,7 +146,10 @@ def test_schema(dsclient):
     assert set(schema['names']) >= {'zipcode', 'state', 'county'}
     assert set(schema['types']) >= {'int32', 'string'}
     assert len(schema['partitioning']) in (0, 6)
-    assert dsclient.execute('{ type }')['type'] in {'FileSystemDataset', 'Scanner', 'Table'}
+    assert dsclient.execute('{ type }')['type'] in {'FileSystemDataset', 'Scanner'}
+    assert dsclient.execute('{ scan { type length } }')['scan']['type'] == 'Scanner'
+    data = dsclient.execute('{ scan { type length l: length } }')
+    assert data['scan']['type'] in {'Scanner', 'Table'}
 
 
 def test_scan(dsclient):
