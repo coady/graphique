@@ -34,7 +34,7 @@ def test_chunks():
     assert C.index(array, 'a', start=3) == 4
     assert C.index(array, 'b', start=2) == -1
     with pytest.raises(NotImplementedError):
-        pc._group_by([array], [array], [('hash_count', None)])
+        pc._group_by([array], [array], [Agg('').astuple('count')])
     table = pa.table({'col': array})
     tbl = T.group(table, 'col', count_distinct=[Agg('col', 'count')], list=[Agg('col', 'list')])
     assert tbl['col'].type == 'string'
@@ -193,10 +193,10 @@ def test_not_implemented():
         pc.index_in(dictionary.unique(), value_set=dictionary)
     array = pa.array(list('aba'))
     with pytest.raises(NotImplementedError):
-        pc._group_by([array.dictionary_encode()], [array], [('hash_min', None)])
+        pc._group_by([array.dictionary_encode()], [array], [Agg('').astuple('min')])
     with pytest.raises(NotImplementedError):
-        pc._group_by([array], [array], [('hash_any', None)])
-    func = 'hash_max', pc.ScalarAggregateOptions(min_count=4)
+        pc._group_by([array], [array], [Agg('').astuple('any')])
+    func = Agg('', min_count=4).astuple('max')
     values, _ = pc._group_by([list('abc')], [[0, 1, 0]], [func]).flatten()
     assert values.to_pylist() == list('cb')  # min_count has no effect
     value = pa.MonthDayNano([1, 2, 3])

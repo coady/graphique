@@ -45,6 +45,7 @@ class Agg:
     }
 
     associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
+    unary = pa.__version__ < '12.'  # all aggregate functions are unary
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -52,7 +53,10 @@ class Agg:
         self.options = options
 
     def astuple(self, func: str) -> tuple:
-        return f'hash_{func}', self.option_map[func](**self.options)
+        if func == 'count_all':
+            return '', f'hash_{func}', None
+        options = self.option_map[func](**self.options)
+        return ('_', f'hash_{func}', options)[Agg.unary :]
 
     @classmethod
     def getfunc(cls, name: str) -> Callable:
@@ -150,7 +154,7 @@ class ListChunk(pa.lib.BaseListArray):
         If there are empty or null scalars, then the result must be padded with null defaults and
         reordered. If the function is a `count`, then the default is 0.
         """
-        items = {f'hash_{name}': funcs[name] for name in funcs}.items()
+        items = [('_', f'hash_{name}', funcs[name])[Agg.unary :] for name in funcs]
         indices = pc.list_parent_indices(self)
         groups = pc._group_by([pc.list_flatten(self)] * len(funcs), [indices], items)
         if len(groups) == len(self):  # no empty or null scalars
@@ -400,25 +404,33 @@ class Table(pa.Table):
             **funcs: aggregate funcs with columns options
         """
         column = self[names[0]]
-        args = [(column, 'hash_count', pc.CountOptions(mode='all'))] if counts else []
+        values, args = [], []
+        if counts:
+            if Agg.unary:
+                values.append(column)
+                args.append(Agg('', mode='all').astuple('count'))
+            else:
+                args.append(Agg('').astuple('count_all'))
         if first or last:
-            args.append((Column.indices(column), 'hash_min_max', None))
+            values.append(Column.indices(column))
+            args.append(Agg('').astuple('min_max'))
         lists: Sequence[Agg] = []
         list_cols = [self[agg.name] for agg in funcs.get('list', [])]
         if any(pa.types.is_dictionary(col.type) or Column.is_list_type(col) for col in list_cols):
-            args.append((Column.indices(column), 'hash_list', None))
+            values.append(Column.indices(column))
+            args.append(Agg('').astuple('list'))
             lists = funcs.pop('list')
         for func in funcs:
-            args += [(self[agg.name], *agg.astuple(func)) for agg in funcs[func]]  # type: ignore
-        values, hashes, options = zip(*args) if args else [()] * 3
-        keys = map(self.column, names)
+            values += (self[agg.name] for agg in funcs[func])
+            args += (agg.astuple(func) for agg in funcs[func])
+        keys: Iterable = map(self.column, names)
         if isinstance(self, pa.Table):
-            keys = (key.unify_dictionaries() for key in keys)  # type: ignore
-            values = (
-                value.unify_dictionaries() if 'distinct' in func else value
-                for value, func in zip(values, hashes)
-            )
-        arrays = iter(pc._group_by(values, keys, zip(hashes, options)).flatten())
+            keys = (key.unify_dictionaries() for key in keys)
+            values = [
+                value.unify_dictionaries() if 'distinct' in arg[-2] else value
+                for value, arg in zip(values, args)
+            ]
+        arrays = iter(pc._group_by(values, keys, args).flatten())
         columns = {counts: next(arrays)} if counts else {}
         if first or last:
             for aggs, indices in zip([first, last], next(arrays).flatten()):

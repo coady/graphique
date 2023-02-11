@@ -440,7 +440,7 @@ class Dataset:
                 else:
                     columns[agg.alias] = func(table[agg.name], **agg.options)
         for name, aggs in agg_fields.items():
-            funcs = {key: agg.astuple(key)[1] for key, agg in aggs.items()}
+            funcs = {key: agg.astuple(key)[-1] for key, agg in aggs.items()}
             arrays = ListChunk.aggregate(table[name], **funcs).flatten()
             columns.update(zip([agg.alias for agg in aggs.values()], arrays))
         return type(self)(pa.table(columns))
