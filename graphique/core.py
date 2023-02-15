@@ -322,10 +322,10 @@ class Column(pa.ChunkedArray):
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
-    def map_batch(self, func: Callable, *rargs, **kwargs) -> pa.Table:
-        return pa.Table.from_batches(
-            threader.map(lambda batch: func(batch, *rargs, **kwargs), self.to_batches())
-        )
+    def map_batch(scanner: ds.Scanner, func: Callable, *rargs, **kwargs) -> pa.Table:
+        batches: Iterable = filter(None, scanner.to_batches())
+        batches = list(threader.map(lambda batch: func(batch, *rargs, **kwargs), batches))
+        return pa.Table.from_batches(batches, None if batches else scanner.projected_schema)
 
     def union(*tables: pa.Table) -> pa.Table:
         """Return table with union of columns."""

@@ -1,5 +1,6 @@
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.dataset as ds
 import pytest
 from graphique.core import Agg, ListChunk, Column as C, Table as T
 
@@ -42,6 +43,8 @@ def test_chunks():
     counts, _ = ListChunk.aggregate(tbl['list'], count_distinct=None).flatten()
     assert counts.to_pylist() == [1] * 3
     assert len(T.map_batch(table, T.group, 'col')) == 4
+    scanner = ds.dataset(table).scanner(filter=ds.field('col') == '')
+    assert not T.map_batch(scanner, T.group, 'col')
 
 
 def test_lists():
