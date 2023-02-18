@@ -1,20 +1,33 @@
 """
 Default GraphQL service.
-"""
-import pyarrow.compute as pc
-import pyarrow.dataset as ds
-from .inputs import Expression
-from .middleware import GraphQL
-from .settings import COLUMNS, DEBUG, FEDERATED, FILTERS, PARQUET_PATH
 
-root = dataset = ds.dataset(PARQUET_PATH, partitioning='hive' if PARQUET_PATH.is_dir() else None)
+Copy and customize as needed. Demonstrates:
+* federation versus root type
+* datasets, scanners, and tables
+* filtering and projection
+"""
+import json
+from pathlib import Path
+import pyarrow.dataset as ds
+from starlette.config import Config
+from graphique.inputs import Expression
+from graphique import GraphQL
+
+config = Config('.env')
+PARQUET_PATH = Path(config('PARQUET_PATH')).resolve()
+FEDERATED = config('FEDERATED', default='')
+DEBUG = config('DEBUG', cast=bool, default=False)
+COLUMNS = config('COLUMNS', cast=json.loads, default=None)
+FILTERS = config('FILTERS', cast=json.loads, default=None)
+
+root = ds.dataset(PARQUET_PATH, partitioning='hive' if PARQUET_PATH.is_dir() else None)
 
 if isinstance(COLUMNS, dict):
-    COLUMNS = {alias: pc.field(name) for alias, name in COLUMNS.items()}
+    COLUMNS = {alias: ds.field(name) for alias, name in COLUMNS.items()}
 if FILTERS is not None:
-    root = dataset.to_table(columns=COLUMNS, filter=Expression.from_query(**FILTERS).to_arrow())
+    root = root.to_table(columns=COLUMNS, filter=Expression.from_query(**FILTERS).to_arrow())
 elif COLUMNS:
-    root = dataset.scanner(columns=COLUMNS)
+    root = root.scanner(columns=COLUMNS)
 
 if FEDERATED:
     app = GraphQL.federated({FEDERATED: root}, debug=DEBUG)

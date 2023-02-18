@@ -46,7 +46,7 @@ app = GraphQL.federated({<name>: ds.dataset(...), ...}, keys={...})  # Tables on
 Start like any ASGI app.
 
 ```console
-uvicorn <package>:app
+uvicorn <module>:app
 ```
 
 Configuration options exist to provide a convenient no-code solution, but are subject to change in the future. Using a custom app is recommended for production usage.
@@ -108,6 +108,11 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ```
 
 ## Changes
+dev
+
+* Pyarrow >=12 supported
+* Grouping fragments optimized
+
 1.1
 
 * Pyarrow >=11 required
