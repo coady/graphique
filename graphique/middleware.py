@@ -19,12 +19,11 @@ Root = Union[ds.Dataset, ds.Scanner, pa.Table]
 
 
 class TimingExtension(strawberry.extensions.Extension):
-    def on_request_start(self):
-        self.start = datetime.now()
-
-    def on_request_end(self):
+    def on_operation(self):
+        start = datetime.now()
+        yield
         end = datetime.now()
-        print(f"[{end.replace(microsecond=0)}]: {end - self.start}")
+        print(f"[{end.replace(microsecond=0)}]: {end - start}")
 
 
 class GraphQL(strawberry.asgi.GraphQL):

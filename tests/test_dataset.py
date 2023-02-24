@@ -6,8 +6,7 @@ from .conftest import load
 
 def test_extension(capsys):
     ext = middleware.TimingExtension(execution_context=None)
-    assert ext.on_request_start() is None
-    assert ext.on_request_end() is None
+    assert list(ext.on_operation()) == [None]
     assert capsys.readouterr().out.startswith('[')
 
 
