@@ -441,8 +441,8 @@ class Dataset:
                     columns[agg.alias] = func(table[agg.name], **agg.options)
         for name, aggs in agg_fields.items():
             funcs = {key: agg.astuple(key)[-1] for key, agg in aggs.items()}
-            arrays = ListChunk.aggregate(table[name], **funcs).flatten()
-            columns.update(zip([agg.alias for agg in aggs.values()], arrays))
+            batch = ListChunk.aggregate(table[name], **funcs)
+            columns.update(zip([agg.alias for agg in aggs.values()], batch))
         return type(self)(pa.table(columns))
 
     aggregate.deprecation_reason = list_deprecation

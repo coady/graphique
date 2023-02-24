@@ -34,13 +34,11 @@ def test_chunks():
     assert C.index(array, 'c') == 3
     assert C.index(array, 'a', start=3) == 4
     assert C.index(array, 'b', start=2) == -1
-    with pytest.raises(NotImplementedError):
-        pc._group_by([array], [array], [Agg('').astuple('count')])
     table = pa.table({'col': array})
     tbl = T.group(table, 'col', count_distinct=[Agg('col', 'count')], list=[Agg('col', 'list')])
     assert tbl['col'].type == 'string'
     assert tbl['count'].to_pylist() == [1] * 3
-    counts, _ = ListChunk.aggregate(tbl['list'], count_distinct=None).flatten()
+    (counts,) = ListChunk.aggregate(tbl['list'], count_distinct=None)
     assert counts.to_pylist() == [1] * 3
     assert len(T.map_batch(table, T.group, 'col')) == 4
     scanner = ds.dataset(table).scanner(filter=ds.field('col') == '')
@@ -196,11 +194,12 @@ def test_not_implemented():
         pc.index_in(dictionary.unique(), value_set=dictionary)
     array = pa.array(list('aba'))
     with pytest.raises(NotImplementedError):
-        pc._group_by([array.dictionary_encode()], [array], [Agg('').astuple('min')])
+        pa.table({'': array.dictionary_encode()}).group_by('').aggregate([('', 'min')])
     with pytest.raises(NotImplementedError):
-        pc._group_by([array], [array], [Agg('').astuple('any')])
-    func = Agg('', min_count=4).astuple('max')
-    values, _ = pc._group_by([list('abc')], [[0, 1, 0]], [func]).flatten()
+        pa.table({'': array}).group_by('').aggregate([('', 'any')])
+    func = Agg('value', min_count=4).astuple('max')
+    table = pa.table({'value': list('abc'), 'key': [0, 1, 0]})
+    values, _ = table.group_by('key').aggregate([func])
     assert values.to_pylist() == list('cb')  # min_count has no effect
     value = pa.MonthDayNano([1, 2, 3])
     with pytest.raises(NotImplementedError):

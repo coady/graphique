@@ -45,7 +45,6 @@ class Agg:
     }
 
     associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
-    unary = pa.__version__ < '12.'  # all aggregate functions are unary
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -53,10 +52,8 @@ class Agg:
         self.options = options
 
     def astuple(self, func: str) -> tuple:
-        if func == 'count_all':
-            return '', f'hash_{func}', None
         options = self.option_map[func](**self.options)
-        return ('_', f'hash_{func}', options)[Agg.unary :]
+        return self.name, func, options
 
     @classmethod
     def getfunc(cls, name: str) -> Callable:
@@ -148,29 +145,34 @@ class ListChunk(pa.lib.BaseListArray):
         values = [func(value, **kwargs) for value in ListChunk.scalars(self)]
         return ListChunk.from_scalars(values)
 
-    def aggregate(self, **funcs: Optional[pc.FunctionOptions]) -> pa.StructArray:
+    def aggregate(self, **funcs: Optional[pc.FunctionOptions]) -> pa.RecordBatch:
         """Return aggregated scalars by grouping each hash function on the parent indices.
 
         If there are empty or null scalars, then the result must be padded with null defaults and
         reordered. If the function is a `count`, then the default is 0.
         """
-        items = [('_', f'hash_{name}', funcs[name])[Agg.unary :] for name in funcs]
-        indices = pc.list_parent_indices(self)
-        groups = pc._group_by([pc.list_flatten(self)] * len(funcs), [indices], items)
-        if len(groups) == len(self):  # no empty or null scalars
-            return groups
+        columns = {'key': pc.list_parent_indices(self), '': pc.list_flatten(self)}
+        items = [('', name, funcs[name]) for name in funcs]
+        table = pa.table(columns).group_by(['key']).aggregate(items)
+        indices, table = table['key'], table.remove_column(table.schema.get_field_index('key'))
+        (batch,) = table.to_batches()
+        if len(batch) == len(self):  # no empty or null scalars
+            return batch
         mask = pc.equal(pc.list_value_length(self), 0)
         empties = pc.indices_nonzero(Column.fill_null(mask, True))
-        indices = pa.concat_arrays([groups.field(-1).cast('uint64'), empties])
-        counters = [field.name for field in groups.type if 'count' in field.name]
-        empties = pa.repeat(pa.scalar(dict.fromkeys(counters, 0), groups.type), len(empties))
-        return pa.concat_arrays([groups, empties]).take(pc.sort_indices(indices))
+        indices = pa.chunked_array(indices.chunks + [empties.cast(indices.type)])
+        columns = {}
+        for field in batch.schema:
+            scalar = pa.scalar(0 if 'count' in field.name else None, field.type)
+            columns[field.name] = pa.repeat(scalar, len(empties))
+        table = pa.concat_tables([table, pa.table(columns)]).combine_chunks()
+        return table.to_batches()[0].take(pc.sort_indices(indices))
 
     def min_max(self, **options) -> pa.Array:
         if pa.types.is_dictionary(self.type.value_type):
-            self = ListChunk.aggregate(self, distinct=None).field(0)
+            (self,) = ListChunk.aggregate(self, distinct=None)
             self = type(self).from_arrays(self.offsets, self.values.dictionary_decode())
-        return ListChunk.aggregate(self, min_max=pc.ScalarAggregateOptions(**options)).field(0)
+        return ListChunk.aggregate(self, min_max=pc.ScalarAggregateOptions(**options))[0]
 
     def min(self, **options) -> pa.Array:
         """min value of each list scalar"""
@@ -196,12 +198,12 @@ class ListChunk(pa.lib.BaseListArray):
     @register
     def list_all(ctx, self: pa.list_(pa.bool_())) -> pa.bool_():  # type: ignore
         """Test whether all elements in a boolean array evaluate to true."""
-        return ListChunk.aggregate(self, all=None).field(0)
+        return ListChunk.aggregate(self, all=None)[0]
 
     @register
     def list_any(ctx, self: pa.list_(pa.bool_())) -> pa.bool_():  # type: ignore
         """Test whether any element in a boolean array evaluates to true."""
-        return ListChunk.aggregate(self, any=None).field(0)
+        return ListChunk.aggregate(self, any=None)[0]
 
 
 class Column(pa.ChunkedArray):
@@ -403,50 +405,46 @@ class Table(pa.Table):
             last: columns to take last value
             **funcs: aggregate funcs with columns options
         """
-        column = self[names[0]]
-        values, args = [], []
+        if isinstance(self, pa.Table):
+            self = self.unify_dictionaries()
+        columns = {name: self[name] for name in self.schema.names}
+        aliases, args = {}, []
         if counts:
-            if Agg.unary:
-                values.append(column)
-                args.append(Agg('', mode='all').astuple('count'))
+            if pa.__version__ < '12.':
+                aliases[f'{names[0]}_count'] = counts
+                args.append(Agg(names[0], mode='all').astuple('count'))
             else:
-                args.append(Agg('').astuple('count_all'))
+                aliases['count_all'] = counts
+                args.append(([], 'count_all'))
         if first or last:
-            values.append(Column.indices(column))
-            args.append(Agg('').astuple('min_max'))
+            columns[''] = Column.indices(self[names[0]])
+            args.append(('', 'min_max'))
         lists: Sequence[Agg] = []
         list_cols = [self[agg.name] for agg in funcs.get('list', [])]
         if any(pa.types.is_dictionary(col.type) or Column.is_list_type(col) for col in list_cols):
-            values.append(Column.indices(column))
-            args.append(Agg('').astuple('list'))
+            columns[''] = Column.indices(self[names[0]])
+            args.append(('', 'list'))
             lists = funcs.pop('list')
-        for func in funcs:
-            values += (self[agg.name] for agg in funcs[func])
-            args += (agg.astuple(func) for agg in funcs[func])
-        keys: Iterable = map(self.column, names)
-        if isinstance(self, pa.Table):
-            keys = (key.unify_dictionaries() for key in keys)
-            values = [
-                value.unify_dictionaries() if 'distinct' in arg[-2] else value
-                for value, arg in zip(values, args)
-            ]
-        arrays = iter(pc._group_by(values, keys, args).flatten())
-        columns = {counts: next(arrays)} if counts else {}
+        for func, aggs in funcs.items():
+            aliases.update({f'{agg.name}_{func}': agg.alias for agg in aggs})
+            args += (agg.astuple(func) for agg in aggs)
+        table = pa.table(columns).group_by(list(names)).aggregate(args)
+        columns = {name: table[name].combine_chunks() for name in table.schema.names}
         if first or last:
-            for aggs, indices in zip([first, last], next(arrays).flatten()):
+            for aggs, indices in zip([first, last], columns.pop('_min_max').flatten()):
                 columns.update({agg.alias: self[agg.name].take(indices) for agg in aggs})
         if lists:
-            indices = next(arrays)
+            indices = columns.pop('_list')
             table = self.select({agg.name for agg in lists}).take(indices.values)
             table = Table.from_offsets(table, indices.offsets)
-            columns.update({agg.alias: table[agg.name] for agg in lists})
-        for aggs in funcs.values():
-            columns.update(zip([agg.alias for agg in aggs], arrays))
-        columns.update(zip(names, map(decode, arrays)))
+            columns.update({agg.alias: table[agg.name].combine_chunks() for agg in lists})
+        columns.update({name: decode(columns[name]) for name in names})
+        columns = {aliases.get(name, name): columns[name] for name in columns}
         return type(self).from_pydict(columns)
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
         """Return aggregated scalars as a row of data."""
+        # TODO(pyarrow >=12): use `Table.group_by` with empty keys
         row = {name: self[name] for name in self.column_names}
         if counts:
             row[counts] = len(self)
@@ -526,7 +524,7 @@ class Table(pa.Table):
         flattened = pa.table(columns, self.column_names)
         mask = ds.dataset(flattened).to_table(columns={'mask': expr})['mask'].combine_chunks()
         masks = type(first).from_arrays(first.offsets, mask)
-        counts = Column.fill_null(ListChunk.aggregate(masks, sum=None).field(0), 0)
+        counts = Column.fill_null(ListChunk.aggregate(masks, sum=None)[0], 0)
         flattened = flattened.select(table.column_names).filter(mask)
         return Table.union(self, Table.from_counts(flattened, counts))
 
