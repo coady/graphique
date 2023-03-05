@@ -19,6 +19,7 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 
 threader = futures.ThreadPoolExecutor(pa.cpu_count())
+Array = Union[pa.Array, pa.ChunkedArray]
 
 
 class Agg:
@@ -220,35 +221,24 @@ class Column(pa.ChunkedArray):
         funcs = pa.types.is_list, pa.types.is_large_list, pa.types.is_fixed_size_list
         return any(func(self.type) for func in funcs)
 
-    def combine_dictionaries(self) -> tuple:
-        if not pa.types.is_dictionary(self.type):
-            return self, None
-        if not self or len(self) <= max(len(chunk.dictionary) for chunk in self.iterchunks()):
-            return self.cast(self.type.value_type), None
-        self = self.unify_dictionaries()
-        indices = pa.chunked_array(chunk.indices for chunk in self.iterchunks())
-        return self.chunk(0).dictionary, indices
-
-    def indices(self) -> Union[pa.Array, pa.ChunkedArray]:
+    def indices(self) -> Array:
         """Return chunked indices suitable for aggregation."""
         if isinstance(self, pa.Array):
             return pa.array(np.arange(len(self)))
         offsets = list(itertools.accumulate(map(len, self.iterchunks())))
         return pa.chunked_array(map(np.arange, [0] + offsets, offsets))
 
-    def call_indices(self, func: Callable) -> pa.ChunkedArray:
-        dictionary, indices = Column.combine_dictionaries(self)
-        if indices is None:
-            return func(dictionary)
-        return pa.chunked_array(
-            pa.DictionaryArray.from_arrays(chunk, dictionary) for chunk in func(indices).chunks
-        )
+    def call_indices(self, func: Callable) -> Array:
+        if not pa.types.is_dictionary(self.type):
+            return func(self)
+        array = self.combine_chunks()
+        return pa.DictionaryArray.from_arrays(func(array.indices), array.dictionary)
 
-    def fill_null_backward(self) -> pa.ChunkedArray:
+    def fill_null_backward(self) -> Array:
         """`fill_null_backward` with dictionary support."""
         return Column.call_indices(self, pc.fill_null_backward)
 
-    def fill_null_forward(self) -> pa.ChunkedArray:
+    def fill_null_forward(self) -> Array:
         """`fill_null_forward` with dictionary support."""
         return Column.call_indices(self, pc.fill_null_forward)
 
@@ -256,11 +246,11 @@ class Column(pa.ChunkedArray):
         """Optimized `fill_null` to check `null_count`."""
         return self.fill_null(value) if self.null_count else self
 
-    def sort_values(self) -> pa.Array:
-        dictionary, indices = Column.combine_dictionaries(self)
-        if indices is None:
-            return dictionary
-        return pc.sort_indices(pc.sort_indices(dictionary)).take(indices)
+    def sort_values(self) -> Array:
+        if not pa.types.is_dictionary(self.type):
+            return self
+        array = self.combine_chunks()
+        return pc.sort_indices(pc.sort_indices(array.dictionary)).take(array.indices)
 
     def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
         """Return discrete differences between adjacent values."""
@@ -511,7 +501,7 @@ class Table(pa.Table):
         metadata = {'index_columns': list(itertools.takewhile(func, names))}
         return table.replace_schema_metadata({'pandas': json.dumps(metadata)})
 
-    def filter_list(self, expr: ds.Expression) -> 'Table':
+    def filter_list(self, expr: ds.Expression) -> pa.Table:
         """Return table with list columns filtered within scalars."""
         table = Table.select_list(self)
         counts = Table.list_value_length(table)

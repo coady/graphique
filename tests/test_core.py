@@ -13,12 +13,10 @@ def test_dictionary(table):
     table = pa.table({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
     array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()
-    assert C.fill_null_backward(array) == array
+    assert C.fill_null_backward(array) == array.combine_chunks()
     assert C.fill_null_forward(array)[-1].as_py() == 'b'
     assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
     assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
-    dictionary, ind = C.combine_dictionaries(pa.chunked_array([], 'string').dictionary_encode())
-    assert not len(dictionary) and ind is None
 
 
 def test_chunks():
@@ -29,7 +27,6 @@ def test_chunks():
     assert groups['counts'].to_pylist() == [2, 3, 1]
     assert table['col'].unique() == pa.array('abc')
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
-    assert pa.Array.equals(*(chunk.dictionary for chunk in C.unify_dictionaries(array).chunks))
     assert C.index(array, 'a') == 0
     assert C.index(array, 'c') == 3
     assert C.index(array, 'a', start=3) == 4
