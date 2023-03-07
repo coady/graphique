@@ -9,6 +9,7 @@ import contextlib
 import functools
 import inspect
 import itertools
+import operator
 import json
 from concurrent import futures
 from dataclasses import dataclass
@@ -59,6 +60,8 @@ class Agg:
     @classmethod
     def getfunc(cls, name: str) -> Callable:
         """Return callable with named parameters for keyword arguments."""
+        if name in ('first', 'last', 'one'):
+            return operator.itemgetter(-1 if name == 'last' else 0)
         if name == 'element':
             return lambda array, index: array[index]
         if name == 'slice':
@@ -220,13 +223,6 @@ class Column(pa.ChunkedArray):
     def is_list_type(self):
         funcs = pa.types.is_list, pa.types.is_large_list, pa.types.is_fixed_size_list
         return any(func(self.type) for func in funcs)
-
-    def indices(self) -> Array:
-        """Return chunked indices suitable for aggregation."""
-        if isinstance(self, pa.Array):
-            return pa.array(np.arange(len(self)))
-        offsets = list(itertools.accumulate(map(len, self.iterchunks())))
-        return pa.chunked_array(map(np.arange, [0] + offsets, offsets))
 
     def call_indices(self, func: Callable) -> Array:
         if not pa.types.is_dictionary(self.type):
@@ -407,12 +403,12 @@ class Table(pa.Table):
                 aliases['count_all'] = counts
                 args.append(([], 'count_all'))
         if first or last:
-            columns[''] = Column.indices(self[names[0]])
+            columns[''] = np.arange(len(self))
             args.append(('', 'min_max'))
         lists: Sequence[Agg] = []
         list_cols = [self[agg.name] for agg in funcs.get('list', [])]
         if any(pa.types.is_dictionary(col.type) or Column.is_list_type(col) for col in list_cols):
-            columns[''] = Column.indices(self[names[0]])
+            columns[''] = np.arange(len(self))
             args.append(('', 'list'))
             lists = funcs.pop('list')
         for func, aggs in funcs.items():
@@ -434,13 +430,20 @@ class Table(pa.Table):
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
         """Return aggregated scalars as a row of data."""
-        # TODO(pyarrow >=12): use `Table.group_by` with empty keys
         row = {name: self[name] for name in self.column_names}
         if counts:
             row[counts] = len(self)
+        aliases, args = {}, []  # type: ignore
         for key in funcs:
-            func = Agg.getfunc(key)
-            row.update({agg.alias: func(self[agg.name], **agg.options) for agg in funcs[key]})
+            if pa.__version__ >= '12.' and key in Agg.option_map:
+                aliases.update({f'{agg.name}_{key}': agg.alias for agg in funcs[key]})
+                args += (agg.astuple(key) for agg in funcs[key])
+            else:
+                func = Agg.getfunc(key)
+                row.update({agg.alias: func(self[agg.name], **agg.options) for agg in funcs[key]})
+        if args:
+            table = self.group_by([]).aggregate(args)
+            row.update({aliases[name]: table[name][0] for name in table.column_names})
         for name, value in row.items():
             if isinstance(value, pa.ChunkedArray):
                 row[name] = value.combine_chunks()

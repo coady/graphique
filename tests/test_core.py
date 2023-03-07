@@ -87,6 +87,9 @@ def test_group(table):
     groups = groups.append_column('other', pa.array([[0]] * len(groups)))
     with pytest.raises(ValueError):
         T.sort_list(groups, 'county')
+    if pa.__version__ >= '12.':
+        groups = T.group(table, first=[Agg('state')])
+        assert groups['state'].to_pylist() == ['NY']
 
 
 def test_aggregate(table):
@@ -122,6 +125,10 @@ def test_aggregate(table):
     assert row['zipcode'].as_py() == 99950
     row = T.aggregate(table, slice=[Agg('zipcode', start=-3, stop=None, step=1)])
     assert row['zipcode'].to_pylist() == [99928, 99929, 99950]
+    row = T.aggregate(table, first=[Agg('zipcode')])
+    assert row['zipcode'].as_py() == 501
+    row = T.aggregate(table, last=[Agg('zipcode')])
+    assert row['zipcode'].as_py() == 99950
 
 
 def test_partition(table):
