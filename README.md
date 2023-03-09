@@ -97,7 +97,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 
 ## Dependencies
 * pyarrow >=11
-* strawberry-graphql[asgi,cli] >=0.159
+* strawberry-graphql[asgi,cli]
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 
 ## Tests
@@ -119,7 +119,7 @@ dev
 * Pyarrow >=11 required
 * Python >=3.8 required
 * Scannable functions added
-* List aggregations deprecaated
+* List aggregations deprecated
 * Group by fragments
 * Month day nano interval array
 * `min` and `max` fields memory optimized
@@ -190,9 +190,9 @@ dev
 
 0.2
 
+* Pyarrow >= 2 required
 * `ListColumn` and `StructColumn` types
 * `Groups` type with `aggregate` field
 * `group` and `unique` optimized
-* pyarrow >= 2 required
 * Statistical fields: `mode`, `stddev`, `variance`
 * `is_in`, `min`, and `max` optimized

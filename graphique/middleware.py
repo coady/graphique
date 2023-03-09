@@ -2,8 +2,7 @@
 ASGI GraphQL utilities.
 """
 from datetime import datetime
-from typing import Iterable, Mapping, Optional, Union
-import pyarrow as pa
+from typing import Iterable, Mapping, Optional
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import UNSET
@@ -11,14 +10,12 @@ from strawberry.utils.str_converters import to_camel_case
 from strawberry.types import Info
 from .core import Column as C
 from .inputs import Filter
-from .interface import Dataset
+from .interface import Dataset, Root
 from .models import Column, doc_field
 from .scalars import Long, scalar_map, type_map
 
-Root = Union[ds.Dataset, ds.Scanner, pa.Table]
 
-
-class TimingExtension(strawberry.extensions.Extension):
+class TimingExtension(strawberry.extensions.SchemaExtension):
     def on_operation(self):
         start = datetime.now()
         yield
