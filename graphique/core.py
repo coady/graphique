@@ -343,7 +343,7 @@ class Table(pa.Table):
         Assumes the table is sorted by the column name, i.e., indexed.
         """
         (slc,) = Column.find(self[name], value)
-        return pa.concat_tables([self[: slc.start], self[slc.stop :]])  # noqa: E203
+        return pa.concat_tables([self[: slc.start], self[slc.stop :]])
 
     def from_offsets(self, offsets: pa.IntegerArray) -> pa.Table:
         """Return table with columns converted into list columns."""

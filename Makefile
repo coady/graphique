@@ -1,9 +1,9 @@
 check:
-	python3 -m pytest -s --cov
+	python -m pytest -s --cov
 
 lint:
-	python3 -m black --check .
-	flake8 --ignore E203,E501 graphique tests
+	black --check .
+	ruff .
 	mypy -p graphique
 
 html: docs/schema.md

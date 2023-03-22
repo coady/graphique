@@ -297,7 +297,7 @@ class Dataset:
         funcs = {diff.pop('name'): diff for diff in map(dict, diffs)}
         names = list(itertools.takewhile(lambda name: name not in funcs, by))
         predicates = {}
-        for name in by[len(names) :]:  # noqa: E203
+        for name in by[len(names) :]:
             ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
             predicates[name] = (getattr(pc, func),)
             if value is not None:
