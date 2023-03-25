@@ -214,7 +214,7 @@ class Dataset:
         if isinstance(self.table, pa.Table) or lists or not set(aggs) <= Field.associatives:
             table = self.select(info)
         else:  # scan fragments or batches when possible
-            if set(by) <= set(self.schema().partitioning):
+            if set(by) <= set(self.schema().partitioning) > set():
                 table = self.fragments(info, Expression(), counts, aggregate, Expression()).table
             else:
                 table = T.map_batch(self.scanner(info), T.group, *by, counts=counts, **aggs)
@@ -274,8 +274,7 @@ class Dataset:
                 columns[name] = C.from_scalars(values)
             elif isinstance(values[0], pa.Array):
                 columns[name] = ListChunk.from_scalars(values)
-        for name, tp in zip(schema.names, schema.types):
-            columns[name] = pa.array(columns[name], tp)
+        columns.update({field.name: pa.array(columns[field.name], field.type) for field in schema})
         return type(self)(pa.table(columns))
 
     @doc_field(
