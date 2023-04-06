@@ -149,6 +149,11 @@ class ListChunk(pa.lib.BaseListArray):
         values = [func(value, **kwargs) for value in ListChunk.scalars(self)]
         return ListChunk.from_scalars(values)
 
+    def inner_flatten(self) -> pa.lib.BaseListArray:
+        """Return flattened inner lists from a nested list array."""
+        offsets = self.values.offsets.take(self.offsets)
+        return type(self).from_arrays(offsets, self.values.values)
+
     def aggregate(self, **funcs: Optional[pc.FunctionOptions]) -> pa.RecordBatch:
         """Return aggregated scalars by grouping each hash function on the parent indices.
 

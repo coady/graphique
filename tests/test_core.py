@@ -60,6 +60,8 @@ def test_lists():
     assert ListChunk.min(array).to_pylist() == ["a", None]
     assert ListChunk.max(array).to_pylist() == ["b", None]
     assert C.is_list_type(pa.FixedSizeListArray.from_arrays([], 1))
+    array = pa.array([[list('ab'), ['c']], [list('de')]])
+    assert ListChunk.inner_flatten(array).to_pylist() == [list('abc'), list('de')]
 
 
 def test_membership():

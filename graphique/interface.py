@@ -211,7 +211,9 @@ class Dataset:
         for values in aggs.values():
             scalars.update(agg.alias for agg in values)
         lists = self.references(info, level=1) - scalars - {counts}
-        if isinstance(self.table, pa.Table) or lists or not set(aggs) <= Field.associatives:
+        flat = isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives
+        aggs['list'] = list(map(Field, lists))
+        if flat:
             table = self.select(info)
         else:  # scan fragments or batches when possible
             if set(by) <= set(self.schema().partitioning) > set():
@@ -221,7 +223,11 @@ class Dataset:
             if counts:
                 aggs.setdefault('sum', []).append(Field(counts))
                 counts = ''
-        return type(self)(T.group(table, *by, counts=counts, list=list(map(Field, lists)), **aggs))
+        table = T.group(table, *by, counts=counts, **aggs)
+        columns = dict(zip(table.column_names, table))
+        if not flat:
+            columns.update({name: ListChunk.inner_flatten(*columns[name].chunks) for name in lists})
+        return type(self)(pa.table(columns))
 
     @doc_field(
         keys="selected fragments",
