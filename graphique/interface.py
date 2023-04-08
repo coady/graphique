@@ -163,7 +163,10 @@ class Dataset:
 
     @doc_field
     def any(self, info: Info, length: Long = 1) -> bool:
-        """Provisional: return whether there are at least `length` rows."""
+        """Return whether there are at least `length` rows.
+
+        May be significantly faster than `length` for out-of-core data.
+        """
         table = self.select(info, length)
         return len(table) >= length
 
@@ -509,5 +512,5 @@ class Dataset:
 
     @doc_field
     def take(self, info: Info, indices: List[Long]) -> Self:
-        """Provisional: select rows from indices."""
+        """Select rows from indices."""
         return type(self)(self.scanner(info).take(indices))

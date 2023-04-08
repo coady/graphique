@@ -246,7 +246,7 @@ class IntColumn(RatioColumn[T]):
     def take_from(
         self, info: Info, field: str
     ) -> Annotated['Dataset', strawberry.lazy('.interface')]:
-        """Provisional: select indices from a table on the root Query type."""
+        """Select indices from a table on the root Query type."""
         root = getattr(info.root_value, field)
         return type(root)(root.scanner(info).take(self.array.combine_chunks()))
 

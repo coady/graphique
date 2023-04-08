@@ -205,8 +205,8 @@ def test_not_implemented():
         pa.table({'': array}).group_by('').aggregate([('', 'any')])
     func = Agg('value', min_count=4).astuple('max')
     table = pa.table({'value': list('abc'), 'key': [0, 1, 0]})
-    values, _ = table.group_by('key').aggregate([func])
-    assert values.to_pylist() == list('cb')  # min_count has no effect
+    table = table.group_by('key').aggregate([func])
+    assert table['value_max'].to_pylist() == list('cb')  # min_count has no effect
     value = pa.MonthDayNano([1, 2, 3])
     with pytest.raises(NotImplementedError):
         pc.equal(value, value)

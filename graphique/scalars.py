@@ -15,9 +15,9 @@ def parse_long(value) -> int:
 
 @strawberry.type(description="month day nano interval")
 class Interval:
-    months: int = 0
-    days: int = 0
-    nanoseconds: 'Long' = 0  # type: ignore
+    months: int
+    days: int
+    nanoseconds: 'Long'  # type: ignore
 
 
 Long = strawberry.scalar(int, name='Long', description="64-bit int", parse_value=parse_long)

@@ -18,6 +18,7 @@ from strawberry.schema_directive import Location
 from strawberry.field import StrawberryField
 from strawberry.scalars import JSON
 from strawberry.types.fields.resolver import StrawberryResolver
+from typing_extensions import Self
 from .core import Agg, ListChunk
 from .scalars import Long
 
@@ -399,7 +400,7 @@ class Expression:
 
     @classmethod
     @no_type_check
-    def from_query(cls, **queries: Filter) -> 'Expression':
+    def from_query(cls, **queries: Filter) -> Self:
         """Transform query syntax into an Expression input."""
         exprs = []
         for name, query in queries.items():
