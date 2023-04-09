@@ -349,11 +349,8 @@ class Dataset:
                 return type(self)(scanner)
             table, by = scanner.to_table(), by[1:]
         else:
-            # TODO(ARROW-16212): replace with user defined function for multiple kernels
-            batches = self.scanner(info).to_batches()
-            table = pa.Table.from_batches(
-                batch.filter(pc.equal(batch[name], func(batch[name]))) for batch in batches
-            )
+            scanner = self.scanner(info)
+            table = T.map_batch(scanner, lambda b: b.filter(pc.equal(b[name], func(b[name]))))
         return type(self)(T.matched(table, func, *by))
 
     @doc_field(by="column names")

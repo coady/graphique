@@ -11,7 +11,6 @@ import inspect
 import itertools
 import operator
 import json
-from concurrent import futures
 from dataclasses import dataclass
 from typing import Callable, Iterable, Iterator, Optional, Sequence, Union, get_type_hints
 import numpy as np  # type: ignore
@@ -19,7 +18,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 
-threader = futures.ThreadPoolExecutor(pa.cpu_count())
 Array = Union[pa.Array, pa.ChunkedArray]
 
 
@@ -316,8 +314,8 @@ class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
     def map_batch(scanner: ds.Scanner, func: Callable, *rargs, **kwargs) -> pa.Table:
-        batches: Iterable = filter(None, scanner.to_batches())
-        batches = list(threader.map(lambda batch: func(batch, *rargs, **kwargs), batches))
+        # TODO(apache/arrow#31612): replace with user defined function for multiple kernels
+        batches = [func(batch, *rargs, **kwargs) for batch in scanner.to_batches() if batch]
         return pa.Table.from_batches(batches, None if batches else scanner.projected_schema)
 
     def union(*tables: pa.Table) -> pa.Table:
@@ -484,7 +482,7 @@ class Table(pa.Table):
         names = [name for name in self.column_names if Column.is_list_type(self[name])]
         return pa.table(list(map(apply, self.select(names))), names)
 
-    def sort_indices(self, *names: str, length: Optional[int] = None) -> pa.Table:
+    def sort_indices(self, *names: str, length: Optional[int] = None) -> pa.Array:
         """Return indices which would sort the table by columns, optimized for fixed length."""
         func = pc.sort_indices
         if length is not None:
