@@ -324,10 +324,17 @@ class Dataset:
 
         Sorting on list columns will sort within scalars, all of which must have the same lengths.
         """
-        table = self.select(info)
+        table = self.table
+        schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
         scalars, lists = [], []  # type: ignore
         for key in by:
-            (lists if C.is_list_type(table[key.lstrip('-')]) else scalars).append(key)
+            (lists if C.is_list_type(schema.field(key.lstrip('-'))) else scalars).append(key)
+        if not scalars or isinstance(table, pa.Table) or length is None:
+            table = self.select(info)
+        else:
+            table = T.map_batch(
+                self.scanner(info), lambda b: b.take(T.sort_indices(b, *scalars, length=length))
+            )
         if scalars:
             table = T.sort(table, *scalars, length=length)
         if lists:

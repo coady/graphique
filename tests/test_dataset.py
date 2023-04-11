@@ -209,6 +209,8 @@ def test_min_max(dsclient):
     assert data == {'min': {'length': 273, 'row': {'state': 'AK'}}}
     data = dsclient.execute('{ max(by: ["state", "county"]) { length row { state county } } }')
     assert data == {'max': {'length': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
+    data = dsclient.execute('{ sort(by: "state", length: 3) { columns { state { values } } } }')
+    assert data == {'sort': {'columns': {'state': {'values': ['AK'] * 3}}}}
 
 
 def test_root(fedclient):

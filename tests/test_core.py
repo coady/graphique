@@ -17,6 +17,7 @@ def test_dictionary(table):
     assert C.fill_null_forward(array)[-1].as_py() == 'b'
     assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
     assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
+    assert C.sort_values(array.combine_chunks()).to_pylist() == [0, 1, 0, 1, None]
 
 
 def test_chunks():

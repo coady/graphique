@@ -248,7 +248,7 @@ class Column(pa.ChunkedArray):
     def sort_values(self) -> Array:
         if not pa.types.is_dictionary(self.type):
             return self
-        array = self.combine_chunks()
+        array = self if isinstance(self, pa.Array) else self.combine_chunks()
         return pc.sort_indices(pc.sort_indices(array.dictionary)).take(array.indices)
 
     def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:

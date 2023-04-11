@@ -113,6 +113,7 @@ dev
 * Pyarrow >=12 supported
 * Grouping fragments optimized
 * Group by empty columns
+* Batch sorting and grouping into lists
 
 1.1
 
