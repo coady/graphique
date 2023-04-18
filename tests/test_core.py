@@ -84,7 +84,7 @@ def test_group(table):
     assert mins['city'][0].values[0].as_py() == 'Akutan'
     groups = T.sort_list(groups, 'county')
     assert groups['county'][0].values[0].as_py() == 'Albany'
-    groups = T.sort_list(groups, '-county', '-city', length=1)
+    groups = T.sort_list(groups, '-county', '-city', length=1, null_placement='at_start')
     assert groups['county'][0].values.to_pylist() == ['Yates']
     assert groups['city'][0].values.to_pylist() == ['Rushville']
     groups = groups.append_column('other', pa.array([[0]] * len(groups)))
@@ -158,7 +158,7 @@ def test_sort(table):
     assert (data['state'][0], data['county'][0]) == ('AK', 'Anchorage')
     data = T.sort(table, 'state', 'county', length=1).to_pydict()
     assert (data['state'], data['county']) == (['AK'], ['Aleutians East'])
-    tbl = T.sort(table, 'state', '-county', length=2)
+    tbl = T.sort(table, 'state', '-county', length=2, null_placement='at_start')
     assert tbl.schema.pandas_metadata == {'index_columns': ['state']}
     assert tbl['state'].to_pylist() == ['AK'] * 2
     assert tbl['county'].to_pylist() == ['Yukon Koyukuk'] * 2

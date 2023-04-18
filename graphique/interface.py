@@ -318,8 +318,15 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         length="maximum number of rows to return; may be significantly faster but is unstable",
+        null_placement="where nulls in input should be sorted; incompatible with `length`",
     )
-    def sort(self, info: Info, by: List[str], length: Optional[Long] = None) -> Self:
+    def sort(
+        self,
+        info: Info,
+        by: List[str],
+        length: Optional[Long] = None,
+        null_placement: str = 'at_end',
+    ) -> Self:
         """Return table slice sorted by specified columns.
 
         Sorting on list columns will sort within scalars, all of which must have the same lengths.
@@ -332,13 +339,14 @@ class Dataset:
         if not scalars or isinstance(table, pa.Table) or length is None:
             table = self.select(info)
         else:
+            kwargs = dict(length=length, null_placement=null_placement)
             table = T.map_batch(
-                self.scanner(info), lambda b: b.take(T.sort_indices(b, *scalars, length=length))
+                self.scanner(info), lambda b: b.take(T.sort_indices(b, *scalars, **kwargs))
             )
         if scalars:
-            table = T.sort(table, *scalars, length=length)
+            table = T.sort(table, *scalars, length=length, null_placement=null_placement)
         if lists:
-            table = T.sort_list(table, *lists, length=length)
+            table = T.sort_list(table, *lists, length=length, null_placement=null_placement)
         return type(self)(table)
 
     def min_max(self, info: Info, by: List[str], func: Callable) -> Self:

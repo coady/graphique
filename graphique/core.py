@@ -461,13 +461,17 @@ class Table(pa.Table):
             raise ValueError(f"list columns have different value lengths: {lists}")
         return counts.chunk(0)
 
-    def sort_list(self, *names: str, length: Optional[int] = None) -> pa.Table:
+    def sort_list(
+        self, *names: str, length: Optional[int] = None, null_placement: str = 'at_end'
+    ) -> pa.Table:
         """Return table with list columns sorted within scalars."""
         keys = dict(map(sort_key, names))  # type: ignore
         columns = {name: Column.sort_values(pc.list_flatten(self[name])) for name in keys}
         columns[''] = pc.list_parent_indices(self[next(iter(keys))])
         keys = dict({'': 'ascending'}, **keys)
-        indices = pc.sort_indices(pa.table(columns), sort_keys=keys.items())
+        indices = pc.sort_indices(
+            pa.table(columns), sort_keys=keys.items(), null_placement=null_placement
+        )
         counts = Table.list_value_length(self)
         if length is not None:
             indices = pa.concat_arrays(
@@ -482,16 +486,24 @@ class Table(pa.Table):
         names = [name for name in self.column_names if Column.is_list_type(self[name])]
         return pa.table(list(map(apply, self.select(names))), names)
 
-    def sort_indices(self, *names: str, length: Optional[int] = None) -> pa.Array:
+    def sort_indices(
+        self, *names: str, length: Optional[int] = None, null_placement: str = 'at_end'
+    ) -> pa.Array:
         """Return indices which would sort the table by columns, optimized for fixed length."""
-        func = pc.sort_indices
+        func = functools.partial(pc.sort_indices, null_placement=null_placement)
         if length is not None:
             func = functools.partial(pc.select_k_unstable, k=length)
         keys = dict(map(sort_key, names))  # type: ignore
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
         return func(table, sort_keys=keys.items())
 
-    def sort(self, *names: str, length: Optional[int] = None, indices: str = '') -> pa.Table:
+    def sort(
+        self,
+        *names: str,
+        length: Optional[int] = None,
+        indices: str = '',
+        null_placement: str = 'at_end',
+    ) -> pa.Table:
         """Return table sorted by columns, optimized for fixed length.
 
         Args:
@@ -499,7 +511,7 @@ class Table(pa.Table):
             length: maximum number of rows to return
             indices: include original indices in the table
         """
-        indices_ = Table.sort_indices(self, *names, length=length)
+        indices_ = Table.sort_indices(self, *names, length=length, null_placement=null_placement)
         table = self.take(indices_)
         if indices:
             table = table.append_column(indices, indices_)
