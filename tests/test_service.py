@@ -1,3 +1,4 @@
+import pyarrow as pa
 import pytest
 
 
@@ -293,6 +294,15 @@ def test_apply(client):
         { columns { zipcode { value(index: -1) } } } }'''
     )
     assert data == {'apply': {'columns': {'zipcode': {'value': 2066562337}}}}
+    if pa.__version__ < '12.':
+        pytest.skip()
+    data = client.execute('{ apply(rank: {name: "zipcode"}) { row { zipcode } } }')
+    assert data == {'apply': {'row': {'zipcode': 1}}}
+    data = client.execute(
+        '''{ apply(rank: {name: "zipcode", sortKeys: "descending", nullPlacement: "at_start", tiebreaker: "dense"})
+        { row { zipcode } } }'''
+    )
+    assert data == {'apply': {'row': {'zipcode': 41700}}}
 
 
 def test_sort(client):

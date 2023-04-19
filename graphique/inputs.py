@@ -163,6 +163,13 @@ class Quantile(Field):
 
 
 @strawberry.input
+class Rank(Field):
+    sort_keys: str = 'ascending'
+    null_placement: str = 'at_end'
+    tiebreaker: str = 'first'
+
+
+@strawberry.input
 class Sort:
     by: List[str]
     length: Long

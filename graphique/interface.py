@@ -17,7 +17,7 @@ from strawberry.types import Info
 from typing_extensions import Annotated, Self
 from .core import Column as C, ListChunk, Table as T, sort_key
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
-from .inputs import HashAggregates, ListFunction, Projection, ScalarAggregate, Sort
+from .inputs import HashAggregates, ListFunction, Projection, Rank, ScalarAggregate, Sort
 from .inputs import TDigestAggregate, VarianceAggregate, VectorAggregates, links
 from .models import Column, doc_field, selections
 from .scalars import Long
@@ -386,6 +386,7 @@ class Dataset:
         cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
         fill_null_backward: doc_argument(List[Field], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
+        rank: doc_argument(List[Rank], func=pc.rank) = [],
         list: Annotated[
             List[ListFunction], strawberry.argument(deprecation_reason=list_deprecation)
         ] = [],
@@ -403,8 +404,8 @@ class Dataset:
                 table = T.filter_list(table, expr)
             for func, field in value.items():
                 columns[field.alias] = getattr(ListChunk, func)(table[field.name], **field.options)
-        args = cumulative_sum, fill_null_backward, fill_null_forward
-        funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward
+        args = cumulative_sum, fill_null_backward, fill_null_forward, rank
+        funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, pc.rank
         for fields, func in zip(args, funcs):
             for field in fields:
                 columns[field.alias] = func(table[field.name], **field.options)
