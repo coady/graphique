@@ -29,13 +29,14 @@ class GraphQL(strawberry.asgi.GraphQL):
     Args:
         root: root dataset to attach as the Query type
         debug: enable timing extension
+        extensions: schema extensions
         **kwargs: additional `asgi.GraphQL` options
     """
 
     options = dict(types=Column.registry.values(), scalar_overrides=scalar_map)
 
-    def __init__(self, root: Root, debug: bool = False, **kwargs):
-        options = dict(self.options, extensions=[TimingExtension] * bool(debug))
+    def __init__(self, root: Root, debug: bool = False, extensions: list = [], **kwargs):
+        options = dict(self.options, extensions=extensions + [TimingExtension][: bool(debug)])
         if type(root).__name__ == 'Query':
             self.root_value = root
             options['enable_federation_2'] = True  # type: ignore
