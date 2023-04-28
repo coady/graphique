@@ -536,8 +536,9 @@ class Table(pa.Table):
         flattened = flattened.select(table.column_names).filter(mask)
         return Table.union(self, Table.from_counts(flattened, counts))
 
-    def matched(self, func: Callable, *names: str) -> pa.Table:
-        for name in names:
+    def min_max(self, *names: str) -> pa.Table:
+        for name, order in map(sort_key, names):
+            func = Column.min if order == 'ascending' else Column.max
             if Column.is_list_type(self[name]):
                 self = self.append_column('', getattr(ListChunk, func.__name__)(self[name]))
                 self = Table.filter_list(self, pc.field(name) == pc.field('')).drop([''])

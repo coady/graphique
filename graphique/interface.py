@@ -331,6 +331,8 @@ class Dataset:
 
         Sorting on list columns will sort within scalars, all of which must have the same lengths.
         """
+        if length == 1:
+            self = self.min_max(info, by).slice(info, length=length)
         table = self.table
         schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
         scalars, lists = [], []  # type: ignore
@@ -349,8 +351,9 @@ class Dataset:
             table = T.sort_list(table, *lists, length=length, null_placement=null_placement)
         return type(self)(table)
 
-    def min_max(self, info: Info, by: List[str], func: Callable) -> Self:
-        table, name = self.table, by[0]
+    def min_max(self, info: Info, by: List[str]) -> Self:
+        table, (name, order) = self.table, sort_key(by[0])
+        func = C.min if order == 'ascending' else C.max
         schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
         if isinstance(table, pa.Table) or C.is_list_type(schema.field(name)):
             table = self.select(info)
@@ -366,17 +369,17 @@ class Dataset:
         else:
             scanner = self.scanner(info)
             table = T.map_batch(scanner, lambda b: b.filter(pc.equal(b[name], func(b[name]))))
-        return type(self)(T.matched(table, func, *by))
+        return type(self)(T.min_max(table, *by))
 
     @doc_field(by="column names")
     def min(self, info: Info, by: List[str]) -> Self:
         """Return table with minimum values per column."""
-        return self.min_max(info, by, C.min)
+        return self.min_max(info, by)
 
     @doc_field(by="column names")
     def max(self, info: Info, by: List[str]) -> Self:
         """Return table with maximum values per column."""
-        return self.min_max(info, by, C.max)
+        return self.min_max(info, ['-' + name for name in by])
 
     @doc_field
     @no_type_check

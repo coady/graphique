@@ -78,10 +78,9 @@ def test_group(table):
     assert groups['state'][0].as_py() == 'NY'
     table = T.filter_list(groups, pc.field('county') == pc.field('city'))
     assert len(pc.list_flatten(table['city'])) == 2805
-    mins = T.matched(groups, C.min, 'state', 'county')
-    assert mins['state'].to_pylist() == ['AK']
-    assert mins['county'].to_pylist() == [['Aleutians East'] * 5]
-    assert mins['city'][0].values[0].as_py() == 'Akutan'
+    min_max = T.min_max(groups, 'state', '-county')
+    assert min_max['state'].to_pylist() == ['AK']
+    assert min_max['county'].to_pylist() == [['Yukon Koyukuk'] * 30]
     groups = T.sort_list(groups, 'county')
     assert groups['county'][0].values[0].as_py() == 'Albany'
     groups = T.sort_list(groups, '-county', '-city', length=1, null_placement='at_start')
