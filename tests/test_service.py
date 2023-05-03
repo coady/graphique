@@ -1,4 +1,3 @@
-import pyarrow as pa
 import pytest
 
 
@@ -294,8 +293,6 @@ def test_apply(client):
         { columns { zipcode { value(index: -1) } } } }'''
     )
     assert data == {'apply': {'columns': {'zipcode': {'value': 2066562337}}}}
-    if pa.__version__ < '12.':
-        pytest.skip()
     data = client.execute('{ apply(rank: {name: "zipcode"}) { row { zipcode } } }')
     assert data == {'apply': {'row': {'zipcode': 1}}}
     data = client.execute(
@@ -339,8 +336,6 @@ def test_sort(client):
 
 
 def test_group(client):
-    with pytest.raises(ValueError, match="is required"):
-        client.execute('{ group { length } }')
     with pytest.raises(ValueError, match="list"):
         client.execute('{ group(by: ["state"]) { tables { length } } }')
     with pytest.raises(ValueError, match="cannot represent"):
@@ -425,8 +420,6 @@ def test_aggregate(client):
 
 
 def test_partition(client):
-    with pytest.raises(ValueError, match="is required"):
-        client.execute('{ group { length } }')
     data = client.execute(
         '''{ partition(by: ["state"]) { aggregate { length columns { state { values } }
         column(name: "county") { type } } } }'''

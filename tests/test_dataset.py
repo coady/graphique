@@ -1,5 +1,4 @@
 import asyncio
-import pyarrow as pa
 import pytest
 from graphique import middleware
 from .conftest import load
@@ -93,11 +92,7 @@ def test_group(dsclient):
     assert data == {
         'group': {'aggregate': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
     }
-    if pa.__version__ < '12.':
-        pytest.skip()
-    data = dsclient.execute(
-        '{ group(by: [], aggregate: {min: {name: "state"}}) { length row { state } } }'
-    )
+    data = dsclient.execute('{ group(aggregate: {min: {name: "state"}}) { length row { state } } }')
     assert data == {'group': {'length': 1, 'row': {'state': 'AK'}}}
 
 
@@ -145,8 +140,6 @@ def test_fragments(partclient):
         '{ group(by: ["part"], aggregate: {max: {name: "zipcode"}}) { row { part zipcode } } }'
     )
     assert data == {'group': {'row': {'part': 0, 'zipcode': 99950}}}
-    if pa.__version__ < '12.':
-        pytest.skip()
     data = partclient.execute(
         '{ group(by: [], aggregate: {min: {name: "state"}}) { length row { state } } }'
     )

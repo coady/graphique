@@ -397,14 +397,10 @@ class Table(pa.Table):
         if isinstance(self, pa.Table):
             self = self.unify_dictionaries()
         columns = {name: self[name] for name in self.schema.names}
-        aliases, args = {}, []
+        aliases, args = {}, []  # type: ignore
         if counts:
-            if pa.__version__ < '12.':
-                aliases[f'{names[0]}_count'] = counts
-                args.append(Agg(names[0], mode='all').astuple('count'))
-            else:
-                aliases['count_all'] = counts
-                args.append(([], 'count_all'))
+            aliases['count_all'] = counts
+            args.append(([], 'count_all'))
         if first or last:
             columns[''] = np.arange(len(self))
             args.append(('', 'min_max'))
@@ -416,7 +412,7 @@ class Table(pa.Table):
             lists = funcs.pop('list')
         for func, aggs in funcs.items():
             aliases.update({f'{agg.name}_{func}': agg.alias for agg in aggs})
-            args += (agg.astuple(func) for agg in aggs)
+            args += (agg.astuple(func) for agg in aggs)  # type: ignore
         table = pa.table(columns).group_by(list(names)).aggregate(args)
         columns = {name: table[name].combine_chunks() for name in table.schema.names}
         if first or last:
@@ -438,7 +434,7 @@ class Table(pa.Table):
             row[counts] = len(self)
         aliases, args = {}, []  # type: ignore
         for key in funcs:
-            if pa.__version__ >= '12.' and key in Agg.option_map:
+            if key in Agg.option_map:
                 aliases.update({f'{agg.name}_{key}': agg.alias for agg in funcs[key]})
                 args += (agg.astuple(key) for agg in funcs[key])
             else:

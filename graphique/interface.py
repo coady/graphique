@@ -203,7 +203,7 @@ class Dataset:
         aggregate="grouped aggregation functions",
     )
     def group(
-        self, info: Info, by: List[str], counts: str = '', aggregate: HashAggregates = {}  # type: ignore
+        self, info: Info, by: List[str] = [], counts: str = '', aggregate: HashAggregates = {}  # type: ignore
     ) -> Self:
         """Return table grouped by columns, with stable ordering.
 
@@ -265,8 +265,7 @@ class Dataset:
             projection.pop(name, None)
         columns = collections.defaultdict(list)
         for fragment in self.table.get_fragments(filter=keys.to_arrow()):
-            # TODO(apache/arrow#33825): `get_partition_keys` will be public
-            row = ds._get_partition_keys(fragment.partition_expression)
+            row = ds.get_partition_keys(fragment.partition_expression)
             if projection:
                 table = fragment.to_table(filter=filter, columns=projection)
                 row.update(T.aggregate(table, counts=counts, **aggs))
@@ -359,7 +358,7 @@ class Dataset:
             table = self.select(info)
         elif name in self.schema().partitioning:
             values = pa.array(
-                ds._get_partition_keys(fragment.partition_expression)[name]
+                ds.get_partition_keys(fragment.partition_expression)[name]
                 for fragment in table.get_fragments()
             )
             scanner = self.scanner(info, filter=ds.field(name) == func(values))

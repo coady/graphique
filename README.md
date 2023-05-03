@@ -96,7 +96,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ```
 
 ## Dependencies
-* pyarrow >=11
+* pyarrow >=12
 * strawberry-graphql[asgi,cli]
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 
@@ -110,7 +110,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ## Changes
 dev
 
-* Pyarrow >=12 supported
+* Pyarrow >=12 required
 * Grouping fragments optimized
 * Group by empty columns
 * Batch sorting and grouping into lists
