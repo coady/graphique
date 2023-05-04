@@ -23,7 +23,6 @@ from .models import Column, doc_field, selections
 from .scalars import Long
 
 Root = Union[ds.Dataset, ds.Scanner, pa.Table]
-list_deprecation = "List functions will be moved to `scan(...: {list: ...})`"
 
 
 def references(field) -> Iterator:
@@ -390,12 +389,12 @@ class Dataset:
         fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
         rank: doc_argument(List[Rank], func=pc.rank) = [],
         list: Annotated[
-            List[ListFunction], strawberry.argument(deprecation_reason=list_deprecation)
+            List[ListFunction], strawberry.argument(description="Functions for list arrays.")
         ] = [],
     ) -> Self:
         """Return view of table with vector functions applied across columns.
 
-        Applied function load arrays into memory as needed. See `scan` for scalar functions,
+        Applied functions load arrays into memory as needed. See `scan` for scalar functions,
         which do not require loading.
         """
         table = self.select(info)
@@ -468,7 +467,7 @@ class Dataset:
             columns.update(zip([agg.alias for agg in aggs.values()], batch))
         return type(self)(pa.table(columns))
 
-    aggregate.deprecation_reason = list_deprecation
+    aggregate.deprecation_reason = ListFunction.deprecation
 
     def project(self, info: Info, columns: List[Projection]) -> dict:
         """Return projected columns, including all references from below fields."""

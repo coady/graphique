@@ -177,10 +177,12 @@ class Sort:
 
 @strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for lists")
 class ListFunction(Input):
+    deprecation = "List scalar functions will be moved to `scan(...: {list: ...})`"
+
     filter: 'Expression' = default_field({}, description="filter within list scalars")
-    index: Optional[Index] = default_field(func=pc.index)
-    mode: Optional[Mode] = default_field(func=pc.mode)
-    quantile: Optional[Quantile] = default_field(func=pc.quantile)
+    index: Optional[Index] = default_field(func=pc.index, deprecation_reason=deprecation)
+    mode: Optional[Mode] = default_field(func=pc.mode, deprecation_reason=deprecation)
+    quantile: Optional[Quantile] = default_field(func=pc.quantile, deprecation_reason=deprecation)
 
 
 @strawberry.input(description=f"options for count [aggregation]({links.compute}#aggregations)")
