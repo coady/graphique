@@ -448,14 +448,17 @@ class Table(pa.Table):
                 row[name] = value.combine_chunks()
         return row
 
+    def list_fields(self) -> set:
+        return {field.name for field in self.schema if Column.is_list_type(field)}
+
     def list_value_length(self) -> pa.Array:
-        lists = {name for name in self.column_names if Column.is_list_type(self[name])}
+        lists = Table.list_fields(self)
         if not lists:
-            raise ValueError(f"no list columns available: {self.column_names}")
+            raise ValueError(f"no list columns available: {self.schema.names}")
         counts, *others = (pc.list_value_length(self[name]) for name in lists)
         if any(counts != other for other in others):
             raise ValueError(f"list columns have different value lengths: {lists}")
-        return counts.chunk(0)
+        return counts if isinstance(counts, pa.Array) else counts.chunk(0)
 
     def sort_list(
         self, *names: str, length: Optional[int] = None, null_placement: str = 'at_end'
@@ -479,7 +482,7 @@ class Table(pa.Table):
 
     def select_list(self, apply: Callable = lambda c: c) -> pa.Table:
         """Return table with only the list columns."""
-        names = [name for name in self.column_names if Column.is_list_type(self[name])]
+        names = list(Table.list_fields(self))
         return pa.table(list(map(apply, self.select(names))), names)
 
     def sort_indices(

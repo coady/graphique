@@ -418,13 +418,13 @@ class Dataset:
 
         At least one list column must be referenced, and all list columns must have the same lengths.
         """
-        table = self.select(info)
-        lists = {name for name in table.column_names if C.is_list_type(table[name])}
-        scalars = set(table.column_names) - lists
-        for index, count in enumerate(T.list_value_length(table).to_pylist()):
-            row = {name: pa.repeat(table[name][index], count) for name in scalars}
-            row.update({name: table[name][index].values for name in lists})
-            yield type(self)(pa.table(row))
+        for batch in self.scanner(info).to_batches():
+            lists = T.list_fields(batch)
+            scalars = set(batch.schema.names) - lists
+            for index, count in enumerate(T.list_value_length(batch).to_pylist()):
+                row = {name: pa.repeat(batch[name][index], count) for name in scalars}
+                row.update({name: batch[name][index].values for name in lists})
+                yield type(self)(pa.table(row))
 
     @doc_field
     def aggregate(
