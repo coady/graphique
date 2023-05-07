@@ -327,7 +327,8 @@ class Dataset:
     ) -> Self:
         """Return table slice sorted by specified columns.
 
-        Sorting on list columns will sort within scalars, all of which must have the same lengths.
+        Optimized for length == 1; matches min or max values.
+        Pending deprecation: sorting on list columns will sort within scalars, all of which must have the same lengths.
         """
         if length == 1:
             self = self.min_max(info, by).slice(info, length=length)
@@ -371,12 +372,12 @@ class Dataset:
 
     @doc_field(by="column names")
     def min(self, info: Info, by: List[str]) -> Self:
-        """Return table with minimum values per column."""
+        """Pending deprecation: return table with minimum values per column."""
         return self.min_max(info, by)
 
     @doc_field(by="column names")
     def max(self, info: Info, by: List[str]) -> Self:
-        """Return table with maximum values per column."""
+        """Pending deprecation: return table with maximum values per column."""
         return self.min_max(info, ['-' + name for name in by])
 
     @doc_field

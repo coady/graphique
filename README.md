@@ -108,7 +108,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ```
 
 ## Changes
-dev
+1.2
 
 * Pyarrow >=12 required
 * Grouping fragments optimized
