@@ -389,23 +389,26 @@ class Dataset:
         fill_null_backward: doc_argument(List[Field], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
         rank: doc_argument(List[Rank], func=pc.rank) = [],
-        list: Annotated[
-            List[ListFunction], strawberry.argument(description="Functions for list arrays.")
-        ] = [],
+        list_: Annotated[
+            ListFunction,
+            strawberry.argument(name='list', description="Provisional: functions for list arrays."),
+        ] = {},
     ) -> Self:
         """Return view of table with vector functions applied across columns.
 
         Applied functions load arrays into memory as needed. See `scan` for scalar functions,
         which do not require loading.
         """
-        table = self.select(info)
+        expr = list_.filter.to_arrow() if list_.filter else None
+        if expr is not None:
+            table = T.map_batch(self.scanner(info), T.filter_list, expr)
+        else:
+            table = self.select(info)
         columns = {}
-        for value in map(dict, list):
-            expr = value.pop('filter').to_arrow()
-            if expr is not None:
-                table = T.filter_list(table, expr)
-            for func, field in value.items():
-                columns[field.alias] = getattr(ListChunk, func)(table[field.name], **field.options)
+        aggs = dict(list_)
+        aggs.pop('filter', None)
+        for func, field in aggs.items():
+            columns[field.alias] = getattr(ListChunk, func)(table[field.name], **field.options)
         args = cumulative_sum, fill_null_backward, fill_null_forward, rank
         funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, pc.rank
         for fields, func in zip(args, funcs):

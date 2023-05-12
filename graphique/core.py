@@ -19,6 +19,7 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 
 Array = Union[pa.Array, pa.ChunkedArray]
+Batch = Union[pa.RecordBatch, pa.Table]
 
 
 class Agg:
@@ -318,12 +319,12 @@ class Table(pa.Table):
         batches = [func(batch, *rargs, **kwargs) for batch in scanner.to_batches() if batch]
         return pa.Table.from_batches(batches, None if batches else scanner.projected_schema)
 
-    def union(*tables: pa.Table) -> pa.Table:
+    def union(*tables: Batch) -> Batch:
         """Return table with union of columns."""
         columns: dict = {}
         for table in tables:
-            columns.update(zip(table.column_names, table))
-        return pa.table(columns)
+            columns.update(zip(table.schema.names, table))
+        return type(tables[0]).from_pydict(columns)
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
         """Return rows within range, by default a half-open interval.
@@ -348,14 +349,16 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])
 
-    def from_offsets(self, offsets: pa.IntegerArray) -> pa.Table:
-        """Return table with columns converted into list columns."""
+    def from_offsets(self, offsets: pa.IntegerArray) -> pa.RecordBatch:
+        """Return record batch with columns converted into list columns."""
         cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
-        arrays = [col.combine_chunks() if col else pa.array([], col.type) for col in self]
-        return pa.table([cls.from_arrays(offsets, array) for array in arrays], self.column_names)
+        if isinstance(self, pa.Table):
+            (self,) = self.combine_chunks().to_batches() or [pa.record_batch([], self.schema)]
+        arrays = {name: cls.from_arrays(offsets, self[name]) for name in self.schema.names}
+        return pa.RecordBatch.from_pydict(arrays)
 
-    def from_counts(self, counts: pa.IntegerArray) -> pa.Table:
-        """Return table with columns converted into list columns."""
+    def from_counts(self, counts: pa.IntegerArray) -> pa.RecordBatch:
+        """Return record batch with columns converted into list columns."""
         offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum_checked(counts)])
         return Table.from_offsets(self, offsets)
 
@@ -422,7 +425,7 @@ class Table(pa.Table):
             indices = columns.pop('_list')
             table = self.select({agg.name for agg in lists}).take(indices.values)
             table = Table.from_offsets(table, indices.offsets)
-            columns.update({agg.alias: table[agg.name].combine_chunks() for agg in lists})
+            columns.update({agg.alias: table[agg.name] for agg in lists})
         columns.update({name: decode(columns[name]) for name in names})
         columns = {aliases.get(name, name): columns[name] for name in columns}
         return type(self).from_pydict(columns)
@@ -477,13 +480,9 @@ class Table(pa.Table):
                 scalar.values[:length] for scalar in ListChunk.from_counts(counts, indices)
             )
             counts = pc.min_element_wise(counts, length)
-        table = Table.select_list(self, pc.list_flatten).take(indices)
+        lists = {name: pc.list_flatten(self[name]) for name in Table.list_fields(self)}
+        table = type(self).from_pydict(lists).take(indices)
         return Table.union(self, Table.from_counts(table, counts))
-
-    def select_list(self, apply: Callable = lambda c: c) -> pa.Table:
-        """Return table with only the list columns."""
-        names = list(Table.list_fields(self))
-        return pa.table(list(map(apply, self.select(names))), names)
 
     def sort_indices(
         self, *names: str, length: Optional[int] = None, null_placement: str = 'at_end'
@@ -518,21 +517,21 @@ class Table(pa.Table):
         metadata = {'index_columns': list(itertools.takewhile(func, names))}
         return table.replace_schema_metadata({'pandas': json.dumps(metadata)})
 
-    def filter_list(self, expr: ds.Expression) -> pa.Table:
+    def filter_list(self, expr: ds.Expression) -> Batch:
         """Return table with list columns filtered within scalars."""
-        table = Table.select_list(self)
+        table = self.select(Table.list_fields(self))
         counts = Table.list_value_length(table)
-        first = table[0].combine_chunks()
+        first = table[0].combine_chunks() if isinstance(table, pa.Table) else table[0]
         indices = pc.list_parent_indices(first)
         columns = [
             pc.list_flatten(column) if Column.is_list_type(column) else column.take(indices)
             for column in self
         ]
-        flattened = pa.table(columns, self.column_names)
+        flattened = pa.table(columns, self.schema.names)
         mask = ds.dataset(flattened).to_table(columns={'mask': expr})['mask'].combine_chunks()
         masks = type(first).from_arrays(first.offsets, mask)
         counts = Column.fill_null(ListChunk.aggregate(masks, sum=None)[0], 0)
-        flattened = flattened.select(table.column_names).filter(mask)
+        flattened = flattened.select(table.schema.names).filter(mask)
         return Table.union(self, Table.from_counts(flattened, counts))
 
     def min_max(self, *names: str) -> pa.Table:
