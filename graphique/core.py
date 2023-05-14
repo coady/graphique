@@ -465,8 +465,13 @@ class Table(pa.Table):
 
     def sort_list(
         self, *names: str, length: Optional[int] = None, null_placement: str = 'at_end'
-    ) -> pa.Table:
+    ) -> Batch:
         """Return table with list columns sorted within scalars."""
+        if length == 1:
+            if isinstance(self, pa.Table):
+                self = Table.min_max(self, *names)
+            else:
+                (self,) = Table.min_max(pa.Table.from_batches([self]), *names).to_batches()
         keys = dict(map(sort_key, names))  # type: ignore
         columns = {name: Column.sort_values(pc.list_flatten(self[name])) for name in keys}
         columns[''] = pc.list_parent_indices(self[next(iter(keys))])
@@ -476,9 +481,9 @@ class Table(pa.Table):
         )
         counts = Table.list_value_length(self)
         if length is not None:
-            indices = pa.concat_arrays(
-                scalar.values[:length] for scalar in ListChunk.from_counts(counts, indices)
-            )
+            array = ListChunk.from_counts(counts, indices)
+            offsets = array.offsets.take(pc.list_parent_indices(array))
+            indices = indices.filter(pc.less(pc.subtract(np.arange(len(indices)), offsets), length))
             counts = pc.min_element_wise(counts, length)
         lists = {name: pc.list_flatten(self[name]) for name in Table.list_fields(self)}
         table = type(self).from_pydict(lists).take(indices)

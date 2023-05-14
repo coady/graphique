@@ -322,6 +322,22 @@ def test_sort(client):
     data = client.execute('{ sort(by: ["state"], length: 2) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'] == ['AK', 'AK']
     data = client.execute(
+        '''{ group(by: ["state"]) { apply(list: {sort: {by: ["county"]}})
+        { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
+    )
+    assert data['group']['apply']['aggregate']['row'] == {'state': 'NY', 'county': 'Albany'}
+    data = client.execute(
+        '''{ group(by: ["state"]) { apply(list: {sort: {by: ["-county"], length: 1}})
+        { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
+    )
+    assert data['group']['apply']['aggregate']['row'] == {'state': 'NY', 'county': 'Yates'}
+    data = client.execute(
+        '''{ group(by: ["state"]) { apply(list: {sort: {by: "county", length: 2}})
+        { row { state } column(name: "county") { ... on ListColumn { value { length } } } } } }'''
+    )
+    assert data['group']['apply'] == {'row': {'state': 'NY'}, 'column': {'value': {'length': 2}}}
+    # deprecated
+    data = client.execute(
         '''{ group(by: ["state"]) { sort(by: ["county"])
         { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
     )

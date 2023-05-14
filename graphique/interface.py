@@ -330,7 +330,7 @@ class Dataset:
         """Return table slice sorted by specified columns.
 
         Optimized for length == 1; matches min or max values.
-        Pending deprecation: sorting on list columns will sort within scalars, all of which must have the same lengths.
+        Deprecated: sorting on list columns has moved to `apply`
         """
         if length == 1:
             self = self.min_max(info, by).slice(info, length=length)
@@ -402,14 +402,15 @@ class Dataset:
         which do not require loading.
         """
         expr = list_.filter.to_arrow() if list_.filter else None
+        table = self.scanner(info)
         if expr is not None:
-            table = T.map_batch(self.scanner(info), T.filter_list, expr)
-        else:
+            table = T.map_batch(table, T.filter_list, expr)
+        if list_.sort:
+            table = T.map_batch(table, T.sort_list, *list_.sort.by, length=list_.sort.length)
+        if isinstance(table, ds.Scanner):
             table = self.select(info)
         columns = {}
-        aggs = dict(list_)
-        aggs.pop('filter', None)
-        for func, field in aggs.items():
+        for func, field in dict(list_).items():
             columns[field.alias] = getattr(ListChunk, func)(table[field.name], **field.options)
         args = cumulative_sum, fill_null_backward, fill_null_forward, rank
         funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, pc.rank
