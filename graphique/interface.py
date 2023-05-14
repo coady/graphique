@@ -225,6 +225,8 @@ class Dataset:
             if counts:
                 aggs.setdefault('sum', []).append(Field(counts))
                 counts = ''
+            for agg in itertools.chain(*aggs.values()):
+                agg.name = agg.alias
         table = T.group(table, *by, counts=counts, **aggs)
         columns = dict(zip(table.column_names, table))
         if not flat:

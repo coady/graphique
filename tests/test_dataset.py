@@ -92,8 +92,11 @@ def test_group(dsclient):
     assert data == {
         'group': {'aggregate': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
     }
-    data = dsclient.execute('{ group(aggregate: {min: {name: "state"}}) { length row { state } } }')
-    assert data == {'group': {'length': 1, 'row': {'state': 'AK'}}}
+    data = dsclient.execute(
+        '''{ group(aggregate: {min: {alias: "st", name: "state"}}) {
+        column(name: "st") { ... on StringColumn { values } } } }'''
+    )
+    assert data == {'group': {'column': {'values': ['AK']}}}
 
 
 def test_fragments(partclient):
