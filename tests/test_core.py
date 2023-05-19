@@ -17,7 +17,7 @@ def test_dictionary(table):
     assert C.fill_null_forward(array)[-1].as_py() == 'b'
     assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
     assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
-    assert C.sort_values(array.combine_chunks()).to_pylist() == [0, 1, 0, 1, None]
+    assert C.sort_values(array.combine_chunks()).to_pylist() == [1, 2, 1, 2, None]
 
 
 def test_chunks():
@@ -163,6 +163,14 @@ def test_sort(table):
     assert tbl.schema.pandas_metadata == {'index_columns': ['state']}
     assert tbl['state'].to_pylist() == ['AK'] * 2
     assert tbl['county'].to_pylist() == ['Yukon Koyukuk'] * 2
+    counts = T.ranked(table, 1, 'state')['state'].value_counts().to_pylist()
+    assert counts == [{'values': 'AK', 'counts': 273}]
+    counts = T.ranked(table, 1, 'state', '-county')['county'].value_counts().to_pylist()
+    assert counts == [{'values': 'Yukon Koyukuk', 'counts': 30}]
+    counts = T.ranked(table, 2, 'state')['state'].value_counts().to_pylist()
+    assert counts == [{'values': 'AL', 'counts': 838}, {'values': 'AK', 'counts': 273}]
+    counts = T.ranked(table, 2, 'state', '-county')['county'].value_counts().to_pylist()
+    assert counts == [{'counts': 30, 'values': 'Yukon Koyukuk'}, {'counts': 1, 'values': 'Yakutat'}]
 
 
 def test_numeric():

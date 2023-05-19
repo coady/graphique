@@ -250,7 +250,7 @@ class Column(pa.ChunkedArray):
         if not pa.types.is_dictionary(self.type):
             return self
         array = self if isinstance(self, pa.Array) else self.combine_chunks()
-        return pc.sort_indices(pc.sort_indices(array.dictionary)).take(array.indices)
+        return pc.rank(array.dictionary, 'ascending').take(array.indices)
 
     def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
         """Return discrete differences between adjacent values."""
@@ -547,4 +547,24 @@ class Table(pa.Table):
                 self = Table.filter_list(self, pc.field(name) == pc.field('')).drop([''])
             else:
                 self = self.filter(pc.field(name) == func(self[name]))
+        return self
+
+    def ranked(self, k: int, *names: str) -> Batch:
+        """Return table filtered by values within dense rank, similar to `select_k_unstable`."""
+        if k == 1:  # optimized for min_max
+            for name, order in map(sort_key, names):
+                func = Column.min if order == 'ascending' else Column.max
+                self = self.filter(pc.equal(self[name], func(self[name])))
+            return self
+        values = None
+        for name, order in map(sort_key, names):
+            ranks = pc.rank(Column.sort_values(self[name]), order, tiebreaker='dense')
+            if values is None:  # optimized to sort only once on first iteration
+                values = ranks
+            else:
+                values = pc.add_checked(pc.multiply_checked(values, pc.max(ranks)), ranks)
+                values = pc.rank(values, 'ascending', tiebreaker='dense')
+            mask = pc.less_equal(values, k)
+            self = self.filter(mask)
+            values = values.filter(mask)
         return self
