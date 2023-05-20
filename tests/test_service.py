@@ -407,6 +407,19 @@ def test_group(client):
     assert data['sc']['length'] == data['cs']['length'] == 3216
 
 
+def test_flatten(client):
+    data = client.execute('{ group(by: "state") { flatten { columns { city { type } } } } }')
+    assert data == {'group': {'flatten': {'columns': {'city': {'type': 'string'}}}}}
+    data = client.execute(
+        '''{ group(by: "state") { flatten(indices: "idx") { columns { city { type } }
+        column(name: "idx") { ... on LongColumn { unique { values counts } } } } } }'''
+    )
+    idx = data['group']['flatten']['column']['unique']
+    assert idx['values'] == list(range(52))
+    assert sum(idx['counts']) == 41700
+    assert idx['counts'][0] == 2205
+
+
 def test_aggregate(client):
     data = client.execute(
         '''{ group(by: ["state"] counts: "c", aggregate: {first: [{name: "county"}]

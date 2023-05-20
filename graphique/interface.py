@@ -420,18 +420,22 @@ class Dataset:
         return type(self)(T.union(table, pa.table(columns)))
 
     @doc_field
+    def flatten(self, info: Info, indices: str = '') -> Self:
+        """Provisional: return table with list arrays flattened.
+
+        At least one list column must be referenced, and all list columns must have the same lengths.
+        """
+        batches = T.flatten(self.scanner(info), indices)
+        return type(self)(pa.Table.from_batches(batches))
+
+    @doc_field
     def tables(self, info: Info) -> List[Self]:  # type: ignore
         """Return a list of tables by splitting list columns.
 
         At least one list column must be referenced, and all list columns must have the same lengths.
         """
         for batch in self.scanner(info).to_batches():
-            lists = T.list_fields(batch)
-            scalars = set(batch.schema.names) - lists
-            for index, count in enumerate(T.list_value_length(batch).to_pylist()):
-                row = {name: pa.repeat(batch[name][index], count) for name in scalars}
-                row.update({name: batch[name][index].values for name in lists})
-                yield type(self)(pa.table(row))
+            yield from map(type(self), T.tables(batch))
 
     @doc_field
     def aggregate(
