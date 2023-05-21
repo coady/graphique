@@ -171,6 +171,9 @@ def test_sort(table):
     assert counts == [{'values': 'AL', 'counts': 838}, {'values': 'AK', 'counts': 273}]
     counts = T.ranked(table, 2, 'state', '-county')['county'].value_counts().to_pylist()
     assert counts == [{'counts': 30, 'values': 'Yukon Koyukuk'}, {'counts': 1, 'values': 'Yakutat'}]
+    table = pa.table({'x': [list('ab'), [], None, ['c']]})
+    (column,) = T.sort_list(table, '-x', length=2)
+    assert column.to_pylist() == [list('ba'), [], None, ['c']]
 
 
 def test_numeric():

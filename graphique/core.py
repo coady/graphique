@@ -97,7 +97,9 @@ def register(func: Callable) -> pc.Function:
     doc = inspect.getdoc(func)
     doc = {'summary': doc.splitlines()[0], 'description': doc}  # type: ignore
     annotations = dict(get_type_hints(func))
-    pc.register_scalar_function(func, func.__name__, doc, annotations, annotations.pop('return'))
+    result = annotations.pop('return')
+    with contextlib.suppress(pa.ArrowKeyError):  # apache/arrow#{31611,31612}
+        pc.register_scalar_function(func, func.__name__, doc, annotations, result)
     return pc.get_function(func.__name__)
 
 
@@ -112,9 +114,12 @@ def digitize(
 class ListChunk(pa.lib.BaseListArray):
     def from_counts(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
         """Return list array by converting counts into offsets."""
+        mask = None
+        if counts.null_count:
+            mask, counts = counts.is_null(), counts.fill_null(0)
         offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum_checked(counts)])
         cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
-        return cls.from_arrays(offsets, values)
+        return cls.from_arrays(offsets, values, mask=mask)
 
     def from_scalars(values: Iterable) -> pa.LargeListArray:
         """Return list array from array scalars."""
@@ -349,18 +354,21 @@ class Table(pa.Table):
         (slc,) = Column.find(self[name], value)
         return pa.concat_tables([self[: slc.start], self[slc.stop :]])
 
-    def from_offsets(self, offsets: pa.IntegerArray) -> pa.RecordBatch:
+    def from_offsets(self, offsets: pa.IntegerArray, mask=None) -> pa.RecordBatch:
         """Return record batch with columns converted into list columns."""
         cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
         if isinstance(self, pa.Table):
             (self,) = self.combine_chunks().to_batches() or [pa.record_batch([], self.schema)]
-        arrays = {name: cls.from_arrays(offsets, self[name]) for name in self.schema.names}
-        return pa.RecordBatch.from_pydict(arrays)
+        arrays = [cls.from_arrays(offsets, array, mask=mask) for array in self]
+        return pa.RecordBatch.from_arrays(arrays, self.schema.names)
 
     def from_counts(self, counts: pa.IntegerArray) -> pa.RecordBatch:
         """Return record batch with columns converted into list columns."""
+        mask = None
+        if counts.null_count:
+            mask, counts = counts.is_null(), counts.fill_null(0)
         offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum_checked(counts)])
-        return Table.from_offsets(self, offsets)
+        return Table.from_offsets(self, offsets, mask=mask)
 
     def partition(self, *names: str, **predicates: tuple) -> tuple:
         """Return table partitioned by discrete differences and corresponding counts.
@@ -484,7 +492,7 @@ class Table(pa.Table):
             array = ListChunk.from_counts(counts, indices)
             offsets = array.offsets.take(pc.list_parent_indices(array))
             indices = indices.filter(pc.less(pc.subtract(np.arange(len(indices)), offsets), length))
-            counts = pc.min_element_wise(counts, length)
+            counts = pc.min_element_wise(counts, length, skip_nulls=False)
         lists = {name: pc.list_flatten(self[name]) for name in Table.list_fields(self)}
         table = type(self).from_pydict(lists).take(indices)
         return Table.union(self, Table.from_counts(table, counts))
@@ -535,7 +543,7 @@ class Table(pa.Table):
         flattened = pa.table(columns, self.schema.names)
         mask = ds.dataset(flattened).to_table(columns={'mask': expr})['mask'].combine_chunks()
         masks = type(first).from_arrays(first.offsets, mask)
-        counts = Column.fill_null(ListChunk.aggregate(masks, sum=None)[0], 0)
+        counts = pc.coalesce(*ListChunk.aggregate(masks, sum=None), counts)
         flattened = flattened.select(table.schema.names).filter(mask)
         return Table.union(self, Table.from_counts(flattened, counts))
 

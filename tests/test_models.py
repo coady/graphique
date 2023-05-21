@@ -289,7 +289,7 @@ def test_list(executor):
         columns { list { values { ... on IntColumn { values } } } } } }'''
     )
     column = data['apply']['columns']['list']
-    assert column == {'values': [{'values': [0, 2]}, {'values': []}]}
+    assert column == {'values': [{'values': [0, 2]}, None]}
     data = executor('{ apply(list: {mode: {name: "list"}}) { column(name: "list") { type } } }')
     assert data['apply']['column']['type'] == 'large_list<item: struct<mode: int32, count: int64>>'
     data = executor(

@@ -492,7 +492,7 @@ def test_partition(client):
         apply(list: {filter: {gt: [{name: "zipcode"}, {value: 90000}]}}) {
         column(name: "zipcode") { type } } } }'''
     )
-    assert data['partition']['apply']['column']['type'] == 'list<item: int32>'
+    assert data['partition']['apply']['column']['type'] == 'large_list<item: int32>'
     data = client.execute(
         '''{ partition(by: ["state"], counts: "c") { filter(state: {eq: "NY"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }'''
