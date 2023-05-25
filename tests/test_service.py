@@ -336,19 +336,6 @@ def test_sort(client):
         { row { state } column(name: "county") { ... on ListColumn { value { length } } } } } }'''
     )
     assert data['group']['apply'] == {'row': {'state': 'NY'}, 'column': {'value': {'length': 2}}}
-    # deprecated
-    data = client.execute(
-        '''{ group(by: ["state"]) { sort(by: ["county"])
-        { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
-    )
-    assert data['group']['sort']['aggregate']['row'] == {'state': 'NY', 'county': 'Albany'}
-    data = client.execute(
-        '''{ group(by: ["state"]) { sort(by: ["-county"], length: 1)
-        { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
-    )
-    assert data['group']['sort']['aggregate']['row'] == {'state': 'NY', 'county': 'Yates'}
-    data = client.execute('{ group(by: ["state"]) { sort(by: ["state", "county"]) { length } } }')
-    assert data['group']['sort']['length']
 
 
 def test_group(client):

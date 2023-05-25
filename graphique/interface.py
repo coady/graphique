@@ -330,26 +330,17 @@ class Dataset:
         """Return table slice sorted by specified columns.
 
         Optimized for length == 1; matches min or max values.
-        Deprecated: sorting on list columns has moved to `apply`
         """
         if length == 1:
             self = self.min_max(info, by).slice(info, length=length)
-        table = self.table
-        schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
-        scalars, lists = [], []  # type: ignore
-        for key in by:
-            (lists if C.is_list_type(schema.field(key.lstrip('-'))) else scalars).append(key)
-        if not scalars or isinstance(table, pa.Table) or length is None:
+        if isinstance(self.table, pa.Table) or length is None:
             table = self.select(info)
         else:
             kwargs = dict(length=length, null_placement=null_placement)
             table = T.map_batch(
-                self.scanner(info), lambda b: b.take(T.sort_indices(b, *scalars, **kwargs))
+                self.scanner(info), lambda b: b.take(T.sort_indices(b, *by, **kwargs))
             )
-        if scalars:
-            table = T.sort(table, *scalars, length=length, null_placement=null_placement)
-        if lists:
-            table = T.sort_list(table, *lists, length=length, null_placement=null_placement)
+        table = T.sort(table, *by, length=length, null_placement=null_placement)
         return type(self)(table)
 
     def min_max(self, info: Info, by: List[str]) -> Self:
