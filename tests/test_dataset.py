@@ -125,10 +125,10 @@ def test_fragments(partclient):
         column(name: "south") { ... on FloatColumn { values } } } }'''
     )
     assert data == {'fragments': {'column': {'values': [pytest.approx(17.96333)]}}}
-    data = partclient.execute('{ min(by: "part") { row { part } } }')
-    assert data == {'min': {'row': {'part': 0}}}
-    data = partclient.execute('{ max(by: ["part", "zipcode"]) { row { zipcode } } }')
-    assert data == {'max': {'row': {'zipcode': 99950}}}
+    data = partclient.execute('{ rank(by: "part") { row { part } } }')
+    assert data == {'rank': {'row': {'part': 0}}}
+    data = partclient.execute('{ rank(by: ["-part", "-zipcode"]) { row { zipcode } } }')
+    assert data == {'rank': {'row': {'zipcode': 99950}}}
     data = partclient.execute(
         '''{ fragments(aggregate: {quantile: {name: "latitude"}}) {
         column(name: "latitude") { ... on ListColumn { values { ... on FloatColumn { values } } } } } }'''
@@ -200,11 +200,11 @@ def test_scan(dsclient):
     assert data == {'scan': {'length': 2647}}
 
 
-def test_min_max(dsclient):
-    data = dsclient.execute('{ min(by: ["state"]) { length row { state } } }')
-    assert data == {'min': {'length': 273, 'row': {'state': 'AK'}}}
-    data = dsclient.execute('{ max(by: ["state", "county"]) { length row { state county } } }')
-    assert data == {'max': {'length': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
+def test_rank(dsclient):
+    data = dsclient.execute('{ rank(by: ["state"]) { length row { state } } }')
+    assert data == {'rank': {'length': 273, 'row': {'state': 'AK'}}}
+    data = dsclient.execute('{ rank(by: ["-state", "-county"]) { length row { state county } } }')
+    assert data == {'rank': {'length': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
     data = dsclient.execute('{ sort(by: "state", length: 3) { columns { state { values } } } }')
     assert data == {'sort': {'columns': {'state': {'values': ['AK'] * 3}}}}
 

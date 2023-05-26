@@ -78,8 +78,7 @@ Configuration options exist to provide a convenient no-code solution, but are su
 
 #### ordering
 * `sort`: sort table by given columns
-* `min`: select rows with smallest values
-* `max`: select rows with largest values
+* `rank`: select rows with smallest or largest values
 
 ### Performance
 Graphique relies on native [PyArrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/) or custom optimizations.

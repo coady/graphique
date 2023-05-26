@@ -332,45 +332,46 @@ class Dataset:
         Optimized for length == 1; matches min or max values.
         """
         if length == 1:
-            self = self.min_max(info, by).slice(info, length=length)
+            return type(self)(self.rank(info, by).table[:1])
+        kwargs = dict(length=length, null_placement=null_placement)
         if isinstance(self.table, pa.Table) or length is None:
             table = self.select(info)
         else:
-            kwargs = dict(length=length, null_placement=null_placement)
-            table = T.map_batch(
-                self.scanner(info), lambda b: b.take(T.sort_indices(b, *by, **kwargs))
-            )
-        table = T.sort(table, *by, length=length, null_placement=null_placement)
-        return type(self)(table)
+            table = T.map_batch(self.scanner(info), T.sort, *by, **kwargs)  # type: ignore
+        return type(self)(T.sort(table, *by, **kwargs))  # type: ignore
+
+    @doc_field(
+        by="column names; prefix with `-` for descending order",
+        max="maximum dense rank to select; optimized for == 1 (min or max)",
+    )
+    def rank(self, info: Info, by: List[str], max: int = 1) -> Self:
+        """Return table selected by maximum dense rank."""
+        if isinstance(self.table, pa.Table):
+            table = self.select(info)
+        else:
+            name, order = sort_key(by[0])
+            expr, values, field = None, [], ds.field(name)
+            if name in self.schema().partitioning:
+                partitions = [frag.partition_expression for frag in self.table.get_fragments()]
+                values = sorted({ds.get_partition_keys(part)[name] for part in partitions})
+            if len(values) >= max:
+                expr = field <= values[max - 1] if order == 'ascending' else field >= values[-max]
+            table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by)
+        return type(self)(T.ranked(table, max, *by))
 
     def min_max(self, info: Info, by: List[str]) -> Self:
-        table, (name, order) = self.table, sort_key(by[0])
-        func = C.min if order == 'ascending' else C.max
+        table = self.table
         schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
-        if isinstance(table, pa.Table) or C.is_list_type(schema.field(name)):
-            table = self.select(info)
-        elif name in self.schema().partitioning:
-            values = pa.array(
-                ds.get_partition_keys(fragment.partition_expression)[name]
-                for fragment in table.get_fragments()
-            )
-            scanner = self.scanner(info, filter=ds.field(name) == func(values))
-            if len(by) == 1:
-                return type(self)(scanner)
-            table, by = scanner.to_table(), by[1:]
-        else:
-            scanner = self.scanner(info)
-            table = T.map_batch(scanner, lambda b: b.filter(pc.equal(b[name], func(b[name]))))
-        return type(self)(T.min_max(table, *by))
+        if any(C.is_list_type(schema.field(name)) for name, _ in map(sort_key, by)):
+            return type(self)(T.min_max(self.select(info), *by))
+        return self.rank(info, by)
 
-    @doc_field(by="column names")
+    @strawberry.field(deprecation_reason="use `rank(by: [...])`")
     def min(self, info: Info, by: List[str]) -> Self:
-        """Pending deprecation: return table with minimum values per column."""
         return self.min_max(info, by)
 
-    @doc_field(by="column names")
+    @strawberry.field(deprecation_reason="use `rank(by: [-...])`")
     def max(self, info: Info, by: List[str]) -> Self:
-        """Pending deprecation: return table with maximum values per column."""
         return self.min_max(info, ['-' + name for name in by])
 
     @doc_field
