@@ -107,6 +107,11 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ```
 
 ## Changes
+dev
+* `flatten` field for list columns
+* `rank` field for min and max filtering
+* List filtering and sorting moved to functions and optimized
+
 1.2
 
 * Pyarrow >=12 required

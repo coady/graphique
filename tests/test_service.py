@@ -501,8 +501,8 @@ def test_rows(client):
     data = client.execute('{ max(by: ["latitude", "longitude"]) { row { state } } }')
     assert data == {'max': {'row': {'state': 'AK'}}}
     data = client.execute(
-        '''{ group(by: ["state"]) { min(by: ["state", "longitude"]) {
-        aggregate(first: [{name: "city"}]) { row { state } columns { city { values } } } } } }'''
+        '''{ group(by: "state") { apply(list: {rank: {by: "-longitude"}}) {
+        aggregate(first: [{name: "city"}]) { row { state city } } } } }'''
     )
-    agg = data['group']['min']['aggregate']
-    assert agg == {'row': {'state': 'AK'}, 'columns': {'city': {'values': ['Atka']}}}
+    agg = data['group']['apply']['aggregate']
+    assert agg == {'row': {'state': 'NY', 'city': 'Montauk'}}

@@ -497,6 +497,14 @@ class Table(pa.Table):
         table = type(self).from_pydict(lists).take(indices)
         return Table.union(self, Table.from_counts(table, counts))
 
+    def map_list(self, func: Callable, *args, **kwargs) -> Batch:
+        """Return table with function mapped across list scalars."""
+        batches: Iterable = Table.split(self.select(Table.list_fields(self)))
+        batches = [None if batch is None else func(batch, *args, **kwargs) for batch in batches]
+        counts = pa.array(None if batch is None else len(batch) for batch in batches)
+        table = pa.Table.from_batches(batch for batch in batches if batch is not None)
+        return Table.union(self, Table.from_counts(table, counts))
+
     def sort_indices(
         self, *names: str, length: Optional[int] = None, null_placement: str = 'at_end'
     ) -> pa.Array:

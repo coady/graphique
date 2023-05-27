@@ -359,20 +359,13 @@ class Dataset:
             table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by)
         return type(self)(T.ranked(table, max, *by))
 
-    def min_max(self, info: Info, by: List[str]) -> Self:
-        table = self.table
-        schema = table.projected_schema if isinstance(table, ds.Scanner) else table.schema
-        if any(C.is_list_type(schema.field(name)) for name, _ in map(sort_key, by)):
-            return type(self)(T.min_max(self.select(info), *by))
-        return self.rank(info, by)
-
     @strawberry.field(deprecation_reason="use `rank(by: [...])`")
     def min(self, info: Info, by: List[str]) -> Self:
-        return self.min_max(info, by)
+        return self.rank(info, by)
 
     @strawberry.field(deprecation_reason="use `rank(by: [-...])`")
     def max(self, info: Info, by: List[str]) -> Self:
-        return self.min_max(info, ['-' + name for name in by])
+        return self.rank(info, ['-' + name for name in by])
 
     @doc_field
     @no_type_check
@@ -397,6 +390,8 @@ class Dataset:
         table = self.scanner(info)
         if expr is not None:
             table = T.map_batch(table, T.filter_list, expr)
+        if list_.rank:
+            table = T.map_batch(table, T.map_list, T.ranked, list_.rank.max, *list_.rank.by)
         if list_.sort:
             table = T.map_batch(table, T.sort_list, *list_.sort.by, length=list_.sort.length)
         if isinstance(table, ds.Scanner):
