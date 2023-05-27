@@ -306,6 +306,8 @@ def test_list(executor):
     assert data == {'partition': {'scan': {'column': {'values': [None]}}}}
     data = executor('{ columns { list { value { type } } } }')
     assert data == {'columns': {'list': {'value': {'type': 'int32'}}}}
+    data = executor('{ tables { column(name: "list") { type } } }')
+    assert data == {'tables': [{'column': {'type': 'int32'}}, None]}
 
 
 def test_struct(executor):

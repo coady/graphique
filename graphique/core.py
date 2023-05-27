@@ -593,11 +593,14 @@ class Table(pa.Table):
             offset += len(batch)
             yield pa.RecordBatch.from_pydict(columns)
 
-    def tables(self) -> Iterator[pa.Table]:
+    def split(self) -> Iterator[Optional[pa.RecordBatch]]:
         """Generate tables from splitting list scalars."""
         lists = Table.list_fields(self)
         scalars = set(self.schema.names) - lists
         for index, count in enumerate(Table.list_value_length(self).to_pylist()):
-            row = {name: pa.repeat(self[name][index], count) for name in scalars}
-            row.update({name: self[name][index].values for name in lists})
-            yield pa.table(row)
+            if count is None:
+                yield None
+            else:
+                row = {name: pa.repeat(self[name][index], count) for name in scalars}
+                row.update({name: self[name][index].values for name in lists})
+                yield pa.RecordBatch.from_pydict(row)

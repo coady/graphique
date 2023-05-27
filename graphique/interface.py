@@ -421,13 +421,14 @@ class Dataset:
         return type(self)(pa.Table.from_batches(batches))
 
     @doc_field
-    def tables(self, info: Info) -> List[Self]:  # type: ignore
+    def tables(self, info: Info) -> List[Optional[Self]]:  # type: ignore
         """Return a list of tables by splitting list columns.
 
         At least one list column must be referenced, and all list columns must have the same lengths.
         """
         for batch in self.scanner(info).to_batches():
-            yield from map(type(self), T.tables(batch))
+            for row in T.split(batch):
+                yield None if row is None else type(self)(pa.Table.from_batches([row]))
 
     @doc_field
     def aggregate(
