@@ -79,6 +79,7 @@ def test_group(table):
     groups = T.group(table, 'state', list=[Agg('county'), Agg('city')])
     assert len(groups) == 52
     assert groups['state'][0].as_py() == 'NY'
+    assert len(pa.Table.from_batches(T.flatten(groups))) == len(table)
     table = T.filter_list(groups, pc.field('county') == pc.field('city'))
     assert len(pc.list_flatten(table['city'])) == 2805
     min_max = T.min_max(groups, 'state', '-county')

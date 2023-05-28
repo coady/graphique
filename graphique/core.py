@@ -592,7 +592,7 @@ class Table(pa.Table):
             _ = Table.list_value_length(batch)
             indices_ = pc.list_parent_indices(batch[Table.list_fields(batch).pop()])
             arrays = [
-                array.values if Column.is_list_type(array) else array.take(indices_)
+                pc.list_flatten(array) if Column.is_list_type(array) else array.take(indices_)
                 for array in batch
             ]
             columns = dict(zip(batch.schema.names, arrays))

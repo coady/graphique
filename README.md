@@ -73,8 +73,8 @@ Configuration options exist to provide a convenient no-code solution, but are su
 #### aggregation
 * `group`: group by given columns, transforming the others into list columns
 * `partition`: partition on adjacent values in given columns, transforming the others into list columns
-* `aggregate`: apply reduce functions to list columns
 * `tables`: return a list of tables by splitting on the scalars in list columns
+* `flatten`: flatten list columns with repeated scalars
 
 #### ordering
 * `sort`: sort table by given columns

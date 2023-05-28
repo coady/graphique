@@ -408,12 +408,14 @@ class Dataset:
 
     @doc_field
     def flatten(self, info: Info, indices: str = '') -> Self:
-        """Provisional: return table with list arrays flattened.
+        """Return table with list arrays flattened.
 
         At least one list column must be referenced, and all list columns must have the same lengths.
         """
         batches = T.flatten(self.scanner(info), indices)
-        return type(self)(pa.Table.from_batches(batches))
+        batch = next(batches)
+        scanner = ds.Scanner.from_batches(itertools.chain([batch], batches), schema=batch.schema)
+        return type(self)(self.oneshot(info, scanner))
 
     @doc_field
     def tables(self, info: Info) -> List[Optional[Self]]:  # type: ignore
@@ -476,16 +478,22 @@ class Dataset:
             raise ValueError(f"projected columns need a name or alias: {projection['']}")
         return projection
 
+    @staticmethod
+    def oneshot(info: Info, scanner: ds.Scanner) -> Union[ds.Scanner, pa.Table]:
+        """Load oneshot scanner if needed."""
+        selected = selections(*info.selected_fields)
+        selected['type'] = selected['schema'] = 0
+        return scanner.to_table() if sum(selected.values()) > 1 else scanner
+
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(
         self, info: Info, filter: Expression = {}, columns: List[Projection] = []  # type: ignore
     ) -> Self:
         """Select rows and project columns without memory usage."""
         scanner = self.scanner(info, filter=filter.to_arrow(), columns=self.project(info, columns))
-        selected = selections(*info.selected_fields)
-        selected['type'] = selected['schema'] = 0
-        oneshot = sum(selected.values()) > 1 and isinstance(self.table, ds.Scanner)
-        return type(self)(scanner.to_table() if oneshot else scanner)
+        if isinstance(self.table, ds.Scanner):
+            scanner = self.oneshot(info, scanner)
+        return type(self)(scanner)
 
     @doc_field(
         right="name of right table; must be on root Query type",
