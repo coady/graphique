@@ -66,6 +66,8 @@ def test_lists():
     batch = T.from_offsets(pa.record_batch([list('abcde')], ['col']), pa.array([0, 3, 5]))
     assert batch['col'].to_pylist() == [list('abc'), list('de')]
     assert not T.from_offsets(pa.table({}), pa.array([0]))
+    array = ListChunk.from_counts(pa.array([3, None, 2]), list('abcde'))
+    assert array.to_pylist() == [list('abc'), None, list('de')]
 
 
 def test_membership():
@@ -82,17 +84,14 @@ def test_group(table):
     assert len(pa.Table.from_batches(T.flatten(groups))) == len(table)
     table = T.filter_list(groups, pc.field('county') == pc.field('city'))
     assert len(pc.list_flatten(table['city'])) == 2805
-    min_max = T.min_max(groups, 'state', '-county')
-    assert min_max['state'].to_pylist() == ['AK']
-    assert min_max['county'].to_pylist() == [['Yukon Koyukuk'] * 30]
-    groups = T.sort_list(groups, 'county')
+    groups = T.map_list(groups, T.sort, 'county')
     assert groups['county'][0].values[0].as_py() == 'Albany'
-    groups = T.sort_list(groups, '-county', '-city', length=1, null_placement='at_start')
+    groups = T.map_list(groups, T.sort, '-county', '-city', length=1, null_placement='at_start')
     assert groups['county'][0].values.to_pylist() == ['Yates']
     assert groups['city'][0].values.to_pylist() == ['Rushville']
     groups = groups.append_column('other', pa.array([[0]] * len(groups)))
     with pytest.raises(ValueError):
-        T.sort_list(groups, 'county')
+        T.map_list(groups, T.sort, 'county')
     groups = T.group(table, first=[Agg('state')])
     assert groups['state'].to_pylist() == ['NY']
 
@@ -173,7 +172,7 @@ def test_sort(table):
     counts = T.ranked(table, 2, 'state', '-county')['county'].value_counts().to_pylist()
     assert counts == [{'counts': 30, 'values': 'Yukon Koyukuk'}, {'counts': 1, 'values': 'Yakutat'}]
     table = pa.table({'x': [list('ab'), [], None, ['c']]})
-    (column,) = T.sort_list(table, '-x', length=2)
+    (column,) = T.map_list(table, T.sort, '-x', length=2)
     assert column.to_pylist() == [list('ba'), [], None, ['c']]
 
 

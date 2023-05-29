@@ -471,32 +471,6 @@ class Table(pa.Table):
             raise ValueError(f"list columns have different value lengths: {lists}")
         return counts if isinstance(counts, pa.Array) else counts.chunk(0)
 
-    def sort_list(
-        self, *names: str, length: Optional[int] = None, null_placement: str = 'at_end'
-    ) -> Batch:
-        """Return table with list columns sorted within scalars."""
-        if length == 1:
-            if isinstance(self, pa.Table):
-                self = Table.min_max(self, *names)
-            else:
-                (self,) = Table.min_max(pa.Table.from_batches([self]), *names).to_batches()
-        keys = dict(map(sort_key, names))  # type: ignore
-        columns = {name: Column.sort_values(pc.list_flatten(self[name])) for name in keys}
-        columns[''] = pc.list_parent_indices(self[next(iter(keys))])
-        keys = dict({'': 'ascending'}, **keys)
-        indices = pc.sort_indices(
-            pa.table(columns), sort_keys=keys.items(), null_placement=null_placement
-        )
-        counts = Table.list_value_length(self)
-        if length is not None:
-            array = ListChunk.from_counts(counts, indices)
-            offsets = array.offsets.take(pc.list_parent_indices(array))
-            indices = indices.filter(pc.less(pc.subtract(np.arange(len(indices)), offsets), length))
-            counts = pc.min_element_wise(counts, length, skip_nulls=False)
-        lists = {name: pc.list_flatten(self[name]) for name in Table.list_fields(self)}
-        table = type(self).from_pydict(lists).take(indices)
-        return Table.union(self, Table.from_counts(table, counts))
-
     def map_list(self, func: Callable, *args, **kwargs) -> Batch:
         """Return table with function mapped across list scalars."""
         batches: Iterable = Table.split(self.select(Table.list_fields(self)))
@@ -514,7 +488,7 @@ class Table(pa.Table):
             func = functools.partial(pc.select_k_unstable, k=length)
         keys = dict(map(sort_key, names))  # type: ignore
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
-        return func(table, sort_keys=keys.items())
+        return func(table, sort_keys=keys.items()) if table else pa.array([], 'int64')
 
     def sort(
         self,
@@ -522,7 +496,7 @@ class Table(pa.Table):
         length: Optional[int] = None,
         indices: str = '',
         null_placement: str = 'at_end',
-    ) -> pa.Table:
+    ) -> Batch:
         """Return table sorted by columns, optimized for fixed length.
 
         Args:
@@ -530,6 +504,8 @@ class Table(pa.Table):
             length: maximum number of rows to return
             indices: include original indices in the table
         """
+        if length == 1 and not indices:
+            return Table.ranked(self, 1, *names)[:1]
         indices_ = Table.sort_indices(self, *names, length=length, null_placement=null_placement)
         table = self.take(indices_)
         if indices:
@@ -540,37 +516,22 @@ class Table(pa.Table):
 
     def filter_list(self, expr: ds.Expression) -> Batch:
         """Return table with list columns filtered within scalars."""
-        table = self.select(Table.list_fields(self))
-        counts = Table.list_value_length(table)
-        first = table[0].combine_chunks() if isinstance(table, pa.Table) else table[0]
-        indices = pc.list_parent_indices(first)
-        columns = [
-            pc.list_flatten(column) if Column.is_list_type(column) else column.take(indices)
-            for column in self
+        fields = Table.list_fields(self)
+        tables = [
+            None if batch is None else pa.Table.from_batches([batch]).filter(expr).select(fields)
+            for batch in Table.split(self)
         ]
-        flattened = pa.table(columns, self.schema.names)
-        mask = ds.dataset(flattened).to_table(columns={'mask': expr})['mask'].combine_chunks()
-        masks = type(first).from_arrays(first.offsets, mask)
-        counts = pc.coalesce(*ListChunk.aggregate(masks, sum=None), counts)
-        flattened = flattened.select(table.schema.names).filter(mask)
-        return Table.union(self, Table.from_counts(flattened, counts))
-
-    def min_max(self, *names: str) -> pa.Table:
-        for name, order in map(sort_key, names):
-            func = Column.min if order == 'ascending' else Column.max
-            if Column.is_list_type(self[name]):
-                self = self.append_column('', getattr(ListChunk, func.__name__)(self[name]))
-                self = Table.filter_list(self, pc.field(name) == pc.field('')).drop([''])
-            else:
-                self = self.filter(pc.field(name) == func(self[name]))
-        return self
+        counts = pa.array(None if table is None else len(table) for table in tables)
+        table = pa.concat_tables(table for table in tables if table is not None)
+        return Table.union(self, Table.from_counts(table, counts))
 
     def ranked(self, k: int, *names: str) -> Batch:
         """Return table filtered by values within dense rank, similar to `select_k_unstable`."""
         if k == 1:  # optimized for min_max
+            expr = isinstance(self, pa.Table)
             for name, order in map(sort_key, names):
-                func = Column.min if order == 'ascending' else Column.max
-                self = self.filter(pc.equal(self[name], func(self[name])))
+                value = (Column.min if order == 'ascending' else Column.max)(self[name])
+                self = self.filter(pc.field(name) == value if expr else pc.equal(self[name], value))
             return self
         values = None
         for name, order in map(sort_key, names):

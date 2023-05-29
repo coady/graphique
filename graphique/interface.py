@@ -331,8 +331,6 @@ class Dataset:
 
         Optimized for length == 1; matches min or max values.
         """
-        if length == 1:
-            return type(self)(self.rank(info, by).table[:1])
         kwargs = dict(length=length, null_placement=null_placement)
         if isinstance(self.table, pa.Table) or length is None:
             table = self.select(info)
@@ -378,7 +376,7 @@ class Dataset:
         rank: doc_argument(List[Rank], func=pc.rank) = [],
         list_: Annotated[
             ListFunction,
-            strawberry.argument(name='list', description="Provisional: functions for list arrays."),
+            strawberry.argument(name='list', description="functions for list arrays."),
         ] = {},
     ) -> Self:
         """Return view of table with vector functions applied across columns.
@@ -393,7 +391,7 @@ class Dataset:
         if list_.rank:
             table = T.map_batch(table, T.map_list, T.ranked, list_.rank.max, *list_.rank.by)
         if list_.sort:
-            table = T.map_batch(table, T.sort_list, *list_.sort.by, length=list_.sort.length)
+            table = T.map_batch(table, T.map_list, T.sort, *list_.sort.by, length=list_.sort.length)
         if isinstance(table, ds.Scanner):
             table = self.select(info)
         columns = {}
