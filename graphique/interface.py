@@ -15,7 +15,7 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.types import Info
 from typing_extensions import Annotated, Self
-from .core import Column as C, ListChunk, Table as T, sort_key
+from .core import Batch, Column as C, ListChunk, Table as T, sort_key
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
 from .inputs import HashAggregates, ListFunction, Projection, Rank, ScalarAggregate, Sort
 from .inputs import TDigestAggregate, VarianceAggregate, VectorAggregates, links
@@ -202,26 +202,41 @@ class Dataset:
         aggregate="grouped aggregation functions",
     )
     def group(
-        self, info: Info, by: List[str] = [], counts: str = '', aggregate: HashAggregates = {}  # type: ignore
+        self,
+        info: Info,
+        by: List[str] = [],
+        counts: str = '',
+        aggregate: HashAggregates = {},  # type: ignore
+        list_: Annotated[
+            ListFunction,
+            strawberry.argument(name='list', description="provisional: functions for list arrays"),
+        ] = {},  # type: ignore
     ) -> Self:
         """Return table grouped by columns, with stable ordering.
 
         Columns which are not aggregated are transformed into list columns.
         See `column`, `aggregate`, and `tables` for further usage of list columns.
         """
-        scalars, aggs = set(by), dict(aggregate)
+        scalars, ignore, aggs = set(by), set(), dict(aggregate)  # type: ignore
         for values in aggs.values():
             scalars.update(agg.alias for agg in values)
-        lists = self.references(info, level=1) - scalars - {counts}
+            ignore.update(agg.name for agg in values if agg.name != agg.alias)
+        lists = self.references(info) - scalars - ignore - {counts}
+        lists |= self.references(info, level=1) & ignore
         flat = isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives
         aggs['list'] = list(map(Field, lists))
         if flat:
             table = self.select(info)
         else:  # scan fragments or batches when possible
             if set(by) <= set(self.schema().partitioning) > set():
-                table = self.fragments(info, Expression(), counts, aggregate, Expression()).table
+                kwargs = dict(filter=list_.filter, sort=list_.sort)
+                table = self.fragments(info, Expression(), counts, aggregate, **kwargs).table
             else:
-                table = T.map_batch(self.scanner(info), T.group, *by, counts=counts, **aggs)
+                table = T.map_batch(
+                    self.scanner(info),
+                    lambda b: self.apply_list(T.group(b, *by, counts=counts, **aggs), list_),
+                )
+            list_.filter = Expression()
             if counts:
                 aggs.setdefault('sum', []).append(Field(counts))
                 counts = ''
@@ -231,7 +246,7 @@ class Dataset:
         columns = dict(zip(table.column_names, table))
         if not flat:
             columns.update({name: ListChunk.inner_flatten(*columns[name].chunks) for name in lists})
-        return type(self)(pa.table(columns))
+        return type(self)(self.apply_list(pa.table(columns), list_))
 
     @doc_field(
         keys="selected fragments",
@@ -257,7 +272,7 @@ class Dataset:
         Requires a partitioned dataset. Faster and less memory intensive than `group`.
         """
         schema = self.table.partitioning.schema  # requires a Dataset
-        filter, aggs = filter.to_arrow(), dict(aggregate)
+        filter, aggs = (filter.to_arrow() if filter else None), dict(aggregate)
         projection = {agg.name: ds.field(agg.name) for value in aggs.values() for agg in value}
         if sort:
             projection.update({name: ds.field(name) for name in dict(map(sort_key, sort.by))})
@@ -360,6 +375,20 @@ class Dataset:
     def max(self, info: Info, by: List[str]) -> Self:
         return self.rank(info, ['-' + name for name in by])
 
+    @staticmethod
+    def apply_list(table: Batch, list_: ListFunction) -> Batch:
+        expr = list_.filter.to_arrow() if list_.filter else None
+        if expr is not None:
+            table = T.filter_list(table, expr)
+        if list_.rank:
+            table = T.map_list(table, T.ranked, list_.rank.max, *list_.rank.by)
+        if list_.sort:
+            table = T.map_list(table, T.sort, *list_.sort.by, length=list_.sort.length)
+        columns = {}
+        for func, field in dict(list_).items():
+            columns[field.alias] = getattr(ListChunk, func)(table[field.name], **field.options)
+        return T.union(table, pa.RecordBatch.from_pydict(columns))
+
     @doc_field
     @no_type_check
     def apply(
@@ -379,19 +408,8 @@ class Dataset:
         Applied functions load arrays into memory as needed. See `scan` for scalar functions,
         which do not require loading.
         """
-        expr = list_.filter.to_arrow() if list_.filter else None
-        table = self.scanner(info)
-        if expr is not None:
-            table = T.map_batch(table, T.filter_list, expr)
-        if list_.rank:
-            table = T.map_batch(table, T.map_list, T.ranked, list_.rank.max, *list_.rank.by)
-        if list_.sort:
-            table = T.map_batch(table, T.map_list, T.sort, *list_.sort.by, length=list_.sort.length)
-        if isinstance(table, ds.Scanner):
-            table = self.select(info)
+        table = T.map_batch(self.scanner(info), self.apply_list, list_)
         columns = {}
-        for func, field in dict(list_).items():
-            columns[field.alias] = getattr(ListChunk, func)(table[field.name], **field.options)
         args = cumulative_sum, fill_null_backward, fill_null_forward, rank
         funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, pc.rank
         for fields, func in zip(args, funcs):

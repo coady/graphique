@@ -394,6 +394,14 @@ def test_group(client):
     assert data['sc']['length'] == data['cs']['length'] == 3216
 
 
+def test_list(client):
+    data = client.execute(
+        '''{ group(by: "state", list: {filter: {eq: [{name: "county"}, {name: "city"}]}}) {
+        aggregate(count: {name: "city"}) { column(name: "city") { ... on LongColumn { values} } } } }'''
+    )
+    assert data['group']['aggregate']['column']['values'].count(0) == 2
+
+
 def test_flatten(client):
     data = client.execute('{ group(by: "state") { flatten { columns { city { type } } } } }')
     assert data == {'group': {'flatten': {'columns': {'city': {'type': 'string'}}}}}

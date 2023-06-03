@@ -99,6 +99,19 @@ def test_group(dsclient):
     assert data == {'group': {'column': {'values': ['AK']}}}
 
 
+def test_list(dsclient):
+    data = dsclient.execute(
+        '''{ group(by: ["state"], list: {sort: {by: "zipcode", length: 1}}) {
+        tables { length row { state county } } } }'''
+    )
+    assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'NY', 'county': 'Suffolk'}}
+    data = dsclient.execute(
+        '''{ group(by: ["state"], list: {rank: {by: "zipcode"}}) {
+        tables { length row { state county } } } }'''
+    )
+    assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'NY', 'county': 'Suffolk'}}
+
+
 def test_fragments(partclient):
     data = partclient.execute('{ fragments { columns { part { values } } } }')
     assert data == {'fragments': {'columns': {'part': {'values': [0]}}}}
