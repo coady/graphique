@@ -129,6 +129,8 @@ def test_fragments(partclient):
     assert data == {'rank': {'row': {'part': 0}}}
     data = partclient.execute('{ rank(by: ["-part", "-zipcode"]) { row { zipcode } } }')
     assert data == {'rank': {'row': {'zipcode': 99950}}}
+    data = partclient.execute('{ sort(by: "part", length: 1) { row { part } } }')
+    assert data == {'sort': {'row': {'part': 0}}}
     data = partclient.execute(
         '''{ fragments(aggregate: {quantile: {name: "latitude"}}) {
         column(name: "latitude") { ... on ListColumn { values { ... on FloatColumn { values } } } } } }'''

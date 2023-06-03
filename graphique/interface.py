@@ -335,7 +335,8 @@ class Dataset:
         if isinstance(self.table, pa.Table) or length is None:
             table = self.select(info)
         else:
-            table = T.map_batch(self.scanner(info), T.sort, *by, **kwargs)  # type: ignore
+            expr = T.rank_keys(self.table, length, *by)
+            table = T.map_batch(self.scanner(info, filter=expr), T.sort, *by, **kwargs)
         return type(self)(T.sort(table, *by, **kwargs))  # type: ignore
 
     @doc_field(
@@ -347,13 +348,7 @@ class Dataset:
         if isinstance(self.table, pa.Table):
             table = self.select(info)
         else:
-            name, order = sort_key(by[0])
-            expr, values, field = None, [], ds.field(name)
-            if name in self.schema().partitioning:
-                partitions = [frag.partition_expression for frag in self.table.get_fragments()]
-                values = sorted({ds.get_partition_keys(part)[name] for part in partitions})
-            if len(values) >= max:
-                expr = field <= values[max - 1] if order == 'ascending' else field >= values[-max]
+            expr = T.rank_keys(self.table, max, *by)
             table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by)
         return type(self)(T.ranked(table, max, *by))
 

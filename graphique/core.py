@@ -535,6 +535,8 @@ class Table(pa.Table):
             return self
         values = None
         for name, order in map(sort_key, names):
+            if len(self) <= k:
+                break
             ranks = pc.rank(Column.sort_values(self[name]), order, tiebreaker='dense')
             if values is None:  # optimized to sort only once on first iteration
                 values = ranks
@@ -545,6 +547,21 @@ class Table(pa.Table):
             self = self.filter(mask)
             values = values.filter(mask)
         return self
+
+    def rank_keys(self, k: int, *names: str) -> Optional[ds.Expression]:
+        """Return expression for partitioned dataset which filters by rank."""
+        partitioning = getattr(self, 'partitioning', None)
+        schema = set(partitioning.schema.names if partitioning else [])
+        keys = dict(itertools.takewhile(lambda key: key[0] in schema, map(sort_key, names)))  # type: ignore
+        if not keys:
+            return None
+        parts = [ds.get_partition_keys(frag.partition_expression) for frag in self.get_fragments()]
+        table = Table.ranked(pa.Table.from_pylist(parts).select(keys), k, *names[: len(keys)])
+        fields = []
+        for name, order in keys.items():
+            field, col = ds.field(name), table[name]
+            fields.append(field <= pc.max(col) if order == 'ascending' else field >= pc.min(col))
+        return functools.reduce(operator.and_, fields)
 
     def flatten(self, indices: str = '') -> Iterator[pa.RecordBatch]:
         """Generate batches with list arrays flattened, optionally with parent indices."""
