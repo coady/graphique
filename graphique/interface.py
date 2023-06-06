@@ -18,7 +18,7 @@ from typing_extensions import Annotated, Self
 from .core import Batch, Column as C, ListChunk, Table as T, sort_key
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
 from .inputs import HashAggregates, ListFunction, Projection, Rank, ScalarAggregate, Sort
-from .inputs import TDigestAggregate, VarianceAggregate, VectorAggregates, links
+from .inputs import TDigestAggregate, VarianceAggregate, VectorAggregates, links, provisional
 from .models import Column, doc_field, selections
 from .scalars import Long
 
@@ -209,7 +209,11 @@ class Dataset:
         aggregate: HashAggregates = {},  # type: ignore
         list_: Annotated[
             ListFunction,
-            strawberry.argument(name='list', description="provisional: functions for list arrays"),
+            strawberry.argument(
+                name='list',
+                description="provisional: functions for list arrays",
+                directives=[provisional()],
+            ),
         ] = {},  # type: ignore
     ) -> Self:
         """Return table grouped by columns, with stable ordering.
@@ -300,6 +304,8 @@ class Dataset:
                 columns[name] = ListChunk.from_scalars(values)
         columns.update({field.name: pa.array(columns[field.name], field.type) for field in schema})
         return type(self)(pa.table(columns))
+
+    fragments.directives = [provisional()]
 
     @doc_field(
         by="column names",
@@ -541,6 +547,8 @@ class Dataset:
             coalesce_keys=coalesce_keys,
         )
         return type(self)(table)
+
+    join.directives = [provisional()]
 
     @doc_field
     def take(self, info: Info, indices: List[Long]) -> Self:

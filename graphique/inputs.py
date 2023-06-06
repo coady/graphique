@@ -76,6 +76,14 @@ class optional:
     """
 
 
+@use_doc(
+    strawberry.schema_directive,
+    locations=[Location.ARGUMENT_DEFINITION, Location.FIELD_DEFINITION],
+)
+class provisional:
+    """Provisional feature; subject to change in the future."""
+
+
 def default_field(
     default=UNSET, func: Optional[Callable] = None, nullable: bool = False, **kwargs
 ) -> StrawberryField:
