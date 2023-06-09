@@ -232,7 +232,7 @@ class Dataset:
         if flat:
             table = self.select(info)
         else:  # scan fragments or batches when possible
-            if set(by) <= set(self.schema().partitioning) > set():
+            if set(by) <= set(T.fragment_keys(self.table)) > set():
                 kwargs = dict(filter=list_.filter, sort=list_.sort)
                 table = self.fragments(info, Expression(), counts, aggregate, **kwargs).table
             else:
@@ -507,7 +507,10 @@ class Dataset:
         self, info: Info, filter: Expression = {}, columns: List[Projection] = []  # type: ignore
     ) -> Self:
         """Select rows and project columns without memory usage."""
-        scanner = self.scanner(info, filter=filter.to_arrow(), columns=self.project(info, columns))
+        expr = filter.to_arrow()
+        if expr is not None and not columns and isinstance(self.table, ds.Dataset):
+            return type(self)(self.table.filter(expr))
+        scanner = self.scanner(info, filter=expr, columns=self.project(info, columns))
         if isinstance(self.table, ds.Scanner):
             scanner = self.oneshot(info, scanner)
         return type(self)(scanner)

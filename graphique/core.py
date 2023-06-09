@@ -548,10 +548,17 @@ class Table(pa.Table):
             values = values.filter(mask)
         return self
 
+    def fragment_keys(self) -> list:
+        """Filtered datasets can have partitions, but not fragments."""
+        try:
+            self.get_fragments()
+        except (AttributeError, ValueError):
+            return []
+        return self.partitioning.schema.names
+
     def rank_keys(self, k: int, *names: str) -> Optional[ds.Expression]:
         """Return expression for partitioned dataset which filters by rank."""
-        partitioning = getattr(self, 'partitioning', None)
-        schema = set(partitioning.schema.names if partitioning else [])
+        schema = set(Table.fragment_keys(self))
         keys = dict(itertools.takewhile(lambda key: key[0] in schema, map(sort_key, names)))  # type: ignore
         if not keys:
             return None
