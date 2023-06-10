@@ -110,7 +110,9 @@ class Dataset:
     def filter(self, info: Info, **queries: Filter) -> Self:
         """Return table with rows which match all queries.
 
-        See `scan(filter: ...)` for more advanced queries.
+        See `scan(filter: ...)` for more advanced queries. Additional features
+        * sorted tables support binary search
+        * partitioned datasets retain fragment information when filtered on keys
         """
         table = self.table
         prev = info.path.prev
@@ -134,6 +136,11 @@ class Dataset:
                 break
         self = type(self)(table)
         expr = Expression.from_query(**queries)
+        names = {name for name in queries if dict(queries[name])}
+        if set() < names <= set(T.fragment_keys(table)) and isinstance(table, ds.FileSystemDataset):
+            paths = [fragment.path for fragment in table.get_fragments(expr.to_arrow())]
+            kwargs = dict(schema=table.schema, format=table.format, partitioning=table.partitioning)
+            return type(self)(ds.dataset(paths, **kwargs))
         return self if expr.to_arrow() is None else self.scan(info, filter=expr)
 
     @doc_field
@@ -234,13 +241,15 @@ class Dataset:
         else:  # scan fragments or batches when possible
             if set(by) <= set(T.fragment_keys(self.table)) > set():
                 kwargs = dict(filter=list_.filter, sort=list_.sort)
-                table = self.fragments(info, Expression(), counts, aggregate, **kwargs).table
+                table = self.fragments(info, counts, aggregate, **kwargs).table
             else:
                 table = T.map_batch(
                     self.scanner(info),
                     lambda b: self.apply_list(T.group(b, *by, counts=counts, **aggs), list_),
                 )
             list_.filter = Expression()
+            lists = {field.name for field in table.schema if C.is_list_type(field)}
+            aggs['list'] = list(map(Field, lists))
             if counts:
                 aggs.setdefault('sum', []).append(Field(counts))
                 counts = ''
@@ -253,7 +262,6 @@ class Dataset:
         return type(self)(self.apply_list(pa.table(columns), list_))
 
     @doc_field(
-        keys="selected fragments",
         counts="optionally include counts in an aliased column",
         aggregate="scalar aggregation functions",
         filter="selected rows (within fragment)",
@@ -264,7 +272,6 @@ class Dataset:
     def fragments(
         self,
         info: Info,
-        keys: Expression = {},
         counts: str = '',
         aggregate: VectorAggregates = {},
         filter: Expression = {},
@@ -284,7 +291,7 @@ class Dataset:
         for name in schema.names:
             projection.pop(name, None)
         columns = collections.defaultdict(list)
-        for fragment in self.table.get_fragments(filter=keys.to_arrow()):
+        for fragment in self.table.get_fragments():
             row = ds.get_partition_keys(fragment.partition_expression)
             if projection:
                 table = fragment.to_table(filter=filter, columns=projection)

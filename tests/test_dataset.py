@@ -115,8 +115,8 @@ def test_list(dsclient):
 def test_fragments(partclient):
     data = partclient.execute('{ fragments { columns { part { values } } } }')
     assert data == {'fragments': {'columns': {'part': {'values': [0]}}}}
-    data = partclient.execute('{ fragments(keys: {eq: [{name: "part"}, {value: 1}]}) { length } }')
-    assert data == {'fragments': {'length': 0}}
+    data = partclient.execute('{ filter(part: {eq: 1}) { fragments { length } } }')
+    assert data == {'filter': {'fragments': {'length': 0}}}
     data = partclient.execute(
         '{ fragments(counts: "c") { length column(name: "c") { ... on LongColumn { values } } } }'
     )
