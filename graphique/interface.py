@@ -17,7 +17,7 @@ from strawberry.types import Info
 from typing_extensions import Annotated, Self
 from .core import Batch, Column as C, ListChunk, Table as T, sort_key
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
-from .inputs import HashAggregates, ListFunction, Projection, Rank, ScalarAggregate, Sort
+from .inputs import HashAggregates, ListFunction, Projection, Rank, Ranked, ScalarAggregate, Sort
 from .inputs import TDigestAggregate, VarianceAggregate, VectorAggregates, links, provisional
 from .models import Column, doc_field, selections
 from .scalars import Long
@@ -240,7 +240,7 @@ class Dataset:
             table = self.select(info)
         else:  # scan fragments or batches when possible
             if set(by) <= set(T.fragment_keys(self.table)) > set():
-                kwargs = dict(filter=list_.filter, sort=list_.sort)
+                kwargs = dict(filter=list_.filter, sort=list_.sort, rank=list_.rank)
                 table = self.fragments(info, counts, aggregate, **kwargs).table
             else:
                 table = T.map_batch(
@@ -265,7 +265,6 @@ class Dataset:
         counts="optionally include counts in an aliased column",
         aggregate="scalar aggregation functions",
         filter="selected rows (within fragment)",
-        columns="projected columns",
         sort="sort and select rows (within fragments)",
     )
     @no_type_check
@@ -275,8 +274,8 @@ class Dataset:
         counts: str = '',
         aggregate: VectorAggregates = {},
         filter: Expression = {},
-        columns: List[Projection] = [],
         sort: Optional[Sort] = None,
+        rank: Optional[Ranked] = None,
     ) -> Self:
         """Provisional: return table from scanning fragments and grouping by partitions.
 
@@ -284,12 +283,13 @@ class Dataset:
         """
         schema = self.table.partitioning.schema  # requires a Dataset
         filter, aggs = (filter.to_arrow() if filter else None), dict(aggregate)
-        projection = {agg.name: ds.field(agg.name) for value in aggs.values() for agg in value}
+        names = self.references(info, level=1)
+        names.update(agg.name for value in aggs.values() for agg in value)
+        if rank:
+            names.update(dict(map(sort_key, rank.by)))
         if sort:
-            projection.update({name: ds.field(name) for name in dict(map(sort_key, sort.by))})
-        projection.update(self.project(info, columns))
-        for name in schema.names:
-            projection.pop(name, None)
+            names.update(dict(map(sort_key, sort.by)))
+        projection = {name: pc.field(name) for name in names - set(schema.names)}
         columns = collections.defaultdict(list)
         for fragment in self.table.get_fragments():
             row = ds.get_partition_keys(fragment.partition_expression)
@@ -299,9 +299,12 @@ class Dataset:
             elif counts:
                 row[counts] = fragment.count_rows(filter=filter)
             arrays = {name: value for name, value in row.items() if isinstance(value, pa.Array)}
+            batch = pa.RecordBatch.from_pydict(arrays)
+            if rank:
+                batch = T.ranked(batch, rank.max, *rank.by)
             if sort:
-                table = T.sort(pa.table(arrays), *sort.by, length=sort.length)
-                row.update({name: table[name].combine_chunks() for name in table.column_names})
+                batch = T.sort(batch, *sort.by, length=sort.length)
+            row.update({name: batch[name] for name in batch.schema.names})
             for name in row:
                 columns[name].append(row[name])
         for name, values in columns.items():

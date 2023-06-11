@@ -155,6 +155,11 @@ def test_fragments(partclient):
     )
     assert data == {'fragments': {'column': {'values': [{'values': [99950, 99929, 99928]}]}}}
     data = partclient.execute(
+        '''{ group(by: "part", list: {rank: {by: "state"}}) { column(name: "state") {
+        ... on ListColumn { values { length ... on StringColumn { value } } } } } }'''
+    )
+    assert data == {'group': {'column': {'values': [{'length': 273, 'value': 'AK'}]}}}
+    data = partclient.execute(
         '{ group(by: ["part"], aggregate: {max: {name: "zipcode"}}) { row { part zipcode } } }'
     )
     assert data == {'group': {'row': {'part': 0, 'zipcode': 99950}}}
