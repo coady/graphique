@@ -137,18 +137,6 @@ class Cumulative(Field):
 
 
 @strawberry.input
-class Element(Field):
-    index: Long
-
-
-@strawberry.input
-class Slice(Field):
-    start: int = 0
-    stop: Optional[int] = None
-    step: int = 1
-
-
-@strawberry.input
 class Index(Field):
     value: JSON
     start: Long = 0
@@ -245,16 +233,6 @@ class ScalarAggregates(Input):
 
     def keys(self):
         return (key for key in super().keys() if self[key])
-
-
-@strawberry.input
-class VectorAggregates(ScalarAggregates):
-    element: List[Element] = default_field([], description="scalar value at index")
-    slice: List[Slice] = default_field([], description="array slice")
-    unique: List[Field] = default_field([], func=pc.unique)
-    index: List[Index] = default_field([], func=pc.index)
-    mode: List[Mode] = default_field([], func=pc.mode)
-    quantile: List[Quantile] = default_field([], func=pc.quantile)
 
 
 @strawberry.input

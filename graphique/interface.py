@@ -18,7 +18,7 @@ from typing_extensions import Annotated, Self
 from .core import Batch, Column as C, ListChunk, Table as T, sort_key
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
 from .inputs import HashAggregates, ListFunction, Projection, Rank, Ranked, ScalarAggregate, Sort
-from .inputs import TDigestAggregate, VarianceAggregate, VectorAggregates, links, provisional
+from .inputs import TDigestAggregate, VarianceAggregate, links, provisional
 from .models import Column, doc_field, selections
 from .scalars import Long
 
@@ -261,23 +261,18 @@ class Dataset:
             columns.update({name: ListChunk.inner_flatten(*columns[name].chunks) for name in lists})
         return type(self)(self.apply_list(pa.table(columns), list_))
 
-    @doc_field(
-        counts="optionally include counts in an aliased column",
-        aggregate="scalar aggregation functions",
-        filter="selected rows (within fragment)",
-        sort="sort and select rows (within fragments)",
-    )
+    @strawberry.field(deprecation_reason="use `group(by: [<fragment key>, ...])`")
     @no_type_check
     def fragments(
         self,
         info: Info,
         counts: str = '',
-        aggregate: VectorAggregates = {},
+        aggregate: HashAggregates = {},
         filter: Expression = {},
         sort: Optional[Sort] = None,
         rank: Optional[Ranked] = None,
     ) -> Self:
-        """Provisional: return table from scanning fragments and grouping by partitions.
+        """Return table from scanning fragments and grouping by partitions.
 
         Requires a partitioned dataset. Faster and less memory intensive than `group`.
         """
@@ -314,8 +309,6 @@ class Dataset:
                 columns[name] = ListChunk.from_scalars(values)
         columns.update({field.name: pa.array(columns[field.name], field.type) for field in schema})
         return type(self)(pa.table(columns))
-
-    fragments.directives = [provisional()]
 
     @doc_field(
         by="column names",

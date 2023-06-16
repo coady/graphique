@@ -145,11 +145,6 @@ def test_fragments(partclient):
     data = partclient.execute('{ sort(by: "part", length: 1) { row { part } } }')
     assert data == {'sort': {'row': {'part': 0}}}
     data = partclient.execute(
-        '''{ fragments(aggregate: {quantile: {name: "latitude"}}) {
-        column(name: "latitude") { ... on ListColumn { values { ... on FloatColumn { values } } } } } }'''
-    )
-    assert data == {'fragments': {'column': {'values': [{'values': [pytest.approx(39.12055)]}]}}}
-    data = partclient.execute(
         '''{ fragments(sort: {by: "-zipcode", length: 3}) {
         column(name: "zipcode") { ... on ListColumn { values { ... on IntColumn { values } } } } } }'''
     )
