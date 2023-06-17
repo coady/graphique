@@ -13,6 +13,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
+from strawberry import UNSET
 from strawberry.types import Info
 from typing_extensions import Annotated, Self
 from .core import Batch, Column as C, ListChunk, Table as T, sort_key
@@ -207,28 +208,29 @@ class Dataset:
         by="column names",
         counts="optionally include counts in an aliased column",
         aggregate="grouped aggregation functions",
+        filter="filter within list scalars",
+        sort="sort within list scalars",
+        rank="filter by dense rank within list scalars",
     )
+    @no_type_check
     def group(
         self,
         info: Info,
         by: List[str] = [],
         counts: str = '',
-        aggregate: HashAggregates = {},  # type: ignore
-        list_: Annotated[
-            ListFunction,
-            strawberry.argument(
-                name='list',
-                description="provisional: functions for list arrays",
-                directives=[provisional()],
-            ),
-        ] = {},  # type: ignore
+        aggregate: HashAggregates = {},
+        filter: Expression = {},
+        sort: Optional[Sort] = None,
+        rank: Optional[Ranked] = None,
     ) -> Self:
         """Return table grouped by columns, with stable ordering.
 
         Columns which are not aggregated are transformed into list columns.
         See `column`, `aggregate`, and `tables` for further usage of list columns.
+        `filter`, `sort`, and `rank` are equivalent to the functions in `apply(list: ...)`,
+        but memory optimized.
         """
-        scalars, ignore, aggs = set(by), set(), dict(aggregate)  # type: ignore
+        scalars, ignore, aggs = set(by), set(), dict(aggregate)
         for values in aggs.values():
             scalars.update(agg.alias for agg in values)
             ignore.update(agg.name for agg in values if agg.name != agg.alias)
@@ -236,18 +238,19 @@ class Dataset:
         lists |= self.references(info, level=1) & ignore
         flat = isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives
         aggs['list'] = list(map(Field, lists))
+        list_opts = dict(filter=filter, sort=sort or UNSET, rank=rank or UNSET)
+        list_func = ListFunction(**list_opts)
         if flat:
             table = self.select(info)
         else:  # scan fragments or batches when possible
             if set(by) <= set(T.fragment_keys(self.table)) > set():
-                kwargs = dict(filter=list_.filter, sort=list_.sort, rank=list_.rank)
-                table = self.fragments(info, counts, aggregate, **kwargs).table
+                table = self.fragments(info, counts, aggregate, **list_opts).table
             else:
                 table = T.map_batch(
                     self.scanner(info),
-                    lambda b: self.apply_list(T.group(b, *by, counts=counts, **aggs), list_),
+                    lambda b: self.apply_list(T.group(b, *by, counts=counts, **aggs), list_func),
                 )
-            list_.filter = Expression()
+            list_func.filter = Expression()
             lists = {field.name for field in table.schema if C.is_list_type(field)}
             aggs['list'] = list(map(Field, lists))
             if counts:
@@ -259,7 +262,7 @@ class Dataset:
         columns = dict(zip(table.column_names, table))
         if not flat:
             columns.update({name: ListChunk.inner_flatten(*columns[name].chunks) for name in lists})
-        return type(self)(self.apply_list(pa.table(columns), list_))
+        return type(self)(self.apply_list(pa.table(columns), list_func))
 
     @strawberry.field(deprecation_reason="use `group(by: [<fragment key>, ...])`")
     @no_type_check

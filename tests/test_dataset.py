@@ -101,12 +101,12 @@ def test_group(dsclient):
 
 def test_list(dsclient):
     data = dsclient.execute(
-        '''{ group(by: ["state"], list: {sort: {by: "zipcode", length: 1}}) {
+        '''{ group(by: ["state"], sort: {by: "zipcode", length: 1}) {
         tables { length row { state county } } } }'''
     )
     assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'NY', 'county': 'Suffolk'}}
     data = dsclient.execute(
-        '''{ group(by: ["state"], list: {rank: {by: "zipcode"}}) {
+        '''{ group(by: ["state"], rank: {by: "zipcode"}) {
         tables { length row { state county } } } }'''
     )
     assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'NY', 'county': 'Suffolk'}}
@@ -150,7 +150,7 @@ def test_fragments(partclient):
     )
     assert data == {'fragments': {'column': {'values': [{'values': [99950, 99929, 99928]}]}}}
     data = partclient.execute(
-        '''{ group(by: "part", list: {rank: {by: "state"}}) { column(name: "state") {
+        '''{ group(by: "part", rank: {by: "state"}) { column(name: "state") {
         ... on ListColumn { values { length ... on StringColumn { value } } } } } }'''
     )
     assert data == {'group': {'column': {'values': [{'length': 273, 'value': 'AK'}]}}}

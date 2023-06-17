@@ -396,7 +396,7 @@ def test_group(client):
 
 def test_list(client):
     data = client.execute(
-        '''{ group(by: "state", list: {filter: {eq: [{name: "county"}, {name: "city"}]}}) {
+        '''{ group(by: "state", filter: {eq: [{name: "county"}, {name: "city"}]}) {
         aggregate(count: {name: "city"}) { column(name: "city") { ... on LongColumn { values} } } } }'''
     )
     assert data['group']['aggregate']['column']['values'].count(0) == 2
