@@ -548,10 +548,17 @@ class Table(pa.Table):
             values = values.filter(mask)
         return self
 
+    def get_fragments(self) -> Iterator[ds.Fragment]:
+        """Support filtered datasets if it only references partition keys."""
+        expr = self._scan_options.get('filter')
+        if expr is not None:  # raise ValueError if filter references other fields
+            ds.dataset([], schema=self.partitioning.schema).scanner(filter=expr)
+        return self._get_fragments(expr)
+
     def fragment_keys(self) -> list:
-        """Filtered datasets can have partitions, but not fragments."""
+        """Filtered partitioned datasets may not have fragments."""
         try:
-            self.get_fragments()
+            Table.get_fragments(self)
         except (AttributeError, ValueError):
             return []
         return self.partitioning.schema.names
@@ -562,7 +569,9 @@ class Table(pa.Table):
         keys = dict(itertools.takewhile(lambda key: key[0] in schema, map(sort_key, names)))  # type: ignore
         if not keys:
             return None
-        parts = [ds.get_partition_keys(frag.partition_expression) for frag in self.get_fragments()]
+        parts = [
+            ds.get_partition_keys(frag.partition_expression) for frag in Table.get_fragments(self)
+        ]
         table = Table.ranked(pa.Table.from_pylist(parts).select(keys), k, *names[: len(keys)])
         fields = []
         for name, order in keys.items():

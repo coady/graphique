@@ -137,11 +137,6 @@ class Dataset:
                 break
         self = type(self)(table)
         expr = Expression.from_query(**queries)
-        names = {name for name in queries if dict(queries[name])}
-        if set() < names <= set(T.fragment_keys(table)) and isinstance(table, ds.FileSystemDataset):
-            paths = [fragment.path for fragment in table.get_fragments(expr.to_arrow())]
-            kwargs = dict(schema=table.schema, format=table.format, partitioning=table.partitioning)
-            return type(self)(ds.dataset(paths, **kwargs))
         return self if expr.to_arrow() is None else self.scan(info, filter=expr)
 
     @doc_field
@@ -289,7 +284,7 @@ class Dataset:
             names.update(dict(map(sort_key, sort.by)))
         projection = {name: pc.field(name) for name in names - set(schema.names)}
         columns = collections.defaultdict(list)
-        for fragment in self.table.get_fragments():
+        for fragment in T.get_fragments(self.table):
             row = ds.get_partition_keys(fragment.partition_expression)
             if projection:
                 table = fragment.to_table(filter=filter, columns=projection)
