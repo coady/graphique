@@ -364,15 +364,17 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         max="maximum dense rank to select; optimized for == 1 (min or max)",
+        null_placement="where nulls in input should be ranked",
     )
-    def rank(self, info: Info, by: List[str], max: int = 1) -> Self:
+    def rank(self, info: Info, by: List[str], max: int = 1, null_placement: str = 'at_end') -> Self:
         """Return table selected by maximum dense rank."""
+        kwargs = dict(null_placement=null_placement)
         if isinstance(self.table, pa.Table):
             table = self.select(info)
         else:
             expr = T.rank_keys(self.table, max, *by)
-            table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by)
-        return type(self)(T.ranked(table, max, *by))
+            table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by, **kwargs)
+        return type(self)(T.ranked(table, max, *by, **kwargs))
 
     @strawberry.field(deprecation_reason="use `rank(by: [...])`")
     def min(self, info: Info, by: List[str]) -> Self:

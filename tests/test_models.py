@@ -115,6 +115,12 @@ def test_decimal(executor):
         '{ sort(by: "decimal", nullPlacement: "at_start") { columns { decimal { values } } } }'
     )
     assert data == {'sort': {'columns': {'decimal': {'values': [None, '0']}}}}
+    data = executor('{ rank(by: "decimal") { columns { decimal { values } } } }')
+    assert data == {'rank': {'columns': {'decimal': {'values': ['0']}}}}
+    data = executor(
+        '{ rank(by: "-decimal", nullPlacement: "at_start") { columns { decimal { values } } } }'
+    )
+    assert data == {'rank': {'columns': {'decimal': {'values': [None]}}}}
 
 
 def test_numeric(executor):

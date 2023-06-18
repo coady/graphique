@@ -505,7 +505,7 @@ class Table(pa.Table):
             indices: include original indices in the table
         """
         if length == 1 and not indices:
-            return Table.ranked(self, 1, *names)[:1]
+            return Table.ranked(self, 1, *names, null_placement=null_placement)[:1]
         indices_ = Table.sort_indices(self, *names, length=length, null_placement=null_placement)
         table = self.take(indices_)
         if indices:
@@ -525,19 +525,25 @@ class Table(pa.Table):
         table = pa.concat_tables(table for table in tables if table is not None)
         return Table.union(self, Table.from_counts(table, counts))
 
-    def ranked(self, k: int, *names: str) -> Batch:
+    def ranked(self, k: int, *names: str, null_placement: str = 'at_end') -> Batch:
         """Return table filtered by values within dense rank, similar to `select_k_unstable`."""
         if k == 1:  # optimized for min_max
             expr = isinstance(self, pa.Table)
             for name, order in map(sort_key, names):
-                value = (Column.min if order == 'ascending' else Column.max)(self[name])
-                self = self.filter(pc.field(name) == value if expr else pc.equal(self[name], value))
+                func = Column.min if order == 'ascending' else Column.max
+                value = func(self[name], skip_nulls=null_placement == 'at_end')
+                if value is None:
+                    mask = (pc.field(name) if expr else self[name]).is_null()
+                else:
+                    mask = pc.field(name) == value if expr else pc.equal(self[name], value)
+                self = self.filter(mask)
             return self
         values = None
+        kwargs = dict(tiebreaker='dense', null_placement=null_placement)
         for name, order in map(sort_key, names):
             if len(self) <= k:
                 break
-            ranks = pc.rank(Column.sort_values(self[name]), order, tiebreaker='dense')
+            ranks = pc.rank(Column.sort_values(self[name]), order, **kwargs)
             if values is None:  # optimized to sort only once on first iteration
                 values = ranks
             else:
