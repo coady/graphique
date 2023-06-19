@@ -569,21 +569,29 @@ class Table(pa.Table):
             return []
         return self.partitioning.schema.names
 
-    def rank_keys(self, k: int, *names: str) -> Optional[ds.Expression]:
-        """Return expression for partitioned dataset which filters by rank."""
+    def rank_keys(self, k: int, *names: str) -> tuple:
+        """Return expression and unmatched fields for partitioned dataset which filters by rank."""
         schema = set(Table.fragment_keys(self))
         keys = dict(itertools.takewhile(lambda key: key[0] in schema, map(sort_key, names)))  # type: ignore
         if not keys:
-            return None
+            return None, names
         parts = [
             ds.get_partition_keys(frag.partition_expression) for frag in Table.get_fragments(self)
         ]
         table = Table.ranked(pa.Table.from_pylist(parts).select(keys), k, *names[: len(keys)])
-        fields = []
-        for name, order in keys.items():
-            field, col = ds.field(name), table[name]
-            fields.append(field <= pc.max(col) if order == 'ascending' else field >= pc.min(col))
-        return functools.reduce(operator.and_, fields)
+        fields, prefix = [], []  # type: ignore
+        for index, (name, order) in enumerate(keys.items()):
+            expr, field, values = None, ds.field(name), table[name].unique()
+            value = pc.max(values) if order == 'ascending' else pc.min(values)
+            if index == len(keys) - 1:  # last one
+                expr = field <= value if order == 'ascending' else field >= value
+            elif len(values) > 1:
+                expr = field < value if order == 'ascending' else field > value
+            if expr is not None:
+                fields.append(functools.reduce(operator.and_, prefix + [expr]))
+            prefix.append(field == value)
+            table = table.filter(prefix[-1])
+        return functools.reduce(operator.or_, fields), names[len(keys) :]
 
     def flatten(self, indices: str = '') -> Iterator[pa.RecordBatch]:
         """Generate batches with list arrays flattened, optionally with parent indices."""

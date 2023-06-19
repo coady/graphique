@@ -113,51 +113,51 @@ def test_list(dsclient):
 
 
 def test_fragments(partclient):
-    data = partclient.execute('{ fragments { columns { part { values } } } }')
-    assert data == {'fragments': {'columns': {'part': {'values': [0]}}}}
-    data = partclient.execute('{ filter(part: {eq: 1}) { fragments { length } } }')
-    assert data == {'filter': {'fragments': {'length': 0}}}
+    data = partclient.execute('{ fragments { columns { north { values } } } }')
+    assert data == {'fragments': {'columns': {'north': {'values': [0, 0, 1, 1]}}}}
+    data = partclient.execute('{ filter(north: {eq: 1}) { fragments { length } } }')
+    assert data == {'filter': {'fragments': {'length': 2}}}
     data = partclient.execute(
-        '{ fragments(counts: "c") { length column(name: "c") { ... on LongColumn { values } } } }'
+        '{ fragments(counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
     )
-    assert data == {'fragments': {'length': 1, 'column': {'values': [41700]}}}
+    assert data == {'fragments': {'column': {'values': [9301, 11549, 11549, 9301]}}}
     data = partclient.execute(
-        '''{ fragments(filter: {ge: [{name: "state"}, {value: "CA"}]}
+        '''{ fragments(filter: {eq: [{name: "state"}, {value: "CA"}]}
         aggregate: {min: {name: "state"}}) { columns { state { values } } } }'''
     )
-    assert data == {'fragments': {'columns': {'state': {'values': ['CA']}}}}
+    assert data == {'fragments': {'columns': {'state': {'values': [None, 'CA'] * 2}}}}
     data = partclient.execute('{ fragments { column(name: "state") { type length } } }')
-    assert data == {'fragments': {'column': {'type': 'large_list<item: string>', 'length': 1}}}
+    assert data == {'fragments': {'column': {'type': 'large_list<item: string>', 'length': 4}}}
     data = partclient.execute(
         '''{ fragments(counts: "c", filter: {eq: [{name: "state"}, {value: "CA"}]}) {
         column(name: "c") { ... on LongColumn { values } } } }'''
     )
-    assert data == {'fragments': {'column': {'values': [2647]}}}
+    assert data == {'fragments': {'column': {'values': [0, 2376, 0, 271]}}}
     data = partclient.execute(
         '''{ fragments(aggregate: {min: {alias: "south", name: "latitude"}}) {
-        column(name: "south") { ... on FloatColumn { values } } } }'''
+        column(name: "south") { ... on FloatColumn { min } } } }'''
     )
-    assert data == {'fragments': {'column': {'values': [pytest.approx(17.96333)]}}}
-    data = partclient.execute('{ rank(by: "part") { row { part } } }')
-    assert data == {'rank': {'row': {'part': 0}}}
-    data = partclient.execute('{ rank(by: ["-part", "-zipcode"]) { row { zipcode } } }')
+    assert data == {'fragments': {'column': {'min': pytest.approx(17.96333)}}}
+    data = partclient.execute('{ rank(by: "north") { row { north } } }')
+    assert data == {'rank': {'row': {'north': 0}}}
+    data = partclient.execute('{ rank(by: ["-north", "-zipcode"]) { row { zipcode } } }')
     assert data == {'rank': {'row': {'zipcode': 99950}}}
-    data = partclient.execute('{ sort(by: "part", length: 1) { row { part } } }')
-    assert data == {'sort': {'row': {'part': 0}}}
+    data = partclient.execute('{ sort(by: "north", length: 1) { row { north } } }')
+    assert data == {'sort': {'row': {'north': 0}}}
     data = partclient.execute(
         '''{ fragments(sort: {by: "-zipcode", length: 3}) {
-        column(name: "zipcode") { ... on ListColumn { values { ... on IntColumn { values } } } } } }'''
+        column(name: "zipcode") { ... on ListColumn { value(index: 3) { ... on IntColumn { values } } } } } }'''
     )
-    assert data == {'fragments': {'column': {'values': [{'values': [99950, 99929, 99928]}]}}}
+    assert data == {'fragments': {'column': {'value': {'values': [99950, 99929, 99928]}}}}
     data = partclient.execute(
-        '''{ group(by: "part", rank: {by: "state"}) { column(name: "state") {
-        ... on ListColumn { values { length ... on StringColumn { value } } } } } }'''
+        '''{ group(by: "north", rank: {by: "state"}) { column(name: "state") {
+        ... on ListColumn { value(index: 1) { length ... on StringColumn { value } } } } } }'''
     )
-    assert data == {'group': {'column': {'values': [{'length': 273, 'value': 'AK'}]}}}
+    assert data == {'group': {'column': {'value': {'length': 273, 'value': 'AK'}}}}
     data = partclient.execute(
-        '{ group(by: ["part"], aggregate: {max: {name: "zipcode"}}) { row { part zipcode } } }'
+        '{ group(by: ["north"], aggregate: {max: {name: "zipcode"}}) { row { north zipcode } } }'
     )
-    assert data == {'group': {'row': {'part': 0, 'zipcode': 99950}}}
+    assert data == {'group': {'row': {'north': 0, 'zipcode': 96898}}}
     data = partclient.execute(
         '{ group(by: [], aggregate: {min: {name: "state"}}) { length row { state } } }'
     )
@@ -215,13 +215,27 @@ def test_scan(dsclient):
     assert data == {'scan': {'length': 2647}}
 
 
-def test_rank(dsclient):
-    data = dsclient.execute('{ rank(by: ["state"]) { length row { state } } }')
+def test_rank(partclient):
+    data = partclient.execute('{ rank(by: ["state"]) { length row { state } } }')
     assert data == {'rank': {'length': 273, 'row': {'state': 'AK'}}}
-    data = dsclient.execute('{ rank(by: ["-state", "-county"]) { length row { state county } } }')
+    data = partclient.execute('{ rank(by: ["-state", "-county"]) { length row { state county } } }')
     assert data == {'rank': {'length': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
-    data = dsclient.execute('{ sort(by: "state", length: 3) { columns { state { values } } } }')
+    data = partclient.execute('{ sort(by: "state", length: 3) { columns { state { values } } } }')
     assert data == {'sort': {'columns': {'state': {'values': ['AK'] * 3}}}}
+    data = partclient.execute('{ rank(by: "north") { length } }')
+    assert data == {'rank': {'length': 20850}}
+    data = partclient.execute('{ rank(by: "north", max: 2) { length } }')
+    assert data == {'rank': {'length': 41700}}
+    data = partclient.execute('{ rank(by: ["north", "west"]) { length } }')
+    assert data == {'rank': {'length': 9301}}
+    data = partclient.execute('{ rank(by: ["north", "west"], max: 2) { length } }')
+    assert data == {'rank': {'length': 20850}}
+    data = partclient.execute('{ rank(by: ["north", "west"], max: 3) { length } }')
+    assert data == {'rank': {'length': 32399}}
+    data = partclient.execute(
+        '{ rank(by: ["north", "state"], max: 2) { columns { state { unique { values } } } } }'
+    )
+    assert data == {'rank': {'columns': {'state': {'unique': {'values': ['AL', 'AR']}}}}}
 
 
 def test_root(fedclient):

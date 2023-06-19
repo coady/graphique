@@ -357,8 +357,13 @@ class Dataset:
         if isinstance(self.table, pa.Table) or length is None:
             table = self.select(info)
         else:
-            expr = T.rank_keys(self.table, length, *by)
-            table = T.map_batch(self.scanner(info, filter=expr), T.sort, *by, **kwargs)
+            expr, names = T.rank_keys(self.table, length, *by)
+            if length == 1:
+                by = names
+            scanner = self.scanner(info, filter=expr)
+            if not by:
+                return type(self)(scanner.head(length))
+            table = T.map_batch(scanner, T.sort, *by, **kwargs)
         return type(self)(T.sort(table, *by, **kwargs))  # type: ignore
 
     @doc_field(
@@ -372,7 +377,11 @@ class Dataset:
         if isinstance(self.table, pa.Table):
             table = self.select(info)
         else:
-            expr = T.rank_keys(self.table, max, *by)
+            expr, names = T.rank_keys(self.table, max, *by)
+            if not names:
+                return type(self)(self.table.filter(expr))
+            if max == 1:
+                by = names
             table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by, **kwargs)
         return type(self)(T.ranked(table, max, *by, **kwargs))
 
