@@ -32,12 +32,12 @@ class Agg:
         'count': pc.CountOptions,
         'count_distinct': pc.CountOptions,
         'distinct': pc.CountOptions,
-        'list': pc.ElementWiseAggregateOptions,
+        'list': type(None),
         'max': pc.ScalarAggregateOptions,
         'mean': pc.ScalarAggregateOptions,
         'min': pc.ScalarAggregateOptions,
         'min_max': pc.ScalarAggregateOptions,
-        'one': pc.ScalarAggregateOptions,  # no options
+        'one': type(None),
         'product': pc.ScalarAggregateOptions,
         'stddev': pc.VarianceOptions,
         'sum': pc.ScalarAggregateOptions,
@@ -56,16 +56,16 @@ class Agg:
         options = self.option_map[func](**self.options)
         return self.name, func, options
 
-    @classmethod
-    def getfunc(cls, name: str) -> Callable:
-        """Return callable with named parameters for keyword arguments."""
-        if name in ('first', 'last', 'one'):
-            return operator.itemgetter(-1 if name == 'last' else 0)
-        if name == 'element':
-            return lambda array, index: array[index]
-        if name == 'slice':
-            return lambda array, start, stop, step: array[start:stop:step]
-        return getattr(pc, name)
+    first = one = operator.itemgetter(0)
+    last = operator.itemgetter(-1)
+    list = staticmethod(lambda array: array)
+
+    @staticmethod
+    def distinct(array: Array, mode: str = 'only_valid') -> pa.Array:
+        values = pc.unique(array)
+        if not values.null_count or mode == 'all':
+            return values
+        return values.drop_null() if mode == 'only_valid' else pa.array([None], array.type)
 
 
 @dataclass(frozen=True)
@@ -445,11 +445,11 @@ class Table(pa.Table):
             row[counts] = len(self)
         aliases, args = {}, []  # type: ignore
         for key in funcs:
-            if key in Agg.option_map:
+            if hasattr(pc, key):
                 aliases.update({f'{agg.name}_{key}': agg.alias for agg in funcs[key]})
                 args += (agg.astuple(key) for agg in funcs[key])
             else:
-                func = Agg.getfunc(key)
+                func = getattr(Agg, key)
                 row.update({agg.alias: func(self[agg.name], **agg.options) for agg in funcs[key]})
         if args:
             table = self.group_by([]).aggregate(args)

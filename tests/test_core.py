@@ -122,17 +122,18 @@ def test_aggregate(table):
     row = T.aggregate(table, min=[Agg('state')])
     assert row['state'].as_py() == 'AK'
     assert row['zipcode'] == table['zipcode'].combine_chunks()
-    row = T.aggregate(table, counts='counts', quantile=[Agg('zipcode')])
+    row = T.aggregate(table, counts='counts')
     assert row['counts'] == 41700
-    assert row['zipcode'].to_pylist() == [48817.5]
-    row = T.aggregate(table, element=[Agg('zipcode', index=-1)])
-    assert row['zipcode'].as_py() == 99950
-    row = T.aggregate(table, slice=[Agg('zipcode', start=-3, stop=None, step=1)])
-    assert row['zipcode'].to_pylist() == [99928, 99929, 99950]
     row = T.aggregate(table, first=[Agg('zipcode')])
     assert row['zipcode'].as_py() == 501
     row = T.aggregate(table, last=[Agg('zipcode')])
     assert row['zipcode'].as_py() == 99950
+    nulls = pa.table({'': [0, None, 0]})
+    row = T.aggregate(nulls, list=[Agg('')])
+    assert row[''].to_pylist() == [0, None, 0]
+    row = T.aggregate(nulls, distinct=[Agg('', 'd1'), Agg('', 'd2', mode='all')])
+    assert row['d1'].to_pylist() == [0]
+    assert row['d2'].to_pylist() == [0, None]
 
 
 def test_partition(table):
