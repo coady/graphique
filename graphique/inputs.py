@@ -427,7 +427,7 @@ class Fields:
 
     def to_fields(self) -> Iterable[ds.Expression]:
         funcs, arguments, options = [], [], {}
-        for field in self._type_definition.fields:  # type: ignore
+        for field in self.__strawberry_definition__.fields:  # type: ignore
             value = getattr(self, field.name)
             if isinstance(value, Expression):
                 value = [value]

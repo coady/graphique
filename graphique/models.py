@@ -70,7 +70,7 @@ class Column:
         # strawberry#1921: scalar python names are prepended to column name
         self = cls.registry[scalar] = StrawberryAnnotation(cls[wrapper or scalar]).resolve()
         for name in attrs:
-            setattr(self._type_definition, name, attrs[name])
+            setattr(self.__strawberry_definition__, name, attrs[name])
         return cls
 
     @strawberry.field(description=links.type)
@@ -142,7 +142,7 @@ class OrdinalColumn(NominalColumn[T]):
         super().__init__(array)
         self.min_max = functools.lru_cache(maxsize=None)(functools.partial(C.min_max, array))
 
-    @strawberry.field(description=Set._type_definition.description)  # type: ignore
+    @strawberry.field(description=Set.__strawberry_definition__.description)  # type: ignore
     def unique(self, info: Info) -> Set[T]:
         if 'counts' in selections(*info.selected_fields):
             return Set(*self.array.value_counts().flatten())
