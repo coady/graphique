@@ -6,11 +6,11 @@ from .conftest import load
 
 
 def test_extensions():
-    ext = middleware.MetricsExtension(execution_context=None)
+    context = strawberry.types.ExecutionContext(None, None, context={})
+    ext = middleware.MetricsExtension(execution_context=context)
     for name in ('operation', 'parse', 'validate'):
         assert list(getattr(ext, 'on_' + name)()) == [None]
     assert set(ext.get_results()['metrics']) == {'duration', 'execution'}
-    context = strawberry.types.ExecutionContext(None, None, context={})
     ext = middleware.ContextExtension(execution_context=context)
     assert ext.get_results() == {}
 

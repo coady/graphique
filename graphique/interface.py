@@ -84,7 +84,9 @@ class Dataset:
         if isinstance(self.table, pa.Table):
             return self.table.select(self.references(info))
         scanner = self.scanner(info)
-        return scanner.to_table() if length is None else scanner.head(length)
+        if length is None:
+            return self.add_metric(info, scanner.to_table(), mode='read')
+        return self.add_metric(info, scanner.head(length), mode='head')
 
     @classmethod
     @no_type_check
@@ -163,6 +165,13 @@ class Dataset:
     def add_context(info: Info, key: str, **data):
         """Add data to context with path info."""
         info.context.setdefault(key, []).append(dict(data, path=get_path_from_info(info)))
+
+    @staticmethod
+    def add_metric(info: Info, table: pa.Table, **data):
+        """Add memory usage and other metrics to context with path info."""
+        path = tuple(get_path_from_info(info))
+        info.context.setdefault('metrics', {})[path] = dict(data, memory=T.size(table))
+        return table
 
     @doc_field
     def length(self) -> Long:
@@ -258,6 +267,7 @@ class Dataset:
                     self.scanner(info),
                     lambda b: self.apply_list(T.group(b, *by, counts=counts, **aggs), list_func),
                 )
+                self.add_metric(info, table, mode='batch')
             list_func.filter = Expression()
             aggs.setdefault('sum', []).extend(Field(agg.alias) for agg in aggs.pop('count', []))
             if counts:
@@ -324,7 +334,7 @@ class Dataset:
             elif isinstance(values[0], pa.Array):
                 columns[name] = ListChunk.from_scalars(values)
         columns.update({field.name: pa.array(columns[field.name], field.type) for field in schema})
-        return type(self)(pa.table(columns))
+        return type(self)(self.add_metric(info, pa.table(columns), mode='fragment'))
 
     @doc_field(
         by="column names",
@@ -380,8 +390,9 @@ class Dataset:
                 by = names
             scanner = self.scanner(info, filter=expr)
             if not by:
-                return type(self)(scanner.head(length))
+                return type(self)(self.add_metric(info, scanner.head(length), mode='head'))
             table = T.map_batch(scanner, T.sort, *by, **kwargs)
+            self.add_metric(info, table, mode='batch')
         return type(self)(T.sort(table, *by, **kwargs))  # type: ignore
 
     @doc_field(
@@ -401,6 +412,7 @@ class Dataset:
             if max == 1:
                 by = names
             table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by, **kwargs)
+            self.add_metric(info, table, mode='batch')
         return type(self)(T.ranked(table, max, *by, **kwargs))
 
     @strawberry.field(deprecation_reason="use `rank(by: [...])`")
@@ -445,6 +457,7 @@ class Dataset:
         which do not require loading.
         """
         table = T.map_batch(self.scanner(info), self.apply_list, list_)
+        self.add_metric(info, table, mode='batch')
         columns = {}
         args = cumulative_sum, fill_null_backward, fill_null_forward, rank
         funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, pc.rank
@@ -525,12 +538,14 @@ class Dataset:
             raise ValueError(f"projected columns need a name or alias: {projection['']}")
         return projection
 
-    @staticmethod
-    def oneshot(info: Info, scanner: ds.Scanner) -> Union[ds.Scanner, pa.Table]:
+    @classmethod
+    def oneshot(cls, info: Info, scanner: ds.Scanner) -> Union[ds.Scanner, pa.Table]:
         """Load oneshot scanner if needed."""
         selected = selections(*info.selected_fields)
         selected['type'] = selected['schema'] = 0
-        return scanner.to_table() if sum(selected.values()) > 1 else scanner
+        if sum(selected.values()) > 1:
+            return cls.add_metric(info, scanner.to_table(), mode='oneshot')
+        return scanner
 
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(
@@ -586,4 +601,5 @@ class Dataset:
     @doc_field
     def take(self, info: Info, indices: List[Long]) -> Self:
         """Select rows from indices."""
-        return type(self)(self.scanner(info).take(indices))
+        table = self.scanner(info).take(indices)
+        return type(self)(self.add_metric(info, table, mode='take'))

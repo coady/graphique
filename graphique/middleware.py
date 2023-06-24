@@ -21,9 +21,12 @@ class MetricsExtension(tracing.ApolloTracingExtension):
 
     def get_results(self) -> dict:
         tracing = super().get_results()['tracing']
+        metrics = self.execution_context.context.get('metrics', {})
         resolvers = []
         for resolver in tracing['execution']['resolvers']:  # pragma: no cover
-            resolvers.append({'path': resolver['path'], 'duration': self.duration(resolver)})
+            path = tuple(resolver['path'])
+            resolvers.append({'path': path, 'duration': self.duration(resolver)})
+            resolvers[-1].update(metrics.get(path, {}))
         metrics = {'duration': self.duration(tracing), 'execution': {'resolvers': resolvers}}
         return {'metrics': metrics}
 
