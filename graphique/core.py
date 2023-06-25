@@ -46,6 +46,7 @@ class Agg:
     }
 
     associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
+    associatives |= {'count', 'distinct', 'list'}  # transformed to be associative
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -440,9 +441,7 @@ class Table(pa.Table):
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
         """Return aggregated scalars as a row of data."""
-        row = {name: self[name] for name in self.column_names}
-        if counts:
-            row[counts] = len(self)
+        row = {counts: len(self)} if counts else {}
         aliases, args = {}, []  # type: ignore
         for key in funcs:
             if hasattr(pc, key):

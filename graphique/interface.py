@@ -220,25 +220,29 @@ class Dataset:
     ) -> Self:
         """Return table grouped by columns, with stable ordering.
 
-        Columns which are not aggregated are transformed into list columns.
         See `column`, `aggregate`, and `tables` for further usage of list columns.
         `filter`, `sort`, and `rank` are equivalent to the functions in `apply(list: ...)`,
         but memory optimized.
+
+        Deprecated: columns which are not aggregated are transformed into list columns.
+        Use the explicit `list` input instead, which also supports aliasing.
         """
-        scalars, ignore, aggs = set(by), set(), dict(aggregate)
+        scalars, refs, aggs = set(by), set(), dict(aggregate)
         for values in aggs.values():
             scalars.update(agg.alias for agg in values)
-            ignore.update(agg.name for agg in values if agg.name != agg.alias)
-        lists = self.references(info) - scalars - ignore - {counts}
-        lists |= self.references(info, level=1) & ignore
+            refs.update(agg.name for agg in values)
         flat = isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives
-        aggs['list'] = list(map(Field, lists))
+        if not aggs.setdefault('list', []):
+            aggs['list'] += map(Field, self.references(info, level=1) - scalars - {counts})
+            aggregate.list += aggs['list']  # only needed for fragments
+        distincts = []
         list_opts = dict(filter=filter, sort=sort or UNSET, rank=rank or UNSET)
         list_func = ListFunction(**list_opts)
+        fragments = set(T.fragment_keys(self.table))
         if flat:
             table = self.select(info)
         else:  # scan fragments or batches when possible
-            if set(by) <= set(T.fragment_keys(self.table)) > set():
+            if fragments and set(by) <= fragments and fragments.isdisjoint(refs):
                 table = self.fragments(info, counts, aggregate, **list_opts).table
             else:
                 table = T.map_batch(
@@ -246,17 +250,22 @@ class Dataset:
                     lambda b: self.apply_list(T.group(b, *by, counts=counts, **aggs), list_func),
                 )
             list_func.filter = Expression()
-            lists = {field.name for field in table.schema if C.is_list_type(field)}
-            aggs['list'] = list(map(Field, lists))
+            aggs.setdefault('sum', []).extend(Field(agg.alias) for agg in aggs.pop('count', []))
             if counts:
-                aggs.setdefault('sum', []).append(Field(counts))
+                aggs['sum'].append(Field(counts))
                 counts = ''
+            distincts = aggs.pop('distinct', [])
+            aggs['list'] += (Field(agg.alias) for agg in distincts)
             for agg in itertools.chain(*aggs.values()):
                 agg.name = agg.alias
         table = T.group(table, *by, counts=counts, **aggs)
         columns = dict(zip(table.column_names, table))
         if not flat:
-            columns.update({name: ListChunk.inner_flatten(*columns[name].chunks) for name in lists})
+            for agg in aggs['list']:
+                columns[agg.name] = ListChunk.inner_flatten(*columns[agg.name].chunks)
+            for agg in distincts:
+                column = columns[agg.name]
+                columns[agg.name] = ListChunk.map_list(column, agg.distinct, **agg.options)
         return type(self)(self.apply_list(pa.table(columns), list_func))
 
     @strawberry.field(deprecation_reason="use `group(by: [<fragment key>, ...])`")

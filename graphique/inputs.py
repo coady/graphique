@@ -242,6 +242,7 @@ class HashAggregates(ScalarAggregates):
     )
     first: List[Field] = default_field([], func=ListChunk.first)
     last: List[Field] = default_field([], func=ListChunk.last)
+    list: List[Field] = default_field([], description="all values within each scalar")
     one: List[Field] = default_field([], description="arbitrary value within each scalar")
 
 

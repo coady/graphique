@@ -119,7 +119,7 @@ def test_aggregate(table):
     )
     assert groups['longitude'][0].as_py() == pytest.approx(-74.25370)
     assert groups['latitude'][0].as_py() == [pytest.approx(42.34672)]
-    row = T.aggregate(table, min=[Agg('state')])
+    row = T.aggregate(table, min=[Agg('state')], list=[Agg('zipcode')])
     assert row['state'].as_py() == 'AK'
     assert row['zipcode'] == table['zipcode'].combine_chunks()
     row = T.aggregate(table, counts='counts')

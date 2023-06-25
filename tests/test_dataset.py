@@ -99,17 +99,29 @@ def test_group(dsclient):
     assert data == {'group': {'column': {'values': ['AK']}}}
 
 
-def test_list(dsclient):
-    data = dsclient.execute(
-        '''{ group(by: ["state"], sort: {by: "zipcode", length: 1}) {
-        tables { length row { state county } } } }'''
+def test_list(partclient):
+    data = partclient.execute(
+        '''{ group(by: ["state"], aggregate: {list: [{name: "county"}, {name: "zipcode"}]},
+        sort: {by: "zipcode", length: 1}) { tables { length row { state county } } } }'''
     )
-    assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'NY', 'county': 'Suffolk'}}
-    data = dsclient.execute(
-        '''{ group(by: ["state"], rank: {by: "zipcode"}) {
-        tables { length row { state county } } } }'''
+    assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'PR', 'county': 'Adjuntas'}}
+    data = partclient.execute(
+        '''{ group(by: ["state"], aggregate: {list: [{name: "county"}, {name: "zipcode"}]},
+        rank: {by: "zipcode"}) { tables { length row { state county } } } }'''
     )
-    assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'NY', 'county': 'Suffolk'}}
+    assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'PR', 'county': 'Adjuntas'}}
+    data = partclient.execute(
+        '''{ group(by: "state", aggregate: {distinct: {name: "county"}}) {
+        tables { row { state } columns { county { length } } } } }'''
+    )
+    table = data['group']['tables'][0]
+    assert table == {'row': {'state': 'PR'}, 'columns': {'county': {'length': 78}}}
+    data = partclient.execute(
+        '''{ group(by: "north", aggregate: {list: {name: "west"}, distinct: {name: "county"}}) {
+        tables { row { north } columns { county { length } } } } }'''
+    )
+    table = data['group']['tables'][0]
+    assert table == {'row': {'north': 0}, 'columns': {'county': {'length': 1242}}}
 
 
 def test_fragments(partclient):
@@ -126,8 +138,6 @@ def test_fragments(partclient):
         aggregate: {min: {name: "state"}}) { columns { state { values } } } }'''
     )
     assert data == {'fragments': {'columns': {'state': {'values': [None, 'CA'] * 2}}}}
-    data = partclient.execute('{ fragments { column(name: "state") { type length } } }')
-    assert data == {'fragments': {'column': {'type': 'large_list<item: string>', 'length': 4}}}
     data = partclient.execute(
         '''{ fragments(counts: "c", filter: {eq: [{name: "state"}, {value: "CA"}]}) {
         column(name: "c") { ... on LongColumn { values } } } }'''
@@ -145,10 +155,10 @@ def test_fragments(partclient):
     data = partclient.execute('{ sort(by: "north", length: 1) { row { north } } }')
     assert data == {'sort': {'row': {'north': 0}}}
     data = partclient.execute(
-        '''{ fragments(sort: {by: "-zipcode", length: 3}) {
+        '''{ group(by: ["north", "west"], sort: {by: "-zipcode", length: 3}) {
         column(name: "zipcode") { ... on ListColumn { value(index: 3) { ... on IntColumn { values } } } } } }'''
     )
-    assert data == {'fragments': {'column': {'value': {'values': [99950, 99929, 99928]}}}}
+    assert data == {'group': {'column': {'value': {'values': [99950, 99929, 99928]}}}}
     data = partclient.execute(
         '''{ group(by: "north", rank: {by: "state"}) { column(name: "state") {
         ... on ListColumn { value(index: 1) { length ... on StringColumn { value } } } } } }'''
