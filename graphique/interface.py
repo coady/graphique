@@ -14,6 +14,7 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import UNSET
+from strawberry.extensions.utils import get_path_from_info
 from strawberry.types import Info
 from typing_extensions import Annotated, Self
 from .core import Batch, Column as C, ListChunk, Table as T, sort_key
@@ -158,6 +159,11 @@ class Dataset:
             index=[name for name in index if isinstance(name, str)],
         )  # type: ignore
 
+    @staticmethod
+    def add_context(info: Info, key: str, **data):
+        """Add data to context with path info."""
+        info.context.setdefault(key, []).append(dict(data, path=get_path_from_info(info)))
+
     @doc_field
     def length(self) -> Long:
         """number of rows"""
@@ -235,6 +241,9 @@ class Dataset:
         if not aggs.setdefault('list', []):
             aggs['list'] += map(Field, self.references(info, level=1) - scalars - {counts})
             aggregate.list += aggs['list']  # only needed for fragments
+            if aggs['list']:
+                reason = "specify list aggregations explicitly"
+                self.add_context(info, 'deprecations', reason=reason)
         distincts = []
         list_opts = dict(filter=filter, sort=sort or UNSET, rank=rank or UNSET)
         list_func = ListFunction(**list_opts)

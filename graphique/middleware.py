@@ -1,11 +1,12 @@
 """
 ASGI GraphQL utilities.
 """
-from datetime import datetime
+from datetime import timedelta
 from typing import Iterable, Mapping, Optional
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import UNSET
+from strawberry.extensions import tracing
 from strawberry.utils.str_converters import to_camel_case
 from strawberry.types import Info
 from .core import Column as C
@@ -15,12 +16,30 @@ from .models import Column, doc_field
 from .scalars import Long, scalar_map, type_map
 
 
-class TimingExtension(strawberry.extensions.SchemaExtension):
-    def on_operation(self):
-        start = datetime.now()
-        yield
-        end = datetime.now()
-        print(f"[{end.replace(microsecond=0)}]: {end - start}")
+class MetricsExtension(tracing.ApolloTracingExtension):
+    """Human-readable metrics from apollo tracing."""
+
+    def get_results(self) -> dict:
+        tracing = super().get_results()['tracing']
+        resolvers = []
+        for resolver in tracing['execution']['resolvers']:  # pragma: no cover
+            resolvers.append({'path': resolver['path'], 'duration': self.duration(resolver)})
+        metrics = {'duration': self.duration(tracing), 'execution': {'resolvers': resolvers}}
+        return {'metrics': metrics}
+
+    @staticmethod
+    def duration(data: dict) -> Optional[str]:
+        return data['duration'] and str(timedelta(microseconds=data['duration'] / 1e3))
+
+
+class ContextExtension(strawberry.extensions.SchemaExtension):
+    """Adds registered context keys to extensions."""
+
+    keys = ('deprecations',)
+
+    def get_results(self) -> dict:
+        context = self.execution_context.context
+        return {key: context[key] for key in self.keys if key in context}
 
 
 class GraphQL(strawberry.asgi.GraphQL):
@@ -29,14 +48,14 @@ class GraphQL(strawberry.asgi.GraphQL):
     Args:
         root: root dataset to attach as the Query type
         debug: enable timing extension
-        extensions: schema extensions
         **kwargs: additional `asgi.GraphQL` options
     """
 
     options = dict(types=Column.registry.values(), scalar_overrides=scalar_map)
+    extensions = ContextExtension, MetricsExtension
 
-    def __init__(self, root: Root, debug: bool = False, extensions: list = [], **kwargs):
-        options = dict(self.options, extensions=extensions + [TimingExtension][: bool(debug)])
+    def __init__(self, root: Root, debug: bool = False, **kwargs):
+        options = dict(self.options, extensions=self.extensions if debug else [])
         if type(root).__name__ == 'Query':
             self.root_value = root
             options['enable_federation_2'] = True  # type: ignore

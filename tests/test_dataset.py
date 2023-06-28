@@ -1,13 +1,18 @@
 import asyncio
 import pytest
+import strawberry
 from graphique import middleware
 from .conftest import load
 
 
-def test_extension(capsys):
-    ext = middleware.TimingExtension(execution_context=None)
-    assert list(ext.on_operation()) == [None]
-    assert capsys.readouterr().out.startswith('[')
+def test_extensions():
+    ext = middleware.MetricsExtension(execution_context=None)
+    for name in ('operation', 'parse', 'validate'):
+        assert list(getattr(ext, 'on_' + name)()) == [None]
+    assert set(ext.get_results()['metrics']) == {'duration', 'execution'}
+    context = strawberry.types.ExecutionContext(None, None, context={})
+    ext = middleware.ContextExtension(execution_context=context)
+    assert ext.get_results() == {}
 
 
 def test_filter(dsclient):
