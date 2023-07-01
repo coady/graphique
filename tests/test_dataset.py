@@ -177,6 +177,15 @@ def test_fragments(partclient):
         '{ group(by: [], aggregate: {min: {name: "state"}}) { length row { state } } }'
     )
     assert data == {'group': {'length': 1, 'row': {'state': 'AK'}}}
+    data = partclient.execute(
+        '{ group(by: ["north", "west"], aggregate: {mean: {name: "zipcode"}}) { length } }'
+    )
+    assert data == {'group': {'length': 4}}
+    data = partclient.execute(
+        '''{ group(by: "north", aggregate: {countDistinct: {name: "west"}}) { 
+        column(name: "west") { ... on LongColumn { values } } } }'''
+    )
+    assert data == {'group': {'column': {'values': [2, 2]}}}
 
 
 def test_schema(dsclient):

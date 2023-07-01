@@ -243,20 +243,21 @@ class Dataset:
         Use the explicit `list` input instead, which also supports aliasing.
         """
         scalars, refs, aggs = set(by), set(), dict(aggregate)
-        for values in aggs.values():
+        for func, values in aggs.items():
             scalars.update(agg.alias for agg in values)
-            refs.update(agg.name for agg in values)
+            if func not in Field.fragmented:
+                refs.update(agg.name for agg in values)
         flat = isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives
-        if not aggs.setdefault('list', []):
+        if not aggs.setdefault('list', aggregate.list):
             aggs['list'] += map(Field, self.references(info, level=1) - scalars - {counts})
-            aggregate.list += aggs['list']  # only needed for fragments
             if aggs['list']:
                 reason = "specify list aggregations explicitly"
                 self.add_context(info, 'deprecations', reason=reason)
-        distincts = []
         list_opts = dict(filter=filter, sort=sort or UNSET, rank=rank or UNSET)
         list_func = ListFunction(**list_opts)
         fragments = set(T.fragment_keys(self.table))
+        if fragments and set(by) == fragments:
+            return self.fragments(info, counts, aggregate, **list_opts)
         if flat:
             table = self.select(info)
         else:  # scan fragments or batches when possible
@@ -273,16 +274,17 @@ class Dataset:
             if counts:
                 aggs['sum'].append(Field(counts))
                 counts = ''
-            distincts = aggs.pop('distinct', [])
-            aggs['list'] += (Field(agg.alias) for agg in distincts)
+            aggs['list'] += (Field(agg.alias) for agg in aggs.pop('distinct', []))
             for agg in itertools.chain(*aggs.values()):
                 agg.name = agg.alias
         table = T.group(table, *by, counts=counts, **aggs)
         columns = dict(zip(table.column_names, table))
         if not flat:
             for agg in aggs['list']:
-                columns[agg.name] = ListChunk.inner_flatten(*columns[agg.name].chunks)
-            for agg in distincts:
+                (array,) = columns[agg.name].chunks
+                if C.is_list_type(array.values):  # fragment keys are already flat
+                    columns[agg.name] = ListChunk.inner_flatten(array)
+            for agg in aggregate.distinct:
                 column = columns[agg.name]
                 columns[agg.name] = ListChunk.map_list(column, agg.distinct, **agg.options)
         return type(self)(self.apply_list(pa.table(columns), list_func))
@@ -305,6 +307,8 @@ class Dataset:
         schema = self.table.partitioning.schema  # requires a Dataset
         filter, aggs = (filter.to_arrow() if filter else None), dict(aggregate)
         names = self.references(info, level=1)
+        for func in Field.fragmented & set(aggs):
+            aggs[func] = [agg for agg in aggs[func] if agg.name not in schema.names]
         names.update(agg.name for value in aggs.values() for agg in value)
         if rank:
             names.update(dict(map(sort_key, rank.by)))
