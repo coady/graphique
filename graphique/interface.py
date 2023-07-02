@@ -389,9 +389,7 @@ class Dataset:
         if isinstance(self.table, pa.Table) or length is None:
             table = self.select(info)
         else:
-            expr, names = T.rank_keys(self.table, length, *by)
-            if length == 1:
-                by = names
+            expr, by = T.rank_keys(self.table, length, *by, dense=False)
             scanner = self.scanner(info, filter=expr)
             if not by:
                 return type(self)(self.add_metric(info, scanner.head(length), mode='head'))
@@ -410,11 +408,9 @@ class Dataset:
         if isinstance(self.table, pa.Table):
             table = self.select(info)
         else:
-            expr, names = T.rank_keys(self.table, max, *by)
-            if not names:
+            expr, by = T.rank_keys(self.table, max, *by)
+            if not by:
                 return type(self)(self.table.filter(expr))
-            if max == 1:
-                by = names
             table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by, **kwargs)
             self.add_metric(info, table, mode='batch')
         return type(self)(T.ranked(table, max, *by, **kwargs))

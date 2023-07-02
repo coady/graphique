@@ -484,7 +484,7 @@ class Table(pa.Table):
     ) -> pa.Array:
         """Return indices which would sort the table by columns, optimized for fixed length."""
         func = functools.partial(pc.sort_indices, null_placement=null_placement)
-        if length is not None:
+        if length is not None and length < len(self):
             func = functools.partial(pc.select_k_unstable, k=length)
         keys = dict(map(sort_key, names))  # type: ignore
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
@@ -569,16 +569,34 @@ class Table(pa.Table):
             return []
         return self.partitioning.schema.names
 
-    def rank_keys(self, k: int, *names: str) -> tuple:
-        """Return expression and unmatched fields for partitioned dataset which filters by rank."""
+    def rank_keys(self, k: int, *names: str, dense: bool = True) -> tuple:
+        """Return expression and unmatched fields for partitioned dataset which filters by rank.
+
+        Args:
+            k: max dense rank or length
+            *names: columns to rank by
+            dense: use dense rank; false indicates sorting
+        """
         schema = set(Table.fragment_keys(self))
         keys = dict(itertools.takewhile(lambda key: key[0] in schema, map(sort_key, names)))  # type: ignore
         if not keys:
             return None, names
-        parts = [
-            ds.get_partition_keys(frag.partition_expression) for frag in Table.get_fragments(self)
-        ]
-        table = Table.ranked(pa.Table.from_pylist(parts).select(keys), k, *names[: len(keys)])
+        parts = []
+        for fragment in Table.get_fragments(self):
+            parts.append(ds.get_partition_keys(fragment.partition_expression))
+            if not dense:
+                parts[-1][''] = fragment.count_rows()
+        offset, table = len(keys), pa.Table.from_pylist(parts)
+        if dense:
+            table = Table.ranked(table, k, *names[:offset])
+        else:
+            table = Table.sort(table, *names[:offset])
+            index = pc.index(pc.greater_equal(pc.cumulative_sum(table['']), k), True).as_py()
+            table = table[: index + 1 if index >= 0 else None]
+        remaining = names[offset:]
+        if remaining or not dense:  # fields with a single value are no longer needed
+            selectors = [len(table[name].unique()) > 1 for name in keys]
+            remaining = tuple(itertools.compress(names, selectors)) + remaining
         fields, prefix = [], []  # type: ignore
         for index, (name, order) in enumerate(keys.items()):
             expr, field, values = None, ds.field(name), table[name].unique()
@@ -591,7 +609,7 @@ class Table(pa.Table):
                 fields.append(functools.reduce(operator.and_, prefix + [expr]))
             prefix.append(field == value)
             table = table.filter(prefix[-1])
-        return functools.reduce(operator.or_, fields), names[len(keys) :]
+        return functools.reduce(operator.or_, fields), remaining
 
     def flatten(self, indices: str = '') -> Iterator[pa.RecordBatch]:
         """Generate batches with list arrays flattened, optionally with parent indices."""
