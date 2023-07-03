@@ -98,10 +98,10 @@ def test_group(table):
 
 def test_aggregate(table):
     tbl = T.union(table, table.select([0]).rename_columns(['test']))
-    assert tbl.column_names == table.column_names + ['test']
+    assert tbl.schema.names == table.schema.names + ['test']
     groups = T.group(table, 'state', 'county')
     assert len(groups) == 3216
-    assert groups.column_names == ['state', 'county']
+    assert groups.schema.names == ['state', 'county']
     groups = T.group(table, 'state', counts='counts', first=[Agg('county')])
     assert len(groups) == 52
     assert groups['state'][0].as_py() == 'NY'

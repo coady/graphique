@@ -99,13 +99,13 @@ class Dataset:
     def columns(self, info: Info) -> dict:
         """fields for each column"""
         table = self.select(info)
-        return {name: Column.cast(table[name]) for name in table.column_names}
+        return {name: Column.cast(table[name]) for name in table.schema.names}
 
     def row(self, info: Info, index: int = 0) -> dict:
         """Return scalar values at index."""
         table = self.select(info, index + 1 if index >= 0 else None)
         row = {}
-        for name in table.column_names:
+        for name in table.schema.names:
             scalar = table[name][index]
             columnar = isinstance(scalar, pa.ListScalar)
             row[name] = Column.fromscalar(scalar) if columnar else scalar.as_py()
@@ -277,8 +277,7 @@ class Dataset:
             aggs['list'] += (Field(agg.alias) for agg in aggs.pop('distinct', []))
             for agg in itertools.chain(*aggs.values()):
                 agg.name = agg.alias
-        table = T.group(table, *by, counts=counts, **aggs)
-        columns = dict(zip(table.column_names, table))
+        columns = T.columns(T.group(table, *by, counts=counts, **aggs))
         if not flat:
             for agg in aggs['list']:
                 (array,) = columns[agg.name].chunks
@@ -329,7 +328,7 @@ class Dataset:
                 batch = T.ranked(batch, rank.max, *rank.by)
             if sort:
                 batch = T.sort(batch, *sort.by, length=sort.length)
-            row.update({name: batch[name] for name in batch.schema.names})
+            row.update(T.columns(batch))
             for name in row:
                 columns[name].append(row[name])
         for name, values in columns.items():
@@ -511,7 +510,7 @@ class Dataset:
     ) -> Self:
         """Return table with scalar aggregate functions applied to list columns."""
         table = self.select(info)
-        columns = {name: table[name] for name in table.column_names}
+        columns = T.columns(table)
         agg_fields: dict = collections.defaultdict(dict)
         keys: tuple = 'approximate_median', 'count', 'count_distinct', 'distinct', 'first', 'last'
         keys += 'max', 'mean', 'min', 'product', 'stddev', 'sum', 'tdigest', 'variance'

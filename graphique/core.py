@@ -326,11 +326,15 @@ class Table(pa.Table):
         batches = [func(batch, *rargs, **kwargs) for batch in scanner.to_batches() if batch]
         return pa.Table.from_batches(batches, None if batches else scanner.projected_schema)
 
+    def columns(self) -> dict:
+        """Return columns as a dictionary."""
+        return dict(zip(self.schema.names, self))
+
     def union(*tables: Batch) -> Batch:
         """Return table with union of columns."""
         columns: dict = {}
         for table in tables:
-            columns.update(zip(table.schema.names, table))
+            columns.update(Table.columns(table))
         return type(tables[0]).from_pydict(columns)
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
@@ -386,7 +390,7 @@ class Table(pa.Table):
         ).unique()
         offsets = offsets.take(pc.sort_indices(offsets))
         scalars = self.select(names).take(offsets[:-1])
-        lists = self.select(set(self.column_names) - set(names))
+        lists = self.select(set(self.schema.names) - set(names))
         table = Table.union(scalars, Table.from_offsets(lists, offsets))
         return table, Column.diff(offsets)
 
@@ -409,7 +413,7 @@ class Table(pa.Table):
         """
         if isinstance(self, pa.Table):
             self = self.unify_dictionaries()
-        columns = {name: self[name] for name in self.schema.names}
+        columns = Table.columns(self)
         aliases, args = {}, []  # type: ignore
         if counts:
             aliases['count_all'] = counts
@@ -453,7 +457,7 @@ class Table(pa.Table):
                 row.update({agg.alias: func(self[agg.name], **agg.options) for agg in funcs[key]})
         if args:
             table = self.group_by([]).aggregate(args)
-            row.update({aliases[name]: table[name][0] for name in table.column_names})
+            row.update({aliases[name]: table[name][0] for name in table.schema.names})
         for name, value in row.items():
             if isinstance(value, pa.ChunkedArray):
                 row[name] = value.combine_chunks()
