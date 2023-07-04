@@ -161,6 +161,11 @@ class Dataset:
             index=[name for name in index if isinstance(name, str)],
         )  # type: ignore
 
+    @doc_field
+    def optional(self) -> Optional[Self]:
+        """Nullable field to stop error propagation. Enables partial query results."""
+        return self
+
     @staticmethod
     def add_context(info: Info, key: str, **data):
         """Add data to context with path info."""

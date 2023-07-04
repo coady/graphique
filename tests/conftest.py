@@ -17,9 +17,12 @@ class TestClient:
     def __init__(self, app):
         self.app = app
 
-    def execute(self, query):
+    def _execute(self, query):
         root_value = self.app.root_value
-        result = self.app.schema.execute_sync(query, root_value=root_value, context_value={})
+        return self.app.schema.execute_sync(query, root_value=root_value, context_value={})
+
+    def execute(self, query):
+        result = self._execute(query)
         for error in result.errors or []:
             raise ValueError(error)
         return result.data

@@ -197,6 +197,9 @@ def test_schema(dsclient):
     assert dsclient.execute('{ scan { type length } }')['scan']['type'] == 'Scanner'
     data = dsclient.execute('{ scan { type length l: length } }')
     assert data['scan']['type'] in {'Scanner', 'Table'}
+    result = dsclient._execute('{ length optional { tables { length } } }')
+    assert result.data == {'length': 41700, 'optional': None}
+    assert len(result.errors) == 1
 
 
 def test_scan(dsclient):
