@@ -252,7 +252,6 @@ class Dataset:
             scalars.update(agg.alias for agg in values)
             if func not in Field.fragmented:
                 refs.update(agg.name for agg in values)
-        flat = isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives
         if not aggs.setdefault('list', aggregate.list):
             aggs['list'] += map(Field, self.references(info, level=1) - scalars - {counts})
             if aggs['list']:
@@ -263,32 +262,34 @@ class Dataset:
         fragments = set(T.fragment_keys(self.table))
         if fragments and set(by) == fragments:
             return self.fragments(info, counts, aggregate, **list_opts)
-        if flat:
+        if isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives:
             table = self.select(info)
+            columns = T.columns(T.group(table, *by, counts=counts, **aggs))
         else:  # scan fragments or batches when possible
             if fragments and set(by) <= fragments and fragments.isdisjoint(refs):
                 table = self.fragments(info, counts, aggregate, **list_opts).table
+                distinct, keep = [], []
+                for agg in aggs.get('distinct', []):
+                    (keep if agg.name in fragments else distinct).append(agg)
+                aggs['distinct'] = keep
             else:
                 table = T.map_batch(
                     self.scanner(info),
                     lambda b: self.apply_list(T.group(b, *by, counts=counts, **aggs), list_func),
                 )
                 self.add_metric(info, table, mode='batch')
+                distinct = aggs.pop('distinct', [])
             list_func.filter = Expression()
             aggs.setdefault('sum', []).extend(Field(agg.alias) for agg in aggs.pop('count', []))
             if counts:
                 aggs['sum'].append(Field(counts))
-                counts = ''
-            aggs['list'] += (Field(agg.alias) for agg in aggs.pop('distinct', []))
+            aggs['list'] += (Field(agg.alias) for agg in distinct)
             for agg in itertools.chain(*aggs.values()):
                 agg.name = agg.alias
-        columns = T.columns(T.group(table, *by, counts=counts, **aggs))
-        if not flat:
+            columns = T.columns(T.group(table, *by, **aggs))
             for agg in aggs['list']:
-                (array,) = columns[agg.name].chunks
-                if C.is_list_type(array.values):  # fragment keys are already flat
-                    columns[agg.name] = ListChunk.inner_flatten(array)
-            for agg in aggregate.distinct:
+                columns[agg.name] = ListChunk.inner_flatten(*columns[agg.name].chunks)
+            for agg in distinct:
                 column = columns[agg.name]
                 columns[agg.name] = ListChunk.map_list(column, agg.distinct, **agg.options)
         return type(self)(self.apply_list(pa.table(columns), list_func))

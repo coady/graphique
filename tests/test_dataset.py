@@ -122,11 +122,11 @@ def test_list(partclient):
     table = data['group']['tables'][0]
     assert table == {'row': {'state': 'PR'}, 'columns': {'county': {'length': 78}}}
     data = partclient.execute(
-        '''{ group(by: "north", aggregate: {list: {name: "west"}, distinct: {name: "county"}}) {
-        tables { row { north } columns { county { length } } } } }'''
+        '''{ group(by: "north", aggregate: {distinct: {name: "west"}}) {
+        tables { row { north } columns { west { length } } } } }'''
     )
     table = data['group']['tables'][0]
-    assert table == {'row': {'north': 0}, 'columns': {'county': {'length': 1242}}}
+    assert table == {'row': {'north': 0}, 'columns': {'west': {'length': 2}}}
 
 
 def test_fragments(partclient):
