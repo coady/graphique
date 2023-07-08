@@ -608,3 +608,13 @@ class Dataset:
         """Select rows from indices."""
         table = self.scanner(info).take(indices)
         return type(self)(self.add_metric(info, table, mode='take'))
+
+    @doc_field
+    def drop_null(self, info: Info) -> Self:
+        """Remove missing values from referenced columns in the table."""
+        if isinstance(self.table, pa.Table):
+            return type(self)(pc.drop_null(self.select(info)))
+        scanner = self.scanner(info)
+        batches = map(pc.drop_null, scanner.to_batches())
+        scanner = ds.Scanner.from_batches(batches, schema=scanner.projected_schema)
+        return type(self)(self.oneshot(info, scanner))

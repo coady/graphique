@@ -28,6 +28,8 @@ def test_filter(dsclient):
     assert data == {'filter': {'length': 41700}}
     data = dsclient.execute('{ filter(state: {ne: null}) { length } }')
     assert data == {'filter': {'length': 41700}}
+    data = dsclient.execute('{ dropNull { length } }')
+    assert data == {'dropNull': {'length': 41700}}
 
 
 def test_search(dsclient):

@@ -368,6 +368,10 @@ def test_dictionary(executor):
 def test_selections(executor):
     data = executor('{ slice { length } slice { sort(by: "snake_id") { length } } }')
     assert data == {'slice': {'length': 2, 'sort': {'length': 2}}}
+    data = executor('{ dropNull { length } }')
+    assert data == {'dropNull': {'length': 2}}
+    data = executor('{ dropNull { columns { float { values } } } }')
+    assert data == {'dropNull': {'columns': {'float': {'values': [0.0]}}}}
 
 
 def test_conditions(executor):
