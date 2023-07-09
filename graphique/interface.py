@@ -192,6 +192,11 @@ class Dataset:
         table = self.select(info, length)
         return len(table) >= length
 
+    @doc_field
+    def size(self) -> Optional[Long]:
+        """buffer size in bytes; null if table is not loaded"""
+        return getattr(self.table, 'nbytes', None)
+
     @doc_field(
         name="column name(s); multiple names access nested struct fields",
         cast=f"cast array to {links.type}",
