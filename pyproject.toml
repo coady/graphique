@@ -28,7 +28,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-dependencies = ["pyarrow>=12", "strawberry-graphql[asgi,cli]>=0.187"]
+dependencies = ["pyarrow>=12", "strawberry-graphql[asgi,cli]>=0.195.1"]
 
 [project.urls]
 Homepage = "https://github.com/coady/graphique"

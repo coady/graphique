@@ -6,6 +6,7 @@ import functools
 import inspect
 import itertools
 import operator
+import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Callable, Generic, List, Optional, TypeVar, TYPE_CHECKING
@@ -13,7 +14,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry
-from strawberry.annotation import StrawberryAnnotation
 from strawberry.field import StrawberryField
 from strawberry.types import Info
 from typing_extensions import Annotated
@@ -66,11 +66,10 @@ class Column:
         cls.__init__ = cls.__init__
 
     @classmethod
-    def register(cls, scalar, wrapper=None, **attrs):
+    def register(cls, scalar, wrapper=None, name='Column', **attrs):
         # strawberry#1921: scalar python names are prepended to column name
-        self = cls.registry[scalar] = StrawberryAnnotation(cls[wrapper or scalar]).resolve()
-        for name in attrs:
-            setattr(self.__strawberry_definition__, name, attrs[name])
+        subtype = strawberry.type(types.new_class(name, [cls[T]]), **attrs)
+        cls.registry[scalar] = subtype[wrapper or scalar]
         return cls
 
     @strawberry.field(description=links.type)
@@ -98,7 +97,7 @@ class Column:
 
 @operator.methodcaller('register', timedelta, Duration, description="column of durations")
 @operator.methodcaller('register', Interval, description="column of intervals")
-@strawberry.type(name='Column')
+@strawberry.type
 class NominalColumn(Generic[T], Column):
     @compute_field
     def count_distinct(self, mode: str = 'only_valid') -> Long:
@@ -136,7 +135,7 @@ class Set(Generic[T]):
     'register', bytes, strawberry.scalars.Base64, description="column of binaries"
 )
 @operator.methodcaller('register', str, name='ingColumn', description="column of strings")
-@strawberry.type(name='Column')
+@strawberry.type
 class OrdinalColumn(NominalColumn[T]):
     def __init__(self, array):
         super().__init__(array)
@@ -165,7 +164,7 @@ class OrdinalColumn(NominalColumn[T]):
 
 
 @operator.methodcaller('register', Decimal, description="column of decimals")
-@strawberry.type(name='Column')
+@strawberry.type
 class IntervalColumn(OrdinalColumn[T]):
     @compute_field
     def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0) -> Set[T]:
@@ -189,7 +188,7 @@ class IntervalColumn(OrdinalColumn[T]):
 
 
 @operator.methodcaller('register', float, description="column of floats")
-@strawberry.type(name='Column')
+@strawberry.type
 class RatioColumn(IntervalColumn[T]):
     @compute_field
     def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
@@ -227,7 +226,7 @@ class RatioColumn(IntervalColumn[T]):
 
 
 @operator.methodcaller('register', bool, name='eanColumn', description="column of booleans")
-@strawberry.type(name='Column')
+@strawberry.type
 class BooleanColumn(IntervalColumn[T]):
     @compute_field
     def any(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
@@ -240,7 +239,7 @@ class BooleanColumn(IntervalColumn[T]):
 
 @operator.methodcaller('register', int, description="column of ints")
 @operator.methodcaller('register', Long, description="column of longs")
-@strawberry.type(name='Column')
+@strawberry.type
 class IntColumn(RatioColumn[T]):
     @doc_field
     def take_from(
