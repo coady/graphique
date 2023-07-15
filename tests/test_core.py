@@ -193,8 +193,8 @@ def test_list():
 
 def test_not_implemented():
     dictionary = pa.array(['']).dictionary_encode()
-    with pytest.raises(NotImplementedError):
-        pc.sort_indices(dictionary)
+    with pytest.raises((NotImplementedError, TypeError)):
+        pc.sort_indices(pa.table({'': dictionary}), [('', 'ascending')])
     with pytest.raises(NotImplementedError):
         dictionary.index('')
     with pytest.raises(NotImplementedError):
@@ -210,9 +210,6 @@ def test_not_implemented():
             pc.list_element(pa.array([[0]]), index)
     with pytest.raises(NotImplementedError):
         pc.any([0])
-    dictionary = pa.array(['']).dictionary_encode()
-    with pytest.raises(ValueError, match="string vs dictionary"):
-        pc.index_in(dictionary.unique(), value_set=dictionary)
     array = pa.array(list('aba'))
     with pytest.raises(NotImplementedError):
         pa.table({'': array.dictionary_encode()}).group_by('').aggregate([('', 'min')])
@@ -225,3 +222,7 @@ def test_not_implemented():
     value = pa.MonthDayNano([1, 2, 3])
     with pytest.raises(NotImplementedError):
         pc.equal(value, value)
+    for name in ('one', 'list', 'distinct'):
+        assert not hasattr(pc, name)
+    with pytest.raises((NotImplementedError, KeyError)):
+        pa.table({'': list('aba')}).group_by([]).aggregate([('', 'first'), ('', 'last')])

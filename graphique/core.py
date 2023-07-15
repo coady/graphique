@@ -32,6 +32,9 @@ class Agg:
         'count': pc.CountOptions,
         'count_distinct': pc.CountOptions,
         'distinct': pc.CountOptions,
+        'first': pc.ScalarAggregateOptions,
+        'first_last': pc.ScalarAggregateOptions,
+        'last': pc.ScalarAggregateOptions,
         'list': type(None),
         'max': pc.ScalarAggregateOptions,
         'mean': pc.ScalarAggregateOptions,
@@ -449,7 +452,7 @@ class Table(pa.Table):
         row = {counts: len(self)} if counts else {}
         aliases, args = {}, []  # type: ignore
         for key in funcs:
-            if hasattr(pc, key):
+            if hasattr(pc, key) and key not in ('first', 'last'):
                 aliases.update({f'{agg.name}_{key}': agg.alias for agg in funcs[key]})
                 args += (agg.astuple(key) for agg in funcs[key])
             else:
