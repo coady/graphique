@@ -24,9 +24,7 @@ def test_chunks():
     array = pa.chunked_array([list('aba'), list('bcb')])
     table = pa.table({'col': array})
     groups = T.group(table, 'col', counts='counts')
-    assert groups['col'].to_pylist() == list('abc')
-    assert groups['counts'].to_pylist() == [2, 3, 1]
-    assert table['col'].unique() == pa.array('abc')
+    assert dict(zip(*groups.to_pydict().values())) == {'a': 2, 'b': 3, 'c': 1}
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
     assert C.index(array, 'a') == 0
     assert C.index(array, 'c') == 3

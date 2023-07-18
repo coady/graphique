@@ -295,8 +295,8 @@ class Dataset:
             for agg in aggs['list']:
                 columns[agg.name] = ListChunk.inner_flatten(*columns[agg.name].chunks)
             for agg in distinct:
-                column = columns[agg.name]
-                columns[agg.name] = ListChunk.map_list(column, agg.distinct, **agg.options)
+                column = columns[agg.alias]
+                columns[agg.alias] = ListChunk.map_list(column, agg.distinct, **agg.options)
         return type(self)(self.apply_list(pa.table(columns), list_func))
 
     @strawberry.field(deprecation_reason="use `group(by: [<fragment key>, ...])`")
