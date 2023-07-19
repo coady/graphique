@@ -19,8 +19,8 @@ from strawberry.types import Info
 from typing_extensions import Annotated, Self
 from .core import Batch, Column as C, ListChunk, Table as T, sort_key
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
-from .inputs import HashAggregates, ListFunction, Projection, Rank, Ranked, ScalarAggregate, Sort
-from .inputs import TDigestAggregate, VarianceAggregate, links, provisional
+from .inputs import HashAggregates, ListFunction, Pairwise, Projection, Rank, Ranked
+from .inputs import ScalarAggregate, Sort, TDigestAggregate, VarianceAggregate, links, provisional
 from .models import Column, doc_field, selections
 from .scalars import Long
 
@@ -44,7 +44,8 @@ def references(field) -> Iterator:
 
 def doc_argument(annotation, func: Callable, **kwargs):
     """Use function doc for argument description."""
-    kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
+    if func is not None:
+        kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
     return Annotated[annotation, strawberry.argument(**kwargs)]
 
 
@@ -453,6 +454,16 @@ class Dataset:
         self,
         info: Info,
         cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
+        cumulative_prod: doc_argument(
+            List[Cumulative], func=getattr(pc, 'cumulative_prod', None)
+        ) = [],
+        cumulative_min: doc_argument(
+            List[Cumulative], func=getattr(pc, 'cumulative_min', None)
+        ) = [],
+        cumulative_max: doc_argument(
+            List[Cumulative], func=getattr(pc, 'cumulative_max', None)
+        ) = [],
+        pairwise_diff: doc_argument(List[Pairwise], func=getattr(pc, 'pairwise_diff', None)) = [],
         fill_null_backward: doc_argument(List[Field], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
         rank: doc_argument(List[Rank], func=pc.rank) = [],
@@ -471,8 +482,13 @@ class Dataset:
         columns = {}
         args = cumulative_sum, fill_null_backward, fill_null_forward, rank
         funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, pc.rank
+        if pa.__version__ >= '13':
+            args += cumulative_prod, cumulative_min, cumulative_max, pairwise_diff
+            funcs += pc.cumulative_prod, pc.cumulative_min, pc.cumulative_max, pc.pairwise_diff
         for fields, func in zip(args, funcs):
             for field in fields:
+                if field.options.pop('checked', False):
+                    func = getattr(pc, func.__name__ + '_checked')
                 columns[field.alias] = func(table[field.name], **field.options)
         return type(self)(T.union(table, pa.table(columns)))
 

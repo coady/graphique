@@ -222,5 +222,11 @@ def test_not_implemented():
         pc.equal(value, value)
     for name in ('one', 'list', 'distinct'):
         assert not hasattr(pc, name)
-    with pytest.raises((NotImplementedError, KeyError)):
+    with pytest.raises(NotImplementedError):
+        pc.fill_null_forward(dictionary)
+    if pa.__version__ < '13':
+        pytest.skip("requires pyarrow >=13")
+    with pytest.raises(NotImplementedError):
         pa.table({'': list('aba')}).group_by([]).aggregate([('', 'first'), ('', 'last')])
+    with pytest.raises(ValueError):
+        pc.pairwise_diff(pa.chunked_array([[0]]))

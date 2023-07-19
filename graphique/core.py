@@ -262,9 +262,9 @@ class Column(pa.ChunkedArray):
         array = self if isinstance(self, pa.Array) else self.combine_chunks()
         return pc.rank(array.dictionary, 'ascending').take(array.indices)
 
-    def diff(self, func: Callable = pc.subtract) -> pa.ChunkedArray:
+    def diff(self, func: Callable = pc.subtract, period: int = 1) -> pa.ChunkedArray:
         """Return discrete differences between adjacent values."""
-        return func(self[1:], self[:-1])
+        return func(self[period:], self[:-period])
 
     def partition_offsets(self, predicate: Callable = pc.not_equal, *args) -> pa.IntegerArray:
         """Return list array offsets by partitioning on discrete differences.

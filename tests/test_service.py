@@ -293,6 +293,11 @@ def test_apply(client):
         { columns { zipcode { value(index: -1) } } } }'''
     )
     assert data == {'apply': {'columns': {'zipcode': {'value': 2066562337}}}}
+    data = client.execute(
+        '''{ apply(cumulativeSum: {name: "zipcode", checked: true})
+        { columns { zipcode { value(index: -1) } } } }'''
+    )
+    assert data == {'apply': {'columns': {'zipcode': {'value': 2066562337}}}}
     data = client.execute('{ apply(rank: {name: "zipcode"}) { row { zipcode } } }')
     assert data == {'apply': {'row': {'zipcode': 1}}}
     data = client.execute(

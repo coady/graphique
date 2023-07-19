@@ -134,6 +134,13 @@ class Field(Agg):
 class Cumulative(Field):
     start: float = 0.0
     skip_nulls: bool = False
+    checked: bool = False
+
+
+@strawberry.input
+class Pairwise(Field):
+    period: int = 1
+    checked: bool = False
 
 
 @strawberry.input
