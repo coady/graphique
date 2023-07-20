@@ -115,17 +115,19 @@ def test_list(partclient):
         '''{ group(by: ["state"], aggregate: {list: [{name: "county"}, {name: "zipcode"}]},
         sort: {by: "zipcode", length: 1}) { tables { length row { state county } } } }'''
     )
-    assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'PR', 'county': 'Adjuntas'}}
+    (table,) = [table for table in data['group']['tables'] if table['row']['state'] == 'PR']
+    assert table == {'length': 1, 'row': {'state': 'PR', 'county': 'Adjuntas'}}
     data = partclient.execute(
         '''{ group(by: ["state"], aggregate: {list: [{name: "county"}, {name: "zipcode"}]},
         rank: {by: "zipcode"}) { tables { length row { state county } } } }'''
     )
-    assert data['group']['tables'][0] == {'length': 1, 'row': {'state': 'PR', 'county': 'Adjuntas'}}
+    (table,) = [table for table in data['group']['tables'] if table['row']['state'] == 'PR']
+    assert table == {'length': 1, 'row': {'state': 'PR', 'county': 'Adjuntas'}}
     data = partclient.execute(
         '''{ group(by: "state", aggregate: {distinct: {alias: "counties", name: "county"}}) {
         tables { row { state } column(name: "counties") { length } } } } '''
     )
-    table = data['group']['tables'][0]
+    (table,) = [table for table in data['group']['tables'] if table['row']['state'] == 'PR']
     assert table == {'row': {'state': 'PR'}, 'column': {'length': 78}}
     data = partclient.execute(
         '''{ group(by: "north", aggregate: {distinct: {name: "west"}}) {

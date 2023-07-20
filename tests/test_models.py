@@ -75,6 +75,8 @@ def test_columns(executor):
         assert execute(f'{{ {name} {{ index(value: "") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull }} }}')
         assert data == {name: {'dropNull': ['']}}
+        data = execute(f'{{ {name} {{ fillNull(value: "") }} }}')
+        assert data == {name: {'fillNull': ['', '']}}
 
     assert execute('{ string { type } }') == {
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
@@ -228,9 +230,9 @@ def test_datetime(executor):
 def test_duration(executor):
     data = executor(
         '''{ scan(columns: {alias: "diff", checked: true, subtract: [{name: "timestamp"}, {name: "timestamp"}]})
-        { column(name: "diff") { ... on DurationColumn { values } } } }'''
+        { column(name: "diff") { ... on DurationColumn { unique { values  } } } } }'''
     )
-    assert data == {'scan': {'column': {'values': [0.0, None]}}}
+    assert data == {'scan': {'column': {'unique': {'values': [0.0, None]}}}}
     data = executor(
         '''{ partition(by: ["timestamp"] diffs: [{name: "timestamp", gt: 0.0}]) { length } }'''
     )

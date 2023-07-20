@@ -29,6 +29,8 @@ def test_ints(client):
     assert zipcodes['max'] == 99950
     assert len(zipcodes['unique']['values']) == 41700
     assert set(zipcodes['unique']['counts']) == {1}
+    data = client.execute('{ columns { zipcode { size } } }')
+    assert data == {'columns': {'zipcode': {'size': 172013}}}
 
 
 def test_floats(client):

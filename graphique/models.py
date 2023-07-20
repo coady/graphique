@@ -81,6 +81,11 @@ class Column:
         """array length"""
         return len(self.array)
 
+    @doc_field
+    def size(self) -> Long:
+        """buffer size in bytes"""
+        return self.array.nbytes
+
     @classmethod
     def cast(cls, array: pa.ChunkedArray) -> 'Column':
         """Return typed column based on array type."""
@@ -95,37 +100,44 @@ class Column:
         return pc.count(self.array, mode=mode).as_py()
 
 
-@operator.methodcaller('register', timedelta, Duration, description="column of durations")
-@operator.methodcaller('register', Interval, description="column of intervals")
-@strawberry.type
-class NominalColumn(Generic[T], Column):
-    @compute_field
-    def count_distinct(self, mode: str = 'only_valid') -> Long:
-        return pc.count_distinct(self.array, mode=mode).as_py()
+@strawberry.type(description="unique values and counts")
+class Set(Generic[T]):
+    length = doc_field(Column.length)
+    counts: List[Long] = strawberry.field(description="list of counts")
 
-    @doc_field
-    def value(self, index: Long = 0) -> Optional[T]:
-        """scalar value at index"""
-        return self.array[index].as_py()
+    def __init__(self, array, counts=pa.array([])):
+        self.array, self.counts = array, counts.to_pylist()
 
     @doc_field
     def values(self) -> List[Optional[T]]:
         """list of values"""
         return self.array.to_pylist()
 
+
+@operator.methodcaller('register', timedelta, Duration, description="column of durations")
+@operator.methodcaller('register', Interval, description="column of intervals")
+@strawberry.type
+class NominalColumn(Generic[T], Column):
+    values = doc_field(Set.values)
+
+    @compute_field
+    def count_distinct(self, mode: str = 'only_valid') -> Long:
+        return pc.count_distinct(self.array, mode=mode).as_py()
+
+    @strawberry.field(description=Set.__strawberry_definition__.description)  # type: ignore
+    def unique(self, info: Info) -> Set[T]:
+        if 'counts' in selections(*info.selected_fields):
+            return Set(*self.array.value_counts().flatten())
+        return Set(self.array.unique())
+
+    @doc_field
+    def value(self, index: Long = 0) -> Optional[T]:
+        """scalar value at index"""
+        return self.array[index].as_py()
+
     @compute_field
     def drop_null(self) -> List[T]:
         return self.array.drop_null().to_pylist()
-
-
-@strawberry.type(description="unique values and counts")
-class Set(Generic[T]):
-    length = doc_field(Column.length)
-    values = doc_field(NominalColumn.values)
-    counts: List[Long] = strawberry.field(description="list of counts")
-
-    def __init__(self, array, counts=pa.array([])):
-        self.array, self.counts = array, counts.to_pylist()
 
 
 @operator.methodcaller('register', date, description="column of dates")
@@ -141,12 +153,6 @@ class OrdinalColumn(NominalColumn[T]):
         super().__init__(array)
         self.min_max = functools.lru_cache(maxsize=None)(functools.partial(C.min_max, array))
 
-    @strawberry.field(description=Set.__strawberry_definition__.description)  # type: ignore
-    def unique(self, info: Info) -> Set[T]:
-        if 'counts' in selections(*info.selected_fields):
-            return Set(*self.array.value_counts().flatten())
-        return Set(self.array.unique())
-
     @doc_field
     def min(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
         """minimum value"""
@@ -161,6 +167,10 @@ class OrdinalColumn(NominalColumn[T]):
     def index(self, value: T, start: Long = 0, end: Optional[Long] = None) -> Long:
         """Find the index of the first occurrence of a given value."""
         return C.index(self.array, value, start, end)
+
+    @compute_field
+    def fill_null(self, value: T) -> List[T]:
+        return self.array.fill_null(value).to_pylist()
 
 
 @operator.methodcaller('register', Decimal, description="column of decimals")
