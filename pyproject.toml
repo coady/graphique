@@ -36,6 +36,7 @@ Documentation = "https://coady.github.io/graphique"
 
 [project.optional-dependencies]
 server = ["uvicorn[standard]"]
+cli = ["tqdm"]
 
 [tool.setuptools]
 packages = ["graphique"]
@@ -60,3 +61,4 @@ ignore_missing_imports = true
 [tool.coverage.run]
 source = ["graphique"]
 branch = true
+omit = ["graphique/shell.py"]
