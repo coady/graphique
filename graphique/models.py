@@ -12,7 +12,6 @@ from decimal import Decimal
 from typing import Callable, Generic, List, Optional, TypeVar, TYPE_CHECKING
 import pyarrow as pa
 import pyarrow.compute as pc
-import pyarrow.dataset as ds
 import strawberry
 from strawberry.field import StrawberryField
 from strawberry.types import Info
@@ -254,7 +253,7 @@ class IntColumn(RatioColumn[T]):
     @doc_field
     def take_from(
         self, info: Info, field: str
-    ) -> Annotated['Dataset', strawberry.lazy('.interface')]:
+    ) -> Optional[Annotated['Dataset', strawberry.lazy('.interface')]]:
         """Select indices from a table on the root Query type."""
         root = getattr(info.root_value, field)
         return type(root)(root.scanner(info).take(self.array.combine_chunks()))
@@ -291,10 +290,9 @@ class StructColumn(Column):
         return [field.name for field in self.array.type]
 
     @doc_field(name="field name(s); multiple names access nested fields")
-    def column(self, name: List[str]) -> Column:
+    def column(self, name: List[str]) -> Optional[Column]:
         """Return struct field as a column."""
-        dataset = ds.dataset(pa.table({'': self.array}))
-        return self.cast(*dataset.to_table(columns={'': pc.field('', *name)}))
+        return self.cast(pc.struct_field(self.array, name))
 
 
 Column.registry.update({list: ListColumn, dict: StructColumn})

@@ -93,7 +93,7 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
     prefix = to_camel_case(name.title())
 
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
-    annotations = {name: Column.registry[types[name]] for name in types}  # type: ignore
+    annotations = {name: Optional[Column.registry[types[name]]] for name in types}
     cls = type(prefix + 'Columns', (), dict(namespace, __annotations__=annotations))
     Columns = strawberry.type(cls, description="fields for each column")
 
@@ -113,7 +113,7 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
             return Columns(**super().columns(info))
 
         @doc_field
-        def row(self, info: Info, index: Long = 0) -> Row:  # type: ignore
+        def row(self, info: Info, index: Long = 0) -> Optional[Row]:  # type: ignore
             """Return scalar values at index."""
             row = super().row(info, index)
             for name, value in row.items():

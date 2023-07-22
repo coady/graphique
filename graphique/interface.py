@@ -203,7 +203,9 @@ class Dataset:
         cast=f"cast array to {links.type}",
         safe="check for conversion errors on cast",
     )
-    def column(self, info: Info, name: List[str], cast: str = '', safe: bool = True) -> Column:
+    def column(
+        self, info: Info, name: List[str], cast: str = '', safe: bool = True
+    ) -> Optional[Column]:
         """Return column of any type by name.
 
         This is typically only needed for aliased or casted columns.
