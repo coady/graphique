@@ -72,7 +72,7 @@ Configuration options exist to provide a convenient no-code solution, but are su
 
 #### aggregation
 * `group`: group by given columns, transforming the others into list columns
-* `partition`: partition on adjacent values in given columns, transforming the others into list columns
+* `runs`: partition on adjacent values in given columns, transforming the others into list columns
 * `tables`: return a list of tables by splitting on the scalars in list columns
 * `flatten`: flatten list columns with repeated scalars
 
@@ -108,9 +108,20 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 
 ## Changes
 dev
+
+* Pyarrow >=13 supported
 * `flatten` field for list columns
 * `rank` field for min and max filtering
 * List filtering and sorting moved to functions and optimized
+* Dataset filtering, grouping, and sorting on fragments optimized
+* `fragments` field deprecated and functionality moved to `group` field
+* `group` can aggregate entire table
+* Implicit list aggregation on `group` deprecated
+* Schema extensions for metrics and deprecations
+* `optional` field for partial query results
+* `dropNull`, `fillNull`, and `size` fields
+* Command-line utilities
+* `partition` field deprecated and renamed to `runs`
 
 1.2
 

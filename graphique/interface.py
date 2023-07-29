@@ -228,9 +228,9 @@ class Dataset:
         return type(self)(table[::-1] if reverse else table)
 
     @doc_field(
-        by="column names",
+        by="column names; empty will aggregate into a single row table",
         counts="optionally include counts in an aliased column",
-        aggregate="grouped aggregation functions",
+        aggregate="aggregation functions applied to other columns",
         filter="filter within list scalars",
         sort="sort within list scalars",
         rank="filter by dense rank within list scalars",
@@ -246,11 +246,11 @@ class Dataset:
         sort: Optional[Sort] = None,
         rank: Optional[Ranked] = None,
     ) -> Self:
-        """Return table grouped by columns, with stable ordering.
+        """Return table grouped by columns.
 
-        See `column`, `aggregate`, and `tables` for further usage of list columns.
-        `filter`, `sort`, and `rank` are equivalent to the functions in `apply(list: ...)`,
-        but memory optimized.
+        See `column` for accessing any column which has changed type. See `tables` to split on any
+        aggregated list columns. `filter`, `sort`, and `rank` are equivalent to the functions in
+        `apply(list: ...)`, but memory optimized.
 
         Deprecated: columns which are not aggregated are transformed into list columns.
         Use the explicit `list` input instead, which also supports aliasing.
@@ -359,14 +359,11 @@ class Dataset:
         counts="optionally include counts in an aliased column",
     )
     @no_type_check
-    def partition(
-        self, info: Info, by: List[str], diffs: List[Diff] = [], counts: str = ''
-    ) -> Self:
-        """Return table partitioned by discrete differences of the values.
+    def runs(self, info: Info, by: List[str], diffs: List[Diff] = [], counts: str = '') -> Self:
+        """Return table grouped by pairwise differences.
 
-        Differs from `group` by relying on adjacency, and is typically faster.
-        Other columns can be accessed by the `column` field as a `ListColumn`.
-        Typically used in conjunction with `aggregate` or `tables`.
+        Differs from `group` by relying on adjacency, and is typically faster. Other columns are
+        transformed into list columns. See `column` and `tables` to further access lists.
         """
         table = self.select(info)
         funcs = {diff.pop('name'): diff for diff in map(dict, diffs)}
@@ -379,8 +376,12 @@ class Dataset:
                 if pa.types.is_timestamp(C.scalar_type(table[name])):
                     value = timedelta(seconds=value)
                 predicates[name] += (value,)
-        table, counts_ = T.partition(table, *names, **predicates)
+        table, counts_ = T.runs(table, *names, **predicates)
         return type(self)(table.append_column(counts, counts_) if counts else table)
+
+    partition = strawberry.field(
+        runs.base_resolver, name='partition', deprecation_reason="renamed `runs`"
+    )
 
     @doc_field(
         by="column names; prefix with `-` for descending order",

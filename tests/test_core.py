@@ -134,22 +134,22 @@ def test_aggregate(table):
     assert row['d2'].to_pylist() == [0, None]
 
 
-def test_partition(table):
-    groups, counts = T.partition(table, 'state')
+def test_runs(table):
+    groups, counts = T.runs(table, 'state')
     assert len(groups) == len(counts) == 66
     assert pc.sum(counts).as_py() == 41700
     assert groups['state'][0].as_py() == 'NY'
     assert groups['county'][0].values.to_pylist() == ['Suffolk', 'Suffolk']
-    groups, counts = T.partition(table, 'state', 'county')
+    groups, counts = T.runs(table, 'state', 'county')
     assert len(groups) == len(counts) == 22751
-    groups, counts = T.partition(table, zipcode=(pc.greater, 100))
+    groups, counts = T.runs(table, zipcode=(pc.greater, 100))
     assert len(groups) == len(counts) == 59
     tbl = T.sort(table, 'state', 'longitude')
-    groups, counts = T.partition(tbl, 'state', longitude=(pc.greater, 1.0))
+    groups, counts = T.runs(tbl, 'state', longitude=(pc.greater, 1.0))
     assert len(groups) == len(counts) == 62
     assert groups['state'].value_counts()[0].as_py() == {'values': 'AK', 'counts': 7}
     assert groups['longitude'][:2].to_pylist() == [[-174.213333], [-171.701685]]
-    groups, counts = T.partition(tbl, 'state', longitude=(pc.less,))
+    groups, counts = T.runs(tbl, 'state', longitude=(pc.less,))
     assert len(groups) == len(counts) == 52
 
 

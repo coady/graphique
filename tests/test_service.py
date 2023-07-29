@@ -451,12 +451,12 @@ def test_aggregate(client):
     }
 
 
-def test_partition(client):
+def test_runs(client):
     data = client.execute(
-        '''{ partition(by: ["state"]) { aggregate { length columns { state { values } }
+        '''{ runs(by: ["state"]) { aggregate { length columns { state { values } }
         column(name: "county") { type } } } }'''
     )
-    agg = data['partition']['aggregate']
+    agg = data['runs']['aggregate']
     assert agg['length'] == 66
     assert agg['columns']['state']['values'][:3] == ['NY', 'PR', 'MA']
     assert agg['column']['type'] == 'list<item: string>'
@@ -478,24 +478,24 @@ def test_partition(client):
     assert data['partition']['length'] == 34
     assert data['partition']['column']['values'][0]['values'] == (['NY'] * 2) + (['PR'] * 176)
     data = client.execute(
-        '''{ partition(by: ["state"]) { sort(by: ["state"]) {
+        '''{ runs(by: ["state"]) { sort(by: ["state"]) {
         columns { state { values } } } } }'''
     )
-    assert data['partition']['sort']['columns']['state']['values'][-2:] == ['WY', 'WY']
+    assert data['runs']['sort']['columns']['state']['values'][-2:] == ['WY', 'WY']
     data = client.execute(
-        '''{ partition(by: ["state"]) { slice(offset: 2, length: 2) {
+        '''{ runs(by: ["state"]) { slice(offset: 2, length: 2) {
         aggregate(count: {name: "zipcode", alias: "c"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } } }'''
     )
-    agg = data['partition']['slice']['aggregate']
+    agg = data['runs']['slice']['aggregate']
     assert agg['column']['values'] == [701, 91]
     assert agg['columns']['state']['values'] == ['MA', 'RI']
     data = client.execute(
-        '''{ partition(by: ["state"]) {
+        '''{ runs(by: ["state"]) {
         apply(list: {filter: {gt: [{name: "zipcode"}, {value: 90000}]}}) {
         column(name: "zipcode") { type } } } }'''
     )
-    assert data['partition']['apply']['column']['type'] == 'large_list<item: int32>'
+    assert data['runs']['apply']['column']['type'] == 'large_list<item: int32>'
     data = client.execute(
         '''{ partition(by: ["state"], counts: "c") { filter(state: {eq: "NY"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }'''

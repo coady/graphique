@@ -234,9 +234,9 @@ def test_duration(executor):
     )
     assert data == {'scan': {'column': {'unique': {'values': [0.0, None]}}}}
     data = executor(
-        '''{ partition(by: ["timestamp"] diffs: [{name: "timestamp", gt: 0.0}]) { length } }'''
+        '''{ runs(by: ["timestamp"] diffs: [{name: "timestamp", gt: 0.0}]) { length } }'''
     )
-    assert data == {'partition': {'length': 1}}
+    assert data == {'runs': {'length': 1}}
     data = executor(
         '''{ scan(columns: {alias: "diff", temporal:
         {monthDayNanoIntervalBetween: [{name: "timestamp"}, {name: "timestamp"}]}})
@@ -308,10 +308,10 @@ def test_list(executor):
     assert data['aggregate']['column']['values'] == [pytest.approx((2 / 3) ** 0.5), None]
     assert data['aggregate']['var']['values'] == [1, None]
     data = executor(
-        '''{ partition(by: "int32") { scan(columns: {binary: {join: [{name: "binary"}, {base64: ""}]}, alias: "binary"}) {
+        '''{ runs(by: "int32") { scan(columns: {binary: {join: [{name: "binary"}, {base64: ""}]}, alias: "binary"}) {
         column(name: "binary") { ... on Base64Column { values } } } } }'''
     )
-    assert data == {'partition': {'scan': {'column': {'values': [None]}}}}
+    assert data == {'runs': {'scan': {'column': {'values': [None]}}}}
     data = executor('{ columns { list { value { type } } } }')
     assert data == {'columns': {'list': {'value': {'type': 'int32'}}}}
     data = executor('{ tables { column(name: "list") { type } } }')

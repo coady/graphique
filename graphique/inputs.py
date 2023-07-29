@@ -257,7 +257,7 @@ class HashAggregates(ScalarAggregates):
 class Diff(Input):
     """Discrete difference predicates.
 
-    By default compares by not equal, Specifiying `null` with a predicate compares element-wise.
+    By default compares by not equal. Specifying `null` with a predicate compares element-wise.
     A float computes the discrete difference first; durations may be in float seconds.
     """
 

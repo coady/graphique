@@ -262,12 +262,15 @@ class Column(pa.ChunkedArray):
         array = self if isinstance(self, pa.Array) else self.combine_chunks()
         return pc.rank(array.dictionary, 'ascending').take(array.indices)
 
-    def diff(self, func: Callable = pc.subtract, period: int = 1) -> pa.ChunkedArray:
-        """Return discrete differences between adjacent values."""
+    def diff(self, func: Callable = pc.subtract, period: int = 1) -> Array:
+        """Compute first order difference of an array.
+
+        Unlike `pairwise_diff`, does not return leading nulls.
+        """
         return func(self[period:], self[:-period])
 
-    def partition_offsets(self, predicate: Callable = pc.not_equal, *args) -> pa.IntegerArray:
-        """Return list array offsets by partitioning on discrete differences.
+    def run_offsets(self, predicate: Callable = pc.not_equal, *args) -> pa.IntegerArray:
+        """Run-end encode array with leading zero, suitable for list offsets.
 
         Args:
             predicate: binary function applied to adjacent values
@@ -379,8 +382,8 @@ class Table(pa.Table):
         offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum_checked(counts)])
         return Table.from_offsets(self, offsets, mask=mask)
 
-    def partition(self, *names: str, **predicates: tuple) -> tuple:
-        """Return table partitioned by discrete differences and corresponding counts.
+    def runs(self, *names: str, **predicates: tuple) -> tuple:
+        """Return table grouped by pairwise differences, and corresponding counts.
 
         Args:
             *names: columns to partition by `not_equal` which will return scalars
@@ -388,7 +391,7 @@ class Table(pa.Table):
                 if the predicate has args, it will be called on the differences
         """
         offsets = pa.chunked_array(
-            Column.partition_offsets(self[name], *predicates.get(name, (pc.not_equal,)))
+            Column.run_offsets(self[name], *predicates.get(name, (pc.not_equal,)))
             for name in names + tuple(predicates)
         ).unique()
         offsets = offsets.take(pc.sort_indices(offsets))
