@@ -50,7 +50,6 @@ class Agg:
 
     associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
     associatives |= {'count', 'distinct', 'list'}  # transformed to be associative
-    fragmented = {'distinct', 'first', 'last', 'max', 'min', 'one'}
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name

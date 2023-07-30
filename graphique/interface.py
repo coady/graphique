@@ -256,10 +256,9 @@ class Dataset:
         Use the explicit `list` input instead, which also supports aliasing.
         """
         scalars, refs, aggs = set(by), set(), dict(aggregate)
-        for func, values in aggs.items():
+        for values in aggs.values():
             scalars.update(agg.alias for agg in values)
-            if func not in Field.fragmented:
-                refs.update(agg.name for agg in values)
+            refs.update(agg.name for agg in values)
         if not aggs.setdefault('list', aggregate.list):
             aggs['list'] += map(Field, self.references(info, level=1) - scalars - {counts})
             if aggs['list']:
@@ -276,21 +275,17 @@ class Dataset:
         else:  # scan fragments or batches when possible
             if fragments and set(by) <= fragments and fragments.isdisjoint(refs):
                 table = self.fragments(info, counts, aggregate, **list_opts).table
-                distinct, keep = [], []
-                for agg in aggs.get('distinct', []):
-                    (keep if agg.name in fragments else distinct).append(agg)
-                aggs['distinct'] = keep
             else:
                 table = T.map_batch(
                     self.scanner(info),
                     lambda b: self.apply_list(T.group(b, *by, counts=counts, **aggs), list_func),
                 )
                 self.add_metric(info, table, mode='batch')
-                distinct = aggs.pop('distinct', [])
             list_func.filter = Expression()
             aggs.setdefault('sum', []).extend(Field(agg.alias) for agg in aggs.pop('count', []))
             if counts:
                 aggs['sum'].append(Field(counts))
+            distinct = aggs.pop('distinct', [])
             aggs['list'] += (Field(agg.alias) for agg in distinct)
             for agg in itertools.chain(*aggs.values()):
                 agg.name = agg.alias
@@ -320,8 +315,6 @@ class Dataset:
         schema = self.table.partitioning.schema  # requires a Dataset
         filter, aggs = (filter.to_arrow() if filter else None), dict(aggregate)
         names = self.references(info, level=1)
-        for func in Field.fragmented & set(aggs):
-            aggs[func] = [agg for agg in aggs[func] if agg.name not in schema.names]
         names.update(agg.name for value in aggs.values() for agg in value)
         if rank:
             names.update(dict(map(sort_key, rank.by)))
