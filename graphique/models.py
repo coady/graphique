@@ -5,8 +5,6 @@ import collections
 import functools
 import inspect
 import itertools
-import operator
-import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Callable, Generic, List, Optional, TypeVar, TYPE_CHECKING
@@ -18,7 +16,7 @@ from strawberry.types import Info
 from typing_extensions import Annotated
 from .core import Column as C
 from .inputs import links
-from .scalars import Duration, Interval, Long, type_map
+from .scalars import Interval, Long, scalar_map, type_map
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
@@ -54,7 +52,7 @@ def compute_field(func: Callable):
     return strawberry.field(func, description=doc.splitlines()[0])  # type: ignore
 
 
-@strawberry.interface(description="column interface")
+@strawberry.interface(description="an arrow array")
 class Column:
     registry = {}  # type: ignore
 
@@ -65,11 +63,13 @@ class Column:
         cls.__init__ = cls.__init__
 
     @classmethod
-    def register(cls, scalar, wrapper=None, name='Column', **attrs):
+    def register(cls, *scalars):
+        if cls is Column:
+            return lambda cls: cls.register(*scalars) or cls
         # strawberry#1921: scalar python names are prepended to column name
-        subtype = strawberry.type(types.new_class(name, [cls[T]]), **attrs)
-        cls.registry[scalar] = subtype[wrapper or scalar]
-        return cls
+        generic = cls.__strawberry_definition__.is_generic
+        for scalar in scalars:
+            cls.registry[scalar] = cls[scalar_map.get(scalar, scalar)] if generic else cls
 
     @strawberry.field(description=links.type)
     def type(self) -> str:
@@ -98,6 +98,14 @@ class Column:
     def count(self, mode: str = 'only_valid') -> Long:
         return pc.count(self.array, mode=mode).as_py()
 
+    @classmethod
+    def resolve_type(cls, obj, *args, **kwargs) -> str:
+        if not hasattr(obj, '__orig_class__'):
+            return obj.__strawberry_definition__.name
+        (scalar,) = obj.__orig_class__.__args__
+        name = scalar.__name__ if hasattr(scalar, '__name__') else scalar._scalar_definition.name
+        return name.title() + obj.__strawberry_definition__.name
+
 
 @strawberry.type(description="unique values and counts")
 class Set(Generic[T]):
@@ -113,9 +121,8 @@ class Set(Generic[T]):
         return self.array.to_pylist()
 
 
-@operator.methodcaller('register', timedelta, Duration, description="column of durations")
-@operator.methodcaller('register', Interval, description="column of intervals")
-@strawberry.type
+@Column.register(timedelta, Interval)
+@strawberry.type(name='Column', description="column of elapsed times")
 class NominalColumn(Generic[T], Column):
     values = doc_field(Set.values)
 
@@ -139,14 +146,8 @@ class NominalColumn(Generic[T], Column):
         return self.array.drop_null().to_pylist()
 
 
-@operator.methodcaller('register', date, description="column of dates")
-@operator.methodcaller('register', datetime, description="column of datetimes")
-@operator.methodcaller('register', time, description="column of times")
-@operator.methodcaller(
-    'register', bytes, strawberry.scalars.Base64, description="column of binaries"
-)
-@operator.methodcaller('register', str, name='ingColumn', description="column of strings")
-@strawberry.type
+@Column.register(date, datetime, time, bytes)
+@strawberry.type(name='Column', description="column of ordinal values")
 class OrdinalColumn(NominalColumn[T]):
     def __init__(self, array):
         super().__init__(array)
@@ -172,8 +173,14 @@ class OrdinalColumn(NominalColumn[T]):
         return self.array.fill_null(value).to_pylist()
 
 
-@operator.methodcaller('register', Decimal, description="column of decimals")
-@strawberry.type
+@Column.register(str)
+@strawberry.type(name='ingColumn', description="column of strings")
+class StringColumn(OrdinalColumn[T]):
+    ...
+
+
+@Column.register(Decimal)
+@strawberry.type(name='Column', description="column of decimals")
 class IntervalColumn(OrdinalColumn[T]):
     @compute_field
     def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0) -> Set[T]:
@@ -196,8 +203,8 @@ class IntervalColumn(OrdinalColumn[T]):
         return pc.indices_nonzero(self.array).to_pylist()
 
 
-@operator.methodcaller('register', float, description="column of floats")
-@strawberry.type
+@Column.register(float)
+@strawberry.type(name='Column', description="column of floats")
 class RatioColumn(IntervalColumn[T]):
     @compute_field
     def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
@@ -234,8 +241,8 @@ class RatioColumn(IntervalColumn[T]):
         return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
 
 
-@operator.methodcaller('register', bool, name='eanColumn', description="column of booleans")
-@strawberry.type
+@Column.register(bool)
+@strawberry.type(name='eanColumn', description="column of booleans")
 class BooleanColumn(IntervalColumn[T]):
     @compute_field
     def any(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
@@ -246,9 +253,8 @@ class BooleanColumn(IntervalColumn[T]):
         return pc.all(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
 
-@operator.methodcaller('register', int, description="column of ints")
-@operator.methodcaller('register', Long, description="column of longs")
-@strawberry.type
+@Column.register(int, Long)
+@strawberry.type(name='Column', description="column of integers")
 class IntColumn(RatioColumn[T]):
     @doc_field
     def take_from(
@@ -259,6 +265,7 @@ class IntColumn(RatioColumn[T]):
         return type(root)(root.scanner(info).take(self.array.combine_chunks()))
 
 
+@Column.register(list)
 @strawberry.type(description="column of lists")
 class ListColumn(Column):
     @doc_field
@@ -277,6 +284,7 @@ class ListColumn(Column):
         return self.cast(pc.list_flatten(self.array))
 
 
+@Column.register(dict)
 @strawberry.type(description="column of structs")
 class StructColumn(Column):
     @doc_field
@@ -293,6 +301,3 @@ class StructColumn(Column):
     def column(self, name: List[str]) -> Optional[Column]:
         """Return struct field as a column."""
         return self.cast(pc.struct_field(self.array, name))
-
-
-Column.registry.update({list: ListColumn, dict: StructColumn})
