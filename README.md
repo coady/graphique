@@ -27,7 +27,7 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 
 * PARQUET_PATH: path to the parquet directory or file
 * FEDERATED = '': field name to extend type `Query` with a federated `Table` 
-* DEBUG = False: run service in debug mode, which includes timing
+* DEBUG = False: run service in debug mode, which includes metrics
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
 * FILTERS = None: json `filter` query for which rows to read at startup
 
@@ -71,7 +71,7 @@ Configuration options exist to provide a convenient no-code solution, but are su
 * `join`: join tables by key columns
 
 #### aggregation
-* `group`: group by given columns, transforming the others into list columns
+* `group`: group by given columns, and aggregate the others
 * `runs`: partition on adjacent values in given columns, transforming the others into list columns
 * `tables`: return a list of tables by splitting on the scalars in list columns
 * `flatten`: flatten list columns with repeated scalars

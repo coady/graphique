@@ -55,13 +55,15 @@ class GraphQL(strawberry.asgi.GraphQL):
     """
 
     options = dict(types=Column.registry.values(), scalar_overrides=scalar_map)
-    extensions = ContextExtension, MetricsExtension
+    extensions = (ContextExtension,)
 
     def __init__(self, root: Root, debug: bool = False, **kwargs):
-        options = dict(self.options, extensions=self.extensions if debug else [])
+        options: dict = dict(self.options, extensions=self.extensions)
+        if debug:  # pragma: no cover
+            options['extensions'] += (MetricsExtension,)
         if type(root).__name__ == 'Query':
             self.root_value = root
-            options['enable_federation_2'] = True  # type: ignore
+            options['enable_federation_2'] = True
             schema = strawberry.federation.Schema(type(self.root_value), **options)
         else:
             self.root_value = implemented(root)
@@ -122,7 +124,7 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
             return Row(**row)
 
     Table.filter.base_resolver.type_annotation = Table
-    options = dict(name=prefix + 'Table', description="a column-oriented table")
+    options = dict(name=prefix + 'Table', description="a dataset with a derived schema")
     if name:
         return strawberry.federation.type(Table, keys=keys, **options)(root)
     return strawberry.type(Table, **options)(root)

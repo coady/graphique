@@ -115,9 +115,8 @@ class Dataset:
     def filter(self, info: Info, **queries: Filter) -> Self:
         """Return table with rows which match all queries.
 
-        See `scan(filter: ...)` for more advanced queries. Additional features
-        * sorted tables support binary search
-        * partitioned datasets retain fragment information when filtered on keys
+        See `scan(filter: ...)` for more advanced queries. Additional feature: sorted tables
+        support binary search
         """
         table = self.table
         prev = info.path.prev
@@ -164,7 +163,10 @@ class Dataset:
 
     @doc_field
     def optional(self) -> Optional[Self]:
-        """Nullable field to stop error propagation. Enables partial query results."""
+        """Nullable field to stop error propagation, enabling partial query results.
+
+        Will be replaced by client controlled nullability.
+        """
         return self
 
     @staticmethod
