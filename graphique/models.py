@@ -7,7 +7,7 @@ import inspect
 import itertools
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, Generic, List, Optional, TypeVar, TYPE_CHECKING
+from typing import Callable, Generic, List, Optional, TypeVar, TYPE_CHECKING, get_args
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
@@ -99,12 +99,10 @@ class Column:
         return pc.count(self.array, mode=mode).as_py()
 
     @classmethod
-    def resolve_type(cls, obj, *args, **kwargs) -> str:
-        if not hasattr(obj, '__orig_class__'):
-            return obj.__strawberry_definition__.name
-        (scalar,) = obj.__orig_class__.__args__
-        name = scalar.__name__ if hasattr(scalar, '__name__') else scalar._scalar_definition.name
-        return name.title() + obj.__strawberry_definition__.name
+    def resolve_type(cls, obj, info, *_) -> str:
+        config = Info(info, None).schema.config
+        args = get_args(getattr(obj, '__orig_class__', None))
+        return config.name_converter.from_generic(obj.__strawberry_definition__, args)
 
 
 @strawberry.type(description="unique values and counts")
@@ -277,6 +275,10 @@ class ListColumn(Column):
     def values(self) -> List[Optional[Column]]:
         """list of columns"""
         return list(map(self.fromscalar, self.array))
+
+    @compute_field
+    def drop_null(self) -> List[Column]:
+        return map(self.fromscalar, self.array.drop_null())  # type: ignore
 
     @doc_field
     def flatten(self) -> Column:

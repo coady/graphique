@@ -251,6 +251,8 @@ def test_list(executor):
     assert data == {'columns': {'list': {'length': 2, 'type': 'list<item: int32>'}}}
     data = executor('{ columns { list { values { length } } } }')
     assert data == {'columns': {'list': {'values': [{'length': 3}, None]}}}
+    data = executor('{ columns { list { dropNull { length } } } }')
+    assert data == {'columns': {'list': {'dropNull': [{'length': 3}]}}}
     data = executor('{ row { list { ... on IntColumn { values } } } }')
     assert data == {'row': {'list': {'values': [0, 1, 2]}}}
     data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
