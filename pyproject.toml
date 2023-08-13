@@ -33,6 +33,8 @@ dependencies = ["pyarrow>=12", "strawberry-graphql[asgi,cli]>=0.198"]
 [project.urls]
 Homepage = "https://github.com/coady/graphique"
 Documentation = "https://coady.github.io/graphique"
+Changelog = "https://github.com/coady/graphique/blob/main/CHANGELOG.md"
+Issues = "https://github.com/coady/graphique/issues"
 
 [project.optional-dependencies]
 server = ["uvicorn[standard]"]
