@@ -503,6 +503,12 @@ def test_runs(client):
     agg = data['partition']['filter']
     assert agg['column']['values'] == [2, 1, 2202]
     assert agg['columns']['state']['values'] == ['NY'] * 3
+    data = client.execute('{ runs(split: {name: "zipcode", lt: 0}) { length } }')
+    assert data == {'runs': {'length': 1}}
+    data = client.execute(
+        '{ partition(by: ["zipcode"], diffs: {name: "zipcode", lt: null}) { length } }'
+    )
+    assert data == {'partition': {'length': 1}}
 
 
 def test_rows(client):

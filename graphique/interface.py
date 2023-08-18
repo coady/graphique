@@ -350,33 +350,35 @@ class Dataset:
 
     @doc_field(
         by="column names",
-        diffs="optional inequality predicates; scalars are compared to the adjacent difference",
+        split="optional predicates to split on; scalars are compared to pairwise difference",
         counts="optionally include counts in an aliased column",
     )
     @no_type_check
-    def runs(self, info: Info, by: List[str], diffs: List[Diff] = [], counts: str = '') -> Self:
+    def runs(
+        self, info: Info, by: List[str] = [], split: List[Diff] = [], counts: str = ''
+    ) -> Self:
         """Return table grouped by pairwise differences.
 
         Differs from `group` by relying on adjacency, and is typically faster. Other columns are
         transformed into list columns. See `column` and `tables` to further access lists.
         """
         table = self.select(info)
-        funcs = {diff.pop('name'): diff for diff in map(dict, diffs)}
-        names = list(itertools.takewhile(lambda name: name not in funcs, by))
         predicates = {}
-        for name in by[len(names) :]:
-            ((func, value),) = funcs.pop(name, {'not_equal': None}).items()
-            predicates[name] = (getattr(pc, func),)
-            if value is not None:
-                if pa.types.is_timestamp(C.scalar_type(table[name])):
-                    value = timedelta(seconds=value)
-                predicates[name] += (value,)
-        table, counts_ = T.runs(table, *names, **predicates)
+        for diff in map(dict, split):
+            name = diff.pop('name')
+            ((func, value),) = diff.items()
+            if pa.types.is_timestamp(table.field(name).type):
+                value = timedelta(seconds=value)
+            predicates[name] = (getattr(pc, func), value)[: 1 if value is None else 2]
+        table, counts_ = T.runs(table, *by, **predicates)
         return type(self)(table.append_column(counts, counts_) if counts else table)
 
-    partition = strawberry.field(
-        runs.base_resolver, name='partition', deprecation_reason="renamed `runs`"
-    )
+    @strawberry.field(deprecation_reason="renamed `runs`")
+    def partition(
+        self, info: Info, by: List[str], diffs: List[Diff] = [], counts: str = ''
+    ) -> Self:
+        names = {diff.name for diff in diffs}
+        return self.runs(info, [name for name in by if name not in names], diffs, counts)
 
     @doc_field(
         by="column names; prefix with `-` for descending order",

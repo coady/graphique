@@ -255,9 +255,9 @@ class HashAggregates(ScalarAggregates):
 
 @use_doc(strawberry.input)
 class Diff(Input):
-    """Discrete difference predicates.
+    """Discrete difference predicates, applied in forwards direction (array[i + 1] ? array[i]).
 
-    By default compares by not equal. Specifying `null` with a predicate compares element-wise.
+    By default compares by not equal. Specifying `null` with a predicate compares pairwise.
     A float computes the discrete difference first; durations may be in float seconds.
     """
 

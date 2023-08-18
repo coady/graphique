@@ -233,9 +233,7 @@ def test_duration(executor):
         { column(name: "diff") { ... on DurationColumn { unique { values  } } } } }'''
     )
     assert data == {'scan': {'column': {'unique': {'values': [0.0, None]}}}}
-    data = executor(
-        '''{ runs(by: ["timestamp"] diffs: [{name: "timestamp", gt: 0.0}]) { length } }'''
-    )
+    data = executor('{ runs(split: [{name: "timestamp", gt: 0.0}]) { length } }')
     assert data == {'runs': {'length': 1}}
     data = executor(
         '''{ scan(columns: {alias: "diff", temporal:

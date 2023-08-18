@@ -386,7 +386,7 @@ class Table(pa.Table):
 
         Args:
             *names: columns to partition by `not_equal` which will return scalars
-            **predicates: inequality predicates with optional args which will return list arrays;
+            **predicates: pairwise predicates with optional args which will return list arrays;
                 if the predicate has args, it will be called on the differences
         """
         offsets = pa.chunked_array(
