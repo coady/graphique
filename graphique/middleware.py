@@ -1,6 +1,7 @@
 """
 ASGI GraphQL utilities.
 """
+import warnings
 from datetime import timedelta
 from typing import Iterable, Mapping, Optional
 import pyarrow.dataset as ds
@@ -92,6 +93,9 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
     """Return type which extends the Dataset interface with knowledge of the schema."""
     schema = root.projected_schema if isinstance(root, ds.Scanner) else root.schema
     types = {field.name: type_map[C.scalar_type(field).id] for field in schema}
+    types = {name: types[name] for name in types if name.isidentifier()}
+    if invalid := set(schema.names) - set(types):
+        warnings.warn(f'invalid field names: {invalid}')
     prefix = to_camel_case(name.title())
 
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
@@ -107,23 +111,24 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
     class Table(Dataset):
         __init__ = Dataset.__init__
         field = name
-        filter = Filter.resolve_types(types)(Dataset.filter)
 
-        @doc_field
         def columns(self, info: Info) -> Columns:  # type: ignore
             """fields for each column"""
             return Columns(**super().columns(info))
 
-        @doc_field
         def row(self, info: Info, index: Long = 0) -> Optional[Row]:  # type: ignore
             """Return scalar values at index."""
             row = super().row(info, index)
             for name, value in row.items():
-                if isinstance(value, Column) and Column not in Row.__annotations__[name].__args__:
+                if isinstance(value, Column) and types[name] is not list:
                     raise TypeError(f"Field `{name}` cannot represent `Column` value")
             return Row(**row)
 
-    Table.filter.base_resolver.type_annotation = Table
+    if types:
+        for field in ('filter', 'columns', 'row'):
+            setattr(Table, field, doc_field(getattr(Table, field)))
+        Table.filter.type = Table
+        Table.filter.base_resolver.arguments = list(Filter.resolve_args(types))
     options = dict(name=prefix + 'Table', description="a dataset with a derived schema")
     if name:
         return strawberry.federation.type(Table, keys=keys, **options)(root)

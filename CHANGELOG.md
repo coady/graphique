@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * `optional` field for partial query results
 * `dropNull`, `fillNull`, and `size` fields
 * Command-line utilities
+* Allow datasets with invalid field names
 
 ### Deprecated
 * `fragments` field deprecated and functionality moved to `group` field

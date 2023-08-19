@@ -273,10 +273,12 @@ def test_rank(partclient):
     assert data == {'rank': {'columns': {'state': {'unique': {'values': ['AL', 'AR']}}}}}
 
 
-def test_root(fedclient):
+def test_root():
     app = load('zipcodes.parquet', FEDERATED='test')
     assert asyncio.run(app.get_root_value(None)) is app.root_value
     assert app.root_value.test
+    with pytest.warns(UserWarning):
+        assert load('nofields.parquet', FEDERATED='test')
 
 
 def test_federation(fedclient):

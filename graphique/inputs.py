@@ -17,7 +17,6 @@ from strawberry.arguments import StrawberryArgument
 from strawberry.schema_directive import Location
 from strawberry.field import StrawberryField
 from strawberry.scalars import JSON
-from strawberry.types.fields.resolver import StrawberryResolver
 from typing_extensions import Self
 from .core import Agg, ListChunk
 from .scalars import Long
@@ -45,21 +44,6 @@ class Input:
     def __getitem__(self, name):
         value = getattr(self, name)
         return dict(value) if hasattr(value, 'keys') else value
-
-
-def resolve_annotations(func: Callable, annotations: dict, defaults: dict = {}) -> StrawberryField:
-    """Return field by transforming annotations into function arguments."""
-    resolver = StrawberryResolver(func)
-    resolver.arguments = [
-        StrawberryArgument(
-            python_name=name,
-            graphql_name=name,
-            type_annotation=StrawberryAnnotation(annotation),
-            default=defaults.get(name, UNSET),
-        )
-        for name, annotation in annotations.items()
-    ]
-    return strawberry.field(resolver, description=inspect.getdoc(func))
 
 
 def use_doc(decorator: Callable, **kwargs):
@@ -111,12 +95,12 @@ class Filter(Generic[T], Input):
     nullables = {'eq', 'ne'}
 
     @classmethod
-    @no_type_check
-    def resolve_types(cls, types: dict) -> Callable:
-        """Return a decorator which transforms the type map into arguments."""
-        defaults = dict.fromkeys(types, {})
-        annotations = {name: cls[types[name]] for name in types if types[name] not in (list, dict)}
-        return functools.partial(resolve_annotations, annotations=annotations, defaults=defaults)
+    def resolve_args(cls, types: dict) -> Iterable[StrawberryArgument]:
+        """Generate dynamically resolved arguments for filter field."""
+        for name in types:
+            annotation = StrawberryAnnotation(cls[types[name]])  # type: ignore
+            if types[name] not in (list, dict):
+                yield StrawberryArgument(name, name, annotation, default={})
 
 
 @strawberry.input(description=f"name and optional alias for [compute functions]({links.compute})")
