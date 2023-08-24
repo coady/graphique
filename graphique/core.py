@@ -261,6 +261,10 @@ class Column(pa.ChunkedArray):
         array = self if isinstance(self, pa.Array) else self.combine_chunks()
         return pc.rank(array.dictionary, 'ascending').take(array.indices)
 
+    def pairwise_diff(self, period: int = 1) -> Array:
+        """`pairwise_diff` with chunked array support."""
+        return pc.pairwise_diff(self.combine_chunks(), period)
+
     def diff(self, func: Callable = pc.subtract, period: int = 1) -> Array:
         """Compute first order difference of an array.
 

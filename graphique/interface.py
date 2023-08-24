@@ -44,8 +44,7 @@ def references(field) -> Iterator:
 
 def doc_argument(annotation, func: Callable, **kwargs):
     """Use function doc for argument description."""
-    if func is not None:
-        kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
+    kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
     return Annotated[annotation, strawberry.argument(**kwargs)]
 
 
@@ -454,16 +453,10 @@ class Dataset:
         self,
         info: Info,
         cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
-        cumulative_prod: doc_argument(
-            List[Cumulative], func=getattr(pc, 'cumulative_prod', None)
-        ) = [],
-        cumulative_min: doc_argument(
-            List[Cumulative], func=getattr(pc, 'cumulative_min', None)
-        ) = [],
-        cumulative_max: doc_argument(
-            List[Cumulative], func=getattr(pc, 'cumulative_max', None)
-        ) = [],
-        pairwise_diff: doc_argument(List[Pairwise], func=getattr(pc, 'pairwise_diff', None)) = [],
+        cumulative_prod: doc_argument(List[Cumulative], func=pc.cumulative_prod) = [],
+        cumulative_min: doc_argument(List[Cumulative], func=pc.cumulative_min) = [],
+        cumulative_max: doc_argument(List[Cumulative], func=pc.cumulative_max) = [],
+        pairwise_diff: doc_argument(List[Pairwise], func=pc.pairwise_diff) = [],
         fill_null_backward: doc_argument(List[Field], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
         rank: doc_argument(List[Rank], func=pc.rank) = [],
@@ -480,16 +473,14 @@ class Dataset:
         table = T.map_batch(self.scanner(info), self.apply_list, list_)
         self.add_metric(info, table, mode='batch')
         columns = {}
-        args = cumulative_sum, fill_null_backward, fill_null_forward, rank
         funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, pc.rank
-        if pa.__version__ >= '13':
-            args += cumulative_prod, cumulative_min, cumulative_max, pairwise_diff
-            funcs += pc.cumulative_prod, pc.cumulative_min, pc.cumulative_max, pc.pairwise_diff
-        for fields, func in zip(args, funcs):
-            for field in fields:
+        funcs += pc.cumulative_prod, pc.cumulative_min, pc.cumulative_max, C.pairwise_diff
+        for func in funcs:
+            for field in locals()[func.__name__]:
+                callable = func
                 if field.options.pop('checked', False):
-                    func = getattr(pc, func.__name__ + '_checked')
-                columns[field.alias] = func(table[field.name], **field.options)
+                    callable = getattr(pc, func.__name__ + '_checked')
+                columns[field.alias] = callable(table[field.name], **field.options)
         return type(self)(T.union(table, pa.table(columns)))
 
     @doc_field

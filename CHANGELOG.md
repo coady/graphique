@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 ### Changed
-* Pyarrow >=13 supported
+* Pyarrow >=13 required
 * List filtering and sorting moved to functions and optimized
 * Dataset filtering, grouping, and sorting on fragments optimized
 * `group` can aggregate entire table
