@@ -48,6 +48,11 @@ def doc_argument(annotation, func: Callable, **kwargs):
     return Annotated[annotation, strawberry.argument(**kwargs)]
 
 
+def provisional_argument(annotation, **kwargs):
+    """Mark argument as provisional."""
+    return Annotated[annotation, strawberry.argument(directives=[provisional()], **kwargs)]
+
+
 @strawberry.type(description="dataset schema")
 class Schema:
     names: List[str] = strawberry.field(description="field names")
@@ -232,9 +237,6 @@ class Dataset:
         by="column names; empty will aggregate into a single row table",
         counts="optionally include counts in an aliased column",
         aggregate="aggregation functions applied to other columns",
-        filter="filter within list scalars",
-        sort="sort within list scalars",
-        rank="filter by dense rank within list scalars",
     )
     @no_type_check
     def group(
@@ -243,15 +245,17 @@ class Dataset:
         by: List[str] = [],
         counts: str = '',
         aggregate: HashAggregates = {},
-        filter: Expression = {},
-        sort: Optional[Sort] = None,
-        rank: Optional[Ranked] = None,
+        filter: provisional_argument(Expression, description="filter within list scalars") = {},
+        sort: provisional_argument(Optional[Sort], description="sort within list scalars") = None,
+        rank: provisional_argument(
+            Optional[Ranked], description="filter by dense rank within list scalars"
+        ) = None,
     ) -> Self:
         """Return table grouped by columns.
 
         See `column` for accessing any column which has changed type. See `tables` to split on any
-        aggregated list columns. `filter`, `sort`, and `rank` are equivalent to the functions in
-        `apply(list: ...)`, but memory optimized.
+        aggregated list columns. Provisional inputs `filter`, `sort`, and `rank` are equivalent to
+        the functions in `apply(list: ...)`, but memory optimized.
 
         Deprecated: columns which are not aggregated are transformed into list columns.
         Use the explicit `list` input instead, which also supports aliasing.
