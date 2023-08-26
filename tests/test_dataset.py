@@ -97,8 +97,8 @@ def test_group(dsclient):
     )
     assert data == {'group': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
     data = dsclient.execute(
-        '''{ group(by: ["state"]) { aggregate(mean: {name: "zipcode"}) { slice(length: 1) {
-        column(name: "zipcode") { ... on FloatColumn { values } } } } } }'''
+        '''{ group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { aggregate(mean: {name: "zipcode"}) {
+        slice(length: 1) { column(name: "zipcode") { ... on FloatColumn { values } } } } } }'''
     )
     assert data == {
         'group': {'aggregate': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
@@ -138,29 +138,11 @@ def test_list(partclient):
 
 
 def test_fragments(partclient):
-    data = partclient.execute('{ fragments { columns { north { values } } } }')
-    assert data == {'fragments': {'columns': {'north': {'values': [0, 0, 1, 1]}}}}
-    data = partclient.execute('{ filter(north: {eq: 1}) { fragments { length } } }')
-    assert data == {'filter': {'fragments': {'length': 2}}}
+    data = partclient.execute('{ group(by: ["north", "west"]) { columns { north { values } } } }')
     data = partclient.execute(
-        '{ fragments(counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
+        '{ group(by: ["north", "west"], counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
     )
-    assert data == {'fragments': {'column': {'values': [9301, 11549, 11549, 9301]}}}
-    data = partclient.execute(
-        '''{ fragments(filter: {eq: [{name: "state"}, {value: "CA"}]}
-        aggregate: {min: {name: "state"}}) { columns { state { values } } } }'''
-    )
-    assert data == {'fragments': {'columns': {'state': {'values': [None, 'CA'] * 2}}}}
-    data = partclient.execute(
-        '''{ fragments(counts: "c", filter: {eq: [{name: "state"}, {value: "CA"}]}) {
-        column(name: "c") { ... on LongColumn { values } } } }'''
-    )
-    assert data == {'fragments': {'column': {'values': [0, 2376, 0, 271]}}}
-    data = partclient.execute(
-        '''{ fragments(aggregate: {min: {alias: "south", name: "latitude"}}) {
-        column(name: "south") { ... on FloatColumn { min } } } }'''
-    )
-    assert data == {'fragments': {'column': {'min': pytest.approx(17.96333)}}}
+    assert data == {'group': {'column': {'values': [9301, 11549, 11549, 9301]}}}
     data = partclient.execute('{ rank(by: "north") { row { north } } }')
     assert data == {'rank': {'row': {'north': 0}}}
     data = partclient.execute('{ rank(by: ["-north", "-zipcode"]) { row { zipcode } } }')
@@ -168,12 +150,12 @@ def test_fragments(partclient):
     data = partclient.execute('{ sort(by: "north", length: 1) { row { north } } }')
     assert data == {'sort': {'row': {'north': 0}}}
     data = partclient.execute(
-        '''{ group(by: ["north", "west"], sort: {by: "-zipcode", length: 3}) {
+        '''{ group(by: ["north", "west"], aggregate: {list: {name: "zipcode"}}, sort: {by: "-zipcode", length: 3}) {
         column(name: "zipcode") { ... on ListColumn { value(index: 3) { ... on IntColumn { values } } } } } }'''
     )
     assert data == {'group': {'column': {'value': {'values': [99950, 99929, 99928]}}}}
     data = partclient.execute(
-        '''{ group(by: "north", rank: {by: "state"}) { column(name: "state") {
+        '''{ group(by: "north", aggregate: {list: {name: "state"}}, rank: {by: "state"}) { column(name: "state") {
         ... on ListColumn { value(index: 1) { length ... on StringColumn { value } } } } } }'''
     )
     assert data == {'group': {'column': {'value': {'length': 273, 'value': 'AK'}}}}

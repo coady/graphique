@@ -333,17 +333,17 @@ def test_sort(client):
     data = client.execute('{ sort(by: ["state"], length: 2) { columns { state { values } } } }')
     assert data['sort']['columns']['state']['values'] == ['AK', 'AK']
     data = client.execute(
-        '''{ group(by: ["state"]) { apply(list: {sort: {by: ["county"]}})
+        '''{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: ["county"]}})
         { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
     )
     assert data['group']['apply']['aggregate']['row'] == {'state': 'NY', 'county': 'Albany'}
     data = client.execute(
-        '''{ group(by: ["state"]) { apply(list: {sort: {by: ["-county"], length: 1}})
+        '''{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: ["-county"], length: 1}})
         { aggregate(first: [{name: "county"}]) { row { state county } } } } }'''
     )
     assert data['group']['apply']['aggregate']['row'] == {'state': 'NY', 'county': 'Yates'}
     data = client.execute(
-        '''{ group(by: ["state"]) { apply(list: {sort: {by: "county", length: 2}})
+        '''{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: "county", length: 2}})
         { row { state } column(name: "county") { ... on ListColumn { value { length } } } } } }'''
     )
     assert data['group']['apply'] == {'row': {'state': 'NY'}, 'column': {'value': {'length': 2}}}
@@ -353,9 +353,9 @@ def test_group(client):
     with pytest.raises(ValueError, match="list"):
         client.execute('{ group(by: ["state"]) { tables { length } } }')
     with pytest.raises(ValueError, match="cannot represent"):
-        client.execute('{ group(by: "state") { row { city } } }')
+        client.execute('{ group(by: "state", aggregate: {list: {name: "city"}}) { row { city } } }')
     data = client.execute(
-        '''{ group(by: ["state"]) { length tables { length
+        '''{ group(by: ["state"], aggregate: {list: {name: "county"}}) { length tables { length
         columns { state { values } county { min max } } }
         scan(columns: {list: {valueLength: {name: "county"}}, alias: "c"}) {
         column(name: "c") { ... on IntColumn { values } } } } }'''
@@ -366,7 +366,7 @@ def test_group(client):
     assert set(table['columns']['state']['values']) == {'NY'}
     assert table['columns']['county'] == {'min': 'Albany', 'max': 'Yates'}
     data = client.execute(
-        '''{ group(by: ["state", "county"], counts: "counts") {
+        '''{ group(by: ["state", "county"], counts: "counts", aggregate: {list: {name: "city"}}) {
         scan(filter: {gt: [{name: "counts"}, {value: 200}]}) {
         aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
         min: column(name: "min") { ... on StringColumn { values } }
@@ -376,8 +376,8 @@ def test_group(client):
     assert agg['min']['values'] == ['Naval Anacost Annex', 'Alsip', 'Alief', 'Acton']
     assert agg['max']['values'] == ['Washington Navy Yard', 'Worth', 'Webster', 'Woodland Hills']
     data = client.execute(
-        '''{ group(by: ["state", "county"], counts: "c") { sort(by: ["-c"], length: 4) {
-        aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
+        '''{ group(by: ["state", "county"], counts: "c", aggregate: {list: [{name: "zipcode"}, {name: "latitude"}, {name: "longitude"}]}) {
+        sort(by: ["-c"], length: 4) { aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
         columns { latitude { values } longitude { values } }
         column(name: "zipcode") { type } } } } }'''
     )
@@ -387,7 +387,7 @@ def test_group(client):
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
     data = client.execute(
         '''{ scan(columns: {name: "zipcode", cast: "bool"})
-        { group(by: ["state"]) { slice(length: 3) {
+        { group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { slice(length: 3) {
         scan(columns: [{alias: "a", list: {any: {name: "zipcode"}}}, {alias: "b", list: {all: {name: "zipcode"}}}]) {
         a: column(name: "a") { ... on BooleanColumn { values } }
         b: column(name: "b") { ... on BooleanColumn { values } }
@@ -415,10 +415,12 @@ def test_list(client):
 
 
 def test_flatten(client):
-    data = client.execute('{ group(by: "state") { flatten { columns { city { type } } } } }')
+    data = client.execute(
+        '{ group(by: "state", aggregate: {list: {name: "city"}}) { flatten { columns { city { type } } } } }'
+    )
     assert data == {'group': {'flatten': {'columns': {'city': {'type': 'string'}}}}}
     data = client.execute(
-        '''{ group(by: "state") { flatten(indices: "idx") { columns { city { type } }
+        '''{ group(by: "state", aggregate: {list: {name: "city"}}) { flatten(indices: "idx") { columns { city { type } }
         column(name: "idx") { ... on LongColumn { unique { values counts } } } } } }'''
     )
     idx = data['group']['flatten']['column']['unique']
@@ -444,7 +446,7 @@ def test_aggregate(client):
         },
     }
     data = client.execute(
-        '''{ group(by: ["state", "county"], aggregate: {min: {name: "city", alias: "first"}}) {
+        '''{ group(by: ["state", "county"], aggregate: {list: {name: "city"}, min: {name: "city", alias: "first"}}) {
         aggregate(max: {name: "city", alias: "last"}) { slice(length: 3) {
         first: column(name: "first") { ... on StringColumn { values } }
         last: column(name: "last") { ... on StringColumn { values } } } } } }'''
@@ -466,21 +468,21 @@ def test_runs(client):
     assert agg['column']['type'] == 'list<item: string>'
     data = client.execute(
         '''{ sort(by: ["state", "longitude"]) {
-        partition(by: ["state", "longitude"], diffs: [{name: "longitude", gt: 1.0}]) {
+        runs(by: ["state"], split: [{name: "longitude", gt: 1.0}]) {
         length columns { state { values } }
         column(name: "longitude") { type } } } }'''
     )
-    groups = data['sort']['partition']
+    groups = data['sort']['runs']
     assert groups['length'] == 62
     assert groups['columns']['state']['values'][:7] == ['AK'] * 7
     assert groups['column']['type'] == 'list<item: double>'
     data = client.execute(
-        '''{ partition(by: ["state"], diffs: [{name: "state", lt: null}]) {
+        '''{ runs(split: [{name: "state", lt: null}]) {
         length column(name: "state") {
         ... on ListColumn {values { ... on StringColumn { values } } } } } }'''
     )
-    assert data['partition']['length'] == 34
-    assert data['partition']['column']['values'][0]['values'] == (['NY'] * 2) + (['PR'] * 176)
+    assert data['runs']['length'] == 34
+    assert data['runs']['column']['values'][0]['values'] == (['NY'] * 2) + (['PR'] * 176)
     data = client.execute(
         '''{ runs(by: ["state"]) { sort(by: ["state"]) {
         columns { state { values } } } } }'''
@@ -501,18 +503,16 @@ def test_runs(client):
     )
     assert data['runs']['apply']['column']['type'] == 'large_list<item: int32>'
     data = client.execute(
-        '''{ partition(by: ["state"], counts: "c") { filter(state: {eq: "NY"}) {
+        '''{ runs(by: ["state"], counts: "c") { filter(state: {eq: "NY"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }'''
     )
-    agg = data['partition']['filter']
+    agg = data['runs']['filter']
     assert agg['column']['values'] == [2, 1, 2202]
     assert agg['columns']['state']['values'] == ['NY'] * 3
     data = client.execute('{ runs(split: {name: "zipcode", lt: 0}) { length } }')
     assert data == {'runs': {'length': 1}}
-    data = client.execute(
-        '{ partition(by: ["zipcode"], diffs: {name: "zipcode", lt: null}) { length } }'
-    )
-    assert data == {'partition': {'length': 1}}
+    data = client.execute('{ runs(split: {name: "zipcode", lt: null}) { length } }')
+    assert data == {'runs': {'length': 1}}
 
 
 def test_rows(client):
@@ -522,13 +522,9 @@ def test_rows(client):
     assert data == {'row': {'state': 'NY'}}
     data = client.execute('{ row(index: -1) { state } }')
     assert data == {'row': {'state': 'AK'}}
-    data = client.execute('{ min(by: ["latitude"]) { row { state } } }')
-    assert data == {'min': {'row': {'state': 'PR'}}}
-    data = client.execute('{ max(by: ["latitude", "longitude"]) { row { state } } }')
-    assert data == {'max': {'row': {'state': 'AK'}}}
     data = client.execute(
-        '''{ group(by: "state") { apply(list: {rank: {by: "-longitude"}}) {
-        aggregate(first: [{name: "city"}]) { row { state city } } } } }'''
+        '''{ group(by: "state", aggregate: {list: [{name: "city"}, {name: "longitude"}]}, rank: {by: "-longitude"}) {
+        aggregate(first: [{name: "city"}]) { row { state city } } } }'''
     )
-    agg = data['group']['apply']['aggregate']
+    agg = data['group']['aggregate']
     assert agg == {'row': {'state': 'NY', 'city': 'Montauk'}}

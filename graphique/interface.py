@@ -174,7 +174,7 @@ class Dataset:
         return self
 
     @staticmethod
-    def add_context(info: Info, key: str, **data):
+    def add_context(info: Info, key: str, **data):  # pragma: no cover
         """Add data to context with path info."""
         info.context.setdefault(key, []).append(dict(data, path=get_path_from_info(info)))
 
@@ -256,30 +256,20 @@ class Dataset:
         See `column` for accessing any column which has changed type. See `tables` to split on any
         aggregated list columns. Provisional inputs `filter`, `sort`, and `rank` are equivalent to
         the functions in `apply(list: ...)`, but memory optimized.
-
-        Deprecated: columns which are not aggregated are transformed into list columns.
-        Use the explicit `list` input instead, which also supports aliasing.
         """
-        scalars, refs, aggs = set(by), set(), dict(aggregate)
-        for values in aggs.values():
-            scalars.update(agg.alias for agg in values)
-            refs.update(agg.name for agg in values)
-        if not aggs.setdefault('list', aggregate.list):
-            aggs['list'] += map(Field, self.references(info, level=1) - scalars - {counts})
-            if aggs['list']:
-                reason = "specify list aggregations explicitly"
-                self.add_context(info, 'deprecations', reason=reason)
+        aggs = dict(aggregate)
+        refs = {agg.name for values in aggs.values() for agg in values}
         list_opts = dict(filter=filter, sort=sort or UNSET, rank=rank or UNSET)
         list_func = ListFunction(**list_opts)
         fragments = set(T.fragment_keys(self.table))
         if fragments and set(by) == fragments:
-            return self.fragments(info, counts, aggregate, **list_opts)
+            return type(self)(self.fragments(info, counts, aggregate, **list_opts))
         if isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives:
             table = self.select(info)
             columns = T.columns(T.group(table, *by, counts=counts, **aggs))
         else:  # scan fragments or batches when possible
             if fragments and set(by) <= fragments and fragments.isdisjoint(refs):
-                table = self.fragments(info, counts, aggregate, **list_opts).table
+                table = self.fragments(info, counts, aggregate, **list_opts)
             else:
                 table = T.map_batch(
                     self.scanner(info),
@@ -291,7 +281,7 @@ class Dataset:
             if counts:
                 aggs['sum'].append(Field(counts))
             distinct = aggs.pop('distinct', [])
-            aggs['list'] += (Field(agg.alias) for agg in distinct)
+            aggs.setdefault('list', []).extend(Field(agg.alias) for agg in distinct)
             for agg in itertools.chain(*aggs.values()):
                 agg.name = agg.alias
             columns = T.columns(T.group(table, *by, **aggs))
@@ -302,7 +292,6 @@ class Dataset:
                 columns[agg.alias] = ListChunk.map_list(column, agg.distinct, **agg.options)
         return type(self)(self.apply_list(pa.table(columns), list_func))
 
-    @strawberry.field(deprecation_reason="use `group(by: [<fragment key>, ...])`")
     @no_type_check
     def fragments(
         self,
@@ -312,7 +301,7 @@ class Dataset:
         filter: Expression = {},
         sort: Optional[Sort] = None,
         rank: Optional[Ranked] = None,
-    ) -> Self:
+    ) -> pa.Table:
         """Return table from scanning fragments and grouping by partitions.
 
         Requires a partitioned dataset. Faster and less memory intensive than `group`.
@@ -349,7 +338,7 @@ class Dataset:
             elif isinstance(values[0], pa.Array):
                 columns[name] = ListChunk.from_scalars(values)
         columns.update({field.name: pa.array(columns[field.name], field.type) for field in schema})
-        return type(self)(self.add_metric(info, pa.table(columns), mode='fragment'))
+        return self.add_metric(info, pa.table(columns), mode='fragment')
 
     @doc_field(
         by="column names",
@@ -375,13 +364,6 @@ class Dataset:
             predicates[name] = (getattr(pc, func), value)[: 1 if value is None else 2]
         table, counts_ = T.runs(table, *by, **predicates)
         return type(self)(table.append_column(counts, counts_) if counts else table)
-
-    @strawberry.field(deprecation_reason="renamed `runs`")
-    def partition(
-        self, info: Info, by: List[str], diffs: List[Diff] = [], counts: str = ''
-    ) -> Self:
-        names = {diff.name for diff in diffs}
-        return self.runs(info, [name for name in by if name not in names], diffs, counts)
 
     @doc_field(
         by="column names; prefix with `-` for descending order",
@@ -428,14 +410,6 @@ class Dataset:
             table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by, **kwargs)
             self.add_metric(info, table, mode='batch')
         return type(self)(T.ranked(table, max, *by, **kwargs))
-
-    @strawberry.field(deprecation_reason="use `rank(by: [...])`")
-    def min(self, info: Info, by: List[str]) -> Self:
-        return self.rank(info, by)
-
-    @strawberry.field(deprecation_reason="use `rank(by: [-...])`")
-    def max(self, info: Info, by: List[str]) -> Self:
-        return self.rank(info, ['-' + name for name in by])
 
     @staticmethod
     def apply_list(table: Batch, list_: ListFunction) -> Batch:

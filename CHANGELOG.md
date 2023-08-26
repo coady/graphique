@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
+### Removed
+* `fragments` replaced by `group`
+* `min` and `max` replaced by `rank`
+* `partition` replaced by `runs`
+* `list` aggregation must be explicit
 
 ## [1.3](https://pypi.org/project/graphique/1.3/) - 2023-08-25
 ### Changed

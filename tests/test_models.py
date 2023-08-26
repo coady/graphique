@@ -348,7 +348,7 @@ def test_dictionary(executor):
     data = executor('{ column(name: "string") { length } }')
     assert data == {'column': {'length': 2}}
     data = executor(
-        '''{ group(by: ["string"]) { tables {
+        '''{ group(by: ["string"], aggregate: {list: {name: "camelId"}}) { tables {
         columns { string { values } } column(name: "camelId") { length } } } }'''
     )
     assert data['group']['tables'] == [
@@ -356,10 +356,10 @@ def test_dictionary(executor):
         {'columns': {'string': {'values': [None]}}, 'column': {'length': 1}},
     ]
     data = executor(
-        '''{ group(by: ["camelId"]) { aggregate(countDistinct: {name: "string"}) {
-        column(name: "string") { ... on LongColumn { values } } } } }'''
+        '''{ group(by: ["camelId"], aggregate: {countDistinct: {name: "string"}}) {
+        column(name: "string") { ... on LongColumn { values } } } }'''
     )
-    assert data == {'group': {'aggregate': {'column': {'values': [1, 0]}}}}
+    assert data == {'group': {'column': {'values': [1, 0]}}}
     data = executor(
         '''{ scan(columns: {alias: "string", coalesce: [{name: "string"}, {value: ""}]}) {
         columns { string { values } } } }'''
