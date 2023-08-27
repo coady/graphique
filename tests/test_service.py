@@ -405,15 +405,6 @@ def test_group(client):
     assert data['sc']['length'] == data['cs']['length'] == 3216
 
 
-def test_list(client):
-    data = client.execute(
-        '''{ group(by: "state", aggregate: {list: [{name: "county"}, {name: "city"}]},
-        filter: {eq: [{name: "county"}, {name: "city"}]}) {
-        aggregate(count: {name: "city"}) { column(name: "city") { ... on LongColumn { values} } } } }'''
-    )
-    assert data['group']['aggregate']['column']['values'].count(0) == 2
-
-
 def test_flatten(client):
     data = client.execute(
         '{ group(by: "state", aggregate: {list: {name: "city"}}) { flatten { columns { city { type } } } } }'
@@ -522,9 +513,3 @@ def test_rows(client):
     assert data == {'row': {'state': 'NY'}}
     data = client.execute('{ row(index: -1) { state } }')
     assert data == {'row': {'state': 'AK'}}
-    data = client.execute(
-        '''{ group(by: "state", aggregate: {list: [{name: "city"}, {name: "longitude"}]}, rank: {by: "-longitude"}) {
-        aggregate(first: [{name: "city"}]) { row { state city } } } }'''
-    )
-    agg = data['group']['aggregate']
-    assert agg == {'row': {'state': 'NY', 'city': 'Montauk'}}

@@ -112,18 +112,6 @@ def test_group(dsclient):
 
 def test_list(partclient):
     data = partclient.execute(
-        '''{ group(by: ["state"], aggregate: {list: [{name: "county"}, {name: "zipcode"}]},
-        sort: {by: "zipcode", length: 1}) { tables { length row { state county } } } }'''
-    )
-    (table,) = [table for table in data['group']['tables'] if table['row']['state'] == 'PR']
-    assert table == {'length': 1, 'row': {'state': 'PR', 'county': 'Adjuntas'}}
-    data = partclient.execute(
-        '''{ group(by: ["state"], aggregate: {list: [{name: "county"}, {name: "zipcode"}]},
-        rank: {by: "zipcode"}) { tables { length row { state county } } } }'''
-    )
-    (table,) = [table for table in data['group']['tables'] if table['row']['state'] == 'PR']
-    assert table == {'length': 1, 'row': {'state': 'PR', 'county': 'Adjuntas'}}
-    data = partclient.execute(
         '''{ group(by: "state", aggregate: {distinct: {alias: "counties", name: "county"}}) {
         tables { row { state } column(name: "counties") { length } } } } '''
     )
@@ -149,16 +137,6 @@ def test_fragments(partclient):
     assert data == {'rank': {'row': {'zipcode': 99950}}}
     data = partclient.execute('{ sort(by: "north", length: 1) { row { north } } }')
     assert data == {'sort': {'row': {'north': 0}}}
-    data = partclient.execute(
-        '''{ group(by: ["north", "west"], aggregate: {list: {name: "zipcode"}}, sort: {by: "-zipcode", length: 3}) {
-        column(name: "zipcode") { ... on ListColumn { value(index: 3) { ... on IntColumn { values } } } } } }'''
-    )
-    assert data == {'group': {'column': {'value': {'values': [99950, 99929, 99928]}}}}
-    data = partclient.execute(
-        '''{ group(by: "north", aggregate: {list: {name: "state"}}, rank: {by: "state"}) { column(name: "state") {
-        ... on ListColumn { value(index: 1) { length ... on StringColumn { value } } } } } }'''
-    )
-    assert data == {'group': {'column': {'value': {'length': 273, 'value': 'AK'}}}}
     data = partclient.execute(
         '{ group(by: ["north"], aggregate: {max: {name: "zipcode"}}) { row { north zipcode } } }'
     )

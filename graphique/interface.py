@@ -13,14 +13,13 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
-from strawberry import UNSET
 from strawberry.extensions.utils import get_path_from_info
 from strawberry.types import Info
 from typing_extensions import Annotated, Self
-from .core import Batch, Column as C, ListChunk, Table as T, sort_key
+from .core import Batch, Column as C, ListChunk, Table as T
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
-from .inputs import HashAggregates, ListFunction, Pairwise, Projection, Rank, Ranked
-from .inputs import ScalarAggregate, Sort, TDigestAggregate, VarianceAggregate, links, provisional
+from .inputs import HashAggregates, ListFunction, Pairwise, Projection, Rank
+from .inputs import ScalarAggregate, TDigestAggregate, VarianceAggregate, links, provisional
 from .models import Column, doc_field, selections
 from .scalars import Long
 
@@ -46,11 +45,6 @@ def doc_argument(annotation, func: Callable, **kwargs):
     """Use function doc for argument description."""
     kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
     return Annotated[annotation, strawberry.argument(**kwargs)]
-
-
-def provisional_argument(annotation, **kwargs):
-    """Mark argument as provisional."""
-    return Annotated[annotation, strawberry.argument(directives=[provisional()], **kwargs)]
 
 
 @strawberry.type(description="dataset schema")
@@ -238,45 +232,28 @@ class Dataset:
         counts="optionally include counts in an aliased column",
         aggregate="aggregation functions applied to other columns",
     )
-    @no_type_check
     def group(
-        self,
-        info: Info,
-        by: List[str] = [],
-        counts: str = '',
-        aggregate: HashAggregates = {},
-        filter: provisional_argument(Expression, description="filter within list scalars") = {},
-        sort: provisional_argument(Optional[Sort], description="sort within list scalars") = None,
-        rank: provisional_argument(
-            Optional[Ranked], description="filter by dense rank within list scalars"
-        ) = None,
+        self, info: Info, by: List[str] = [], counts: str = '', aggregate: HashAggregates = {}  # type: ignore
     ) -> Self:
         """Return table grouped by columns.
 
         See `column` for accessing any column which has changed type. See `tables` to split on any
-        aggregated list columns. Provisional inputs `filter`, `sort`, and `rank` are equivalent to
-        the functions in `apply(list: ...)`, but memory optimized.
+        aggregated list columns.
         """
         aggs = dict(aggregate)
         refs = {agg.name for values in aggs.values() for agg in values}
-        list_opts = dict(filter=filter, sort=sort or UNSET, rank=rank or UNSET)
-        list_func = ListFunction(**list_opts)
         fragments = set(T.fragment_keys(self.table))
         if fragments and set(by) == fragments:
-            return type(self)(self.fragments(info, counts, aggregate, **list_opts))
+            return type(self)(self.fragments(info, counts, aggregate))
         if isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives:
             table = self.select(info)
             columns = T.columns(T.group(table, *by, counts=counts, **aggs))
         else:  # scan fragments or batches when possible
             if fragments and set(by) <= fragments and fragments.isdisjoint(refs):
-                table = self.fragments(info, counts, aggregate, **list_opts)
+                table = self.fragments(info, counts, aggregate)
             else:
-                table = T.map_batch(
-                    self.scanner(info),
-                    lambda b: self.apply_list(T.group(b, *by, counts=counts, **aggs), list_func),
-                )
+                table = T.map_batch(self.scanner(info), T.group, *by, counts=counts, **aggs)
                 self.add_metric(info, table, mode='batch')
-            list_func.filter = Expression()
             aggs.setdefault('sum', []).extend(Field(agg.alias) for agg in aggs.pop('count', []))
             if counts:
                 aggs['sum'].append(Field(counts))
@@ -290,53 +267,33 @@ class Dataset:
             for agg in distinct:
                 column = columns[agg.alias]
                 columns[agg.alias] = ListChunk.map_list(column, agg.distinct, **agg.options)
-        return type(self)(self.apply_list(pa.table(columns), list_func))
+        return type(self)(pa.table(columns))
 
-    @no_type_check
-    def fragments(
-        self,
-        info: Info,
-        counts: str = '',
-        aggregate: HashAggregates = {},
-        filter: Expression = {},
-        sort: Optional[Sort] = None,
-        rank: Optional[Ranked] = None,
-    ) -> pa.Table:
+    def fragments(self, info: Info, counts: str = '', aggregate: HashAggregates = {}) -> pa.Table:  # type: ignore
         """Return table from scanning fragments and grouping by partitions.
 
         Requires a partitioned dataset. Faster and less memory intensive than `group`.
         """
         schema = self.table.partitioning.schema  # requires a Dataset
-        filter, aggs = (filter.to_arrow() if filter else None), dict(aggregate)
+        aggs = dict(aggregate)
         names = self.references(info, level=1)
         names.update(agg.name for value in aggs.values() for agg in value)
-        if rank:
-            names.update(dict(map(sort_key, rank.by)))
-        if sort:
-            names.update(dict(map(sort_key, sort.by)))
         projection = {name: pc.field(name) for name in names - set(schema.names)}
         columns = collections.defaultdict(list)
         for fragment in T.get_fragments(self.table):
             row = ds.get_partition_keys(fragment.partition_expression)
             if projection:
-                table = fragment.to_table(filter=filter, columns=projection)
+                table = fragment.to_table(columns=projection)
                 row.update(T.aggregate(table, counts=counts, **aggs))
             elif counts:
-                row[counts] = fragment.count_rows(filter=filter)
+                row[counts] = fragment.count_rows()
             arrays = {name: value for name, value in row.items() if isinstance(value, pa.Array)}
-            batch = pa.RecordBatch.from_pydict(arrays)
-            if rank:
-                batch = T.ranked(batch, rank.max, *rank.by)
-            if sort:
-                batch = T.sort(batch, *sort.by, length=sort.length)
-            row.update(T.columns(batch))
+            row.update(T.columns(pa.RecordBatch.from_pydict(arrays)))
             for name in row:
                 columns[name].append(row[name])
         for name, values in columns.items():
             if isinstance(values[0], pa.Scalar):
                 columns[name] = C.from_scalars(values)
-            elif isinstance(values[0], pa.Array):
-                columns[name] = ListChunk.from_scalars(values)
         columns.update({field.name: pa.array(columns[field.name], field.type) for field in schema})
         return self.add_metric(info, pa.table(columns), mode='fragment')
 
