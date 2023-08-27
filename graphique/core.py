@@ -15,8 +15,10 @@ from dataclasses import dataclass
 from typing import Callable, Iterable, Iterator, Optional, Sequence, Union, get_type_hints
 import numpy as np  # type: ignore
 import pyarrow as pa
+import pyarrow.acero as ac
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
+from typing_extensions import Self
 
 Array = Union[pa.Array, pa.ChunkedArray]
 Batch = Union[pa.RecordBatch, pa.Table]
@@ -49,7 +51,7 @@ class Agg:
     }
 
     associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
-    associatives |= {'count', 'distinct', 'list'}  # transformed to be associative
+    associatives |= {'count'}  # transformed to be associative
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -57,11 +59,10 @@ class Agg:
         self.options = options
 
     def astuple(self, func: str) -> tuple:
-        options = self.option_map[func](**self.options)
-        return self.name, func, options
+        options = self.option_map[func.rpartition('hash_')[-1]](**self.options)
+        return self.name, func, options, self.alias
 
-    first = one = operator.itemgetter(0)
-    last = operator.itemgetter(-1)
+    one = operator.itemgetter(0)
     list = staticmethod(lambda array: array)
 
     @staticmethod
@@ -89,11 +90,6 @@ class Compare:
 def sort_key(name: str) -> tuple:
     """Parse sort order."""
     return name.lstrip('-'), ('descending' if name.startswith('-') else 'ascending')
-
-
-def decode(array: pa.Array) -> pa.Array:
-    """Decode dictionary array."""
-    return array.dictionary_decode() if isinstance(array, pa.DictionaryArray) else array
 
 
 def register(func: Callable) -> pc.Function:
@@ -404,69 +400,33 @@ class Table(pa.Table):
         return table, Column.diff(offsets)
 
     def group(
-        self,
-        *names: str,
-        counts: str = '',
-        first: Sequence[Agg] = (),
-        last: Sequence[Agg] = (),
-        **funcs: Sequence[Agg],
-    ) -> Union[pa.Table, pa.RecordBatch]:
+        self, *names: str, counts: str = '', **funcs: Sequence[Agg]
+    ) -> Union[pa.Table, ds.Scanner]:
         """Group by and aggregate.
 
         Args:
             *names: columns to group by
             counts: alias for optional row counts
-            first: columns to take first value
-            last: columns to take last value
             **funcs: aggregate funcs with columns options
         """
-        if isinstance(self, pa.Table):
+        if loaded := isinstance(self, pa.Table):
             self = self.unify_dictionaries()
-        columns = Table.columns(self)
-        aliases, args = {}, []  # type: ignore
+        prefix = 'hash_' if names else ''
+        aggs = [agg.astuple(prefix + func) for func in funcs for agg in funcs[func]]
         if counts:
-            aliases['count_all'] = counts
-            args.append(([], 'count_all'))
-        if first or last:
-            columns[''] = np.arange(len(self))
-            args.append(('', 'min_max'))
-        lists: Sequence[Agg] = []
-        list_cols = [self[agg.name] for agg in funcs.get('list', [])]
-        if any(pa.types.is_dictionary(col.type) or Column.is_list_type(col) for col in list_cols):
-            columns[''] = np.arange(len(self))
-            args.append(('', 'list'))
-            lists = funcs.pop('list')
-        for func, aggs in funcs.items():
-            aliases.update({f'{agg.name}_{func}': agg.alias for agg in aggs})
-            args += (agg.astuple(func) for agg in aggs)  # type: ignore
-        table = pa.table(columns).group_by(list(names)).aggregate(args)
-        columns = {name: table[name].combine_chunks() for name in table.schema.names}
-        if first or last:
-            for aggs, indices in zip([first, last], columns.pop('_min_max').flatten()):
-                columns.update({agg.alias: self[agg.name].take(indices) for agg in aggs})
-        if lists:
-            indices = columns.pop('_list')
-            table = self.select({agg.name for agg in lists}).take(indices.values)
-            table = Table.from_offsets(table, indices.offsets)
-            columns.update({agg.alias: table[agg.name] for agg in lists})
-        columns.update({name: decode(columns[name]) for name in names})
-        columns = {aliases.get(name, name): columns[name] for name in columns}
-        return type(self).from_pydict(columns)
+            aggs.append(([], 'hash_count_all', None, counts))
+        decls = Declarations(self).aggregate(aggs, names)
+        return decls.to_table() if loaded else decls.to_scanner()
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
         """Return aggregated scalars as a row of data."""
         row = {counts: len(self)} if counts else {}
-        aliases, args = {}, []  # type: ignore
-        for key in funcs:
-            if hasattr(pc, key) and key not in ('first', 'last'):
-                aliases.update({f'{agg.name}_{key}': agg.alias for agg in funcs[key]})
-                args += (agg.astuple(key) for agg in funcs[key])
-            else:
-                func = getattr(Agg, key)
-                row.update({agg.alias: func(self[agg.name], **agg.options) for agg in funcs[key]})
-        if args:
-            table = self.group_by([]).aggregate(args)
-            row.update({aliases[name]: table[name][0] for name in table.schema.names})
+        for key in ('one', 'list', 'distinct'):  # hash only functions
+            func, aggs = getattr(Agg, key), funcs.pop(key, [])
+            row.update({agg.alias: func(self[agg.name], **agg.options) for agg in aggs})
+        if funcs:
+            table = Table.group(self, **funcs)  # type: ignore
+            row.update({name: table[name][0] for name in table.schema.names})
         for name, value in row.items():
             if isinstance(value, pa.ChunkedArray):
                 row[name] = value.combine_chunks()
@@ -658,3 +618,39 @@ class Table(pa.Table):
         for prefix in itertools.takewhile(lambda _: size >= 1e3, 'kMGT'):
             size /= 1e3
         return f'{size:n} {prefix}B'
+
+
+class Declarations(list):
+    """[Acero](https://arrow.apache.org/docs/python/api/acero.html) engine declarations."""
+
+    option_map = {
+        'table_source': ac.TableSourceNodeOptions,
+        'scan': ac.ScanNodeOptions,
+        'filter': ac.FilterNodeOptions,
+        'project': ac.ProjectNodeOptions,
+        'aggregate': ac.AggregateNodeOptions,
+        'order_by': ac.OrderByNodeOptions,
+        'hashjoin': ac.HashJoinNodeOptions,
+    }
+
+    def __init__(self, source: Union[pa.Table, ds.Dataset]):
+        if isinstance(source, ds.Dataset):
+            expr = source._scan_options.get('filter')
+            self.scan(source, filter=expr)
+            if expr is not None:
+                self.filter(expr)
+        else:
+            self.table_source(source)
+
+    def apply(self, name: str, *args, **kwargs) -> Self:
+        self.append(ac.Declaration(name, self.option_map[name](*args, **kwargs)))
+        return self
+
+    def __getattr__(self, name: str) -> Callable:
+        return functools.partial(self.apply, name)
+
+    def to_table(self, use_threads: bool = False) -> pa.Table:
+        return ac.Declaration.from_sequence(self).to_table(use_threads)
+
+    def to_scanner(self, use_threads: bool = False) -> pa.Table:
+        return ds.Scanner.from_batches(ac.Declaration.from_sequence(self).to_reader(use_threads))

@@ -240,34 +240,25 @@ class Dataset:
         See `column` for accessing any column which has changed type. See `tables` to split on any
         aggregated list columns.
         """
-        aggs = dict(aggregate)
+        table, aggs = self.table, dict(aggregate)
         refs = {agg.name for values in aggs.values() for agg in values}
         fragments = set(T.fragment_keys(self.table))
-        if fragments and set(by) == fragments:
-            return type(self)(self.fragments(info, counts, aggregate))
-        if isinstance(self.table, pa.Table) or not set(aggs) <= Field.associatives:
+        dicts = (pa.types.is_dictionary(table.schema.field(name).type) for name in set(by) | refs)
+        if isinstance(table, ds.Scanner) or any(dicts):
             table = self.select(info)
-            columns = T.columns(T.group(table, *by, counts=counts, **aggs))
-        else:  # scan fragments or batches when possible
-            if fragments and set(by) <= fragments and fragments.isdisjoint(refs):
+        if fragments and set(by) <= fragments:
+            if set(by) == fragments:
+                return type(self)(self.fragments(info, counts, aggregate))
+            if fragments.isdisjoint(refs) and set(aggs) <= Field.associatives:
                 table = self.fragments(info, counts, aggregate)
-            else:
-                table = T.map_batch(self.scanner(info), T.group, *by, counts=counts, **aggs)
-                self.add_metric(info, table, mode='batch')
-            aggs.setdefault('sum', []).extend(Field(agg.alias) for agg in aggs.pop('count', []))
-            if counts:
-                aggs['sum'].append(Field(counts))
-            distinct = aggs.pop('distinct', [])
-            aggs.setdefault('list', []).extend(Field(agg.alias) for agg in distinct)
-            for agg in itertools.chain(*aggs.values()):
-                agg.name = agg.alias
-            columns = T.columns(T.group(table, *by, **aggs))
-            for agg in aggs['list']:
-                columns[agg.name] = ListChunk.inner_flatten(*columns[agg.name].chunks)
-            for agg in distinct:
-                column = columns[agg.alias]
-                columns[agg.alias] = ListChunk.map_list(column, agg.distinct, **agg.options)
-        return type(self)(pa.table(columns))
+                aggs.setdefault('sum', []).extend(Field(agg.alias) for agg in aggs.pop('count', []))
+                if counts:
+                    aggs['sum'].append(Field(counts))
+                    counts = ''
+                for agg in itertools.chain(*aggs.values()):
+                    agg.name = agg.alias
+        table = T.group(table, *by, counts=counts, **aggs)
+        return type(self)(self.oneshot(info, table) if isinstance(table, ds.Scanner) else table)
 
     def fragments(self, info: Info, counts: str = '', aggregate: HashAggregates = {}) -> pa.Table:  # type: ignore
         """Return table from scanning fragments and grouping by partitions.
@@ -475,7 +466,7 @@ class Dataset:
                 else:
                     columns[agg.alias] = func(table[agg.name], **agg.options)
         for name, aggs in agg_fields.items():
-            funcs = {key: agg.astuple(key)[-1] for key, agg in aggs.items()}
+            funcs = {key: agg.astuple(key)[2] for key, agg in aggs.items()}
             batch = ListChunk.aggregate(table[name], **funcs)
             columns.update(zip([agg.alias for agg in aggs.values()], batch))
         return type(self)(pa.table(columns))

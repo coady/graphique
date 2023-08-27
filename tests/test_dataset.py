@@ -154,6 +154,10 @@ def test_fragments(partclient):
         column(name: "west") { ... on LongColumn { values } } } }'''
     )
     assert data == {'group': {'column': {'values': [2, 2]}}}
+    data = partclient.execute(
+        '{ group(by: "north", counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
+    )
+    assert data == {'group': {'column': {'values': [20850, 20850]}}}
 
 
 def test_schema(dsclient):

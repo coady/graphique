@@ -1,6 +1,5 @@
 import pyarrow as pa
 import pyarrow.compute as pc
-import pyarrow.dataset as ds
 import pytest
 from graphique.core import Agg, ListChunk, Column as C, Table as T
 
@@ -31,14 +30,9 @@ def test_chunks():
     assert C.index(array, 'a', start=3) == 4
     assert C.index(array, 'b', start=2) == -1
     table = pa.table({'col': array})
-    tbl = T.group(table, 'col', count_distinct=[Agg('col', 'count')], list=[Agg('col', 'list')])
-    assert tbl['col'].type == 'string'
+    tbl = T.group(table, 'col', count_distinct=[Agg('col', 'count')])
+    assert tbl['col'].to_pylist() == list('abc')
     assert tbl['count'].to_pylist() == [1] * 3
-    (counts,) = ListChunk.aggregate(tbl['list'], count_distinct=None)
-    assert counts.to_pylist() == [1] * 3
-    assert len(T.map_batch(table, T.group, 'col')) == 4
-    scanner = ds.dataset(table).scanner(filter=ds.field('col') == '')
-    assert not T.map_batch(scanner, T.group, 'col')
 
 
 def test_lists():
@@ -213,9 +207,9 @@ def test_not_implemented():
         pa.table({'': array.dictionary_encode()}).group_by('').aggregate([('', 'min')])
     with pytest.raises(NotImplementedError):
         pa.table({'': array}).group_by('').aggregate([('', 'any')])
-    func = Agg('value', min_count=4).astuple('max')
+    agg = 'value', 'max', pc.ScalarAggregateOptions(min_count=4)
     table = pa.table({'value': list('abc'), 'key': [0, 1, 0]})
-    table = table.group_by('key').aggregate([func])
+    table = table.group_by('key').aggregate([agg])
     assert table['value_max'].to_pylist() == list('cb')  # min_count has no effect
     value = pa.MonthDayNano([1, 2, 3])
     with pytest.raises(NotImplementedError):
