@@ -146,9 +146,10 @@ def test_fragments(partclient):
     )
     assert data == {'group': {'length': 1, 'row': {'state': 'AK'}}}
     data = partclient.execute(
-        '{ group(by: ["north", "west"], aggregate: {mean: {name: "zipcode"}}) { length } }'
+        '''{ group(by: ["north", "west"], aggregate: {distinct: {name: "city"}, mean: {name: "zipcode"}}) {
+        length column(name: "city") { type } } }'''
     )
-    assert data == {'group': {'length': 4}}
+    assert data == {'group': {'length': 4, 'column': {'type': 'large_list<item: string>'}}}
     data = partclient.execute(
         '''{ group(by: "north", aggregate: {countDistinct: {name: "west"}}) { 
         column(name: "west") { ... on LongColumn { values } } } }'''

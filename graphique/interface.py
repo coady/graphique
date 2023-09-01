@@ -257,8 +257,9 @@ class Dataset:
                     counts = ''
                 for agg in itertools.chain(*aggs.values()):
                     agg.name = agg.alias
+        loaded = isinstance(table, pa.Table)
         table = T.group(table, *by, counts=counts, **aggs)
-        return type(self)(self.oneshot(info, table) if isinstance(table, ds.Scanner) else table)
+        return type(self)(table if loaded else self.add_metric(info, table, mode='group'))
 
     def fragments(self, info: Info, counts: str = '', aggregate: HashAggregates = {}) -> pa.Table:  # type: ignore
         """Return table from scanning fragments and grouping by partitions.
@@ -285,6 +286,8 @@ class Dataset:
         for name, values in columns.items():
             if isinstance(values[0], pa.Scalar):
                 columns[name] = C.from_scalars(values)
+            elif isinstance(values[0], pa.Array):
+                columns[name] = ListChunk.from_scalars(values)
         columns.update({field.name: pa.array(columns[field.name], field.type) for field in schema})
         return self.add_metric(info, pa.table(columns), mode='fragment')
 

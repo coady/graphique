@@ -399,9 +399,7 @@ class Table(pa.Table):
         table = Table.union(scalars, Table.from_offsets(lists, offsets))
         return table, Column.diff(offsets)
 
-    def group(
-        self, *names: str, counts: str = '', **funcs: Sequence[Agg]
-    ) -> Union[pa.Table, ds.Scanner]:
+    def group(self, *names: str, counts: str = '', **funcs: Sequence[Agg]) -> pa.Table:
         """Group by and aggregate.
 
         Args:
@@ -409,14 +407,13 @@ class Table(pa.Table):
             counts: alias for optional row counts
             **funcs: aggregate funcs with columns options
         """
-        if loaded := isinstance(self, pa.Table):
+        if isinstance(self, pa.Table):
             self = self.unify_dictionaries()
         prefix = 'hash_' if names else ''
         aggs = [agg.astuple(prefix + func) for func in funcs for agg in funcs[func]]
         if counts:
             aggs.append(([], 'hash_count_all', None, counts))
-        decls = Declarations(self).aggregate(aggs, names)
-        return decls.to_table() if loaded else decls.to_scanner()
+        return Declarations(self).aggregate(aggs, names).to_table()
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
         """Return aggregated scalars as a row of data."""
@@ -651,6 +648,3 @@ class Declarations(list):
 
     def to_table(self, use_threads: bool = False) -> pa.Table:
         return ac.Declaration.from_sequence(self).to_table(use_threads)
-
-    def to_scanner(self, use_threads: bool = False) -> pa.Table:
-        return ds.Scanner.from_batches(ac.Declaration.from_sequence(self).to_reader(use_threads))
