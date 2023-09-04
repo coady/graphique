@@ -55,6 +55,7 @@ def test_columns(executor):
         data = execute(f'{{ {name} {{ dropNull }} }}')
         assert data == {name: {'dropNull': ['1970-01-01']}}
         assert execute(f'{{ {name} {{ min max }} }}')
+        assert execute(f'{{ {name} {{ first last }} }}')
 
     data = execute('{ timestamp { values } }')
     assert data == {'timestamp': {'values': ['1970-01-01T00:00:00', None]}}
@@ -82,6 +83,7 @@ def test_columns(executor):
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
     }
     assert execute('{ string { min max } }')
+    assert execute('{ string { first last } }') == {'string': {'first': '', 'last': ''}}
 
 
 def test_boolean(executor):

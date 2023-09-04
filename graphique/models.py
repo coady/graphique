@@ -147,23 +147,24 @@ class NominalColumn(Generic[T], Column):
 @Column.register(date, datetime, time, bytes)
 @strawberry.type(name='Column', description="column of ordinal values")
 class OrdinalColumn(NominalColumn[T]):
-    def __init__(self, array):
-        super().__init__(array)
-        self.min_max = functools.lru_cache(maxsize=None)(functools.partial(C.min_max, array))
+    @compute_field
+    def first(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+        return C.first_last(self.array, skip_nulls=skip_nulls, min_count=min_count)['first']
 
-    @doc_field
+    @compute_field
+    def last(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+        return C.first_last(self.array, skip_nulls=skip_nulls, min_count=min_count)['last']
+
+    @compute_field
     def min(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
-        """minimum value"""
-        return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['min']
+        return C.min_max(self.array, skip_nulls=skip_nulls, min_count=min_count)['min']
 
-    @doc_field
+    @compute_field
     def max(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
-        """maximum value"""
-        return self.min_max(skip_nulls=skip_nulls, min_count=min_count)['max']
+        return C.min_max(self.array, skip_nulls=skip_nulls, min_count=min_count)['max']
 
-    @doc_field
+    @compute_field
     def index(self, value: T, start: Long = 0, end: Optional[Long] = None) -> Long:
-        """Find the index of the first occurrence of a given value."""
         return C.index(self.array, value, start, end)
 
     @compute_field

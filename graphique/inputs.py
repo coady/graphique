@@ -18,7 +18,7 @@ from strawberry.schema_directive import Location
 from strawberry.field import StrawberryField
 from strawberry.scalars import JSON
 from typing_extensions import Self
-from .core import Agg, ListChunk
+from .core import Agg
 from .scalars import Long
 
 T = TypeVar('T')
@@ -212,6 +212,9 @@ class ScalarAggregates(Input):
     approximate_median: List[ScalarAggregate] = default_field([], func=pc.approximate_median)
     count: List[CountAggregate] = default_field([], func=pc.count)
     count_distinct: List[CountAggregate] = default_field([], func=pc.count_distinct)
+    first: List[ScalarAggregate] = default_field([], func=pc.first)
+    first_last: List[ScalarAggregate] = default_field([], func=pc.first_last)
+    last: List[ScalarAggregate] = default_field([], func=pc.last)
     max: List[ScalarAggregate] = default_field([], func=pc.max)
     mean: List[ScalarAggregate] = default_field([], func=pc.mean)
     min: List[ScalarAggregate] = default_field([], func=pc.min)
@@ -231,8 +234,6 @@ class HashAggregates(ScalarAggregates):
     distinct: List[CountAggregate] = default_field(
         [], description="distinct values within each scalar"
     )
-    first: List[Field] = default_field([], func=ListChunk.first)
-    last: List[Field] = default_field([], func=ListChunk.last)
     list: List[Field] = default_field([], description="all values within each scalar")
     one: List[Field] = default_field([], description="arbitrary value within each scalar")
 

@@ -190,6 +190,8 @@ def test_not_implemented():
     with pytest.raises(NotImplementedError):
         dictionary.index('')
     with pytest.raises(NotImplementedError):
+        pc.first_last(dictionary)
+    with pytest.raises(NotImplementedError):
         pc.min_max(dictionary)
     with pytest.raises(NotImplementedError):
         pc.count_distinct(dictionary)
