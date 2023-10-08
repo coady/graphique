@@ -11,8 +11,9 @@ import inspect
 import itertools
 import operator
 import json
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
-from typing import Callable, Iterable, Iterator, Optional, Sequence, Union, get_type_hints
+from typing import Optional, Union, get_type_hints
 import numpy as np  # type: ignore
 import pyarrow as pa
 import pyarrow.acero as ac

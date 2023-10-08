@@ -7,15 +7,16 @@ Doesn't require knowledge of the schema.
 import collections
 import inspect
 import itertools
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from datetime import timedelta
-from typing import Callable, Iterable, Iterator, List, Mapping, Optional, Union, no_type_check
+from typing import Annotated, Optional, Union, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry.extensions.utils import get_path_from_info
 from strawberry.types import Info
-from typing_extensions import Annotated, Self
+from typing_extensions import Self
 from .core import Batch, Column as C, ListChunk, Table as T
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
 from .inputs import HashAggregates, ListFunction, Pairwise, Projection, Rank
@@ -49,12 +50,12 @@ def doc_argument(annotation, func: Callable, **kwargs):
 
 @strawberry.type(description="dataset schema")
 class Schema:
-    names: List[str] = strawberry.field(description="field names")
-    types: List[str] = strawberry.field(
+    names: list[str] = strawberry.field(description="field names")
+    types: list[str] = strawberry.field(
         description="[arrow types](https://arrow.apache.org/docs/python/api/datatypes.html), corresponding to `names`"
     )
-    partitioning: List[str] = strawberry.field(description="partition keys")
-    index: List[str] = strawberry.field(description="sorted index columns")
+    partitioning: list[str] = strawberry.field(description="partition keys")
+    index: list[str] = strawberry.field(description="sorted index columns")
 
 
 @strawberry.interface(description="an arrow dataset, scanner, or table")
@@ -204,7 +205,7 @@ class Dataset:
         safe="check for conversion errors on cast",
     )
     def column(
-        self, info: Info, name: List[str], cast: str = '', safe: bool = True
+        self, info: Info, name: list[str], cast: str = '', safe: bool = True
     ) -> Optional[Column]:
         """Return column of any type by name.
 
@@ -233,7 +234,7 @@ class Dataset:
         aggregate="aggregation functions applied to other columns",
     )
     def group(
-        self, info: Info, by: List[str] = [], counts: str = '', aggregate: HashAggregates = {}  # type: ignore
+        self, info: Info, by: list[str] = [], counts: str = '', aggregate: HashAggregates = {}  # type: ignore
     ) -> Self:
         """Return table grouped by columns.
 
@@ -298,7 +299,7 @@ class Dataset:
     )
     @no_type_check
     def runs(
-        self, info: Info, by: List[str] = [], split: List[Diff] = [], counts: str = ''
+        self, info: Info, by: list[str] = [], split: list[Diff] = [], counts: str = ''
     ) -> Self:
         """Return table grouped by pairwise differences.
 
@@ -324,7 +325,7 @@ class Dataset:
     def sort(
         self,
         info: Info,
-        by: List[str],
+        by: list[str],
         length: Optional[Long] = None,
         null_placement: str = 'at_end',
     ) -> Self:
@@ -349,7 +350,7 @@ class Dataset:
         max="maximum dense rank to select; optimized for == 1 (min or max)",
         null_placement="where nulls in input should be ranked",
     )
-    def rank(self, info: Info, by: List[str], max: int = 1, null_placement: str = 'at_end') -> Self:
+    def rank(self, info: Info, by: list[str], max: int = 1, null_placement: str = 'at_end') -> Self:
         """Return table selected by maximum dense rank."""
         kwargs = dict(null_placement=null_placement)
         if isinstance(self.table, pa.Table):
@@ -381,14 +382,14 @@ class Dataset:
     def apply(
         self,
         info: Info,
-        cumulative_sum: doc_argument(List[Cumulative], func=pc.cumulative_sum) = [],
-        cumulative_prod: doc_argument(List[Cumulative], func=pc.cumulative_prod) = [],
-        cumulative_min: doc_argument(List[Cumulative], func=pc.cumulative_min) = [],
-        cumulative_max: doc_argument(List[Cumulative], func=pc.cumulative_max) = [],
-        pairwise_diff: doc_argument(List[Pairwise], func=pc.pairwise_diff) = [],
-        fill_null_backward: doc_argument(List[Field], func=pc.fill_null_backward) = [],
-        fill_null_forward: doc_argument(List[Field], func=pc.fill_null_forward) = [],
-        rank: doc_argument(List[Rank], func=pc.rank) = [],
+        cumulative_sum: doc_argument(list[Cumulative], func=pc.cumulative_sum) = [],
+        cumulative_prod: doc_argument(list[Cumulative], func=pc.cumulative_prod) = [],
+        cumulative_min: doc_argument(list[Cumulative], func=pc.cumulative_min) = [],
+        cumulative_max: doc_argument(list[Cumulative], func=pc.cumulative_max) = [],
+        pairwise_diff: doc_argument(list[Pairwise], func=pc.pairwise_diff) = [],
+        fill_null_backward: doc_argument(list[Field], func=pc.fill_null_backward) = [],
+        fill_null_forward: doc_argument(list[Field], func=pc.fill_null_forward) = [],
+        rank: doc_argument(list[Rank], func=pc.rank) = [],
         list_: Annotated[
             ListFunction,
             strawberry.argument(name='list', description="functions for list arrays."),
@@ -424,7 +425,7 @@ class Dataset:
         return type(self)(self.oneshot(info, scanner))
 
     @doc_field
-    def tables(self, info: Info) -> List[Optional[Self]]:  # type: ignore
+    def tables(self, info: Info) -> list[Optional[Self]]:  # type: ignore
         """Return a list of tables by splitting list columns.
 
         At least one list column must be referenced, and all list columns must have the same lengths.
@@ -437,23 +438,23 @@ class Dataset:
     def aggregate(
         self,
         info: Info,
-        approximate_median: doc_argument(List[ScalarAggregate], func=pc.approximate_median) = [],
-        count: doc_argument(List[CountAggregate], func=pc.count) = [],
-        count_distinct: doc_argument(List[CountAggregate], func=pc.count_distinct) = [],
+        approximate_median: doc_argument(list[ScalarAggregate], func=pc.approximate_median) = [],
+        count: doc_argument(list[CountAggregate], func=pc.count) = [],
+        count_distinct: doc_argument(list[CountAggregate], func=pc.count_distinct) = [],
         distinct: Annotated[
-            List[CountAggregate],
+            list[CountAggregate],
             strawberry.argument(description="distinct values within each scalar"),
         ] = [],
-        first: doc_argument(List[Field], func=ListChunk.first) = [],
-        last: doc_argument(List[Field], func=ListChunk.last) = [],
-        max: doc_argument(List[ScalarAggregate], func=pc.max) = [],
-        mean: doc_argument(List[ScalarAggregate], func=pc.mean) = [],
-        min: doc_argument(List[ScalarAggregate], func=pc.min) = [],
-        product: doc_argument(List[ScalarAggregate], func=pc.product) = [],
-        stddev: doc_argument(List[VarianceAggregate], func=pc.stddev) = [],
-        sum: doc_argument(List[ScalarAggregate], func=pc.sum) = [],
-        tdigest: doc_argument(List[TDigestAggregate], func=pc.tdigest) = [],
-        variance: doc_argument(List[VarianceAggregate], func=pc.variance) = [],
+        first: doc_argument(list[Field], func=ListChunk.first) = [],
+        last: doc_argument(list[Field], func=ListChunk.last) = [],
+        max: doc_argument(list[ScalarAggregate], func=pc.max) = [],
+        mean: doc_argument(list[ScalarAggregate], func=pc.mean) = [],
+        min: doc_argument(list[ScalarAggregate], func=pc.min) = [],
+        product: doc_argument(list[ScalarAggregate], func=pc.product) = [],
+        stddev: doc_argument(list[VarianceAggregate], func=pc.stddev) = [],
+        sum: doc_argument(list[ScalarAggregate], func=pc.sum) = [],
+        tdigest: doc_argument(list[TDigestAggregate], func=pc.tdigest) = [],
+        variance: doc_argument(list[VarianceAggregate], func=pc.variance) = [],
     ) -> Self:
         """Return table with scalar aggregate functions applied to list columns."""
         table = self.select(info)
@@ -476,7 +477,7 @@ class Dataset:
 
     aggregate.deprecation_reason = ListFunction.deprecation
 
-    def project(self, info: Info, columns: List[Projection]) -> dict:
+    def project(self, info: Info, columns: list[Projection]) -> dict:
         """Return projected columns, including all references from below fields."""
         projection = {name: pc.field(name) for name in self.references(info, level=1)}
         projection.update({col.alias or '.'.join(col.name): col.to_arrow() for col in columns})
@@ -495,7 +496,7 @@ class Dataset:
 
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(
-        self, info: Info, filter: Expression = {}, columns: List[Projection] = []  # type: ignore
+        self, info: Info, filter: Expression = {}, columns: list[Projection] = []  # type: ignore
     ) -> Self:
         """Select rows and project columns without memory usage."""
         expr = filter.to_arrow()
@@ -519,8 +520,8 @@ class Dataset:
         self,
         info: Info,
         right: str,
-        keys: List[str],
-        right_keys: Optional[List[str]] = None,
+        keys: list[str],
+        right_keys: Optional[list[str]] = None,
         join_type: str = 'left outer',
         left_suffix: str = '',
         right_suffix: str = '',
@@ -545,7 +546,7 @@ class Dataset:
     join.directives = [provisional()]
 
     @doc_field
-    def take(self, info: Info, indices: List[Long]) -> Self:
+    def take(self, info: Info, indices: list[Long]) -> Self:
         """Select rows from indices."""
         table = self.scanner(info).take(indices)
         return type(self)(self.add_metric(info, table, mode='take'))

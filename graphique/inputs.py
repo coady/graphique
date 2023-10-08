@@ -4,9 +4,10 @@ GraphQL input types.
 import functools
 import inspect
 import operator
+from collections.abc import Callable, Iterable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, Generic, Iterable, List, Optional, TypeVar, no_type_check
+from typing import Generic, Optional, TypeVar, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -81,7 +82,7 @@ def default_field(
 
 @strawberry.input(description="predicates for scalars")
 class Filter(Generic[T], Input):
-    eq: Optional[List[Optional[T]]] = default_field(
+    eq: Optional[list[Optional[T]]] = default_field(
         description="== or `isin`; `null` is equivalent to arrow `is_null`.", nullable=True
     )
     ne: Optional[T] = default_field(
@@ -143,7 +144,7 @@ class Mode(Field):
 
 @strawberry.input
 class Quantile(Field):
-    q: List[float] = (0.5,)  # type: ignore
+    q: list[float] = (0.5,)  # type: ignore
     interpolation: str = 'linear'
     skip_nulls: bool = True
     min_count: int = 1
@@ -158,13 +159,13 @@ class Rank(Field):
 
 @strawberry.input
 class Sort:
-    by: List[str]
+    by: list[str]
     length: Optional[Long] = None
 
 
 @strawberry.input
 class Ranked:
-    by: List[str]
+    by: list[str]
     max: int = 1
 
 
@@ -200,42 +201,45 @@ class VarianceAggregate(ScalarAggregate):
 
 @strawberry.input(description=f"options for tdigest [aggregation]({links.compute}#aggregations)")
 class TDigestAggregate(ScalarAggregate):
-    q: List[float] = (0.5,)  # type: ignore
+    q: list[float] = (0.5,)  # type: ignore
     delta: int = 100
     buffer_size: int = 500
 
 
 @strawberry.input
 class ScalarAggregates(Input):
-    all: List[ScalarAggregate] = default_field([], func=pc.all)
-    any: List[ScalarAggregate] = default_field([], func=pc.any)
-    approximate_median: List[ScalarAggregate] = default_field([], func=pc.approximate_median)
-    count: List[CountAggregate] = default_field([], func=pc.count)
-    count_distinct: List[CountAggregate] = default_field([], func=pc.count_distinct)
-    first: List[ScalarAggregate] = default_field([], func=pc.first)
-    first_last: List[ScalarAggregate] = default_field([], func=pc.first_last)
-    last: List[ScalarAggregate] = default_field([], func=pc.last)
-    max: List[ScalarAggregate] = default_field([], func=pc.max)
-    mean: List[ScalarAggregate] = default_field([], func=pc.mean)
-    min: List[ScalarAggregate] = default_field([], func=pc.min)
-    min_max: List[ScalarAggregate] = default_field([], func=pc.min_max)
-    product: List[ScalarAggregate] = default_field([], func=pc.product)
-    stddev: List[VarianceAggregate] = default_field([], func=pc.stddev)
-    sum: List[ScalarAggregate] = default_field([], func=pc.sum)
-    tdigest: List[TDigestAggregate] = default_field([], func=pc.tdigest)
-    variance: List[VarianceAggregate] = default_field([], func=pc.variance)
+    all: list[ScalarAggregate] = default_field([], func=pc.all)
+    any: list[ScalarAggregate] = default_field([], func=pc.any)
+    approximate_median: list[ScalarAggregate] = default_field([], func=pc.approximate_median)
+    count: list[CountAggregate] = default_field([], func=pc.count)
+    count_distinct: list[CountAggregate] = default_field([], func=pc.count_distinct)
+    first: list[ScalarAggregate] = default_field([], func=pc.first)
+    first_last: list[ScalarAggregate] = default_field([], func=pc.first_last)
+    last: list[ScalarAggregate] = default_field([], func=pc.last)
+    max: list[ScalarAggregate] = default_field([], func=pc.max)
+    mean: list[ScalarAggregate] = default_field([], func=pc.mean)
+    min: list[ScalarAggregate] = default_field([], func=pc.min)
+    min_max: list[ScalarAggregate] = default_field([], func=pc.min_max)
+    product: list[ScalarAggregate] = default_field([], func=pc.product)
+    stddev: list[VarianceAggregate] = default_field([], func=pc.stddev)
+    sum: list[ScalarAggregate] = default_field([], func=pc.sum)
+    tdigest: list[TDigestAggregate] = default_field([], func=pc.tdigest)
+    variance: list[VarianceAggregate] = default_field([], func=pc.variance)
 
     def keys(self):
-        return (key for key in super().keys() if self[key])
+        return (key.rstrip('_') for key in super().keys() if self[key])
+
+    def __getitem__(self, name):
+        return super().__getitem__('list_' if name == 'list' else name)
 
 
 @strawberry.input
 class HashAggregates(ScalarAggregates):
-    distinct: List[CountAggregate] = default_field(
+    distinct: list[CountAggregate] = default_field(
         [], description="distinct values within each scalar"
     )
-    list: List[Field] = default_field([], description="all values within each scalar")
-    one: List[Field] = default_field([], description="arbitrary value within each scalar")
+    list_: list[Field] = default_field([], name='list', description="all values within each scalar")
+    one: list[Field] = default_field([], description="arbitrary value within each scalar")
 
 
 @use_doc(strawberry.input)
@@ -267,7 +271,7 @@ class Expression:
     * `ne` with a `null` scalar is equivalent to `is_valid`
     """
 
-    name: List[str] = default_field([], description="field name(s)")
+    name: list[str] = default_field([], description="field name(s)")
     cast: str = strawberry.field(default='', description=f"cast as {links.type}")
     safe: bool = strawberry.field(default=True, description="check for conversion errors on cast")
     value: Optional[JSON] = default_field(
@@ -276,29 +280,29 @@ class Expression:
     kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
     checked: bool = strawberry.field(default=False, description="check for overflow errors")
 
-    base64: List[bytes] = default_field([])
-    date_: List[date] = default_field([], name='date')
-    datetime_: List[datetime] = default_field([], name='datetime')
-    decimal: List[Decimal] = default_field([])
-    duration: List[timedelta] = default_field([])
-    time_: List[time] = default_field([], name='time')
+    base64: list[bytes] = default_field([])
+    date_: list[date] = default_field([], name='date')
+    datetime_: list[datetime] = default_field([], name='datetime')
+    decimal: list[Decimal] = default_field([])
+    duration: list[timedelta] = default_field([])
+    time_: list[time] = default_field([], name='time')
 
-    eq: List['Expression'] = default_field([], description="==")
-    ne: List['Expression'] = default_field([], description="!=")
-    lt: List['Expression'] = default_field([], description="<")
-    le: List['Expression'] = default_field([], description="<=")
-    gt: List['Expression'] = default_field([], description=r"\>")
-    ge: List['Expression'] = default_field([], description=r"\>=")
+    eq: list['Expression'] = default_field([], description="==")
+    ne: list['Expression'] = default_field([], description="!=")
+    lt: list['Expression'] = default_field([], description="<")
+    le: list['Expression'] = default_field([], description="<=")
+    gt: list['Expression'] = default_field([], description=r"\>")
+    ge: list['Expression'] = default_field([], description=r"\>=")
     inv: Optional['Expression'] = default_field(description="~")
 
     abs: Optional['Expression'] = default_field(func=pc.abs)
-    add: List['Expression'] = default_field([], func=pc.add)
-    divide: List['Expression'] = default_field([], func=pc.divide)
-    multiply: List['Expression'] = default_field([], func=pc.multiply)
+    add: list['Expression'] = default_field([], func=pc.add)
+    divide: list['Expression'] = default_field([], func=pc.divide)
+    multiply: list['Expression'] = default_field([], func=pc.multiply)
     negate: Optional['Expression'] = default_field(func=pc.negate)
-    power: List['Expression'] = default_field([], func=pc.power)
+    power: list['Expression'] = default_field([], func=pc.power)
     sign: Optional['Expression'] = default_field(func=pc.sign)
-    subtract: List['Expression'] = default_field([], func=pc.subtract)
+    subtract: list['Expression'] = default_field([], func=pc.subtract)
 
     bit_wise: Optional['BitWise'] = default_field(description="bit-wise functions")
     rounding: Optional['Rounding'] = default_field(description="rounding functions")
@@ -308,10 +312,10 @@ class Expression:
         description="element-wise aggregate functions"
     )
 
-    and_: List['Expression'] = default_field([], name='and', description="&")
-    and_not: List['Expression'] = default_field([], func=pc.and_not)
-    or_: List['Expression'] = default_field([], name='or', description="|")
-    xor: List['Expression'] = default_field([], func=pc.xor)
+    and_: list['Expression'] = default_field([], name='and', description="&")
+    and_not: list['Expression'] = default_field([], func=pc.and_not)
+    or_: list['Expression'] = default_field([], name='or', description="|")
+    xor: list['Expression'] = default_field([], func=pc.xor)
 
     utf8: Optional['Utf8'] = default_field(description="utf8 string functions")
     string_is_ascii: Optional['Expression'] = default_field(func=pc.string_is_ascii)
@@ -325,14 +329,14 @@ class Expression:
     is_nan: Optional['Expression'] = default_field(func=pc.is_nan)
     true_unless_null: Optional['Expression'] = default_field(func=pc.true_unless_null)
 
-    case_when: List['Expression'] = default_field([], func=pc.case_when)
-    choose: List['Expression'] = default_field([], func=pc.choose)
-    coalesce: List['Expression'] = default_field([], func=pc.coalesce)
-    if_else: List['Expression'] = default_field([], func=pc.if_else)
+    case_when: list['Expression'] = default_field([], func=pc.case_when)
+    choose: list['Expression'] = default_field([], func=pc.choose)
+    coalesce: list['Expression'] = default_field([], func=pc.coalesce)
+    if_else: list['Expression'] = default_field([], func=pc.if_else)
 
     temporal: Optional['Temporal'] = default_field(description="temporal functions")
 
-    replace_with_mask: List['Expression'] = default_field([], func=pc.replace_with_mask)
+    replace_with_mask: list['Expression'] = default_field([], func=pc.replace_with_mask)
 
     list: Optional['Lists'] = default_field(description="list array functions")
 
@@ -439,12 +443,12 @@ class Fields:
 
 @strawberry.input(description="Bit-wise functions.")
 class BitWise(Fields):
-    and_: List[Expression] = default_field([], name='and', func=pc.bit_wise_and)
-    not_: List[Expression] = default_field([], name='not', func=pc.bit_wise_not)
-    or_: List[Expression] = default_field([], name='or', func=pc.bit_wise_or)
-    xor: List[Expression] = default_field([], func=pc.bit_wise_xor)
-    shift_left: List[Expression] = default_field([], func=pc.shift_left)
-    shift_right: List[Expression] = default_field([], func=pc.shift_right)
+    and_: list[Expression] = default_field([], name='and', func=pc.bit_wise_and)
+    not_: list[Expression] = default_field([], name='not', func=pc.bit_wise_not)
+    or_: list[Expression] = default_field([], name='or', func=pc.bit_wise_or)
+    xor: list[Expression] = default_field([], func=pc.bit_wise_xor)
+    shift_left: list[Expression] = default_field([], func=pc.shift_left)
+    shift_right: list[Expression] = default_field([], func=pc.shift_right)
 
     def getfunc(self, name):
         return getattr(pc, name if name.startswith('shift') else 'bit_wise_' + name.rstrip('_'))
@@ -471,7 +475,7 @@ class Rounding(Fields):
 class Log(Fields):
     ln: Optional[Expression] = default_field(func=pc.ln)
     log1p: Optional[Expression] = default_field(func=pc.log1p)
-    logb: List[Expression] = default_field([], func=pc.logb)
+    logb: list[Expression] = default_field([], func=pc.logb)
 
 
 @strawberry.input(description="Trigonometry functions.")
@@ -481,7 +485,7 @@ class Trig(Fields):
     acos: Optional[Expression] = default_field(func=pc.acos)
     asin: Optional[Expression] = default_field(func=pc.asin)
     atan: Optional[Expression] = default_field(func=pc.atan)
-    atan2: List[Expression] = default_field([], func=pc.atan2)
+    atan2: list[Expression] = default_field([], func=pc.atan2)
     cos: Optional[Expression] = default_field(func=pc.cos)
     sin: Optional[Expression] = default_field(func=pc.sin)
     tan: Optional[Expression] = default_field(func=pc.tan)
@@ -492,8 +496,8 @@ class Trig(Fields):
 
 @strawberry.input(description="Element-wise aggregate functions.")
 class ElementWise(Fields):
-    min_element_wise: List[Expression] = default_field([], name='min', func=pc.min_element_wise)
-    max_element_wise: List[Expression] = default_field([], name='max', func=pc.max_element_wise)
+    min_element_wise: list[Expression] = default_field([], name='min', func=pc.min_element_wise)
+    max_element_wise: list[Expression] = default_field([], name='max', func=pc.max_element_wise)
     skip_nulls: bool = True
 
 
@@ -545,11 +549,11 @@ class Utf8(Fields):
 @strawberry.input(description="Binary functions.")
 class Binary(Fields):
     length: Optional[Expression] = default_field(func=pc.binary_length)
-    repeat: List[Expression] = default_field([], func=pc.binary_repeat)
+    repeat: list[Expression] = default_field([], func=pc.binary_repeat)
     reverse: Optional[Expression] = default_field(func=pc.binary_reverse)
 
-    join: List[Expression] = default_field([], func=pc.binary_join)
-    join_element_wise: List[Expression] = default_field([], func=pc.binary_join_element_wise)
+    join: list[Expression] = default_field([], func=pc.binary_join)
+    join_element_wise: list[Expression] = default_field([], func=pc.binary_join_element_wise)
     null_handling: str = 'emit_null'
     null_replacement: str = ''
 
@@ -610,23 +614,23 @@ class Temporal(Fields):
     year: Optional[Expression] = default_field(func=pc.year)
     year_month_day: Optional[Expression] = default_field(func=pc.year_month_day)
 
-    day_time_interval_between: List[Expression] = default_field(
+    day_time_interval_between: list[Expression] = default_field(
         [], func=pc.day_time_interval_between
     )
-    days_between: List[Expression] = default_field([], func=pc.days_between)
-    hours_between: List[Expression] = default_field([], func=pc.hours_between)
-    microseconds_between: List[Expression] = default_field([], func=pc.microseconds_between)
-    milliseconds_between: List[Expression] = default_field([], func=pc.milliseconds_between)
-    minutes_between: List[Expression] = default_field([], func=pc.minutes_between)
-    month_day_nano_interval_between: List[Expression] = default_field(
+    days_between: list[Expression] = default_field([], func=pc.days_between)
+    hours_between: list[Expression] = default_field([], func=pc.hours_between)
+    microseconds_between: list[Expression] = default_field([], func=pc.microseconds_between)
+    milliseconds_between: list[Expression] = default_field([], func=pc.milliseconds_between)
+    minutes_between: list[Expression] = default_field([], func=pc.minutes_between)
+    month_day_nano_interval_between: list[Expression] = default_field(
         [], func=pc.month_day_nano_interval_between
     )
-    month_interval_between: List[Expression] = default_field([], func=pc.month_interval_between)
-    nanoseconds_between: List[Expression] = default_field([], func=pc.nanoseconds_between)
-    quarters_between: List[Expression] = default_field([], func=pc.quarters_between)
-    seconds_between: List[Expression] = default_field([], func=pc.seconds_between)
-    weeks_between: List[Expression] = default_field([], func=pc.weeks_between)
-    years_between: List[Expression] = default_field([], func=pc.years_between)
+    month_interval_between: list[Expression] = default_field([], func=pc.month_interval_between)
+    nanoseconds_between: list[Expression] = default_field([], func=pc.nanoseconds_between)
+    quarters_between: list[Expression] = default_field([], func=pc.quarters_between)
+    seconds_between: list[Expression] = default_field([], func=pc.seconds_between)
+    weeks_between: list[Expression] = default_field([], func=pc.weeks_between)
+    years_between: list[Expression] = default_field([], func=pc.years_between)
 
     ceil_temporal: Optional[Expression] = default_field(name='ceil', func=pc.ceil_temporal)
     floor_temporal: Optional[Expression] = default_field(name='floor', func=pc.floor_temporal)
@@ -658,8 +662,8 @@ class Temporal(Fields):
 
 @strawberry.input(description="Set lookup functions.")
 class SetLookup(Fields):
-    index_in: List[Expression] = default_field([], func=pc.index_in)
-    digitize: List[Expression] = default_field(
+    index_in: list[Expression] = default_field([], func=pc.index_in)
+    digitize: list[Expression] = default_field(
         [],
         description="numpy [digitize](https://numpy.org/doc/stable/reference/generated/numpy.digitize.html)",
     )
@@ -678,7 +682,7 @@ class SetLookup(Fields):
 
 @strawberry.input(description="List array functions.")
 class Lists(Fields):
-    element: List[Expression] = default_field([], func=pc.list_element)
+    element: list[Expression] = default_field([], func=pc.list_element)
     value_length: Optional[Expression] = default_field(func=pc.list_value_length)
     # user defined functions
     all: Optional[Expression] = default_field(func=pc.all)

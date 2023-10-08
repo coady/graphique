@@ -5,15 +5,15 @@ import collections
 import functools
 import inspect
 import itertools
+from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Callable, Generic, List, Optional, TypeVar, TYPE_CHECKING, get_args
+from typing import Annotated, Generic, Optional, TypeVar, TYPE_CHECKING, get_args
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
 from strawberry.field import StrawberryField
 from strawberry.types import Info
-from typing_extensions import Annotated
 from .core import Column as C
 from .inputs import links
 from .scalars import Interval, Long, scalar_map, type_map
@@ -108,13 +108,13 @@ class Column:
 @strawberry.type(description="unique values and counts")
 class Set(Generic[T]):
     length = doc_field(Column.length)
-    counts: List[Long] = strawberry.field(description="list of counts")
+    counts: list[Long] = strawberry.field(description="list of counts")
 
     def __init__(self, array, counts=pa.array([])):
         self.array, self.counts = array, counts.to_pylist()
 
     @doc_field
-    def values(self) -> List[Optional[T]]:
+    def values(self) -> list[Optional[T]]:
         """list of values"""
         return self.array.to_pylist()
 
@@ -140,7 +140,7 @@ class NominalColumn(Generic[T], Column):
         return self.array[index].as_py()
 
     @compute_field
-    def drop_null(self) -> List[T]:
+    def drop_null(self) -> list[T]:
         return self.array.drop_null().to_pylist()
 
 
@@ -168,7 +168,7 @@ class OrdinalColumn(NominalColumn[T]):
         return C.index(self.array, value, start, end)
 
     @compute_field
-    def fill_null(self, value: T) -> List[T]:
+    def fill_null(self, value: T) -> list[T]:
         return self.array.fill_null(value).to_pylist()
 
 
@@ -198,7 +198,7 @@ class IntervalColumn(OrdinalColumn[T]):
         return pc.mean(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def indices_nonzero(self) -> List[Long]:
+    def indices_nonzero(self) -> list[Long]:
         return pc.indices_nonzero(self.array).to_pylist()
 
 
@@ -219,23 +219,23 @@ class RatioColumn(IntervalColumn[T]):
     @compute_field
     def quantile(
         self,
-        q: List[float] = [0.5],
+        q: list[float] = [0.5],
         interpolation: str = 'linear',
         skip_nulls: bool = True,
         min_count: int = 0,
-    ) -> List[Optional[float]]:
+    ) -> list[Optional[float]]:
         options = {'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.quantile(self.array, q=q, interpolation=interpolation, **options).to_pylist()
 
     @compute_field
     def tdigest(
         self,
-        q: List[float] = [0.5],
+        q: list[float] = [0.5],
         delta: int = 100,
         buffer_size: int = 500,
         skip_nulls: bool = True,
         min_count: int = 0,
-    ) -> List[Optional[float]]:
+    ) -> list[Optional[float]]:
         options = {'buffer_size': buffer_size, 'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
 
@@ -273,12 +273,12 @@ class ListColumn(Column):
         return self.fromscalar(self.array[index])
 
     @doc_field
-    def values(self) -> List[Optional[Column]]:
+    def values(self) -> list[Optional[Column]]:
         """list of columns"""
         return list(map(self.fromscalar, self.array))
 
     @compute_field
-    def drop_null(self) -> List[Column]:
+    def drop_null(self) -> list[Column]:
         return map(self.fromscalar, self.array.drop_null())  # type: ignore
 
     @doc_field
@@ -296,11 +296,11 @@ class StructColumn(Column):
         return self.array[index].as_py()
 
     @doc_field
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         """field names"""
         return [field.name for field in self.array.type]
 
     @doc_field(name="field name(s); multiple names access nested fields")
-    def column(self, name: List[str]) -> Optional[Column]:
+    def column(self, name: list[str]) -> Optional[Column]:
         """Return struct field as a column."""
         return self.cast(pc.struct_field(self.array, name))

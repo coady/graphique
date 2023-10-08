@@ -6,7 +6,7 @@
 [![image](https://codecov.io/gh/coady/graphique/branch/main/graph/badge.svg)](https://codecov.io/gh/coady/graphique/)
 [![image](https://github.com/coady/graphique/workflows/codeql/badge.svg)](https://github.com/coady/graphique/security/code-scanning)
 [![image](https://img.shields.io/badge/code%20style-black-000000.svg)](https://pypi.org/project/black/)
-[![image](http://mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
+[![image](https://mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
 [GraphQL](https://graphql.org) service for [arrow](https://arrow.apache.org) tables and [parquet](https://parquet.apache.org) data sets. The schema for a query API is derived automatically.
 

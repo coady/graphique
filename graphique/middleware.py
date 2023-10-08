@@ -2,8 +2,9 @@
 ASGI GraphQL utilities.
 """
 import warnings
+from collections.abc import Iterable, Mapping
 from datetime import timedelta
-from typing import Iterable, Mapping, Optional
+from typing import Optional
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import UNSET
