@@ -14,7 +14,7 @@ jobs:
         python-version: ['3.9', '3.10', '3.11']
         arrow-version: ['']
         include:
-        - python-version: '3.x'
+        - python-version: '3.12'
           arrow-version: '--pre '
     steps:
     - uses: actions/checkout@v4
