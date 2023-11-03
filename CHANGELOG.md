@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 ### Changed
+* Pyarrow >=14 required
 * Python >=3.9 required
 * `group` optimized for memory
 

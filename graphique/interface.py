@@ -382,13 +382,14 @@ class Dataset:
     def apply(
         self,
         info: Info,
-        cumulative_sum: doc_argument(list[Cumulative], func=pc.cumulative_sum) = [],
-        cumulative_prod: doc_argument(list[Cumulative], func=pc.cumulative_prod) = [],
-        cumulative_min: doc_argument(list[Cumulative], func=pc.cumulative_min) = [],
         cumulative_max: doc_argument(list[Cumulative], func=pc.cumulative_max) = [],
-        pairwise_diff: doc_argument(list[Pairwise], func=pc.pairwise_diff) = [],
+        cumulative_mean: doc_argument(list[Cumulative], func=pc.cumulative_mean) = [],
+        cumulative_min: doc_argument(list[Cumulative], func=pc.cumulative_min) = [],
+        cumulative_prod: doc_argument(list[Cumulative], func=pc.cumulative_prod) = [],
+        cumulative_sum: doc_argument(list[Cumulative], func=pc.cumulative_sum) = [],
         fill_null_backward: doc_argument(list[Field], func=pc.fill_null_backward) = [],
         fill_null_forward: doc_argument(list[Field], func=pc.fill_null_forward) = [],
+        pairwise_diff: doc_argument(list[Pairwise], func=pc.pairwise_diff) = [],
         rank: doc_argument(list[Rank], func=pc.rank) = [],
         list_: Annotated[
             ListFunction,
@@ -403,8 +404,9 @@ class Dataset:
         table = T.map_batch(self.scanner(info), self.apply_list, list_)
         self.add_metric(info, table, mode='batch')
         columns = {}
-        funcs = pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, pc.rank
-        funcs += pc.cumulative_prod, pc.cumulative_min, pc.cumulative_max, C.pairwise_diff
+        funcs = pc.cumulative_max, pc.cumulative_mean, pc.cumulative_min, pc.cumulative_prod
+        funcs += pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, C.pairwise_diff
+        funcs += (pc.rank,)
         for func in funcs:
             for field in locals()[func.__name__]:
                 callable = func
