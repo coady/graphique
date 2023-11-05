@@ -93,14 +93,14 @@ def sort_key(name: str) -> tuple:
     return name.lstrip('-'), ('descending' if name.startswith('-') else 'ascending')
 
 
-def register(func: Callable) -> pc.Function:
-    """Register user defined scalar function."""
+def register(func: Callable, kind: str = 'scalar') -> pc.Function:
+    """Register user defined function by kind."""
     doc = inspect.getdoc(func)
     doc = {'summary': doc.splitlines()[0], 'description': doc}  # type: ignore
     annotations = dict(get_type_hints(func))
     result = annotations.pop('return')
     with contextlib.suppress(pa.ArrowKeyError):  # apache/arrow#{31611,31612}
-        pc.register_scalar_function(func, func.__name__, doc, annotations, result)
+        getattr(pc, f'register_{kind}_function')(func, func.__name__, doc, annotations, result)
     return pc.get_function(func.__name__)
 
 

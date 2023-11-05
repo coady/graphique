@@ -178,8 +178,7 @@ class StringColumn(OrdinalColumn[T]):
     ...
 
 
-@Column.register(Decimal)
-@strawberry.type(name='Column', description="column of decimals")
+@strawberry.type
 class IntervalColumn(OrdinalColumn[T]):
     @compute_field
     def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0) -> Set[T]:
@@ -202,8 +201,8 @@ class IntervalColumn(OrdinalColumn[T]):
         return pc.indices_nonzero(self.array).to_pylist()
 
 
-@Column.register(float)
-@strawberry.type(name='Column', description="column of floats")
+@Column.register(float, Decimal)
+@strawberry.type(name='Column', description="column of floats or decimals")
 class RatioColumn(IntervalColumn[T]):
     @compute_field
     def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
