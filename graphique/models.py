@@ -67,7 +67,7 @@ class Column:
         if cls is Column:
             return lambda cls: cls.register(*scalars) or cls
         # strawberry#1921: scalar python names are prepended to column name
-        generic = cls.__strawberry_definition__.is_generic
+        generic = issubclass(cls, Generic)
         for scalar in scalars:
             cls.registry[scalar] = cls[scalar_map.get(scalar, scalar)] if generic else cls
 
