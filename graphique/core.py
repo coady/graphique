@@ -347,7 +347,7 @@ class Table(pa.Table):
         """Return table with union of columns."""
         columns: dict = {}
         for table in tables:
-            columns.update(Table.columns(table))
+            columns |= Table.columns(table)
         return type(tables[0]).from_pydict(columns)
 
     def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
@@ -428,10 +428,10 @@ class Table(pa.Table):
         row = {counts: len(self)} if counts else {}
         for key in ('one', 'list', 'distinct'):  # hash only functions
             func, aggs = getattr(Agg, key), funcs.pop(key, [])
-            row.update({agg.alias: func(self[agg.name], **agg.options) for agg in aggs})
+            row |= {agg.alias: func(self[agg.name], **agg.options) for agg in aggs}
         if funcs:
             table = Table.group(self, **funcs)  # type: ignore
-            row.update({name: table[name][0] for name in table.schema.names})
+            row |= {name: table[name][0] for name in table.schema.names}
         for name, value in row.items():
             if isinstance(value, pa.ChunkedArray):
                 row[name] = value.combine_chunks()
@@ -614,7 +614,7 @@ class Table(pa.Table):
                 yield None
             else:
                 row = {name: pa.repeat(self[name][index], count) for name in scalars}
-                row.update({name: self[name][index].values for name in lists})
+                row |= {name: self[name][index].values for name in lists}
                 yield pa.RecordBatch.from_pydict(row)
 
     def size(self) -> str:

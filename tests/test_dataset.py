@@ -121,8 +121,9 @@ def test_list(partclient):
         '''{ group(by: "north", aggregate: {distinct: {name: "west"}}) {
         tables { row { north } columns { west { length } } } } }'''
     )
-    table = data['group']['tables'][0]
-    assert table == {'row': {'north': 0}, 'columns': {'west': {'length': 2}}}
+    tables = data['group']['tables']
+    assert {table['row']['north'] for table in tables} == {0, 1}
+    assert [table['columns'] for table in tables] == [{'west': {'length': 2}}] * 2
 
 
 def test_fragments(partclient):

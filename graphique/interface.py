@@ -277,11 +277,11 @@ class Dataset:
             row = ds.get_partition_keys(fragment.partition_expression)
             if projection:
                 table = fragment.to_table(columns=projection)
-                row.update(T.aggregate(table, counts=counts, **aggs))
+                row |= T.aggregate(table, counts=counts, **aggs)
             elif counts:
                 row[counts] = fragment.count_rows()
             arrays = {name: value for name, value in row.items() if isinstance(value, pa.Array)}
-            row.update(T.columns(pa.RecordBatch.from_pydict(arrays)))
+            row |= T.columns(pa.RecordBatch.from_pydict(arrays))
             for name in row:
                 columns[name].append(row[name])
         for name, values in columns.items():
@@ -289,7 +289,7 @@ class Dataset:
                 columns[name] = C.from_scalars(values)
             elif isinstance(values[0], pa.Array):
                 columns[name] = ListChunk.from_scalars(values)
-        columns.update({field.name: pa.array(columns[field.name], field.type) for field in schema})
+        columns |= {field.name: pa.array(columns[field.name], field.type) for field in schema}
         return self.add_metric(info, pa.table(columns), mode='fragment')
 
     @doc_field(
@@ -482,7 +482,7 @@ class Dataset:
     def project(self, info: Info, columns: list[Projection]) -> dict:
         """Return projected columns, including all references from below fields."""
         projection = {name: pc.field(name) for name in self.references(info, level=1)}
-        projection.update({col.alias or '.'.join(col.name): col.to_arrow() for col in columns})
+        projection |= {col.alias or '.'.join(col.name): col.to_arrow() for col in columns}
         if '' in projection:
             raise ValueError(f"projected columns need a name or alias: {projection['']}")
         return projection

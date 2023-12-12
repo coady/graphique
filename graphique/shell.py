@@ -17,12 +17,8 @@ from tqdm import tqdm  # type: ignore
 
 def write_batches(scanner: ds.Scanner, base_dir: str, *partitioning: str, **options):
     """Partition dataset by batches."""
-    options.update(
-        format=options.get('format', 'parquet'),
-        partitioning=partitioning,
-        partitioning_flavor=options.get('partitioning_flavor', 'hive'),
-        existing_data_behavior='overwrite_or_ignore',
-    )
+    options.update(format='parquet', partitioning=partitioning)
+    options.update(partitioning_flavor='hive', existing_data_behavior='overwrite_or_ignore')
     with tqdm(total=scanner.count_rows(), desc="Batches") as pbar:
         for index, batch in enumerate(scanner.to_batches()):
             options['basename_template'] = f'part-{index}-{{i}}.parquet'
