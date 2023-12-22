@@ -1,6 +1,7 @@
 """
 GraphQL scalars.
 """
+
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 import pyarrow as pa

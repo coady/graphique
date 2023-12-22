@@ -2,8 +2,8 @@ check:
 	python -m pytest -s --cov
 
 lint:
-	black --check .
 	ruff .
+	ruff format --check .
 	mypy -p graphique
 
 html: docs/schema.md

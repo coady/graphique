@@ -1,6 +1,7 @@
 """
 GraphQL input types.
 """
+
 import functools
 import inspect
 import operator

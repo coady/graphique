@@ -4,6 +4,7 @@ Core utilities that add pandas-esque features to arrow arrays and tables.
 Arrow forbids subclassing, so the classes are for logical grouping.
 Their methods are called as functions.
 """
+
 import bisect
 import contextlib
 import functools
@@ -106,7 +107,10 @@ def register(func: Callable, kind: str = 'scalar') -> pc.Function:
 
 @register
 def digitize(
-    ctx, array: pa.float64(), bins: pa.list_(pa.float64()), right: pa.bool_()  # type: ignore
+    ctx,
+    array: pa.float64(),  # type: ignore
+    bins: pa.list_(pa.float64()),  # type: ignore
+    right: pa.bool_(),  # type: ignore
 ) -> pa.int64():  # type: ignore
     """Return the indices of the bins to which each value in input array belongs."""
     return pa.array(np.digitize(array, bins.values, right.as_py()))

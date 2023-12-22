@@ -3,6 +3,7 @@ Primary Dataset interface.
 
 Doesn't require knowledge of the schema.
 """
+
 # mypy: disable-error-code=valid-type
 import collections
 import inspect
@@ -234,7 +235,11 @@ class Dataset:
         aggregate="aggregation functions applied to other columns",
     )
     def group(
-        self, info: Info, by: list[str] = [], counts: str = '', aggregate: HashAggregates = {}  # type: ignore
+        self,
+        info: Info,
+        by: list[str] = [],
+        counts: str = '',
+        aggregate: HashAggregates = {},  # type: ignore
     ) -> Self:
         """Return table grouped by columns.
 
@@ -497,9 +502,7 @@ class Dataset:
         return scanner
 
     @doc_field(filter="selected rows", columns="projected columns")
-    def scan(
-        self, info: Info, filter: Expression = {}, columns: list[Projection] = []  # type: ignore
-    ) -> Self:
+    def scan(self, info: Info, filter: Expression = {}, columns: list[Projection] = []) -> Self:  # type: ignore
         """Select rows and project columns without memory usage."""
         expr = filter.to_arrow()
         if expr is not None and not columns and isinstance(self.table, ds.Dataset):

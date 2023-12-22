@@ -1,6 +1,7 @@
 """
 ASGI GraphQL utilities.
 """
+
 import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta

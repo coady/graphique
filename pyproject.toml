@@ -49,12 +49,13 @@ version = {attr = "graphique.__version__"}
 [tool.setuptools.package-data]
 graphique = ["py.typed"]
 
-[tool.black]
-line-length = 100
-skip-string-normalization = true
-
 [tool.ruff]
-ignore = ["E501"]
+line-length = 100
+extend-include = ["*.ipynb"]
+
+[tool.ruff.format]
+preview = true
+quote-style = "preserve"
 
 [[tool.mypy.overrides]]
 module = ["pyarrow.*", "strawberry.*", "starlette.*"]

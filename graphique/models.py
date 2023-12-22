@@ -1,6 +1,7 @@
 """
 GraphQL output types and resolvers.
 """
+
 import collections
 import functools
 import inspect
@@ -174,8 +175,7 @@ class OrdinalColumn(NominalColumn[T]):
 
 @Column.register(str)
 @strawberry.type(name='ingColumn', description="column of strings")
-class StringColumn(OrdinalColumn[T]):
-    ...
+class StringColumn(OrdinalColumn[T]): ...
 
 
 @strawberry.type

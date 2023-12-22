@@ -6,6 +6,7 @@ Copy and customize as needed. Demonstrates:
 * datasets, scanners, and tables
 * filtering and projection
 """
+
 import json
 from pathlib import Path
 import pyarrow.dataset as ds

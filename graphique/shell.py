@@ -8,6 +8,7 @@ Second, the partitioned dataset is rewritten to merge parts. Often the built-in 
 sufficient once partitioned, but there is a `fragments` option to optimize for memory or show
 progress on the second pass.
 """
+
 import argparse
 import shutil
 from pathlib import Path
