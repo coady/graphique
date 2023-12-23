@@ -5,6 +5,7 @@ ASGI GraphQL utilities.
 import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
+from keyword import iskeyword
 from typing import Optional
 import pyarrow.dataset as ds
 import strawberry.asgi
@@ -95,7 +96,7 @@ def implemented(root: Root, name: str = '', keys: Iterable = ()):
     """Return type which extends the Dataset interface with knowledge of the schema."""
     schema = root.projected_schema if isinstance(root, ds.Scanner) else root.schema
     types = {field.name: type_map[C.scalar_type(field).id] for field in schema}
-    types = {name: types[name] for name in types if name.isidentifier()}
+    types = {name: types[name] for name in types if name.isidentifier() and not iskeyword(name)}
     if invalid := set(schema.names) - set(types):
         warnings.warn(f'invalid field names: {invalid}')
     prefix = to_camel_case(name.title())
