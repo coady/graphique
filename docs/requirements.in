@@ -1,4 +1,3 @@
 -r ../requirements.in
 mkdocstrings[python]
 mkdocs-jupyter
-ipykernel
