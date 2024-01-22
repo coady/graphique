@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "graphique"
-dynamic = ["version"]
+dynamic = ["version", "dependencies"]
 description = "GraphQL service for arrow tables and parquet data sets."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -28,7 +28,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
-dependencies = ["pyarrow>=14", "strawberry-graphql[asgi,cli]>=0.198"]
 
 [project.urls]
 Homepage = "https://github.com/coady/graphique"
@@ -45,6 +44,7 @@ packages = ["graphique"]
 
 [tool.setuptools.dynamic]
 version = {attr = "graphique.__version__"}
+dependencies = {file = "requirements.in"}
 
 [tool.setuptools.package-data]
 graphique = ["py.typed"]
