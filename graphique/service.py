@@ -14,7 +14,7 @@ from starlette.config import Config
 from graphique.inputs import Expression
 from graphique import GraphQL
 
-config = Config('.env')
+config = Config('.env' if Path('.env').is_file() else None)
 PARQUET_PATH = Path(config('PARQUET_PATH')).resolve()
 FEDERATED = config('FEDERATED', default='')
 DEBUG = config('DEBUG', cast=bool, default=False)
