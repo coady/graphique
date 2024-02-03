@@ -85,11 +85,13 @@ def test_group(dsclient):
     assert data['group']['row']['county']
     data = dsclient.execute(
         """{ group(by: ["state"], aggregate: {mean: {name: "zipcode"}}) { slice(length: 1) {
-        column(name: "zipcode") { ... on FloatColumn { values } } } } }""")
+        column(name: "zipcode") { ... on FloatColumn { values } } } } }"""
+    )
     assert data == {'group': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
     data = dsclient.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { aggregate(mean: {name: "zipcode"}) {
-        slice(length: 1) { column(name: "zipcode") { ... on FloatColumn { values } } } } } }""")
+        slice(length: 1) { column(name: "zipcode") { ... on FloatColumn { values } } } } } }"""
+    )
     assert data == {
         'group': {'aggregate': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
     }
@@ -101,7 +103,8 @@ def test_group(dsclient):
 def test_list(partclient):
     data = partclient.execute(
         """{ group(by: "state", aggregate: {distinct: {alias: "counties", name: "county"}}) {
-        tables { row { state } column(name: "counties") { length } } } } """)
+        tables { row { state } column(name: "counties") { length } } } } """
+    )
     (table,) = [table for table in data['group']['tables'] if table['row']['state'] == 'PR']
     assert table == {'row': {'state': 'PR'}, 'column': {'length': 78}}
     data = partclient.execute("""{ group(by: "north", aggregate: {distinct: {name: "west"}}) {
@@ -133,7 +136,8 @@ def test_fragments(partclient):
     assert data == {'group': {'length': 1, 'row': {'state': 'AK'}}}
     data = partclient.execute(
         """{ group(by: ["north", "west"], aggregate: {distinct: {name: "city"}, mean: {name: "zipcode"}}) {
-        length column(name: "city") { type } } }""")
+        length column(name: "city") { type } } }"""
+    )
     assert data == {'group': {'length': 4, 'column': {'type': 'large_list<item: string>'}}}
     data = partclient.execute("""{ group(by: "north", aggregate: {countDistinct: {name: "west"}}) { 
         column(name: "west") { ... on LongColumn { values } } } }""")
@@ -240,14 +244,16 @@ def test_federation(fedclient):
     assert set(table['schema']['names']) > {'zipcode', 'timezone', 'latitude'}
     data = fedclient.execute(
         """{ zipcodes { scan(columns: {alias: "zip", name: "zipcode", cast: "int64"}) {
-        join(right: "zip_db", keys: "zip", joinType: "right outer") { length schema { names } } } } }""")
+        join(right: "zip_db", keys: "zip", joinType: "right outer") { length schema { names } } } } }"""
+    )
     table = data['zipcodes']['scan']['join']
     assert table['length'] == 42724
     assert set(table['schema']['names']) > {'zip', 'timezone', 'latitude'}
 
     data = fedclient.execute(
         """{ _entities(representations: {__typename: "ZipcodesTable", zipcode: 90001}) {
-        ... on ZipcodesTable { length row { state } schema { names } } } }""")
+        ... on ZipcodesTable { length row { state } schema { names } } } }"""
+    )
     assert data == {
         '_entities': [{'length': 1, 'row': {'state': 'CA'}, 'schema': {'names': ['state']}}]
     }

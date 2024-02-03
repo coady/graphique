@@ -48,11 +48,13 @@ def test_floats(client):
     assert quantile == pytest.approx(39.12054)
     data = client.execute(
         """{ scan(columns: {alias: "latitude", elementWise: {min: [{name: "latitude"}, {name: "longitude"}]}}) {
-        columns { latitude { min } } } }""")
+        columns { latitude { min } } } }"""
+    )
     assert data == {'scan': {'columns': {'latitude': {'min': pytest.approx(-174.213333)}}}}
     data = client.execute(
         """{scan(columns: {alias: "l", setLookup: {digitize: [{name: "latitude"}, {value: [40]}]}}) {
-        column(name: "l") { ... on LongColumn { unique { values counts } } } } }""")
+        column(name: "l") { ... on LongColumn { unique { values counts } } } } }"""
+    )
     assert data == {"scan": {"column": {"unique": {"values": [1, 0], "counts": [17955, 23745]}}}}
     data = client.execute(
         '{ scan(columns: {alias: "latitude", log: {logb: [{name: "latitude"}, {value: 3}]}}) { row { latitude } } }'
@@ -106,33 +108,39 @@ def test_strings(client):
     assert data == {'scan': {'length': 41700}}
     data = client.execute(
         """{ scan(columns: {alias: "city", substring: {match: {name: "city"}, pattern: "Mountain"}})
-        { scan(filter: {name: "city"}) { length } } }""")
+        { scan(filter: {name: "city"}) { length } } }"""
+    )
     assert data == {'scan': {'scan': {'length': 88}}}
     data = client.execute(
         """{ scan(filter: {substring: {match: {name: "city"}, pattern: "mountain", ignoreCase: true}})
-        { length } }""")
+        { length } }"""
+    )
     assert data == {'scan': {'length': 88}}
     data = client.execute(
         """{ scan(filter: {substring: {match: {name: "city"}, pattern: "^Mountain", regex: true}})
-        { length } }""")
+        { length } }"""
+    )
     assert data == {'scan': {'length': 42}}
     data = client.execute(
         """{ scan(columns: {alias: "idx", setLookup: {indexIn: [{name: "state"}, {value: ["CA", "OR"]}]}})
-        { column(name: "idx") { ... on IntColumn { unique { values } } } } }""")
+        { column(name: "idx") { ... on IntColumn { unique { values } } } } }"""
+    )
     assert data == {'scan': {'column': {'unique': {'values': [None, 0, 1]}}}}
 
 
 def test_string_methods(client):
     data = client.execute(
         """{ scan(columns: {alias: "split", substring: {split: {name: "city"}, pattern: "-", maxSplits: 1}}) {
-        column(name: "split") { type } } }""")
+        column(name: "split") { type } } }"""
+    )
     assert data == {'scan': {'column': {'type': 'list<item: string>'}}}
     data = client.execute("""{ scan(columns: {alias: "split", substring: {split: {name: "city"}}}) {
         column(name: "split") { type } } }""")
     assert data == {'scan': {'column': {'type': 'list<item: string>'}}}
     data = client.execute(
         """{ scan(columns: {alias: "state", utf8: {trim: {name: "state"}, characters: "C"}}) {
-        columns { state { values } } } }""")
+        columns { state { values } } } }"""
+    )
     states = data['scan']['columns']['state']['values']
     assert 'CA' not in states and 'A' in states
     data = client.execute(
@@ -141,11 +149,13 @@ def test_string_methods(client):
     assert data == {'scan': {'length': 41700}}
     data = client.execute(
         """{ scan(columns: {alias: "state", utf8: {center: {name: "state"}, width: 4, padding: "_"}})
-        { row { state } } }""")
+        { row { state } } }"""
+    )
     assert data == {'scan': {'row': {'state': '_NY_'}}}
     data = client.execute(
         """{ scan(columns: {alias: "state", utf8: {replaceSlice: {name: "state"}, start: 0, stop: 2, replacement: ""}})
-        { columns { state { unique { values } } } } }""")
+        { columns { state { unique { values } } } } }"""
+    )
     assert data == {'scan': {'columns': {'state': {'unique': {'values': ['']}}}}}
     data = client.execute(
         '{ scan(columns: {alias: "state", utf8: {sliceCodeunits: {name: "state"}, start: 0, stop: 1}}) { row { state } } }'
@@ -153,7 +163,8 @@ def test_string_methods(client):
     assert data == {'scan': {'row': {'state': 'N'}}}
     data = client.execute(
         """{ scan(columns: {alias: "state", substring: {replace: {name: "state"}, pattern: "C", replacement: "A"}})
-        { columns { state { values } } } }""")
+        { columns { state { values } } } }"""
+    )
     assert 'AA' in data['scan']['columns']['state']['values']
 
 
@@ -213,15 +224,18 @@ def test_scan(client):
     assert data['scan']['length'] == 2805
     data = client.execute(
         """{ scan(columns: {alias: "zipcode", add: [{name: "zipcode"}, {name: "zipcode"}]})
-        { columns { zipcode { min } } } }""")
+        { columns { zipcode { min } } } }"""
+    )
     assert data['scan']['columns']['zipcode']['min'] == 1002
     data = client.execute(
         """{ scan(columns: {alias: "zipcode", subtract: [{name: "zipcode"}, {name: "zipcode"}]})
-        { columns { zipcode { unique { values } } } } }""")
+        { columns { zipcode { unique { values } } } } }"""
+    )
     assert data['scan']['columns']['zipcode']['unique']['values'] == [0]
     data = client.execute(
         """{ scan(columns: {alias: "product", multiply: [{name: "latitude"}, {name: "longitude"}]})
-        { scan(filter: {gt: [{name: "product"}, {value: 0}]}) { length } } }""")
+        { scan(filter: {gt: [{name: "product"}, {value: 0}]}) { length } } }"""
+    )
     assert data['scan']['scan']['length'] == 0
     data = client.execute(
         '{ scan(columns: {name: "zipcode", cast: "float"}) { column(name: "zipcode") { type } } }'
@@ -237,26 +251,31 @@ def test_scan(client):
     assert data == {'scan': {'column': {'type': 'int32'}}}
     data = client.execute(
         """{ scan(columns: {alias: "longitude", elementWise: {max: [{name: "longitude"}, {name: "latitude"}]}})
-        { columns { longitude { min } } } }""")
+        { columns { longitude { min } } } }"""
+    )
     assert data['scan']['columns']['longitude']['min'] == pytest.approx(17.963333)
     data = client.execute(
         """{ scan(columns: {alias: "latitude", elementWise: {min: [{name: "longitude"}, {name: "latitude"}]}})
-        { columns { latitude { max } } } }""")
+        { columns { latitude { max } } } }"""
+    )
     assert data['scan']['columns']['latitude']['max'] == pytest.approx(-65.301389)
     data = client.execute(
         """{ scan(columns: {alias: "state", elementWise: {min: [{name: "state"}, {name: "county"}], skipNulls: false}})
-        { columns { state { values } } } }""")
+        { columns { state { values } } } }"""
+    )
     assert data['scan']['columns']['state']['values'][0] == 'NY'
 
 
 def test_apply(client):
     data = client.execute(
         """{ scan(columns: {alias: "city", substring: {find: {name: "city"}, pattern: "mountain"}})
-        { column(name: "city") { ... on IntColumn { unique { values } } } } }""")
+        { column(name: "city") { ... on IntColumn { unique { values } } } } }"""
+    )
     assert data['scan']['column']['unique']['values'] == [-1]
     data = client.execute(
         """{ scan(columns: {alias: "city", substring: {count: {name: "city"}, pattern: "mountain", ignoreCase: true}})
-        { column(name: "city") { ... on IntColumn { unique { values } } } } }""")
+        { column(name: "city") { ... on IntColumn { unique { values } } } } }"""
+    )
     assert data['scan']['column']['unique']['values'] == [0, 1]
     data = client.execute("""{ scan(columns: {alias: "state", binary: {joinElementWise: [
         {name: "state"}, {name: "county"}, {value: " "}]}}) { columns { state { values } } } }""")
@@ -275,7 +294,8 @@ def test_apply(client):
     assert data == {'apply': {'row': {'zipcode': 1}}}
     data = client.execute(
         """{ apply(rank: {name: "zipcode", sortKeys: "descending", nullPlacement: "at_start", tiebreaker: "dense"})
-        { row { zipcode } } }""")
+        { row { zipcode } } }"""
+    )
     assert data == {'apply': {'row': {'zipcode': 41700}}}
 
 
@@ -300,15 +320,18 @@ def test_sort(client):
     assert data['sort']['columns']['state']['values'] == ['AK', 'AK']
     data = client.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: ["county"]}})
-        { aggregate(first: [{name: "county"}]) { row { state county } } } } }""")
+        { aggregate(first: [{name: "county"}]) { row { state county } } } } }"""
+    )
     assert data['group']['apply']['aggregate']['row'] == {'state': 'NY', 'county': 'Albany'}
     data = client.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: ["-county"], length: 1}})
-        { aggregate(first: [{name: "county"}]) { row { state county } } } } }""")
+        { aggregate(first: [{name: "county"}]) { row { state county } } } } }"""
+    )
     assert data['group']['apply']['aggregate']['row'] == {'state': 'NY', 'county': 'Yates'}
     data = client.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: "county", length: 2}})
-        { row { state } column(name: "county") { ... on ListColumn { value { length } } } } } }""")
+        { row { state } column(name: "county") { ... on ListColumn { value { length } } } } } }"""
+    )
     assert data['group']['apply'] == {'row': {'state': 'NY'}, 'column': {'value': {'length': 2}}}
 
 
@@ -321,7 +344,8 @@ def test_group(client):
         """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { length tables { length
         columns { state { values } county { min max } } }
         scan(columns: {list: {valueLength: {name: "county"}}, alias: "c"}) {
-        column(name: "c") { ... on IntColumn { values } } } } }""")
+        column(name: "c") { ... on IntColumn { values } } } } }"""
+    )
     assert len(data['group']['tables']) == data['group']['length'] == 52
     table = data['group']['tables'][0]
     assert table['length'] == data['group']['scan']['column']['values'][0] == 2205
@@ -332,7 +356,8 @@ def test_group(client):
         scan(filter: {gt: [{name: "counts"}, {value: 200}]}) {
         aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
         min: column(name: "min") { ... on StringColumn { values } }
-        max: column(name: "max") { ... on StringColumn { values } } } } } }""")
+        max: column(name: "max") { ... on StringColumn { values } } } } } }"""
+    )
     agg = data['group']['scan']['aggregate']
     assert agg['min']['values'] == ['Naval Anacost Annex', 'Alsip', 'Alief', 'Acton']
     assert agg['max']['values'] == ['Washington Navy Yard', 'Worth', 'Webster', 'Woodland Hills']
@@ -340,7 +365,8 @@ def test_group(client):
         """{ group(by: ["state", "county"], counts: "c", aggregate: {list: [{name: "zipcode"}, {name: "latitude"}, {name: "longitude"}]}) {
         sort(by: ["-c"], length: 4) { aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
         columns { latitude { values } longitude { values } }
-        column(name: "zipcode") { type } } } } }""")
+        column(name: "zipcode") { type } } } } }"""
+    )
     agg = data['group']['sort']['aggregate']
     assert agg['column']['type'] == 'list<item: int32>'
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
@@ -368,7 +394,8 @@ def test_flatten(client):
     assert data == {'group': {'flatten': {'columns': {'city': {'type': 'string'}}}}}
     data = client.execute(
         """{ group(by: "state", aggregate: {list: {name: "city"}}) { flatten(indices: "idx") { columns { city { type } }
-        column(name: "idx") { ... on LongColumn { unique { values counts } } } } } }""")
+        column(name: "idx") { ... on LongColumn { unique { values counts } } } } } }"""
+    )
     idx = data['group']['flatten']['column']['unique']
     assert idx['values'] == list(range(52))
     assert sum(idx['counts']) == 41700
@@ -381,7 +408,8 @@ def test_aggregate(client):
         countDistinct: [{name: "city", alias: "cd"}]}) { slice(length: 3) {
         c: column(name: "c") { ... on LongColumn { values } }
         cd: column(name: "cd") { ... on LongColumn { values } }
-        columns { state { values } county { values } } } } }""")
+        columns { state { values } county { values } } } } }"""
+    )
     assert data['group']['slice'] == {
         'c': {'values': [2205, 176, 703]},
         'cd': {'values': [1612, 99, 511]},
@@ -394,7 +422,8 @@ def test_aggregate(client):
         """{ group(by: ["state", "county"], aggregate: {list: {name: "city"}, min: {name: "city", alias: "first"}}) {
         aggregate(max: {name: "city", alias: "last"}) { slice(length: 3) {
         first: column(name: "first") { ... on StringColumn { values } }
-        last: column(name: "last") { ... on StringColumn { values } } } } } }""")
+        last: column(name: "last") { ... on StringColumn { values } } } } } }"""
+    )
     assert data['group']['aggregate']['slice'] == {
         'first': {'values': ['Amagansett', 'Adjuntas', 'Aguada']},
         'last': {'values': ['Yaphank', 'Adjuntas', 'Aguada']},

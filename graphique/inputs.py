@@ -377,11 +377,11 @@ class Expression:
                 fields.append(field)
         for group in operator.attrgetter(*self.groups)(self):
             if group is not UNSET:
-                fields += group.to_fields()  # type: ignore
+                fields += group.to_fields()
         for op in self.unaries:
             expr = getattr(self, op)
             if expr is not UNSET:
-                fields.append(self.getfunc(op)(expr.to_arrow()))  # type: ignore
+                fields.append(self.getfunc(op)(expr.to_arrow()))
         if not fields:
             return None
         if len(fields) > 1:

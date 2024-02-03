@@ -102,7 +102,8 @@ def test_boolean(executor):
     assert data == {'scan': {'length': 1}}
     data = executor(
         """{ scan(columns: {alias: "bool", andNot: [{inv: {name: "bool"}}, {name: "bool"}], kleene: true})
-        { columns { bool { values } } } }""")
+        { columns { bool { values } } } }"""
+    )
     assert data == {'scan': {'columns': {'bool': {'values': [True, None]}}}}
 
 
@@ -153,14 +154,16 @@ def test_numeric(executor):
     assert data == {'scan': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor(
         """{ scan(columns: {alias: "float", coalesce: [{name: "float"}, {name: "int32"}]}) {
-        columns { float { values } } } }""")
+        columns { float { values } } } }"""
+    )
     assert data == {'scan': {'columns': {'float': {'values': [0.0, None]}}}}
     data = executor("""{ scan(columns: {bitWise: {not: {name: "int32"}}, alias: "int32"}) {
         columns { int32 { values } } } }""")
     assert data == {'scan': {'columns': {'int32': {'values': [-1, None]}}}}
     data = executor(
         """{ scan(columns: {bitWise: {or: [{name: "int32"}, {name: "int64"}]}, alias: "int64"}) {
-        columns { int64 { values } } } }""")
+        columns { int64 { values } } } }"""
+    )
     assert data == {'scan': {'columns': {'int64': {'values': [0, None]}}}}
 
 
@@ -169,11 +172,13 @@ def test_datetime(executor):
     for name in ('timestamp', 'date32'):
         data = executor(
             f"""{{ scan(columns: {{alias: "year", temporal: {{year: {{name: "{name}"}}}}}})
-            {{ column(name: "year") {{ ... on LongColumn {{ values }} }} }} }}""")
+            {{ column(name: "year") {{ ... on LongColumn {{ values }} }} }} }}"""
+        )
         assert data == {'scan': {'column': {'values': [1970, None]}}}
         data = executor(
             f"""{{ scan(columns: {{alias: "quarter", temporal: {{quarter: {{name: "{name}"}}}}}})
-            {{ column(name: "quarter") {{ ... on LongColumn {{ values }} }} }} }}""")
+            {{ column(name: "quarter") {{ ... on LongColumn {{ values }} }} }} }}"""
+        )
         assert data == {'scan': {'column': {'values': [1, None]}}}
         data = executor(f"""{{ scan(columns: {{alias: "{name}",
             temporal: {{yearsBetween: [{{name: "{name}"}}, {{name: "{name}"}}]}}}})
@@ -181,16 +186,19 @@ def test_datetime(executor):
         assert data == {'scan': {'column': {'values': [0, None]}}}
     data = executor(
         """{ scan(columns: {alias: "timestamp", temporal: {strftime: {name: "timestamp"}}}) {
-        column(name: "timestamp") { type } } }""")
+        column(name: "timestamp") { type } } }"""
+    )
     assert data == {'scan': {'column': {'type': 'string'}}}
     for name in ('timestamp', 'time32'):
         data = executor(
             f"""{{ scan(columns: {{alias: "hour", temporal: {{hour: {{name: "{name}"}}}}}})
-            {{ column(name: "hour") {{ ... on LongColumn {{ values }} }} }} }}""")
+            {{ column(name: "hour") {{ ... on LongColumn {{ values }} }} }} }}"""
+        )
         assert data == {'scan': {'column': {'values': [0, None]}}}
         data = executor(
             f"""{{ scan(columns: {{alias: "subsecond", temporal: {{subsecond: {{name: "{name}"}}}}}})
-            {{ column(name: "subsecond") {{ ... on FloatColumn {{ values }} }} }} }}""")
+            {{ column(name: "subsecond") {{ ... on FloatColumn {{ values }} }} }} }}"""
+        )
         assert data == {'scan': {'column': {'values': [0.0, None]}}}
         data = executor(f"""{{ scan(columns: {{alias: "hours",
             temporal: {{hoursBetween: [{{name: "{name}"}}, {{name: "{name}"}}]}}}})
@@ -200,19 +208,22 @@ def test_datetime(executor):
         executor('{ columns { time64 { between(unit: "hours") { values } } } }')
     data = executor(
         """{ scan(columns: {alias: "timestamp", temporal: {assumeTimezone: {name: "timestamp"}, timezone: "UTC"}}) {
-        columns { timestamp { values } } } }""")
+        columns { timestamp { values } } } }"""
+    )
     dates = data['scan']['columns']['timestamp']['values']
     assert dates == ['1970-01-01T00:00:00+00:00', None]
     data = executor(
         """{ scan(columns: {alias: "time32", temporal: {round: {name: "time32"}, unit: "hour"}}) {
-        columns { time32 { values } } } }""")
+        columns { time32 { values } } } }"""
+    )
     assert data == {'scan': {'columns': {'time32': {'values': ['00:00:00', None]}}}}
 
 
 def test_duration(executor):
     data = executor(
         """{ scan(columns: {alias: "diff", checked: true, subtract: [{name: "timestamp"}, {name: "timestamp"}]})
-        { column(name: "diff") { ... on DurationColumn { unique { values  } } } } }""")
+        { column(name: "diff") { ... on DurationColumn { unique { values  } } } } }"""
+    )
     assert data == {'scan': {'column': {'unique': {'values': [0.0, None]}}}}
     data = executor('{ runs(split: [{name: "timestamp", gt: 0.0}]) { length } }')
     assert data == {'runs': {'length': 1}}
@@ -250,7 +261,8 @@ def test_list(executor):
     assert data == {'apply': {'column': {'values': [1, -1]}}}
     data = executor(
         """{ scan(columns: {list: {element: [{name: "list"}, {value: 1}]}, alias: "value"}) {
-        column(name: "value") { ... on IntColumn { values } } } }""")
+        column(name: "value") { ... on IntColumn { values } } } }"""
+    )
     assert data == {'scan': {'column': {'values': [1, None]}}}
     data = executor("""{ scan(columns: {list: {slice: {name: "list"}, stop: 1}, alias: "value"}) {
         column(name: "value") { ... on ListColumn { flatten { ... on IntColumn { values } } } } } }""")
@@ -267,12 +279,14 @@ def test_list(executor):
     data = executor(
         """{ aggregate(stddev: {name: "list"}, variance: {name: "list", alias: "var", ddof: 1}) {
         column(name: "list") { ... on FloatColumn { values } }
-        var: column(name: "var") { ... on FloatColumn { values } } } }""")
+        var: column(name: "var") { ... on FloatColumn { values } } } }"""
+    )
     assert data['aggregate']['column']['values'] == [pytest.approx((2 / 3) ** 0.5), None]
     assert data['aggregate']['var']['values'] == [1, None]
     data = executor(
         """{ runs(by: "int32") { scan(columns: {binary: {join: [{name: "binary"}, {base64: ""}]}, alias: "binary"}) {
-        column(name: "binary") { ... on Base64Column { values } } } } }""")
+        column(name: "binary") { ... on Base64Column { values } } } } }"""
+    )
     assert data == {'runs': {'scan': {'column': {'values': [None]}}}}
     data = executor('{ columns { list { value { type } } } }')
     assert data == {'columns': {'list': {'value': {'type': 'int32'}}}}
@@ -318,7 +332,8 @@ def test_dictionary(executor):
     assert data == {'group': {'column': {'values': [1, 0]}}}
     data = executor(
         """{ scan(columns: {alias: "string", coalesce: [{name: "string"}, {value: ""}]}) {
-        columns { string { values } } } }""")
+        columns { string { values } } } }"""
+    )
     assert data == {'scan': {'columns': {'string': {'values': ['', '']}}}}
 
 
@@ -334,7 +349,8 @@ def test_selections(executor):
 def test_conditions(executor):
     data = executor(
         """{ scan(columns: {alias: "bool", ifElse: [{name: "bool"}, {name: "int32"}, {name: "float"}]}) {
-        column(name: "bool") { type } } }""")
+        column(name: "bool") { type } } }"""
+    )
     assert data == {'scan': {'column': {'type': 'float'}}}
     with pytest.raises(ValueError, match="no kernel"):
         executor("""{ scan(columns: {alias: "bool",
@@ -352,7 +368,8 @@ def test_base64(executor):
     assert data == {'scan': {'column': {'values': [0, None]}}}
     data = executor(
         """{ scan(columns: {alias: "binary", binary: {repeat: [{name: "binary"}, {value: 2}]}}) {
-        columns { binary { values } } } }""")
+        columns { binary { values } } } }"""
+    )
     assert data == {'scan': {'columns': {'binary': {'values': ['', None]}}}}
     data = executor(
         '{ apply(fillNullForward: {name: "binary"}) { columns { binary { values } } } }'
@@ -360,7 +377,8 @@ def test_base64(executor):
     assert data == {'apply': {'columns': {'binary': {'values': ['', '']}}}}
     data = executor(
         """{ scan(columns: {alias: "binary", coalesce: [{name: "binary"}, {base64: "Xw=="}]}) {
-        columns { binary { values } } } }""")
+        columns { binary { values } } } }"""
+    )
     assert data == {'scan': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
     data = executor("""{ scan(columns: {alias: "binary", binary: {joinElementWise: [
         {name: "binary"}, {name: "binary"}, {base64: "Xw=="}], nullHandling: "replace"}}) {

@@ -15,7 +15,7 @@ import json
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Optional, Union, get_type_hints
-import numpy as np  # type: ignore
+import numpy as np
 import pyarrow as pa
 import pyarrow.acero as ac
 import pyarrow.compute as pc
@@ -468,7 +468,7 @@ class Table(pa.Table):
         func = functools.partial(pc.sort_indices, null_placement=null_placement)
         if length is not None and length < len(self):
             func = functools.partial(pc.select_k_unstable, k=length)
-        keys = dict(map(sort_key, names))  # type: ignore
+        keys = dict(map(sort_key, names))
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
         return func(table, sort_keys=keys.items()) if table else pa.array([], 'int64')
 
@@ -560,7 +560,7 @@ class Table(pa.Table):
             dense: use dense rank; false indicates sorting
         """
         schema = set(Table.fragment_keys(self))
-        keys = dict(itertools.takewhile(lambda key: key[0] in schema, map(sort_key, names)))  # type: ignore
+        keys = dict(itertools.takewhile(lambda key: key[0] in schema, map(sort_key, names)))
         if not keys:
             return None, names
         parts = []
