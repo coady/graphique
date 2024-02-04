@@ -423,9 +423,10 @@ class Table(pa.Table):
             self = self.unify_dictionaries()
         prefix = 'hash_' if names else ''
         aggs = [agg.astuple(prefix + func) for func in funcs for agg in funcs[func]]
+        columns = list(names) + [agg[0] for agg in aggs]
         if counts:
             aggs.append(([], 'hash_count_all', None, counts))
-        return Declarations(self).aggregate(aggs, names).to_table()
+        return Declarations(self, columns).aggregate(aggs, names).to_table()
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
         """Return aggregated scalars as a row of data."""
@@ -642,10 +643,10 @@ class Declarations(list):
         'hashjoin': ac.HashJoinNodeOptions,
     }
 
-    def __init__(self, source: Union[pa.Table, ds.Dataset]):
+    def __init__(self, source: Union[pa.Table, ds.Dataset], columns=None):
         if isinstance(source, ds.Dataset):
             expr = source._scan_options.get('filter')
-            self.scan(source, filter=expr)
+            self.scan(source, filter=expr, columns=columns)
             if expr is not None:
                 self.filter(expr)
         else:

@@ -58,7 +58,7 @@ preview = true
 quote-style = "preserve"
 
 [[tool.mypy.overrides]]
-module = ["pyarrow.*", "strawberry.*", "starlette.*"]
+module = ["numpy.*", "pyarrow.*", "strawberry.*", "starlette.*"]
 ignore_missing_imports = true
 
 [tool.coverage.run]
