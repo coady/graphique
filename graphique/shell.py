@@ -9,11 +9,11 @@ sufficient once partitioned, but there is a `fragments` option to optimize for m
 progress on the second pass.
 """
 
-import argparse
 import shutil
-from collections.abc import Iterable
 from pathlib import Path
+from typing import Annotated
 import pyarrow.dataset as ds
+import typer  # type: ignore
 from tqdm import tqdm  # type: ignore
 
 
@@ -45,34 +45,25 @@ def write_fragments(dataset: ds.Dataset, base_dir: str, sorting=(), **options):
 
 
 def partition(
-    scanner: ds.Scanner,
-    base_dir: str,
-    *partitioning: str,
-    fragments: bool = False,
-    sort: Iterable[str] = (),
-    **options,
+    src: Annotated[str, typer.Argument(help="source path")],
+    dest: Annotated[str, typer.Argument(help="destination path")],
+    partitioning: Annotated[list[str], typer.Argument(help="partition keys")],
+    fragments: Annotated[bool, typer.Option(help="iterate over fragments")] = False,
+    sort: Annotated[list[str], typer.Option(help="sort keys; will load fragments")] = [],
 ):
     """Partition dataset by keys."""
-    temp = Path(base_dir) / 'temp'
-    write_batches(scanner, str(temp), *partitioning)
+    temp = Path(dest) / 'temp'
+    write_batches(ds.dataset(src, partitioning='hive'), str(temp), *partitioning)
     dataset = ds.dataset(temp, partitioning='hive')
+    options = dict(partitioning_flavor='hive', existing_data_behavior='overwrite_or_ignore')
     if fragments or sort:
-        write_fragments(dataset, base_dir, tuple(map(sort_key, sort)), **options)
+        write_fragments(dataset, dest, tuple(map(sort_key, sort)))
     else:
-        options.update(partitioning_flavor='hive', existing_data_behavior='overwrite_or_ignore')
         with tqdm(desc="Partitions"):
-            ds.write_dataset(dataset, base_dir, partitioning=partitioning, **options)
+            ds.write_dataset(dataset, dest, partitioning=partitioning, **options)
     shutil.rmtree(temp)
 
 
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument('src', help="source path")
-parser.add_argument('dest', help="destination path")
-parser.add_argument('partitioning', nargs='+', help="partition keys")
-parser.add_argument('--fragments', action='store_true', help="iterate over fragments")
-parser.add_argument('--sort', nargs='*', default=(), help="sort keys; will load fragments")
-
 if __name__ == '__main__':
-    args = parser.parse_args()
-    dataset = ds.dataset(args.src, partitioning='hive')
-    partition(dataset, args.dest, *args.partitioning, fragments=args.fragments, sort=args.sort)
+    partition.__doc__ = __doc__
+    typer.run(partition)
