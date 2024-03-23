@@ -15,8 +15,8 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
+from strawberry import Info
 from strawberry.extensions.utils import get_path_from_info
-from strawberry.types import Info
 from typing_extensions import Self
 from .core import Batch, Column as C, ListChunk, Table as T
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter

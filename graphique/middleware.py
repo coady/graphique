@@ -9,10 +9,9 @@ from keyword import iskeyword
 from typing import Optional
 import pyarrow.dataset as ds
 import strawberry.asgi
-from strawberry import UNSET
+from strawberry import Info, UNSET
 from strawberry.extensions import tracing
 from strawberry.utils.str_converters import to_camel_case
-from strawberry.types import Info
 from .core import Column as C
 from .inputs import Filter
 from .interface import Dataset, Root

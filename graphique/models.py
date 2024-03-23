@@ -13,8 +13,8 @@ from typing import Annotated, Generic, Optional, TypeVar, TYPE_CHECKING, get_arg
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
+from strawberry import Info
 from strawberry.field import StrawberryField
-from strawberry.types import Info
 from .core import Column as C
 from .inputs import links
 from .scalars import Interval, Long, scalar_map, type_map
