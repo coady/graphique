@@ -402,10 +402,10 @@ class Table(pa.Table):
                 if the predicate has args, it will be called on the differences
         """
         offsets = pa.chunked_array(
-            Column.run_offsets(self[name], *predicates.get(name, (pc.not_equal,)))
+            Column.run_offsets(self[name], *predicates.get(name, ()))
             for name in names + tuple(predicates)
-        ).unique()
-        offsets = offsets.take(pc.sort_indices(offsets))
+        )
+        offsets = offsets.unique().sort()
         scalars = self.select(names).take(offsets[:-1])
         lists = self.select(set(self.schema.names) - set(names))
         table = Table.union(scalars, Table.from_offsets(lists, offsets))

@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 ### Changed
+* Pyarrow >=16 required
 * `group` optimized for datasets
 
 ## [1.5](https://pypi.org/project/graphique/1.5/) - 2024-01-24
