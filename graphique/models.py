@@ -17,7 +17,7 @@ from strawberry import Info
 from strawberry.field import StrawberryField
 from .core import Column as C
 from .inputs import links
-from .scalars import Interval, Long, scalar_map, type_map
+from .scalars import Long, scalar_map, type_map
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
@@ -120,7 +120,7 @@ class Set(Generic[T]):
         return self.array.to_pylist()
 
 
-@Column.register(timedelta, Interval)
+@Column.register(timedelta, pa.MonthDayNano)
 @strawberry.type(name='Column', description="column of elapsed times")
 class NominalColumn(Generic[T], Column):
     values = doc_field(Set.values)
