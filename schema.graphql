@@ -1,0 +1,2503 @@
+"""
+This input is optional, not nullable.
+If the client insists on sending an explicit null value, the behavior is undefined.
+"""
+directive @optional on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+
+"""Provisional feature; subject to change in the future."""
+directive @provisional on ARGUMENT_DEFINITION | FIELD_DEFINITION
+
+schema {
+  query: Table
+}
+
+"""
+Represents binary data as Base64-encoded strings, using the standard alphabet.
+"""
+scalar Base64 @specifiedBy(url: "https://datatracker.ietf.org/doc/html/rfc4648.html#section-4")
+
+"""column of ordinal values"""
+type Base64Column implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [Base64]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: Base64Set!
+
+  """scalar value at index"""
+  value(index: Long! = 0): Base64
+
+  """Drop nulls from the input."""
+  dropNull: [Base64!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): Base64
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): Base64
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): Base64
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): Base64
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: Base64!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: Base64!): [Base64!]!
+}
+
+"""unique values and counts"""
+type Base64Set {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [Base64]!
+}
+
+"""Binary functions."""
+input Binary {
+  """Compute string lengths."""
+  length: Expression @optional
+
+  """Repeat a binary string."""
+  repeat: [Expression!]! = []
+
+  """Reverse binary input."""
+  reverse: Expression @optional
+
+  """Join a list of strings together with a separator."""
+  join: [Expression!]! = []
+
+  """Join string arguments together, with the last argument as separator."""
+  joinElementWise: [Expression!]! = []
+  nullHandling: String! = "emit_null"
+  nullReplacement: String! = ""
+
+  """Replace a slice of a binary string."""
+  replaceSlice: Expression @optional
+  start: Int! = 0
+  stop: Int! = 0
+  replacement: Base64! = ""
+}
+
+"""Bit-wise functions."""
+input BitWise {
+  """Bit-wise AND the arguments element-wise."""
+  and: [Expression!]! = []
+
+  """Bit-wise negate the arguments element-wise."""
+  not: [Expression!]! = []
+
+  """Bit-wise OR the arguments element-wise."""
+  or: [Expression!]! = []
+
+  """Bit-wise XOR the arguments element-wise."""
+  xor: [Expression!]! = []
+
+  """Left shift `x` by `y`."""
+  shiftLeft: [Expression!]! = []
+
+  """Right shift `x` by `y`."""
+  shiftRight: [Expression!]! = []
+}
+
+"""unique values and counts"""
+type BoolSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [Boolean]!
+}
+
+"""column of booleans"""
+type BooleanColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [Boolean]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: BoolSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): Boolean
+
+  """Drop nulls from the input."""
+  dropNull: [Boolean!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): Boolean
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): Boolean
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): Boolean
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): Boolean
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: Boolean!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: Boolean!): [Boolean!]!
+
+  """Compute the modal (most common) values of a numeric array."""
+  mode(n: Int! = 1, skipNulls: Boolean! = true, minCount: Int! = 0): BoolSet!
+
+  """Compute the sum of a numeric array."""
+  sum(skipNulls: Boolean! = true, minCount: Int! = 0): Boolean
+
+  """Compute the product of values in a numeric array."""
+  product(skipNulls: Boolean! = true, minCount: Int! = 0): Boolean
+
+  """Compute the mean of a numeric array."""
+  mean(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Return the indices of the values in the array that are non-zero."""
+  indicesNonzero: [Long!]!
+
+  """Test whether any element in a boolean array evaluates to true."""
+  any(skipNulls: Boolean! = true, minCount: Int! = 1): Boolean
+
+  """Test whether all elements in a boolean array evaluate to true."""
+  all(skipNulls: Boolean! = true, minCount: Int! = 1): Boolean
+}
+
+"""an arrow array"""
+interface Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+}
+
+"""fields for each column"""
+type Columns {
+  latitude: FloatColumn
+  longitude: FloatColumn
+  state: StringColumn
+  city: StringColumn
+  county: StringColumn
+  zipcode: IntColumn
+}
+
+"""
+options for count [aggregation](https://arrow.apache.org/docs/python/api/compute.html#aggregations)
+"""
+input CountAggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  mode: String! = "only_valid"
+}
+
+input Cumulative {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  start: Float! = 0
+  skipNulls: Boolean! = false
+  checked: Boolean! = false
+}
+
+"""an arrow dataset, scanner, or table"""
+interface Dataset {
+  """
+  [arrow type](https://arrow.apache.org/docs/python/api/dataset.html#classes)
+  """
+  type: String!
+
+  """dataset schema"""
+  schema: Schema!
+
+  """
+  Nullable field to stop error propagation, enabling partial query results.
+  
+  Will be replaced by client controlled nullability.
+  """
+  optional: Dataset
+
+  """number of rows"""
+  length: Long!
+
+  """
+  Return whether there are at least `length` rows.
+  
+  May be significantly faster than `length` for out-of-core data.
+  """
+  any(length: Long! = 1): Boolean!
+
+  """buffer size in bytes; null if table is not loaded"""
+  size: Long
+
+  """
+  Return column of any type by name.
+  
+  This is typically only needed for aliased or casted columns.
+  If the column is in the schema, `columns` can be used instead.
+  """
+  column(
+    """column name(s); multiple names access nested struct fields"""
+    name: [String!]!
+
+    """
+    cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)
+    """
+    cast: String! = ""
+
+    """check for conversion errors on cast"""
+    safe: Boolean! = true
+  ): Column
+
+  """Return zero-copy slice of table."""
+  slice(
+    """number of rows to skip; negative value skips from the end"""
+    offset: Long! = 0
+
+    """maximum number of rows to return"""
+    length: Long = null
+
+    """reverse order after slicing; forces a copy"""
+    reverse: Boolean! = false
+  ): Dataset!
+
+  """
+  Return table grouped by columns.
+  
+  See `column` for accessing any column which has changed type. See `tables` to split on any
+  aggregated list columns.
+  """
+  group(
+    """column names; empty will aggregate into a single row table"""
+    by: [String!]! = []
+
+    """optionally include counts in an aliased column"""
+    counts: String! = ""
+
+    """aggregation functions applied to other columns"""
+    aggregate: HashAggregates! = {}
+  ): Dataset!
+
+  """
+  Return table grouped by pairwise differences.
+  
+  Differs from `group` by relying on adjacency, and is typically faster. Other columns are
+  transformed into list columns. See `column` and `tables` to further access lists.
+  """
+  runs(
+    """column names"""
+    by: [String!]! = []
+
+    """
+    optional predicates to split on; scalars are compared to pairwise difference
+    """
+    split: [Diff!]! = []
+
+    """optionally include counts in an aliased column"""
+    counts: String! = ""
+  ): Dataset!
+
+  """
+  Return table slice sorted by specified columns.
+  
+  Optimized for length == 1; matches min or max values.
+  """
+  sort(
+    """column names; prefix with `-` for descending order"""
+    by: [String!]!
+
+    """
+    maximum number of rows to return; may be significantly faster but is unstable
+    """
+    length: Long = null
+
+    """where nulls in input should be sorted; incompatible with `length`"""
+    nullPlacement: String! = "at_end"
+  ): Dataset!
+
+  """Return table selected by maximum dense rank."""
+  rank(
+    """column names; prefix with `-` for descending order"""
+    by: [String!]!
+
+    """maximum dense rank to select; optimized for == 1 (min or max)"""
+    max: Int! = 1
+
+    """where nulls in input should be ranked"""
+    nullPlacement: String! = "at_end"
+  ): Dataset!
+
+  """
+  Return view of table with vector functions applied across columns.
+  
+  Applied functions load arrays into memory as needed. See `scan` for scalar functions,
+  which do not require loading.
+  """
+  apply(
+    """Compute the cumulative max over a numeric input."""
+    cumulativeMax: [Cumulative!]! = []
+
+    """Compute the cumulative max over a numeric input."""
+    cumulativeMean: [Cumulative!]! = []
+
+    """Compute the cumulative min over a numeric input."""
+    cumulativeMin: [Cumulative!]! = []
+
+    """Compute the cumulative product over a numeric input."""
+    cumulativeProd: [Cumulative!]! = []
+
+    """Compute the cumulative sum over a numeric input."""
+    cumulativeSum: [Cumulative!]! = []
+
+    """Carry non-null values backward to fill null slots."""
+    fillNullBackward: [Field!]! = []
+
+    """Carry non-null values forward to fill null slots."""
+    fillNullForward: [Field!]! = []
+
+    """Compute first order difference of an array."""
+    pairwiseDiff: [Pairwise!]! = []
+
+    """Compute numerical ranks of an array (1-based)."""
+    rank: [Rank!]! = []
+
+    """functions for list arrays."""
+    list: ListFunction! = {}
+  ): Dataset!
+
+  """
+  Return table with list arrays flattened.
+  
+  At least one list column must be referenced, and all list columns must have the same lengths.
+  """
+  flatten(indices: String! = ""): Dataset!
+
+  """
+  Return a list of tables by splitting list columns.
+  
+  At least one list column must be referenced, and all list columns must have the same lengths.
+  """
+  tables: [Dataset]!
+
+  """Return table with scalar aggregate functions applied to list columns."""
+  aggregate(
+    """Approximate median of a numeric array with T-Digest algorithm."""
+    approximateMedian: [ScalarAggregate!]! = []
+
+    """Count the number of null / non-null values."""
+    count: [CountAggregate!]! = []
+
+    """Count the number of unique values."""
+    countDistinct: [CountAggregate!]! = []
+
+    """distinct values within each scalar"""
+    distinct: [CountAggregate!]! = []
+
+    """first value of each list scalar"""
+    first: [Field!]! = []
+
+    """last value of each list scalar"""
+    last: [Field!]! = []
+
+    """Compute the minimum or maximum values of a numeric array."""
+    max: [ScalarAggregate!]! = []
+
+    """Compute the mean of a numeric array."""
+    mean: [ScalarAggregate!]! = []
+
+    """Compute the minimum or maximum values of a numeric array."""
+    min: [ScalarAggregate!]! = []
+
+    """Compute the product of values in a numeric array."""
+    product: [ScalarAggregate!]! = []
+
+    """Calculate the standard deviation of a numeric array."""
+    stddev: [VarianceAggregate!]! = []
+
+    """Compute the sum of a numeric array."""
+    sum: [ScalarAggregate!]! = []
+
+    """Approximate quantiles of a numeric array with T-Digest algorithm."""
+    tdigest: [TDigestAggregate!]! = []
+
+    """Calculate the variance of a numeric array."""
+    variance: [VarianceAggregate!]! = []
+  ): Dataset! @deprecated(reason: "List scalar functions will be moved to `scan(...: {list: ...})`")
+
+  """Select rows and project columns without memory usage."""
+  scan(
+    """selected rows"""
+    filter: Expression! = {}
+
+    """projected columns"""
+    columns: [Projection!]! = []
+  ): Dataset!
+
+  """
+  Provisional: [join](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.join) this table with another table on the root Query type.
+  """
+  join(
+    """name of right table; must be on root Query type"""
+    right: String!
+
+    """column names used as keys on the left side"""
+    keys: [String!]!
+
+    """column names used as keys on the right side; defaults to left side."""
+    rightKeys: [String!] = null
+
+    """
+    the kind of join: 'left semi', 'right semi', 'left anti', 'right anti', 'inner', 'left outer', 'right outer', 'full outer'
+    """
+    joinType: String! = "left outer"
+
+    """add suffix to left column names; for preventing collisions"""
+    leftSuffix: String! = ""
+
+    """add suffix to right column names; for preventing collisions."""
+    rightSuffix: String! = ""
+
+    """omit duplicate keys"""
+    coalesceKeys: Boolean! = true
+  ): Dataset! @provisional
+
+  """Select rows from indices."""
+  take(indices: [Long!]!): Dataset!
+
+  """Remove missing values from referenced columns in the table."""
+  dropNull: Dataset!
+}
+
+"""Date (isoformat)"""
+scalar Date
+
+"""column of ordinal values"""
+type DateColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [Date]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: DateSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): Date
+
+  """Drop nulls from the input."""
+  dropNull: [Date!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): Date
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): Date
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): Date
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): Date
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: Date!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: Date!): [Date!]!
+}
+
+"""unique values and counts"""
+type DateSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [Date]!
+}
+
+"""Date with time (isoformat)"""
+scalar DateTime
+
+"""column of ordinal values"""
+type DatetimeColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [DateTime]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: DatetimeSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): DateTime
+
+  """Drop nulls from the input."""
+  dropNull: [DateTime!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): DateTime
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): DateTime
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): DateTime
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): DateTime
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: DateTime!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: DateTime!): [DateTime!]!
+}
+
+"""unique values and counts"""
+type DatetimeSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [DateTime]!
+}
+
+"""Decimal (fixed-point)"""
+scalar Decimal
+
+"""column of floats or decimals"""
+type DecimalColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [Decimal]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: DecimalSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): Decimal
+
+  """Drop nulls from the input."""
+  dropNull: [Decimal!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): Decimal
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): Decimal
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): Decimal
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): Decimal
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: Decimal!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: Decimal!): [Decimal!]!
+
+  """Compute the modal (most common) values of a numeric array."""
+  mode(n: Int! = 1, skipNulls: Boolean! = true, minCount: Int! = 0): DecimalSet!
+
+  """Compute the sum of a numeric array."""
+  sum(skipNulls: Boolean! = true, minCount: Int! = 0): Decimal
+
+  """Compute the product of values in a numeric array."""
+  product(skipNulls: Boolean! = true, minCount: Int! = 0): Decimal
+
+  """Compute the mean of a numeric array."""
+  mean(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Return the indices of the values in the array that are non-zero."""
+  indicesNonzero: [Long!]!
+
+  """Calculate the standard deviation of a numeric array."""
+  stddev(ddof: Int! = 0, skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Calculate the variance of a numeric array."""
+  variance(ddof: Int! = 0, skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Compute an array of quantiles of a numeric array or chunked array."""
+  quantile(q: [Float!]! = [0.5], interpolation: String! = "linear", skipNulls: Boolean! = true, minCount: Int! = 0): [Float]!
+
+  """Approximate quantiles of a numeric array with T-Digest algorithm."""
+  tdigest(q: [Float!]! = [0.5], delta: Int! = 100, bufferSize: Int! = 500, skipNulls: Boolean! = true, minCount: Int! = 0): [Float]!
+}
+
+"""unique values and counts"""
+type DecimalSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [Decimal]!
+}
+
+"""
+Discrete difference predicates, applied in forwards direction (array[i + 1] ? array[i]).
+
+By default compares by not equal. Specifying `null` with a predicate compares pairwise.
+A float computes the discrete difference first; durations may be in float seconds.
+"""
+input Diff {
+  name: String!
+
+  """<"""
+  lt: Float
+
+  """<="""
+  le: Float
+
+  """\>"""
+  gt: Float
+
+  """\>="""
+  ge: Float
+}
+
+"""Duration (isoformat)"""
+scalar Duration @specifiedBy(url: "https://en.wikipedia.org/wiki/ISO_8601#Durations")
+
+"""column of elapsed times"""
+type DurationColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [Duration]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: DurationSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): Duration
+
+  """Drop nulls from the input."""
+  dropNull: [Duration!]!
+}
+
+"""unique values and counts"""
+type DurationSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [Duration]!
+}
+
+"""Element-wise aggregate functions."""
+input ElementWise {
+  """Find the element-wise minimum value."""
+  min: [Expression!]! = []
+
+  """Find the element-wise maximum value."""
+  max: [Expression!]! = []
+  skipNulls: Boolean! = true
+}
+
+"""
+[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
+used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html).
+
+Expects one of: a field `name`, a scalar, or an operator with expressions. Single values can be passed for an
+[input `List`](https://spec.graphql.org/October2021/#sec-List.Input-Coercion).
+* `eq` with a list scalar is equivalent to `isin`
+* `eq` with a `null` scalar is equivalent `is_null`
+* `ne` with a `null` scalar is equivalent to `is_valid`
+"""
+input Expression {
+  """field name(s)"""
+  name: [String!]! = []
+
+  """
+  cast as [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)
+  """
+  cast: String! = ""
+
+  """check for conversion errors on cast"""
+  safe: Boolean! = true
+
+  """JSON scalar; also see typed scalars"""
+  value: JSON
+
+  """use kleene logic for booleans"""
+  kleene: Boolean! = false
+
+  """check for overflow errors"""
+  checked: Boolean! = false
+  base64: [Base64!]! = []
+  date: [Date!]! = []
+  datetime: [DateTime!]! = []
+  decimal: [Decimal!]! = []
+  duration: [Duration!]! = []
+  time: [Time!]! = []
+
+  """=="""
+  eq: [Expression!]! = []
+
+  """!="""
+  ne: [Expression!]! = []
+
+  """<"""
+  lt: [Expression!]! = []
+
+  """<="""
+  le: [Expression!]! = []
+
+  """\>"""
+  gt: [Expression!]! = []
+
+  """\>="""
+  ge: [Expression!]! = []
+
+  """~"""
+  inv: Expression @optional
+
+  """Calculate the absolute value of the argument element-wise."""
+  abs: Expression @optional
+
+  """Add the arguments element-wise."""
+  add: [Expression!]! = []
+
+  """Divide the arguments element-wise."""
+  divide: [Expression!]! = []
+
+  """Multiply the arguments element-wise."""
+  multiply: [Expression!]! = []
+
+  """Negate the argument element-wise."""
+  negate: Expression @optional
+
+  """Raise arguments to power element-wise."""
+  power: [Expression!]! = []
+
+  """Get the signedness of the arguments element-wise."""
+  sign: Expression @optional
+
+  """Subtract the arguments element-wise."""
+  subtract: [Expression!]! = []
+
+  """bit-wise functions"""
+  bitWise: BitWise @optional
+
+  """rounding functions"""
+  rounding: Rounding @optional
+
+  """logarithmic functions"""
+  log: Log @optional
+
+  """trigonometry functions"""
+  trig: Trig @optional
+
+  """element-wise aggregate functions"""
+  elementWise: ElementWise @optional
+
+  """&"""
+  and: [Expression!]! = []
+
+  """Logical 'and not' boolean values."""
+  andNot: [Expression!]! = []
+
+  """|"""
+  or: [Expression!]! = []
+
+  """Logical 'xor' boolean values."""
+  xor: [Expression!]! = []
+
+  """utf8 string functions"""
+  utf8: Utf8 @optional
+
+  """Classify strings as ASCII."""
+  stringIsAscii: Expression @optional
+
+  """match substring functions"""
+  substring: MatchSubstring @optional
+
+  """binary functions"""
+  binary: Binary @optional
+
+  """set lookup functions"""
+  setLookup: SetLookup @optional
+
+  """Return true if value is finite."""
+  isFinite: Expression @optional
+
+  """Return true if infinity."""
+  isInf: Expression @optional
+
+  """Return true if NaN."""
+  isNan: Expression @optional
+
+  """Return true if non-null, else return null."""
+  trueUnlessNull: Expression @optional
+
+  """Choose values based on multiple conditions."""
+  caseWhen: [Expression!]! = []
+
+  """Choose values from several arrays."""
+  choose: [Expression!]! = []
+
+  """Select the first non-null value."""
+  coalesce: [Expression!]! = []
+
+  """Choose values based on a condition."""
+  ifElse: [Expression!]! = []
+
+  """temporal functions"""
+  temporal: Temporal @optional
+
+  """Replace items selected with a mask."""
+  replaceWithMask: [Expression!]! = []
+
+  """list array functions"""
+  list: Lists @optional
+}
+
+"""
+name and optional alias for [compute functions](https://arrow.apache.org/docs/python/api/compute.html)
+"""
+input Field {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+}
+
+"""column of floats or decimals"""
+type FloatColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [Float]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: FloatSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): Float
+
+  """Drop nulls from the input."""
+  dropNull: [Float!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: Float!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: Float!): [Float!]!
+
+  """Compute the modal (most common) values of a numeric array."""
+  mode(n: Int! = 1, skipNulls: Boolean! = true, minCount: Int! = 0): FloatSet!
+
+  """Compute the sum of a numeric array."""
+  sum(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Compute the product of values in a numeric array."""
+  product(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Compute the mean of a numeric array."""
+  mean(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Return the indices of the values in the array that are non-zero."""
+  indicesNonzero: [Long!]!
+
+  """Calculate the standard deviation of a numeric array."""
+  stddev(ddof: Int! = 0, skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Calculate the variance of a numeric array."""
+  variance(ddof: Int! = 0, skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Compute an array of quantiles of a numeric array or chunked array."""
+  quantile(q: [Float!]! = [0.5], interpolation: String! = "linear", skipNulls: Boolean! = true, minCount: Int! = 0): [Float]!
+
+  """Approximate quantiles of a numeric array with T-Digest algorithm."""
+  tdigest(q: [Float!]! = [0.5], delta: Int! = 100, bufferSize: Int! = 500, skipNulls: Boolean! = true, minCount: Int! = 0): [Float]!
+}
+
+"""predicates for scalars"""
+input FloatFilter {
+  """== or `isin`; `null` is equivalent to arrow `is_null`."""
+  eq: [Float]
+
+  """!=; `null` is equivalent to arrow `is_valid`."""
+  ne: Float
+
+  """<"""
+  lt: Float @optional
+
+  """<="""
+  le: Float @optional
+
+  """\>"""
+  gt: Float @optional
+
+  """\>="""
+  ge: Float @optional
+}
+
+"""unique values and counts"""
+type FloatSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [Float]!
+}
+
+input HashAggregates {
+  """Test whether all elements in a boolean array evaluate to true."""
+  all: [ScalarAggregate!]! = []
+
+  """Test whether any element in a boolean array evaluates to true."""
+  any: [ScalarAggregate!]! = []
+
+  """Approximate median of a numeric array with T-Digest algorithm."""
+  approximateMedian: [ScalarAggregate!]! = []
+
+  """Count the number of null / non-null values."""
+  count: [CountAggregate!]! = []
+
+  """Count the number of unique values."""
+  countDistinct: [CountAggregate!]! = []
+
+  """Compute the first value in each group."""
+  first: [ScalarAggregate!]! = []
+
+  """Compute the first and last values of an array."""
+  firstLast: [ScalarAggregate!]! = []
+
+  """Compute the first value in each group."""
+  last: [ScalarAggregate!]! = []
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max: [ScalarAggregate!]! = []
+
+  """Compute the mean of a numeric array."""
+  mean: [ScalarAggregate!]! = []
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min: [ScalarAggregate!]! = []
+
+  """Compute the minimum and maximum values of a numeric array."""
+  minMax: [ScalarAggregate!]! = []
+
+  """Compute the product of values in a numeric array."""
+  product: [ScalarAggregate!]! = []
+
+  """Calculate the standard deviation of a numeric array."""
+  stddev: [VarianceAggregate!]! = []
+
+  """Compute the sum of a numeric array."""
+  sum: [ScalarAggregate!]! = []
+
+  """Approximate quantiles of a numeric array with T-Digest algorithm."""
+  tdigest: [TDigestAggregate!]! = []
+
+  """Calculate the variance of a numeric array."""
+  variance: [VarianceAggregate!]! = []
+
+  """distinct values within each scalar"""
+  distinct: [CountAggregate!]! = []
+
+  """all values within each scalar"""
+  list: [Field!]! = []
+
+  """arbitrary value within each scalar"""
+  one: [Field!]! = []
+}
+
+input Index {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  value: JSON!
+  start: Long! = 0
+  end: Long = null
+}
+
+"""column of integers"""
+type IntColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [Int]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: IntSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): Int
+
+  """Drop nulls from the input."""
+  dropNull: [Int!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): Int
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): Int
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): Int
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): Int
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: Int!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: Int!): [Int!]!
+
+  """Compute the modal (most common) values of a numeric array."""
+  mode(n: Int! = 1, skipNulls: Boolean! = true, minCount: Int! = 0): IntSet!
+
+  """Compute the sum of a numeric array."""
+  sum(skipNulls: Boolean! = true, minCount: Int! = 0): Int
+
+  """Compute the product of values in a numeric array."""
+  product(skipNulls: Boolean! = true, minCount: Int! = 0): Int
+
+  """Compute the mean of a numeric array."""
+  mean(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Return the indices of the values in the array that are non-zero."""
+  indicesNonzero: [Long!]!
+
+  """Calculate the standard deviation of a numeric array."""
+  stddev(ddof: Int! = 0, skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Calculate the variance of a numeric array."""
+  variance(ddof: Int! = 0, skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Compute an array of quantiles of a numeric array or chunked array."""
+  quantile(q: [Float!]! = [0.5], interpolation: String! = "linear", skipNulls: Boolean! = true, minCount: Int! = 0): [Float]!
+
+  """Approximate quantiles of a numeric array with T-Digest algorithm."""
+  tdigest(q: [Float!]! = [0.5], delta: Int! = 100, bufferSize: Int! = 500, skipNulls: Boolean! = true, minCount: Int! = 0): [Float]!
+
+  """Select indices from a table on the root Query type."""
+  takeFrom(field: String!): Dataset
+}
+
+"""predicates for scalars"""
+input IntFilter {
+  """== or `isin`; `null` is equivalent to arrow `is_null`."""
+  eq: [Int]
+
+  """!=; `null` is equivalent to arrow `is_valid`."""
+  ne: Int
+
+  """<"""
+  lt: Int @optional
+
+  """<="""
+  le: Int @optional
+
+  """\>"""
+  gt: Int @optional
+
+  """\>="""
+  ge: Int @optional
+}
+
+"""unique values and counts"""
+type IntSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [Int]!
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON @specifiedBy(url: "http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf")
+
+"""column of lists"""
+type ListColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """scalar column at index"""
+  value(index: Long! = 0): Column
+
+  """list of columns"""
+  values: [Column]!
+
+  """Drop nulls from the input."""
+  dropNull: [Column!]!
+
+  """concatenation of all sub-lists"""
+  flatten: Column!
+}
+
+"""
+[functions](https://arrow.apache.org/docs/python/api/compute.html#structural-transforms) for lists
+"""
+input ListFunction {
+  """filter within list scalars"""
+  filter: Expression! = {}
+
+  """sort within list scalars"""
+  sort: Sort @optional
+
+  """select by dense rank within list scalars"""
+  rank: Ranked @optional
+
+  """Find the index of the first occurrence of a given value."""
+  index: Index @deprecated(reason: "List scalar functions will be moved to `scan(...: {list: ...})`") @optional
+
+  """Compute the modal (most common) values of a numeric array."""
+  mode: Mode @deprecated(reason: "List scalar functions will be moved to `scan(...: {list: ...})`") @optional
+
+  """Compute an array of quantiles of a numeric array or chunked array."""
+  quantile: Quantile @deprecated(reason: "List scalar functions will be moved to `scan(...: {list: ...})`") @optional
+}
+
+"""List array functions."""
+input Lists {
+  """Compute elements using of nested list values using an index."""
+  element: [Expression!]! = []
+
+  """Compute list lengths."""
+  valueLength: Expression @optional
+
+  """Test whether all elements in a boolean array evaluate to true."""
+  all: Expression @optional
+
+  """Test whether any element in a boolean array evaluates to true."""
+  any: Expression @optional
+
+  """Compute slice of list-like array."""
+  slice: Expression @optional
+  start: Int! = 0
+  stop: Int = null
+  step: Int! = 1
+  returnFixedSizeList: Boolean = null
+}
+
+"""Logarithmic functions."""
+input Log {
+  """Compute natural logarithm."""
+  ln: Expression @optional
+
+  """Compute natural log of (1+x)."""
+  log1p: Expression @optional
+
+  """Compute base `b` logarithm."""
+  logb: [Expression!]! = []
+}
+
+"""64-bit int"""
+scalar Long
+
+"""column of integers"""
+type LongColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [Long]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: LongSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): Long
+
+  """Drop nulls from the input."""
+  dropNull: [Long!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): Long
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): Long
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): Long
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): Long
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: Long!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: Long!): [Long!]!
+
+  """Compute the modal (most common) values of a numeric array."""
+  mode(n: Int! = 1, skipNulls: Boolean! = true, minCount: Int! = 0): LongSet!
+
+  """Compute the sum of a numeric array."""
+  sum(skipNulls: Boolean! = true, minCount: Int! = 0): Long
+
+  """Compute the product of values in a numeric array."""
+  product(skipNulls: Boolean! = true, minCount: Int! = 0): Long
+
+  """Compute the mean of a numeric array."""
+  mean(skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Return the indices of the values in the array that are non-zero."""
+  indicesNonzero: [Long!]!
+
+  """Calculate the standard deviation of a numeric array."""
+  stddev(ddof: Int! = 0, skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Calculate the variance of a numeric array."""
+  variance(ddof: Int! = 0, skipNulls: Boolean! = true, minCount: Int! = 0): Float
+
+  """Compute an array of quantiles of a numeric array or chunked array."""
+  quantile(q: [Float!]! = [0.5], interpolation: String! = "linear", skipNulls: Boolean! = true, minCount: Int! = 0): [Float]!
+
+  """Approximate quantiles of a numeric array with T-Digest algorithm."""
+  tdigest(q: [Float!]! = [0.5], delta: Int! = 100, bufferSize: Int! = 500, skipNulls: Boolean! = true, minCount: Int! = 0): [Float]!
+
+  """Select indices from a table on the root Query type."""
+  takeFrom(field: String!): Dataset
+}
+
+"""unique values and counts"""
+type LongSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [Long]!
+}
+
+"""Match substring functions."""
+input MatchSubstring {
+  """Count occurrences of substring."""
+  count: Expression @optional
+
+  """Check if strings end with a literal pattern."""
+  endsWith: Expression @optional
+
+  """Find first occurrence of substring."""
+  find: Expression @optional
+
+  """Match strings against literal pattern."""
+  match: Expression @optional
+
+  """Check if strings start with a literal pattern."""
+  startsWith: Expression @optional
+
+  """Replace matching non-overlapping substrings with replacement."""
+  replace: Expression @optional
+
+  """Split string according to separator."""
+  split: Expression @optional
+
+  """Extract substrings captured by a regex pattern."""
+  extract: Expression @optional
+  pattern: String! = ""
+  ignoreCase: Boolean! = false
+  regex: Boolean! = false
+  replacement: String! = ""
+  maxReplacements: Int = null
+  maxSplits: Int = null
+  reverse: Boolean! = false
+}
+
+input Mode {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  n: Int! = 1
+  skipNulls: Boolean! = true
+  minCount: Int! = 1
+}
+
+input Pairwise {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  period: Int! = 1
+  checked: Boolean! = false
+}
+
+"""an `Expression` with an optional alias"""
+input Projection {
+  """field name(s)"""
+  name: [String!]! = []
+
+  """
+  cast as [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)
+  """
+  cast: String! = ""
+
+  """check for conversion errors on cast"""
+  safe: Boolean! = true
+
+  """JSON scalar; also see typed scalars"""
+  value: JSON
+
+  """use kleene logic for booleans"""
+  kleene: Boolean! = false
+
+  """check for overflow errors"""
+  checked: Boolean! = false
+  base64: [Base64!]! = []
+  date: [Date!]! = []
+  datetime: [DateTime!]! = []
+  decimal: [Decimal!]! = []
+  duration: [Duration!]! = []
+  time: [Time!]! = []
+
+  """=="""
+  eq: [Expression!]! = []
+
+  """!="""
+  ne: [Expression!]! = []
+
+  """<"""
+  lt: [Expression!]! = []
+
+  """<="""
+  le: [Expression!]! = []
+
+  """\>"""
+  gt: [Expression!]! = []
+
+  """\>="""
+  ge: [Expression!]! = []
+
+  """~"""
+  inv: Expression @optional
+
+  """Calculate the absolute value of the argument element-wise."""
+  abs: Expression @optional
+
+  """Add the arguments element-wise."""
+  add: [Expression!]! = []
+
+  """Divide the arguments element-wise."""
+  divide: [Expression!]! = []
+
+  """Multiply the arguments element-wise."""
+  multiply: [Expression!]! = []
+
+  """Negate the argument element-wise."""
+  negate: Expression @optional
+
+  """Raise arguments to power element-wise."""
+  power: [Expression!]! = []
+
+  """Get the signedness of the arguments element-wise."""
+  sign: Expression @optional
+
+  """Subtract the arguments element-wise."""
+  subtract: [Expression!]! = []
+
+  """bit-wise functions"""
+  bitWise: BitWise @optional
+
+  """rounding functions"""
+  rounding: Rounding @optional
+
+  """logarithmic functions"""
+  log: Log @optional
+
+  """trigonometry functions"""
+  trig: Trig @optional
+
+  """element-wise aggregate functions"""
+  elementWise: ElementWise @optional
+
+  """&"""
+  and: [Expression!]! = []
+
+  """Logical 'and not' boolean values."""
+  andNot: [Expression!]! = []
+
+  """|"""
+  or: [Expression!]! = []
+
+  """Logical 'xor' boolean values."""
+  xor: [Expression!]! = []
+
+  """utf8 string functions"""
+  utf8: Utf8 @optional
+
+  """Classify strings as ASCII."""
+  stringIsAscii: Expression @optional
+
+  """match substring functions"""
+  substring: MatchSubstring @optional
+
+  """binary functions"""
+  binary: Binary @optional
+
+  """set lookup functions"""
+  setLookup: SetLookup @optional
+
+  """Return true if value is finite."""
+  isFinite: Expression @optional
+
+  """Return true if infinity."""
+  isInf: Expression @optional
+
+  """Return true if NaN."""
+  isNan: Expression @optional
+
+  """Return true if non-null, else return null."""
+  trueUnlessNull: Expression @optional
+
+  """Choose values based on multiple conditions."""
+  caseWhen: [Expression!]! = []
+
+  """Choose values from several arrays."""
+  choose: [Expression!]! = []
+
+  """Select the first non-null value."""
+  coalesce: [Expression!]! = []
+
+  """Choose values based on a condition."""
+  ifElse: [Expression!]! = []
+
+  """temporal functions"""
+  temporal: Temporal @optional
+
+  """Replace items selected with a mask."""
+  replaceWithMask: [Expression!]! = []
+
+  """list array functions"""
+  list: Lists @optional
+
+  """name of projected column"""
+  alias: String! = ""
+}
+
+input Quantile {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  q: [Float!]! = [0.5]
+  interpolation: String! = "linear"
+  skipNulls: Boolean! = true
+  minCount: Int! = 1
+}
+
+input Rank {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  sortKeys: String! = "ascending"
+  nullPlacement: String! = "at_end"
+  tiebreaker: String! = "first"
+}
+
+input Ranked {
+  by: [String!]!
+  max: Int! = 1
+}
+
+"""Rounding functions."""
+input Rounding {
+  """Round up to the nearest integer."""
+  ceil: Expression @optional
+
+  """Round down to the nearest integer."""
+  floor: Expression @optional
+
+  """Compute the integral part."""
+  trunc: Expression @optional
+
+  """Round to a given precision."""
+  round: Expression @optional
+  ndigits: Int! = 0
+  roundMode: String! = "half_to_even"
+  multiple: Float! = 1
+}
+
+"""scalar fields"""
+type Row {
+  latitude: Float
+  longitude: Float
+  state: String
+  city: String
+  county: String
+  zipcode: Int
+}
+
+"""
+options for scalar [aggregation](https://arrow.apache.org/docs/python/api/compute.html#aggregations)
+"""
+input ScalarAggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  skipNulls: Boolean! = true
+}
+
+"""dataset schema"""
+type Schema {
+  """field names"""
+  names: [String!]!
+
+  """
+  [arrow types](https://arrow.apache.org/docs/python/api/datatypes.html), corresponding to `names`
+  """
+  types: [String!]!
+
+  """partition keys"""
+  partitioning: [String!]!
+
+  """sorted index columns"""
+  index: [String!]!
+}
+
+"""Set lookup functions."""
+input SetLookup {
+  """Return index of each element in a set of values."""
+  indexIn: [Expression!]! = []
+
+  """
+  numpy [digitize](https://numpy.org/doc/stable/reference/generated/numpy.digitize.html)
+  """
+  digitize: [Expression!]! = []
+  skipNulls: Boolean! = false
+  right: Boolean! = false
+}
+
+input Sort {
+  by: [String!]!
+  length: Long = null
+}
+
+"""predicates for scalars"""
+input StrFilter {
+  """== or `isin`; `null` is equivalent to arrow `is_null`."""
+  eq: [String]
+
+  """!=; `null` is equivalent to arrow `is_valid`."""
+  ne: String
+
+  """<"""
+  lt: String @optional
+
+  """<="""
+  le: String @optional
+
+  """\>"""
+  gt: String @optional
+
+  """\>="""
+  ge: String @optional
+}
+
+"""unique values and counts"""
+type StrSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [String]!
+}
+
+"""column of strings"""
+type StringColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [String]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: StrSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): String
+
+  """Drop nulls from the input."""
+  dropNull: [String!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): String
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): String
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): String
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): String
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: String!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: String!): [String!]!
+}
+
+"""column of structs"""
+type StructColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """scalar json object at index"""
+  value(index: Long! = 0): JSON
+
+  """field names"""
+  names: [String!]!
+
+  """Return struct field as a column."""
+  column(
+    """field name(s); multiple names access nested fields"""
+    name: [String!]!
+  ): Column
+}
+
+"""
+options for tdigest [aggregation](https://arrow.apache.org/docs/python/api/compute.html#aggregations)
+"""
+input TDigestAggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  skipNulls: Boolean! = true
+  q: [Float!]! = [0.5]
+  delta: Int! = 100
+  bufferSize: Int! = 500
+}
+
+"""a dataset with a derived schema"""
+type Table implements Dataset {
+  """
+  [arrow type](https://arrow.apache.org/docs/python/api/dataset.html#classes)
+  """
+  type: String!
+
+  """dataset schema"""
+  schema: Schema!
+
+  """
+  Nullable field to stop error propagation, enabling partial query results.
+  
+  Will be replaced by client controlled nullability.
+  """
+  optional: Table
+
+  """number of rows"""
+  length: Long!
+
+  """
+  Return whether there are at least `length` rows.
+  
+  May be significantly faster than `length` for out-of-core data.
+  """
+  any(length: Long! = 1): Boolean!
+
+  """buffer size in bytes; null if table is not loaded"""
+  size: Long
+
+  """
+  Return column of any type by name.
+  
+  This is typically only needed for aliased or casted columns.
+  If the column is in the schema, `columns` can be used instead.
+  """
+  column(
+    """column name(s); multiple names access nested struct fields"""
+    name: [String!]!
+
+    """
+    cast array to [arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)
+    """
+    cast: String! = ""
+
+    """check for conversion errors on cast"""
+    safe: Boolean! = true
+  ): Column
+
+  """Return zero-copy slice of table."""
+  slice(
+    """number of rows to skip; negative value skips from the end"""
+    offset: Long! = 0
+
+    """maximum number of rows to return"""
+    length: Long = null
+
+    """reverse order after slicing; forces a copy"""
+    reverse: Boolean! = false
+  ): Table!
+
+  """
+  Return table grouped by columns.
+  
+  See `column` for accessing any column which has changed type. See `tables` to split on any
+  aggregated list columns.
+  """
+  group(
+    """column names; empty will aggregate into a single row table"""
+    by: [String!]! = []
+
+    """optionally include counts in an aliased column"""
+    counts: String! = ""
+
+    """aggregation functions applied to other columns"""
+    aggregate: HashAggregates! = {}
+  ): Table!
+
+  """
+  Return table grouped by pairwise differences.
+  
+  Differs from `group` by relying on adjacency, and is typically faster. Other columns are
+  transformed into list columns. See `column` and `tables` to further access lists.
+  """
+  runs(
+    """column names"""
+    by: [String!]! = []
+
+    """
+    optional predicates to split on; scalars are compared to pairwise difference
+    """
+    split: [Diff!]! = []
+
+    """optionally include counts in an aliased column"""
+    counts: String! = ""
+  ): Table!
+
+  """
+  Return table slice sorted by specified columns.
+  
+  Optimized for length == 1; matches min or max values.
+  """
+  sort(
+    """column names; prefix with `-` for descending order"""
+    by: [String!]!
+
+    """
+    maximum number of rows to return; may be significantly faster but is unstable
+    """
+    length: Long = null
+
+    """where nulls in input should be sorted; incompatible with `length`"""
+    nullPlacement: String! = "at_end"
+  ): Table!
+
+  """Return table selected by maximum dense rank."""
+  rank(
+    """column names; prefix with `-` for descending order"""
+    by: [String!]!
+
+    """maximum dense rank to select; optimized for == 1 (min or max)"""
+    max: Int! = 1
+
+    """where nulls in input should be ranked"""
+    nullPlacement: String! = "at_end"
+  ): Table!
+
+  """
+  Return view of table with vector functions applied across columns.
+  
+  Applied functions load arrays into memory as needed. See `scan` for scalar functions,
+  which do not require loading.
+  """
+  apply(
+    """Compute the cumulative max over a numeric input."""
+    cumulativeMax: [Cumulative!]! = []
+
+    """Compute the cumulative max over a numeric input."""
+    cumulativeMean: [Cumulative!]! = []
+
+    """Compute the cumulative min over a numeric input."""
+    cumulativeMin: [Cumulative!]! = []
+
+    """Compute the cumulative product over a numeric input."""
+    cumulativeProd: [Cumulative!]! = []
+
+    """Compute the cumulative sum over a numeric input."""
+    cumulativeSum: [Cumulative!]! = []
+
+    """Carry non-null values backward to fill null slots."""
+    fillNullBackward: [Field!]! = []
+
+    """Carry non-null values forward to fill null slots."""
+    fillNullForward: [Field!]! = []
+
+    """Compute first order difference of an array."""
+    pairwiseDiff: [Pairwise!]! = []
+
+    """Compute numerical ranks of an array (1-based)."""
+    rank: [Rank!]! = []
+
+    """functions for list arrays."""
+    list: ListFunction! = {}
+  ): Table!
+
+  """
+  Return table with list arrays flattened.
+  
+  At least one list column must be referenced, and all list columns must have the same lengths.
+  """
+  flatten(indices: String! = ""): Table!
+
+  """
+  Return a list of tables by splitting list columns.
+  
+  At least one list column must be referenced, and all list columns must have the same lengths.
+  """
+  tables: [Table]!
+
+  """Return table with scalar aggregate functions applied to list columns."""
+  aggregate(
+    """Approximate median of a numeric array with T-Digest algorithm."""
+    approximateMedian: [ScalarAggregate!]! = []
+
+    """Count the number of null / non-null values."""
+    count: [CountAggregate!]! = []
+
+    """Count the number of unique values."""
+    countDistinct: [CountAggregate!]! = []
+
+    """distinct values within each scalar"""
+    distinct: [CountAggregate!]! = []
+
+    """first value of each list scalar"""
+    first: [Field!]! = []
+
+    """last value of each list scalar"""
+    last: [Field!]! = []
+
+    """Compute the minimum or maximum values of a numeric array."""
+    max: [ScalarAggregate!]! = []
+
+    """Compute the mean of a numeric array."""
+    mean: [ScalarAggregate!]! = []
+
+    """Compute the minimum or maximum values of a numeric array."""
+    min: [ScalarAggregate!]! = []
+
+    """Compute the product of values in a numeric array."""
+    product: [ScalarAggregate!]! = []
+
+    """Calculate the standard deviation of a numeric array."""
+    stddev: [VarianceAggregate!]! = []
+
+    """Compute the sum of a numeric array."""
+    sum: [ScalarAggregate!]! = []
+
+    """Approximate quantiles of a numeric array with T-Digest algorithm."""
+    tdigest: [TDigestAggregate!]! = []
+
+    """Calculate the variance of a numeric array."""
+    variance: [VarianceAggregate!]! = []
+  ): Table! @deprecated(reason: "List scalar functions will be moved to `scan(...: {list: ...})`")
+
+  """Select rows and project columns without memory usage."""
+  scan(
+    """selected rows"""
+    filter: Expression! = {}
+
+    """projected columns"""
+    columns: [Projection!]! = []
+  ): Table!
+
+  """
+  Provisional: [join](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.join) this table with another table on the root Query type.
+  """
+  join(
+    """name of right table; must be on root Query type"""
+    right: String!
+
+    """column names used as keys on the left side"""
+    keys: [String!]!
+
+    """column names used as keys on the right side; defaults to left side."""
+    rightKeys: [String!] = null
+
+    """
+    the kind of join: 'left semi', 'right semi', 'left anti', 'right anti', 'inner', 'left outer', 'right outer', 'full outer'
+    """
+    joinType: String! = "left outer"
+
+    """add suffix to left column names; for preventing collisions"""
+    leftSuffix: String! = ""
+
+    """add suffix to right column names; for preventing collisions."""
+    rightSuffix: String! = ""
+
+    """omit duplicate keys"""
+    coalesceKeys: Boolean! = true
+  ): Table! @provisional
+
+  """Select rows from indices."""
+  take(indices: [Long!]!): Table!
+
+  """Remove missing values from referenced columns in the table."""
+  dropNull: Table!
+
+  """fields for each column"""
+  columns: Columns!
+
+  """Return scalar values at index."""
+  row(index: Long! = 0): Row
+
+  """
+  Return table with rows which match all queries.
+  
+  See `scan(filter: ...)` for more advanced queries. Additional feature: sorted tables
+  support binary search
+  """
+  filter(latitude: FloatFilter! = {}, longitude: FloatFilter! = {}, state: StrFilter! = {}, city: StrFilter! = {}, county: StrFilter! = {}, zipcode: IntFilter! = {}): Table!
+}
+
+"""Temporal functions."""
+input Temporal {
+  """Extract day number."""
+  day: Expression @optional
+
+  """Extract day of year number."""
+  dayOfYear: Expression @optional
+
+  """Extract hour value."""
+  hour: Expression @optional
+
+  """Extract ISO week of year number."""
+  isoWeek: Expression @optional
+
+  """Extract ISO year number."""
+  isoYear: Expression @optional
+
+  """Extract (ISO year, ISO week, ISO day of week) struct."""
+  isoCalendar: Expression @optional
+
+  """Extract if year is a leap year."""
+  isLeapYear: Expression @optional
+
+  """Extract microsecond values."""
+  microsecond: Expression @optional
+
+  """Extract millisecond values."""
+  millisecond: Expression @optional
+
+  """Extract minute values."""
+  minute: Expression @optional
+
+  """Extract month number."""
+  month: Expression @optional
+
+  """Extract nanosecond values."""
+  nanosecond: Expression @optional
+
+  """Extract quarter of year number."""
+  quarter: Expression @optional
+
+  """Extract second values."""
+  second: Expression @optional
+
+  """Extract subsecond values."""
+  subsecond: Expression @optional
+
+  """Extract US week of year number."""
+  usWeek: Expression @optional
+
+  """Extract US epidemiological year number."""
+  usYear: Expression @optional
+
+  """Extract year number."""
+  year: Expression @optional
+
+  """Extract (year, month, day) struct."""
+  yearMonthDay: Expression @optional
+
+  """Compute the number of days and milliseconds between two timestamps."""
+  dayTimeIntervalBetween: [Expression!]! = []
+
+  """Compute the number of days between two timestamps."""
+  daysBetween: [Expression!]! = []
+
+  """Compute the number of hours between two timestamps."""
+  hoursBetween: [Expression!]! = []
+
+  """Compute the number of microseconds between two timestamps."""
+  microsecondsBetween: [Expression!]! = []
+
+  """Compute the number of millisecond boundaries between two timestamps."""
+  millisecondsBetween: [Expression!]! = []
+
+  """Compute the number of minute boundaries between two timestamps."""
+  minutesBetween: [Expression!]! = []
+
+  """
+  Compute the number of months, days and nanoseconds between two timestamps.
+  """
+  monthDayNanoIntervalBetween: [Expression!]! = []
+
+  """Compute the number of months between two timestamps."""
+  monthIntervalBetween: [Expression!]! = []
+
+  """Compute the number of nanoseconds between two timestamps."""
+  nanosecondsBetween: [Expression!]! = []
+
+  """Compute the number of quarters between two timestamps."""
+  quartersBetween: [Expression!]! = []
+
+  """Compute the number of seconds between two timestamps."""
+  secondsBetween: [Expression!]! = []
+
+  """Compute the number of weeks between two timestamps."""
+  weeksBetween: [Expression!]! = []
+
+  """Compute the number of years between two timestamps."""
+  yearsBetween: [Expression!]! = []
+
+  """Round temporal values up to nearest multiple of specified time unit."""
+  ceil: Expression @optional
+
+  """Round temporal values down to nearest multiple of specified time unit."""
+  floor: Expression @optional
+
+  """Round temporal values to the nearest multiple of specified time unit."""
+  round: Expression @optional
+  multiple: Int! = 1
+  unit: String! = "day"
+  weekStartsMonday: Boolean! = true
+  ceilIsStrictlyGreater: Boolean! = false
+  calendarBasedOrigin: Boolean! = false
+
+  """Extract week of year number."""
+  week: Expression @optional
+  countFromZero: Boolean
+  firstWeekIsFullyInYear: Boolean! = false
+
+  """Extract day of the week number."""
+  dayOfWeek: Expression @optional
+  weekStart: Int! = 1
+
+  """Format temporal values according to a format string."""
+  strftime: Expression @optional
+
+  """Parse timestamps."""
+  strptime: Expression @optional
+  format: String! = "%Y-%m-%dT%H:%M:%S"
+  locale: String! = "C"
+  errorIsNull: Boolean! = false
+
+  """Convert naive timestamp to timezone-aware timestamp."""
+  assumeTimezone: Expression @optional
+  timezone: String! = ""
+  ambiguous: String! = "raise"
+  nonexistent: String! = "raise"
+}
+
+"""Time (isoformat)"""
+scalar Time
+
+"""column of ordinal values"""
+type TimeColumn implements Column {
+  """[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)"""
+  type: String!
+
+  """array length"""
+  length: Long!
+
+  """buffer size in bytes"""
+  size: Long!
+
+  """Count the number of null / non-null values."""
+  count(mode: String! = "only_valid"): Long!
+
+  """list of values"""
+  values: [Time]!
+
+  """Count the number of unique values."""
+  countDistinct(mode: String! = "only_valid"): Long!
+
+  """unique values and counts"""
+  unique: TimeSet!
+
+  """scalar value at index"""
+  value(index: Long! = 0): Time
+
+  """Drop nulls from the input."""
+  dropNull: [Time!]!
+
+  """Compute the first value in each group."""
+  first(skipNulls: Boolean! = true, minCount: Int! = 0): Time
+
+  """Compute the first value in each group."""
+  last(skipNulls: Boolean! = true, minCount: Int! = 0): Time
+
+  """Compute the minimum or maximum values of a numeric array."""
+  min(skipNulls: Boolean! = true, minCount: Int! = 0): Time
+
+  """Compute the minimum or maximum values of a numeric array."""
+  max(skipNulls: Boolean! = true, minCount: Int! = 0): Time
+
+  """Find the index of the first occurrence of a given value."""
+  index(value: Time!, start: Long! = 0, end: Long = null): Long!
+
+  """Replace each null element in values with a corresponding"""
+  fillNull(value: Time!): [Time!]!
+}
+
+"""unique values and counts"""
+type TimeSet {
+  """list of counts"""
+  counts: [Long!]!
+
+  """array length"""
+  length: Long!
+
+  """list of values"""
+  values: [Time]!
+}
+
+"""Trigonometry functions."""
+input Trig {
+  """check for overflow errors"""
+  checked: Boolean! = false
+
+  """Compute the inverse cosine."""
+  acos: Expression @optional
+
+  """Compute the inverse sine."""
+  asin: Expression @optional
+
+  """Compute the inverse tangent of x."""
+  atan: Expression @optional
+
+  """Compute the inverse tangent of y/x."""
+  atan2: [Expression!]! = []
+
+  """Compute the cosine."""
+  cos: Expression @optional
+
+  """Compute the sine."""
+  sin: Expression @optional
+
+  """Compute the tangent."""
+  tan: Expression @optional
+}
+
+"""Utf8 string functions."""
+input Utf8 {
+  """Classify strings as alphanumeric."""
+  isAlnum: Expression @optional
+
+  """Classify strings as alphabetic."""
+  isAlpha: Expression @optional
+
+  """Classify strings as decimal."""
+  isDecimal: Expression @optional
+
+  """Classify strings as digits."""
+  isDigit: Expression @optional
+
+  """Classify strings as lowercase."""
+  isLower: Expression @optional
+
+  """Classify strings as numeric."""
+  isNumeric: Expression @optional
+
+  """Classify strings as printable."""
+  isPrintable: Expression @optional
+
+  """Classify strings as whitespace."""
+  isSpace: Expression @optional
+
+  """Classify strings as titlecase."""
+  isTitle: Expression @optional
+
+  """Classify strings as uppercase."""
+  isUpper: Expression @optional
+
+  """Capitalize the first character of input."""
+  capitalize: Expression @optional
+
+  """Compute UTF8 string lengths."""
+  length: Expression @optional
+
+  """Transform input to lowercase."""
+  lower: Expression @optional
+
+  """Reverse input."""
+  reverse: Expression @optional
+
+  """
+  Transform input lowercase characters to uppercase and uppercase characters to lowercase.
+  """
+  swapcase: Expression @optional
+
+  """Titlecase each word of input."""
+  title: Expression @optional
+
+  """Transform input to uppercase."""
+  upper: Expression @optional
+
+  """Trim leading characters."""
+  ltrim: Expression @optional
+
+  """Trim trailing characters."""
+  rtrim: Expression @optional
+
+  """Trim leading and trailing characters."""
+  trim: Expression @optional
+
+  """trim options; by default trims whitespace"""
+  characters: String! = ""
+
+  """Replace a slice of a string."""
+  replaceSlice: Expression @optional
+
+  """Slice string."""
+  sliceCodeunits: Expression @optional
+  start: Int! = 0
+  stop: Int
+  step: Int! = 1
+  replacement: String! = ""
+
+  """Center strings by padding with a given character."""
+  center: Expression @optional
+
+  """Right-align strings by padding with a given character."""
+  lpad: Expression @optional
+
+  """Left-align strings by padding with a given character."""
+  rpad: Expression @optional
+  width: Int! = 0
+  padding: String! = ""
+}
+
+"""
+options for variance [aggregation](https://arrow.apache.org/docs/python/api/compute.html#aggregations)
+"""
+input VarianceAggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  skipNulls: Boolean! = true
+  ddof: Int! = 0
+}
