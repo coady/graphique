@@ -91,11 +91,11 @@ class Dataset:
 
     @classmethod
     @no_type_check
-    def resolve_reference(cls, info, **keys) -> Self:
+    def resolve_reference(cls, info: Info, **keys) -> Self:
         """Return table from federated keys."""
         self = getattr(info.root_value, cls.field)
         queries = {name: Filter(eq=[keys[name]]) for name in keys}
-        return self.filter(Info(info, None), **queries)
+        return self.filter(info, **queries)
 
     def columns(self, info: Info) -> dict:
         """fields for each column"""

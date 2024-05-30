@@ -1,2 +1,2 @@
 pyarrow>=16
-strawberry-graphql[asgi,cli]>=0.221
+strawberry-graphql[asgi,cli]>=0.233
