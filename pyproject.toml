@@ -1,10 +1,11 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "graphique"
-dynamic = ["version", "dependencies"]
+version = "1.6"
+dynamic = ["dependencies"]
 description = "GraphQL service for arrow tables and parquet data sets."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -39,22 +40,14 @@ Issues = "https://github.com/coady/graphique/issues"
 server = ["uvicorn[standard]"]
 cli = ["tqdm"]
 
-[tool.setuptools]
-packages = ["graphique"]
-
 [tool.setuptools.dynamic]
-version = {attr = "graphique.__version__"}
 dependencies = {file = "requirements.in"}
-
-[tool.setuptools.package-data]
-graphique = ["py.typed"]
 
 [tool.ruff]
 line-length = 100
 extend-include = ["*.ipynb"]
 
 [tool.ruff.format]
-preview = true
 quote-style = "preserve"
 
 [[tool.mypy.overrides]]

@@ -14,8 +14,8 @@ jobs:
     - uses: actions/setup-python@v5
       with:
         python-version: 3.x
-    - run: pip install build wheel setuptools -r docs/requirements.in
-    - run: python -m build -n
+    - run: pip install build -r docs/requirements.in
+    - run: python -m build
     - run: npm install
     - run: make html
     - run: PYTHONPATH=$PWD python -m mkdocs gh-deploy --force
