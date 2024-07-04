@@ -1,4 +1,3 @@
-import sys
 import pytest
 
 
@@ -167,7 +166,6 @@ def test_numeric(executor):
     assert data == {'scan': {'columns': {'int64': {'values': [0, None]}}}}
 
 
-@pytest.mark.skipif(sys.version_info < (3, 9), reason="requires python3.9 or pytz")
 def test_datetime(executor):
     for name in ('timestamp', 'date32'):
         data = executor(

@@ -1,8 +1,8 @@
 import json
 import os
 import sys
+from importlib import metadata
 from pathlib import Path
-import pyarrow as pa
 import pyarrow.dataset as ds
 import pytest
 
@@ -10,7 +10,7 @@ fixtures = Path(__file__).parent / 'fixtures'
 
 
 def pytest_report_header(config):
-    return f'pyarrow {pa.__version__}'
+    return [f'{name}: {metadata.version(name)}' for name in ('pyarrow', 'strawberry-graphql')]
 
 
 class TestClient:
