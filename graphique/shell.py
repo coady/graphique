@@ -12,6 +12,8 @@ progress on the second pass.
 import shutil
 from pathlib import Path
 from typing import Annotated
+import numpy as np
+import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import typer  # type: ignore
 from tqdm import tqdm  # type: ignore
@@ -22,12 +24,19 @@ def sort_key(name: str) -> tuple:
     return name.lstrip('-'), ('descending' if name.startswith('-') else 'ascending')
 
 
-def write_batches(scanner: ds.Scanner, base_dir: str, *partitioning: str, **options):
-    """Partition dataset by batches."""
+def write_batches(
+    scanner: ds.Scanner, base_dir: str, *partitioning: str, indices: str = '', **options
+):
+    """Partition dataset by batches.
+
+    Optionally include original indices.
+    """
     options.update(format='parquet', partitioning=partitioning)
     options.update(partitioning_flavor='hive', existing_data_behavior='overwrite_or_ignore')
     with tqdm(total=scanner.count_rows(), desc="Batches") as pbar:
         for index, batch in enumerate(scanner.to_batches()):
+            if indices:
+                batch = batch.append_column(indices, pc.add(np.arange(len(batch)), pbar.n))
             options['basename_template'] = f'part-{index}-{{i}}.parquet'
             ds.write_dataset(batch, base_dir, **options)
             pbar.update(len(batch))
