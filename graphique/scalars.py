@@ -24,35 +24,40 @@ def parse_duration(value: str):
     parts = re.split(r'(-?\d+\.?\d*)', d_val.lower() + t_val)
     if parts.pop(0) != 'p':
         raise ValueError("Duration format must start with `P`")
+    multipliers = {'y': 12, 'w': 7, 'H': 3600, 'M': 60}
     for num, key in zip(parts[::2], parts[1::2]):
-        if n := float(num) if '.' in num else int(num):
-            if key in 'ym':
-                months += n * 12 if key == 'y' else n
-            elif key in 'wd':
-                days += n * 7 if key == 'w' else n
-            elif key in 'HMS':
-                seconds += n * {'H': 3600, 'M': 60, 'S': 1}[key]
-            else:
-                raise ValueError(f"Invalid duration field: {key.upper()}")
+        value = (float if '.' in num else int)(num) * multipliers.get(key, 1)
+        if key in 'ym':
+            months += value
+        elif key in 'wd':
+            days += value
+        elif key in 'HMS':
+            seconds += value
+        else:
+            raise ValueError(f"Invalid duration field: {key.upper()}")
     if months:
         return pa.MonthDayNano([months, days, int(seconds * 1_000_000_000)])
     return timedelta(days, seconds)
 
 
 @functools.singledispatch
-def duration_isoformat(td: timedelta) -> str:
-    days = f'{td.days}D' if td.days else ''
-    fraction = f'.{td.microseconds:06}' if td.microseconds else ''
-    return f'P{days}T{td.seconds}{fraction}S'
+def duration_isoformat(months: int, days: int, seconds: int, fraction: str = '.') -> str:
+    minutes, seconds = divmod(seconds, 60)
+    items = zip('YMDHM', divmod(months, 12) + (days,) + divmod(minutes, 60))
+    year, month, day, hour, minute = (f'{value}{key}' if value else '' for key, value in items)
+    fraction = fraction.rstrip('0').rstrip('.')
+    return f'P{year}{month}{day}T{hour}{minute}{seconds}{fraction}S'
+
+
+@duration_isoformat.register
+def _(td: timedelta) -> str:  # type: ignore
+    return duration_isoformat(0, td.days, td.seconds, f'.{td.microseconds:06}')
 
 
 @duration_isoformat.register
 def _(mdn: pa.MonthDayNano) -> str:
-    months = f'{mdn.months}M' if mdn.months else ''
-    days = f'{mdn.days}D' if mdn.days else ''
     seconds, nanoseconds = divmod(mdn.nanoseconds, 1_000_000_000)
-    fraction = f'.{nanoseconds:09}' if nanoseconds else ''
-    return f'P{months}{days}T{seconds}{fraction}S'
+    return duration_isoformat(mdn.months, mdn.days, seconds, f'.{nanoseconds:09}')
 
 
 Long = strawberry.scalar(int, name='Long', description="64-bit int", parse_value=parse_long)
