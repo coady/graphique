@@ -1,7 +1,8 @@
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.dataset as ds
 import pytest
-from graphique.core import Agg, ListChunk, Column as C, Table as T
+from graphique.core import Agg, Declaration, ListChunk, Column as C, Table as T
 from graphique.scalars import parse_duration, duration_isoformat
 
 
@@ -85,6 +86,13 @@ def test_membership():
     assert C.index(array, 1) == C.index(array, 1, end=1) == 0
     assert C.index(array, 1, start=1) == 1
     assert C.index(array, 1, start=2) == -1
+
+
+def test_declaration(table):
+    dataset = ds.dataset(table).filter(pc.field('state') == 'CA')
+    assert Declaration.scan(dataset).to_table()['state'].unique().to_pylist() == ['CA']
+    (column,) = Declaration.scan(dataset, columns={'_': pc.field('state')}).to_table()
+    assert column.unique().to_pylist() == ['CA']
 
 
 def test_group(table):

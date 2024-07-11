@@ -12,7 +12,7 @@ import inspect
 import itertools
 import operator
 import json
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Optional, Union, get_type_hints
 import numpy as np
@@ -419,14 +419,16 @@ class Table(pa.Table):
             counts: alias for optional row counts
             **funcs: aggregate funcs with columns options
         """
-        if isinstance(self, pa.Table):
-            self = self.unify_dictionaries()
         prefix = 'hash_' if names else ''
         aggs = [agg.astuple(prefix + func) for func in funcs for agg in funcs[func]]
         columns = list(names) + [agg[0] for agg in aggs]
         if counts:
             aggs.append(([], 'hash_count_all', None, counts))
-        return Declarations(self, columns).aggregate(aggs, names).to_table()
+        if isinstance(self, pa.Table):
+            decl = Declaration('table_source', self.unify_dictionaries())
+        else:
+            decl = Declaration.scan(self, columns=columns)
+        return decl.aggregate(aggs, names).to_table(use_threads=False)
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
         """Return aggregated scalars as a row of data."""
@@ -630,8 +632,8 @@ class Table(pa.Table):
         return f'{size:n} {prefix}B'
 
 
-class Declarations(list):
-    """[Acero](https://arrow.apache.org/docs/python/api/acero.html) engine declarations."""
+class Declaration(ac.Declaration):
+    """[Acero](https://arrow.apache.org/docs/python/api/acero.html) engine declaration."""
 
     option_map = {
         'table_source': ac.TableSourceNodeOptions,
@@ -643,21 +645,24 @@ class Declarations(list):
         'hashjoin': ac.HashJoinNodeOptions,
     }
 
-    def __init__(self, source: Union[pa.Table, ds.Dataset], columns=None):
-        if isinstance(source, ds.Dataset):
-            expr = source._scan_options.get('filter')
-            self.scan(source, filter=expr, columns=columns)
-            if expr is not None:
-                self.filter(expr)
-        else:
-            self.table_source(source)
+    def __init__(self, name, *args, inputs=None, **options):
+        super().__init__(name, self.option_map[name](*args, **options), inputs)
 
-    def apply(self, name: str, *args, **kwargs) -> Self:
-        self.append(ac.Declaration(name, self.option_map[name](*args, **kwargs)))
+    @classmethod
+    def scan(cls, dataset: ds.Dataset, columns=None) -> Self:
+        """Return source node from a dataset."""
+        expr = dataset._scan_options.get('filter')
+        self = cls('scan', dataset, filter=expr, columns=columns)
+        if expr is not None:
+            self = self.filter(expr)
+        if isinstance(columns, Mapping):
+            self = self.project(columns.values(), columns)
+        elif columns is not None:
+            self = self.project(map(pc.field, columns))
         return self
+
+    def apply(self, name: str, *args, **options) -> Self:
+        return type(self)(name, *args, inputs=[self], **options)
 
     def __getattr__(self, name: str) -> Callable:
         return functools.partial(self.apply, name)
-
-    def to_table(self, use_threads: bool = False) -> pa.Table:
-        return ac.Declaration.from_sequence(self).to_table(use_threads)
