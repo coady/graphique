@@ -35,9 +35,9 @@ def parse_duration(value: str):
             seconds += value
         else:
             raise ValueError(f"Invalid duration field: {key.upper()}")
-    if months:
-        return pa.MonthDayNano([months, days, int(seconds * 1_000_000_000)])
-    return timedelta(days, seconds)
+    if set(d_val).isdisjoint('YM'):
+        return timedelta(days, seconds)
+    return pa.MonthDayNano([months, days, int(seconds * 1_000_000_000)])
 
 
 @functools.singledispatch
@@ -57,7 +57,8 @@ def _(td: timedelta) -> str:  # type: ignore
 @duration_isoformat.register
 def _(mdn: pa.MonthDayNano) -> str:
     seconds, nanoseconds = divmod(mdn.nanoseconds, 1_000_000_000)
-    return duration_isoformat(mdn.months, mdn.days, seconds, f'.{nanoseconds:09}')
+    value = duration_isoformat(mdn.months, mdn.days, seconds, f'.{nanoseconds:09}')
+    return value if mdn.months else value.replace('P', 'P0M')
 
 
 Long = strawberry.scalar(int, name='Long', description="64-bit int", parse_value=parse_long)

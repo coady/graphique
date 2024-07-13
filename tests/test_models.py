@@ -228,7 +228,7 @@ def test_duration(executor):
     data = executor("""{ scan(columns: {alias: "diff", temporal:
         {monthDayNanoIntervalBetween: [{name: "timestamp"}, {name: "timestamp"}]}})
         { column(name: "diff") { ... on DurationColumn { values } } } }""")
-    assert data == {'scan': {'column': {'values': ['PT0S', None]}}}
+    assert data == {'scan': {'column': {'values': ['P0MT0S', None]}}}
 
 
 def test_list(executor):

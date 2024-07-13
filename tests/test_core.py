@@ -17,6 +17,8 @@ def test_duration():
     assert duration_isoformat(parse_duration('P0D')) == 'PT0S'
     assert duration_isoformat(parse_duration('PT0S')) == 'PT0S'
     assert duration_isoformat(parse_duration('P-1DT-1H')) == 'P-2DT23H0S'
+    assert duration_isoformat(parse_duration('P0MT')) == 'P0MT0S'
+    assert duration_isoformat(parse_duration('P0YT')) == 'P0MT0S'
     with pytest.raises(ValueError):
         duration_isoformat(parse_duration('T1H'))
     with pytest.raises(ValueError):
