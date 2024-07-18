@@ -15,9 +15,9 @@ import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.arguments import StrawberryArgument
+from strawberry.types.arguments import StrawberryArgument
 from strawberry.schema_directive import Location
-from strawberry.field import StrawberryField
+from strawberry.types.field import StrawberryField
 from strawberry.scalars import JSON
 from typing_extensions import Self
 from .core import Agg

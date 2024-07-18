@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Acero engine declaration
 * `Duration` format improvements
 
+### Fixed
+* Strawberry >=0.236 compatible
+
 ## [1.6](https://pypi.org/project/graphique/1.6/) - 2024-04-30
 ### Changed
 * Pyarrow >=16 required
