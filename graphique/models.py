@@ -40,7 +40,7 @@ def selections(*fields) -> dict:
 def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField:
     """Return strawberry field with argument and docstring descriptions."""
     if func is None:
-        return functools.partial(doc_field, **kwargs)
+        return functools.partial(doc_field, **kwargs)  # type: ignore
     for name in kwargs:
         argument = strawberry.argument(description=kwargs[name])
         func.__annotations__[name] = Annotated[func.__annotations__[name], argument]

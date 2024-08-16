@@ -661,6 +661,12 @@ class Declaration(ac.Declaration):
             self = self.project(map(pc.field, columns))
         return self
 
+    @classmethod
+    def facets(cls, dataset: ds.Dataset, columns: Mapping, counts: str = '') -> Self:
+        """Return aggregate node from a projected dataset."""
+        aggs: list = [([], 'hash_count_all', None, counts)] if counts else []
+        return cls.scan(dataset, columns).aggregate(aggs, columns)
+
     def apply(self, name: str, *args, **options) -> Self:
         return type(self)(name, *args, inputs=[self], **options)
 

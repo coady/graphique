@@ -9,9 +9,10 @@ sufficient once partitioned, but there is a `fragments` option to optimize for m
 progress on the second pass.
 """
 
+import operator
 import shutil
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Callable, Optional
 import numpy as np
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -42,15 +43,15 @@ def write_batches(
             pbar.update(len(batch))
 
 
-def write_fragments(dataset: ds.Dataset, base_dir: str, sorting=(), **options):
-    """Rewrite partition files by fragment to consolidate."""
+def write_fragments(dataset: ds.Dataset, base_dir: str, func: Optional[Callable] = None, **options):
+    """Rewrite partition files by fragment to consolidate, optionally transforming."""
     options['format'] = 'parquet'
     exprs = {Path(frag.path).parent: frag.partition_expression for frag in dataset.get_fragments()}
     offset = len(dataset.partitioning.schema)
     for path in tqdm(exprs, desc="Fragments"):
         part_dir = Path(base_dir, *path.parts[-offset:])
         part = dataset.filter(exprs[path])
-        ds.write_dataset(part.sort_by(sorting) if sorting else part, part_dir, **options)
+        ds.write_dataset(func(part) if func else part, part_dir, **options)
 
 
 def partition(
@@ -65,8 +66,10 @@ def partition(
     write_batches(ds.dataset(src, partitioning='hive'), str(temp), *partitioning)
     dataset = ds.dataset(temp, partitioning='hive')
     options = dict(partitioning_flavor='hive', existing_data_behavior='overwrite_or_ignore')
-    if fragments or sort:
-        write_fragments(dataset, dest, tuple(map(sort_key, sort)))
+    if sorting := list(map(sort_key, sort)):
+        write_fragments(dataset, dest, operator.methodcaller('sort_by', sorting))
+    elif fragments:
+        write_fragments(dataset, dest)
     else:
         with tqdm(desc="Partitions"):
             ds.write_dataset(dataset, dest, partitioning=partitioning, **options)

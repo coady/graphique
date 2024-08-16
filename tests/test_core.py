@@ -95,6 +95,9 @@ def test_declaration(table):
     assert Declaration.scan(dataset).to_table()['state'].unique().to_pylist() == ['CA']
     (column,) = Declaration.scan(dataset, columns={'_': pc.field('state')}).to_table()
     assert column.unique().to_pylist() == ['CA']
+    table = Declaration.facets(dataset, ['county', 'city'], counts='counts').to_table()
+    assert len(table) == 1241
+    assert pc.sum(table['counts']).as_py() == 2647
 
 
 def test_group(table):

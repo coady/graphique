@@ -45,7 +45,6 @@ dependencies = {file = "requirements.in"}
 
 [tool.ruff]
 line-length = 100
-extend-include = ["*.ipynb"]
 
 [tool.ruff.format]
 quote-style = "preserve"
