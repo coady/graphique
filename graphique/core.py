@@ -54,6 +54,7 @@ class Agg:
 
     associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
     associatives |= {'count'}  # transformed to be associative
+    ordered = {'first', 'last'}
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -411,12 +412,15 @@ class Table(pa.Table):
         table = Table.union(scalars, Table.from_offsets(lists, offsets))
         return table, Column.diff(offsets)
 
-    def group(self, *names: str, counts: str = '', **funcs: Sequence[Agg]) -> pa.Table:
+    def group(
+        self, *names: str, counts: str = '', ordered: bool = False, **funcs: Sequence[Agg]
+    ) -> pa.Table:
         """Group by and aggregate.
 
         Args:
             *names: columns to group by
             counts: alias for optional row counts
+            ordered: do not use threads
             **funcs: aggregate funcs with columns options
         """
         prefix = 'hash_' if names else ''
@@ -428,7 +432,8 @@ class Table(pa.Table):
         if counts:
             aggs.append(([], 'hash_count_all', None, counts))
         decl = Declaration.scan(ds.dataset(self) if isinstance(self, pa.Table) else self, columns)
-        return decl.aggregate(aggs, names).to_table(use_threads=False)
+        use_threads = not ordered and Agg.ordered.isdisjoint(funcs)
+        return decl.aggregate(aggs, names).to_table(use_threads)
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
         """Return aggregated scalars as a row of data."""

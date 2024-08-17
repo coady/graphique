@@ -51,7 +51,7 @@ def test_chunks():
     assert C.index(array, 'a', start=3) == 4
     assert C.index(array, 'b', start=2) == -1
     table = pa.table({'col': array})
-    tbl = T.group(table, 'col', count_distinct=[Agg('col', 'count')])
+    tbl = T.group(table, 'col', ordered=True, count_distinct=[Agg('col', 'count')])
     assert tbl['col'].to_pylist() == list('abc')
     assert tbl['count'].to_pylist() == [1] * 3
 

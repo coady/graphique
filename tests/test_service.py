@@ -341,7 +341,7 @@ def test_group(client):
     with pytest.raises(ValueError, match="cannot represent"):
         client.execute('{ group(by: "state", aggregate: {list: {name: "city"}}) { row { city } } }')
     data = client.execute(
-        """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { length tables { length
+        """{ group(by: ["state"], ordered: true, aggregate: {list: {name: "county"}}) { length tables { length
         columns { state { values } county { min max } } }
         scan(columns: {list: {valueLength: {name: "county"}}, alias: "c"}) {
         column(name: "c") { ... on IntColumn { values } } } } }"""

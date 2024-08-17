@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
+### Changed
+* Grouping defaults to parallelized but unordered
+* Partitioning supports facet counts and arbitrary functions
+* Optimizations for dictionary arrays
 
 ## [1.7](https://pypi.org/project/graphique/1.7/) - 2024-07-19
 ### Changed

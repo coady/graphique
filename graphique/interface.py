@@ -232,6 +232,7 @@ class Dataset:
     @doc_field(
         by="column names; empty will aggregate into a single row table",
         counts="optionally include counts in an aliased column",
+        ordered="optinally disable parallelization to maintain ordering",
         aggregate="aggregation functions applied to other columns",
     )
     def group(
@@ -239,6 +240,7 @@ class Dataset:
         info: Info,
         by: list[str] = [],
         counts: str = '',
+        ordered: bool = False,
         aggregate: HashAggregates = {},  # type: ignore
     ) -> Self:
         """Return table grouped by columns.
@@ -263,7 +265,7 @@ class Dataset:
                 for agg in itertools.chain(*aggs.values()):
                     agg.name = agg.alias
         loaded = isinstance(table, pa.Table)
-        table = T.group(table, *by, counts=counts, **aggs)
+        table = T.group(table, *by, counts=counts, ordered=ordered, **aggs)
         return type(self)(table if loaded else self.add_metric(info, table, mode='group'))
 
     def fragments(self, info: Info, counts: str = '', aggregate: HashAggregates = {}) -> pa.Table:  # type: ignore
