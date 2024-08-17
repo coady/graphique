@@ -421,13 +421,13 @@ class Table(pa.Table):
         """
         prefix = 'hash_' if names else ''
         aggs = [agg.astuple(prefix + func) for func in funcs for agg in funcs[func]]
-        columns = list(names) + [agg[0] for agg in aggs]
+        columns = {
+            name: pc.field(name).cast(Column.scalar_type(self.schema.field(name)))
+            for name in list(names) + [agg[0] for agg in aggs]
+        }
         if counts:
             aggs.append(([], 'hash_count_all', None, counts))
-        if isinstance(self, pa.Table):
-            decl = Declaration('table_source', self.unify_dictionaries())
-        else:
-            decl = Declaration.scan(self, columns=columns)
+        decl = Declaration.scan(ds.dataset(self) if isinstance(self, pa.Table) else self, columns)
         return decl.aggregate(aggs, names).to_table(use_threads=False)
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:

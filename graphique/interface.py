@@ -249,8 +249,7 @@ class Dataset:
         table, aggs = self.table, dict(aggregate)
         refs = {agg.name for values in aggs.values() for agg in values}
         fragments = set(T.fragment_keys(self.table))
-        dicts = (pa.types.is_dictionary(table.schema.field(name).type) for name in set(by) | refs)
-        if isinstance(table, ds.Scanner) or any(dicts):
+        if isinstance(table, ds.Scanner):
             table = self.select(info)
         if fragments and set(by) <= fragments:
             if set(by) == fragments:

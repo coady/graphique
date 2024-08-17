@@ -16,7 +16,7 @@ jobs:
         arrow-version: ['']
         include:
         - python-version: 3.x
-          arrow-version: '--pre '
+          arrow-version: '--pre --only-binary :all: '
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
