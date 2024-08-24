@@ -24,6 +24,8 @@ from typing_extensions import Self
 
 Array = Union[pa.Array, pa.ChunkedArray]
 Batch = Union[pa.RecordBatch, pa.Table]
+bit_any = functools.partial(functools.reduce, operator.or_)
+bit_all = functools.partial(functools.reduce, operator.and_)
 
 
 class Agg:
@@ -566,35 +568,22 @@ class Table(pa.Table):
         keys = dict(itertools.takewhile(lambda key: key[0] in schema, map(sort_key, names)))
         if not keys:
             return None, names
-        parts = []
-        for fragment in Table.get_fragments(self):
-            parts.append(ds.get_partition_keys(fragment.partition_expression))
-            if not dense:
-                parts[-1][''] = fragment.count_rows()
-        offset, table = len(keys), pa.Table.from_pylist(parts)
+        parts = [ds.get_partition_keys(frag.partition_expression) for frag in self.get_fragments()]
+        table = pa.Table.from_pylist(parts).group_by(keys).aggregate([])
         if dense:
-            table = Table.ranked(table, k, *names[:offset])
+            table = table.take(pc.select_k_unstable(table, k, keys.items()))
         else:
-            table = Table.sort(table, *names[:offset])
-            index = pc.index(pc.greater_equal(pc.cumulative_sum(table['']), k), True).as_py()
-            table = table[: index + 1 if index >= 0 else None]
-        remaining = names[offset:]
+            table = table.sort_by(keys.items())
+        exprs = [bit_all(pc.field(key) == row[key] for key in row) for row in table.to_pylist()]
+        totals = itertools.accumulate(self.filter(expr).count_rows() for expr in exprs)
+        counts = (count for count, total in enumerate(totals, 1) if total >= k)
+        if not dense:
+            table = table[: next(counts, None)]
+        remaining = names[len(keys) :]
         if remaining or not dense:  # fields with a single value are no longer needed
-            selectors = [len(table[name].unique()) > 1 for name in keys]
+            selectors = [len(table[key].unique()) > 1 for key in keys]
             remaining = tuple(itertools.compress(names, selectors)) + remaining
-        fields, prefix = [], []  # type: ignore
-        for index, (name, order) in enumerate(keys.items()):
-            expr, field, values = None, ds.field(name), table[name].unique()
-            value = pc.max(values) if order == 'ascending' else pc.min(values)
-            if index == len(keys) - 1:  # last one
-                expr = field <= value if order == 'ascending' else field >= value
-            elif len(values) > 1:
-                expr = field < value if order == 'ascending' else field > value
-            if expr is not None:
-                fields.append(functools.reduce(operator.and_, prefix + [expr]))
-            prefix.append(field == value)
-            table = table.filter(prefix[-1])
-        return functools.reduce(operator.or_, fields), remaining
+        return bit_any(exprs[: len(table)]), remaining
 
     def flatten(self, indices: str = '') -> Iterator[pa.RecordBatch]:
         """Generate batches with list arrays flattened, optionally with parent indices."""

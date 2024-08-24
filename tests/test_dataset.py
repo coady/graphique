@@ -219,6 +219,10 @@ def test_rank(partclient):
         '{ rank(by: ["north", "state"], max: 2) { columns { state { unique { values } } } } }'
     )
     assert data == {'rank': {'columns': {'state': {'unique': {'values': ['AL', 'AR']}}}}}
+    data = partclient.execute('{ sort(by: "north", length: 3) { length } }')
+    assert data == {'sort': {'length': 3}}
+    data = partclient.execute('{ sort(by: "north", length: 50000) { length } }')
+    assert data == {'sort': {'length': 41700}}
 
 
 def test_root():
