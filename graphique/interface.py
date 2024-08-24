@@ -291,9 +291,7 @@ class Dataset:
             for name in row:
                 columns[name].append(row[name])
         for name, values in columns.items():
-            if isinstance(values[0], pa.Scalar):
-                columns[name] = C.from_scalars(values)
-            elif isinstance(values[0], pa.Array):
+            if isinstance(values[0], pa.Array):
                 columns[name] = ListChunk.from_scalars(values)
         columns |= {field.name: pa.array(columns[field.name], field.type) for field in schema}
         return self.add_metric(info, pa.table(columns), mode='fragment')

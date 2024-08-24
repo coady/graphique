@@ -211,8 +211,7 @@ class ListChunk(pa.lib.BaseListArray):
 
     def index(self, **options) -> pa.Array:
         """index for first occurrence of each list scalar"""
-        values = [pc.index(value, **options) for value in ListChunk.scalars(self)]
-        return Column.from_scalars(values)
+        return pa.array(pc.index(value, **options) for value in ListChunk.scalars(self))
 
     @register
     def list_all(ctx, self: pa.list_(pa.bool_())) -> pa.bool_():  # type: ignore
@@ -227,10 +226,6 @@ class ListChunk(pa.lib.BaseListArray):
 
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
-
-    def from_scalars(values: Sequence) -> pa.Array:
-        """Return array from arrow scalars."""
-        return pa.array((value.as_py() for value in values), values[0].type)
 
     def scalar_type(self):
         return self.type.value_type if pa.types.is_dictionary(self.type) else self.type
