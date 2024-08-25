@@ -10,8 +10,8 @@ def test_group(table):
 
 @pytest.mark.benchmark
 def test_rank(table):
-    T.ranked(table, 1, 'state', 'county', 'city')
-    T.ranked(table, 10, 'state', 'county', 'city')
+    T.rank(table, 1, 'state', 'county', 'city')
+    T.rank(table, 10, 'state', 'county', 'city')
 
 
 @pytest.mark.benchmark

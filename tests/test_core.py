@@ -187,15 +187,15 @@ def test_sort(table):
     assert tbl.schema.pandas_metadata == {'index_columns': ['state']}
     assert tbl['state'].to_pylist() == ['AK'] * 2
     assert tbl['county'].to_pylist() == ['Yukon Koyukuk'] * 2
-    counts = T.ranked(table, 1, 'state')['state'].value_counts().to_pylist()
+    counts = T.rank(table, 1, 'state')['state'].value_counts().to_pylist()
     assert counts == [{'values': 'AK', 'counts': 273}]
-    counts = T.ranked(table, 1, 'state', '-county')['county'].value_counts().to_pylist()
+    counts = T.rank(table, 1, 'state', '-county')['county'].value_counts().to_pylist()
     assert counts == [{'values': 'Yukon Koyukuk', 'counts': 30}]
-    counts = T.ranked(table, 2, 'state')['state'].value_counts().to_pylist()
+    counts = T.rank(table, 2, 'state')['state'].value_counts().to_pylist()
     assert counts == [{'values': 'AL', 'counts': 838}, {'values': 'AK', 'counts': 273}]
-    counts = T.ranked(table, 2, 'state', '-county')['county'].value_counts().to_pylist()
+    counts = T.rank(table, 2, 'state', '-county')['county'].value_counts().to_pylist()
     assert counts == [{'counts': 30, 'values': 'Yukon Koyukuk'}, {'counts': 1, 'values': 'Yakutat'}]
-    assert T.ranked(table, 10**5, 'state') is table
+    assert T.rank(table, 10**5, 'state') is table
     table = pa.table({'x': [list('ab'), [], None, ['c']]})
     (column,) = T.map_list(table, T.sort, '-x', length=2)
     assert column.to_pylist() == [list('ba'), [], None, ['c']]

@@ -352,20 +352,16 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         max="maximum dense rank to select; optimized for == 1 (min or max)",
-        null_placement="where nulls in input should be ranked",
     )
-    def rank(self, info: Info, by: list[str], max: int = 1, null_placement: str = 'at_end') -> Self:
+    def rank(self, info: Info, by: list[str], max: int = 1) -> Self:
         """Return table selected by maximum dense rank."""
-        kwargs = dict(null_placement=null_placement)
-        if isinstance(self.table, pa.Table):
+        expr, by = T.rank_keys(self.table, max, *by)
+        table = self.table if expr is None else self.table.filter(expr)
+        if not by:
+            return type(self)(table)
+        if not isinstance(table, ds.Dataset):
             table = self.select(info)
-        else:
-            expr, by = T.rank_keys(self.table, max, *by)
-            if not by:
-                return type(self)(self.table.filter(expr))
-            table = T.map_batch(self.scanner(info, filter=expr), T.ranked, max, *by, **kwargs)
-            self.add_metric(info, table, mode='batch')
-        return type(self)(T.ranked(table, max, *by, **kwargs))
+        return type(self)(T.rank(table, max, *by))
 
     @staticmethod
     def apply_list(table: Batch, list_: ListFunction) -> Batch:
@@ -373,7 +369,7 @@ class Dataset:
         if expr is not None:
             table = T.filter_list(table, expr)
         if list_.rank:
-            table = T.map_list(table, T.ranked, list_.rank.max, *list_.rank.by)
+            table = T.map_list(table, T.rank, list_.rank.max, *list_.rank.by)
         if list_.sort:
             table = T.map_list(table, T.sort, *list_.sort.by, length=list_.sort.length)
         columns = {}

@@ -492,7 +492,7 @@ class Table(pa.Table):
             indices: include original indices in the table
         """
         if length == 1 and not indices:
-            return Table.ranked(self, 1, *names, null_placement=null_placement)[:1]
+            return Table.min_max(self, *names, skip_nulls=null_placement == 'at_end')[:1]
         indices_ = Table.sort_indices(self, *names, length=length, null_placement=null_placement)
         table = self.take(indices_)
         if indices:
@@ -512,34 +512,40 @@ class Table(pa.Table):
         table = pa.concat_tables(table for table in tables if table is not None)
         return Table.union(self, Table.from_counts(table, counts))
 
-    def ranked(self, k: int, *names: str, null_placement: str = 'at_end') -> Batch:
-        """Return table filtered by values within dense rank, similar to `select_k_unstable`."""
-        if k == 1:  # optimized for min_max
-            expr = isinstance(self, pa.Table)
-            for name, order in map(sort_key, names):
-                func = Column.min if order == 'ascending' else Column.max
-                value = func(self[name], skip_nulls=null_placement == 'at_end')
-                if value is None:
-                    mask = (pc.field(name) if expr else self[name]).is_null()
-                else:
-                    mask = pc.field(name) == value if expr else pc.equal(self[name], value)
-                self = self.filter(mask)
-            return self
-        values = None
-        kwargs = dict(tiebreaker='dense', null_placement=null_placement)
-        for name, order in map(sort_key, names):
-            if len(self) <= k:
-                break
-            ranks = pc.rank(Column.sort_values(self[name]), order, **kwargs)
-            if values is None:  # optimized to sort only once on first iteration
-                values = ranks
-            else:
-                values = pc.add_checked(pc.multiply_checked(values, pc.max(ranks)), ranks)
-                values = pc.rank(values, 'ascending', tiebreaker='dense')
-            mask = pc.less_equal(values, k)
-            self = self.filter(mask)
-            values = values.filter(mask)
+    def min_max(self, *names: str, **options) -> Batch:
+        """Return table filtered by minimum or maximum values."""
+        for key, order in map(sort_key, names):
+            field = pc.field(key)
+            value = (Column.min if order == 'ascending' else Column.max)(self[key], **options)
+            self = self.filter(field.is_null() if value is None else field == value)
         return self
+
+    @functools.singledispatch
+    def rank(self, k: int, *names: str) -> Self:
+        """Return table filtered by values within dense rank, similar to `select_k_unstable`."""
+        keys = dict(map(sort_key, names))
+        fields = [pc.field(key).cast(Column.scalar_type(self.schema.field(key))) for key in keys]
+        table = Declaration.scan(self, dict(zip(keys, fields))).aggregate([], keys).to_table()
+        table = table.take(pc.select_k_unstable(table, k, keys.items()))
+        exprs = []
+        for key, order in keys.items():
+            field, asc = pc.field(key), (order == 'ascending')
+            exprs.append(field <= pc.max(table[key]) if asc else field >= pc.min(table[key]))
+        return self.filter(bit_all(exprs))
+
+    @rank.register
+    def _(self: pa.Table, k, *names):
+        if k >= len(self):
+            return self
+        if k == 1:
+            return Table.min_max(self, *names)
+        return Table.rank(ds.dataset(self), k, *names).to_table()
+
+    @rank.register
+    def _(self: pa.RecordBatch, k, *names):
+        if k == 1:
+            return Table.min_max(self, *names)
+        return next(Table.rank(ds.dataset(self), k, *names).to_batches())
 
     def get_fragments(self) -> Iterator[ds.Fragment]:
         """Support filtered datasets if it only references partition keys."""
