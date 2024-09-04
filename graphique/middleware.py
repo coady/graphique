@@ -12,11 +12,10 @@ import strawberry.asgi
 from strawberry import Info, UNSET
 from strawberry.extensions import tracing
 from strawberry.utils.str_converters import to_camel_case
-from .core import Column as C
 from .inputs import Filter
 from .interface import Dataset, Root
 from .models import Column, doc_field
-from .scalars import Long, scalar_map, type_map
+from .scalars import Long, py_type, scalar_map
 
 
 class MetricsExtension(tracing.ApolloTracingExtension):
@@ -94,7 +93,7 @@ class GraphQL(strawberry.asgi.GraphQL):
 def implemented(root: Root, name: str = '', keys: Iterable = ()):
     """Return type which extends the Dataset interface with knowledge of the schema."""
     schema = root.projected_schema if isinstance(root, ds.Scanner) else root.schema
-    types = {field.name: type_map[C.scalar_type(field).id] for field in schema}
+    types = {field.name: py_type(field.type) for field in schema}
     types = {name: types[name] for name in types if name.isidentifier() and not iskeyword(name)}
     if invalid := set(schema.names) - set(types):
         warnings.warn(f'invalid field names: {invalid}')

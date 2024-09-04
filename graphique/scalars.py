@@ -109,3 +109,7 @@ type_map = {
     pa.lib.Type_LARGE_LIST: list,
     pa.lib.Type_STRUCT: dict,
 }
+
+
+def py_type(dt: pa.DataType) -> type:
+    return type_map[(dt.value_type if pa.types.is_dictionary(dt) else dt).id]

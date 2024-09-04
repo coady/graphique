@@ -17,7 +17,7 @@ from strawberry import Info
 from strawberry.types.field import StrawberryField
 from .core import Column as C
 from .inputs import links
-from .scalars import Long, scalar_map, type_map
+from .scalars import Long, py_type, scalar_map
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
@@ -89,7 +89,7 @@ class Column:
     @classmethod
     def cast(cls, array: pa.ChunkedArray) -> 'Column':
         """Return typed column based on array type."""
-        return cls.registry[type_map[C.scalar_type(array).id]](array)
+        return cls.registry[py_type(array.type)](array)
 
     @classmethod
     def fromscalar(cls, scalar: pa.ListScalar) -> Optional['Column']:

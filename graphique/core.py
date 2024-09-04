@@ -57,6 +57,7 @@ class Agg:
     associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
     associatives |= {'count'}  # transformed to be associative
     ordered = {'first', 'last'}
+    count_all: tuple = [], 'hash_count_all', None
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
@@ -228,9 +229,6 @@ class ListChunk(pa.lib.BaseListArray):
 
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
-
-    def scalar_type(self):
-        return self.type.value_type if pa.types.is_dictionary(self.type) else self.type
 
     def is_list_type(self):
         funcs = pa.types.is_list, pa.types.is_large_list, pa.types.is_fixed_size_list
@@ -421,16 +419,17 @@ class Table(pa.Table):
             **funcs: aggregate funcs with columns options
         """
         prefix = 'hash_' if names else ''
-        aggs = [agg.astuple(prefix + func) for func in funcs for agg in funcs[func]]
-        columns = {
-            name: pc.field(name).cast(Column.scalar_type(self.schema.field(name)))
-            for name in list(names) + [agg[0] for agg in aggs]
-        }
+        aggs = {}
+        for func in funcs:
+            for agg in funcs[func]:
+                *value, name = agg.astuple(prefix + func)
+                aggs[name] = tuple(value)
         if counts:
-            aggs.append(([], 'hash_count_all', None, counts))
-        decl = Declaration.scan(ds.dataset(self) if isinstance(self, pa.Table) else self, columns)
+            aggs[counts] = Agg.count_all
+        if isinstance(self, pa.Table):
+            self = ds.dataset(self)
         use_threads = not ordered and Agg.ordered.isdisjoint(funcs)
-        return decl.aggregate(aggs, names).to_table(use_threads)
+        return Declaration.group(self, *names, **aggs).to_table(use_threads)
 
     def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
         """Return aggregated scalars as a row of data."""
@@ -524,8 +523,7 @@ class Table(pa.Table):
     def rank(self, k: int, *names: str) -> Self:
         """Return table filtered by values within dense rank, similar to `select_k_unstable`."""
         keys = dict(map(sort_key, names))
-        fields = [pc.field(key).cast(Column.scalar_type(self.schema.field(key))) for key in keys]
-        table = Declaration.scan(self, dict(zip(keys, fields))).aggregate([], keys).to_table()
+        table = Declaration.group(self, *keys).to_table()
         table = table.take(pc.select_k_unstable(table, k, keys.items()))
         exprs = []
         for key, order in keys.items():
@@ -646,24 +644,30 @@ class Declaration(ac.Declaration):
     @classmethod
     def scan(cls, dataset: ds.Dataset, columns=None) -> Self:
         """Return source node from a dataset."""
+        self = cls('scan', dataset, columns=columns)
         expr = dataset._scan_options.get('filter')
-        self = cls('scan', dataset, filter=expr, columns=columns)
         if expr is not None:
-            self = self.filter(expr)
+            self = self.apply('filter', expr)
+        return self if columns is None else self.project(columns)
+
+    def project(self, columns: Iterable) -> Self:
         if isinstance(columns, Mapping):
-            self = self.project(columns.values(), columns)
-        elif columns is not None:
-            self = self.project(map(pc.field, columns))
-        return self
+            return self.apply('project', columns.values(), columns)
+        return self.apply('project', map(pc.field, columns))
 
     @classmethod
-    def facets(cls, dataset: ds.Dataset, columns: Mapping, counts: str = '') -> Self:
+    def group(cls, dataset: ds.Dataset, *names, **aggs: tuple) -> Self:
         """Return aggregate node from a projected dataset."""
-        aggs: list = [([], 'hash_count_all', None, counts)] if counts else []
-        return cls.scan(dataset, columns).aggregate(aggs, columns)
+        aggregates, targets = [], set(names)
+        for name, (target, _, _) in aggs.items():
+            aggregates.append(aggs[name] + (name,))
+            targets.update([target] if isinstance(target, str) else target)
+        columns = {name: pc.field(name) for name in targets}
+        for name in columns:
+            field = dataset.schema.field(name)
+            if pa.types.is_dictionary(field.type):
+                columns[name] = columns[name].cast(field.type.value_type)
+        return cls.scan(dataset, columns).apply('aggregate', aggregates, names)
 
     def apply(self, name: str, *args, **options) -> Self:
         return type(self)(name, *args, inputs=[self], **options)
-
-    def __getattr__(self, name: str) -> Callable:
-        return functools.partial(self.apply, name)
