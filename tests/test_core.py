@@ -2,7 +2,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import pytest
-from graphique.core import Agg, Declaration, ListChunk, Column as C, Table as T
+from graphique.core import Agg, ListChunk, Nodes, Column as C, Table as T
 from graphique.scalars import parse_duration, duration_isoformat
 
 
@@ -90,16 +90,20 @@ def test_membership():
     assert C.index(array, 1, start=2) == -1
 
 
-def test_declaration(table):
+def test_nodes(table):
     dataset = ds.dataset(table).filter(pc.field('state') == 'CA')
-    assert Declaration.scan(dataset).to_table()['state'].unique().to_pylist() == ['CA']
-    (column,) = Declaration.scan(dataset, columns={'_': pc.field('state')}).to_table()
+    assert Nodes.scan(dataset).to_table()['state'].unique().to_pylist() == ['CA']
+    (column,) = Nodes.scan(dataset, columns={'_': pc.field('state')}).to_table()
     assert column.unique().to_pylist() == ['CA']
-    table = Declaration.group(dataset, 'county', 'city', counts=Agg.count_all).to_table()
+    table = Nodes.group(dataset, 'county', 'city', counts=Agg.count_all).to_table()
     assert len(table) == 1241
     assert pc.sum(table['counts']).as_py() == 2647
-    table = Declaration.scan(dataset, columns=['state']).to_table()
-    assert table.schema.names == ['state']
+    scanner = Nodes.scan(dataset, columns=['state'])
+    assert scanner.schema.names == ['state']
+    assert scanner.group('state').to_table() == pa.table({'state': ['CA']})
+    assert scanner.count_rows() == 2647
+    assert scanner.head(3) == pa.table({'state': ['CA'] * 3})
+    assert scanner.take([0, 2]) == pa.table({'state': ['CA'] * 2})
 
 
 def test_group(table):
