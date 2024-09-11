@@ -37,16 +37,6 @@ class MetricsExtension(tracing.ApolloTracingExtension):
         return data['duration'] and str(timedelta(microseconds=data['duration'] / 1e3))
 
 
-class ContextExtension(strawberry.extensions.SchemaExtension):
-    """Adds registered context keys to extensions."""
-
-    keys = ('deprecations',)
-
-    def get_results(self) -> dict:
-        context = self.execution_context.context
-        return {key: context[key] for key in self.keys if key in context}
-
-
 class GraphQL(strawberry.asgi.GraphQL):
     """ASGI GraphQL app with root value(s).
 
@@ -57,12 +47,9 @@ class GraphQL(strawberry.asgi.GraphQL):
     """
 
     options = dict(types=Column.registry.values(), scalar_overrides=scalar_map)
-    extensions = (ContextExtension,)
 
     def __init__(self, root: Root, debug: bool = False, **kwargs):
-        options: dict = dict(self.options, extensions=self.extensions)
-        if debug:  # pragma: no cover
-            options['extensions'] += (MetricsExtension,)
+        options: dict = dict(self.options, extensions=(MetricsExtension,) * bool(debug))
         if type(root).__name__ == 'Query':
             self.root_value = root
             options['enable_federation_2'] = True

@@ -6,13 +6,11 @@ from .conftest import load
 
 
 def test_extensions():
-    context = strawberry.types.ExecutionContext(None, None, context={})
+    context = strawberry.types.ExecutionContext(None, None, [], context={})
     ext = middleware.MetricsExtension(execution_context=context)
     for name in ('operation', 'parse', 'validate'):
         assert list(getattr(ext, 'on_' + name)()) == [None]
     assert set(ext.get_results()['metrics']) == {'duration', 'execution'}
-    ext = middleware.ContextExtension(execution_context=context)
-    assert ext.get_results() == {}
 
 
 def test_filter(dsclient):
