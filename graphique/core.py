@@ -554,11 +554,10 @@ class Table(pa.Table):
 
     def fragment_keys(self) -> list:
         """Filtered partitioned datasets may not have fragments."""
-        try:
+        with contextlib.suppress(AttributeError, ValueError):
             Table.get_fragments(self)
-        except (AttributeError, ValueError):
-            return []
-        return self.partitioning.schema.names
+            return self.partitioning.schema.names
+        return []
 
     def rank_keys(self, k: int, *names: str, dense: bool = True) -> tuple:
         """Return expression and unmatched fields for partitioned dataset which filters by rank.

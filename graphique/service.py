@@ -9,6 +9,7 @@ Copy and customize as needed. Demonstrates:
 
 import json
 from pathlib import Path
+import pyarrow as pa
 import pyarrow.dataset as ds
 from starlette.config import Config
 from graphique.inputs import Expression
@@ -25,6 +26,9 @@ root = ds.dataset(PARQUET_PATH, partitioning='hive' if PARQUET_PATH.is_dir() els
 
 if isinstance(COLUMNS, dict):
     COLUMNS = {alias: ds.field(name) for alias, name in COLUMNS.items()}
+elif COLUMNS:
+    root = root.replace_schema(pa.schema(map(root.schema.field, COLUMNS), root.schema.metadata))
+    COLUMNS = None
 if FILTERS is not None:
     root = root.to_table(columns=COLUMNS, filter=Expression.from_query(**FILTERS).to_arrow())
 elif COLUMNS:

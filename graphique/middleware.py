@@ -13,7 +13,7 @@ from strawberry import Info, UNSET
 from strawberry.extensions import tracing
 from strawberry.utils.str_converters import to_camel_case
 from .inputs import Filter
-from .interface import Dataset, Root
+from .interface import Dataset, Source
 from .models import Column, doc_field
 from .scalars import Long, py_type, scalar_map
 
@@ -48,7 +48,7 @@ class GraphQL(strawberry.asgi.GraphQL):
 
     options = dict(types=Column.registry.values(), scalar_overrides=scalar_map)
 
-    def __init__(self, root: Root, debug: bool = False, **kwargs):
+    def __init__(self, root: Source, debug: bool = False, **kwargs):
         options: dict = dict(self.options, extensions=(MetricsExtension,) * bool(debug))
         if type(root).__name__ == 'Query':
             self.root_value = root
@@ -63,7 +63,7 @@ class GraphQL(strawberry.asgi.GraphQL):
         return self.root_value
 
     @classmethod
-    def federated(cls, roots: Mapping[str, Root], keys: Mapping[str, Iterable] = {}, **kwargs):
+    def federated(cls, roots: Mapping[str, Source], keys: Mapping[str, Iterable] = {}, **kwargs):
         """Construct GraphQL app with multiple federated datasets.
 
         Args:
@@ -77,7 +77,7 @@ class GraphQL(strawberry.asgi.GraphQL):
         return cls(strawberry.type(Query)(**root_values), **kwargs)
 
 
-def implemented(root: Root, name: str = '', keys: Iterable = ()):
+def implemented(root: Source, name: str = '', keys: Iterable = ()):
     """Return type which extends the Dataset interface with knowledge of the schema."""
     schema = root.projected_schema if isinstance(root, ds.Scanner) else root.schema
     types = {field.name: py_type(field.type) for field in schema}
