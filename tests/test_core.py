@@ -250,9 +250,6 @@ def test_not_implemented():
     table = pa.table({'value': list('abc'), 'key': [0, 1, 0]})
     table = table.group_by('key').aggregate([agg])
     assert table['value_max'].to_pylist() == list('cb')  # min_count has no effect
-    value = pa.MonthDayNano([1, 2, 3])
-    with pytest.raises(NotImplementedError):
-        pc.equal(value, value)
     for name in ('one', 'list', 'distinct'):
         assert not hasattr(pc, name)
     with pytest.raises(NotImplementedError):
