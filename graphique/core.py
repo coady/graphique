@@ -677,6 +677,8 @@ class Nodes(ac.Declaration):
         """Add a node by name."""
         return type(self)(name, *args, inputs=[self], **options)
 
+    filter = functools.partialmethod(apply, 'filter')
+
     def project(self, columns: Union[Mapping[str, pc.Expression], Iterable[str]]) -> Self:
         """Add `project` node from columns names with optional expressions."""
         if isinstance(columns, Mapping):
