@@ -151,10 +151,10 @@ def test_schema(dsclient):
     assert set(schema['names']) >= {'zipcode', 'state', 'county'}
     assert set(schema['types']) >= {'int32', 'string'}
     assert len(schema['partitioning']) in (0, 6)
-    assert dsclient.execute('{ type }')['type'] in {'FileSystemDataset', 'Scanner'}
-    assert dsclient.execute('{ scan { type length } }')['scan']['type'] == 'Scanner'
-    data = dsclient.execute('{ scan { type length l: length } }')
-    assert data['scan']['type'] in {'Scanner', 'Table'}
+    data = dsclient.execute('{ scan(filter: {}) { type } }')
+    assert data == {'scan': {'type': 'FileSystemDataset'}}
+    data = dsclient.execute('{ scan(columns: {name: "zipcode"}) { type } }')
+    assert data == {'scan': {'type': 'Nodes'}}
     result = dsclient._execute('{ length optional { tables { length } } }')
     assert result.data == {'length': 41700, 'optional': None}
     assert len(result.errors) == 1

@@ -5,7 +5,7 @@ from graphique import GraphQL, core
 fixtures = Path(__file__).parent / 'fixtures'
 dataset = ds.dataset(fixtures / 'zipcodes.parquet')
 roots = {
-    'zipcodes': dataset.scanner(),
+    'zipcodes': core.Nodes.scan(dataset, dataset.schema.names),
     'states': core.Table.sort(dataset.to_table(), 'state', 'county', indices='indices'),
     'zip_db': ds.dataset(fixtures / 'zip_db.parquet'),
 }

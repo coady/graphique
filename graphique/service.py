@@ -12,7 +12,6 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.dataset as ds
 from starlette.config import Config
-from graphique.core import Nodes
 from graphique.inputs import Expression
 from graphique import GraphQL
 
@@ -33,7 +32,7 @@ elif COLUMNS:
 if FILTERS is not None:
     root = root.to_table(columns=COLUMNS, filter=Expression.from_query(**FILTERS).to_arrow())
 elif COLUMNS:
-    root = Nodes.scan(root, columns=COLUMNS)
+    root = root.scanner(columns=COLUMNS)
 
 if FEDERATED:
     app = GraphQL.federated({FEDERATED: root}, debug=DEBUG)

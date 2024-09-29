@@ -10,6 +10,8 @@ def test_camel(aliasclient):
     assert data == {'filter': {'length': 1}}
     data = aliasclient.execute('{ filter(camelId: {eq: 1}) { length } }')
     assert data == {'filter': {'length': 1}}
+    data = aliasclient.execute('{ group(by: "camelId") { length } }')
+    assert data == {'group': {'length': 2}}
 
 
 def test_snake(executor):
@@ -349,7 +351,7 @@ def test_conditions(executor):
     assert data == {'scan': {'column': {'type': 'float'}}}
     with pytest.raises(ValueError, match="no kernel"):
         executor("""{ scan(columns: {alias: "bool",
-            ifElse: [{name: "struct"}, {name: "int32"}, {name: "float"}]}) { type } }""")
+            ifElse: [{name: "struct"}, {name: "int32"}, {name: "float"}]}) { slice { type } } }""")
 
 
 def test_long(executor):
