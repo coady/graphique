@@ -334,10 +334,8 @@ class Column(pa.ChunkedArray):
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
-    def map_batch(scanner: ds.Scanner, func: Callable, *rargs, **kwargs) -> pa.Table:
-        # TODO(apache/arrow#31612): replace with user defined function for multiple kernels
-        batches = [func(batch, *rargs, **kwargs) for batch in scanner.to_batches() if batch]
-        return pa.Table.from_batches(batches, None if batches else scanner.projected_schema)
+    def map_batch(self, func: Callable, *args, **kwargs) -> pa.Table:
+        return pa.Table.from_batches(func(batch, *args, **kwargs) for batch in self.to_batches())
 
     def columns(self) -> dict:
         """Return columns as a dictionary."""
@@ -639,6 +637,7 @@ class Nodes(ac.Declaration):
         'order_by': ac.OrderByNodeOptions,
         'hashjoin': ac.HashJoinNodeOptions,
     }
+    to_batches = ac.Declaration.to_reader  # source compatibility
 
     def __init__(self, name, *args, inputs=None, **options):
         super().__init__(name, self.option_map[name](*args, **options), inputs)

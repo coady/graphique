@@ -22,7 +22,7 @@ from .core import Batch, Column as C, ListChunk, Nodes, Table as T
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
 from .inputs import HashAggregates, ListFunction, Pairwise, Projection, Rank
 from .inputs import ScalarAggregate, TDigestAggregate, VarianceAggregate, links, provisional
-from .models import Column, doc_field, selections
+from .models import Column, doc_field
 from .scalars import Long
 
 Source = Union[ds.Dataset, Nodes, ds.Scanner, pa.Table]
@@ -416,7 +416,7 @@ class Dataset:
         Applied functions load arrays into memory as needed. See `scan` for scalar functions,
         which do not require loading.
         """
-        table = T.map_batch(self.scanner(info), self.apply_list, list_)
+        table = T.map_batch(self.select(info), self.apply_list, list_)
         self.add_metric(info, table, mode='batch')
         columns = {}
         funcs = pc.cumulative_max, pc.cumulative_mean, pc.cumulative_min, pc.cumulative_prod
@@ -436,10 +436,8 @@ class Dataset:
 
         At least one list column must be referenced, and all list columns must have the same lengths.
         """
-        batches = T.flatten(self.scanner(info), indices)
-        batch = next(batches)
-        scanner = ds.Scanner.from_batches(itertools.chain([batch], batches), schema=batch.schema)
-        return type(self)(self.oneshot(info, scanner))
+        table = pa.Table.from_batches(T.flatten(self.select(info), indices))
+        return type(self)(self.add_metric(info, table, mode='batch'))
 
     @doc_field
     def tables(self, info: Info) -> list[Optional[Self]]:  # type: ignore
@@ -447,7 +445,7 @@ class Dataset:
 
         At least one list column must be referenced, and all list columns must have the same lengths.
         """
-        for batch in self.scanner(info).to_batches():
+        for batch in self.select(info).to_batches():
             for row in T.split(batch):
                 yield None if row is None else type(self)(pa.Table.from_batches([row]))
 
@@ -502,15 +500,6 @@ class Dataset:
             raise ValueError(f"projected columns need a name or alias: {projection['']}")
         return projection
 
-    @classmethod
-    def oneshot(cls, info: Info, scanner: ds.Scanner) -> Union[ds.Scanner, pa.Table]:
-        """Load oneshot scanner if needed."""
-        selected = selections(*info.selected_fields)
-        selected['type'] = selected['schema'] = 0
-        if sum(selected.values()) > 1:
-            return cls.add_metric(info, scanner.to_table(), mode='oneshot')
-        return scanner
-
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(self, info: Info, filter: Expression = {}, columns: list[Projection] = []) -> Self:  # type: ignore
         """Select rows and project columns without memory usage."""
@@ -519,7 +508,7 @@ class Dataset:
             return type(self)(self.source.filter(expr))
         scanner = self.scanner(info, filter=expr, columns=self.project(info, columns))
         if isinstance(self.source, ds.Scanner):
-            scanner = self.oneshot(info, scanner)
+            scanner = self.add_metric(info, scanner.to_table(), mode='batch')
         return type(self)(scanner)
 
     @doc_field(
@@ -571,7 +560,5 @@ class Dataset:
         """Remove missing values from referenced columns in the table."""
         if isinstance(self.source, pa.Table):
             return type(self)(pc.drop_null(self.to_table(info)))
-        scanner = self.scanner(info)
-        batches = map(pc.drop_null, scanner.to_batches())
-        scanner = ds.Scanner.from_batches(batches, schema=scanner.projected_schema)
-        return type(self)(self.oneshot(info, scanner))
+        table = T.map_batch(self.select(info), pc.drop_null)
+        return type(self)(self.add_metric(info, table, mode='batch'))

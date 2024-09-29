@@ -2,10 +2,8 @@
 GraphQL output types and resolvers.
 """
 
-import collections
 import functools
 import inspect
-import itertools
 from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
@@ -24,17 +22,9 @@ if TYPE_CHECKING:  # pragma: no cover
 T = TypeVar('T')
 
 
-def _selections(field):
-    for selection in field.selections:
-        if hasattr(selection, 'name'):
-            yield selection.name
-        else:
-            yield from _selections(selection)
-
-
-def selections(*fields) -> dict:
-    """Return counts of field name selections from strawberry `SelectedField`."""
-    return collections.Counter(itertools.chain(*map(_selections, fields)))
+def selections(*fields) -> set:
+    """Return field name selections from strawberry `SelectedField`."""
+    return {selection.name for field in fields for selection in field.selections}
 
 
 def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField:
@@ -260,7 +250,7 @@ class IntColumn(RatioColumn[T]):
     ) -> Optional[Annotated['Dataset', strawberry.lazy('.interface')]]:
         """Select indices from a table on the root Query type."""
         root = getattr(info.root_value, field)
-        return type(root)(root.scanner(info).take(self.array.combine_chunks()))
+        return type(root)(root.select(info).take(self.array.combine_chunks()))
 
 
 @Column.register(list)
