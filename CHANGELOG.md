@@ -5,8 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 ### Changed
+* Acero engine used for scanning
 * Grouping defaults to parallelized but unordered
-* Partitioning supports facet counts and arbitrary functions
+* Partitioning supports arbitrary functions
 * `group` optimized for dictionary arrays
 * `rank` optimized for out-of-core
 

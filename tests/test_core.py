@@ -2,7 +2,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import pytest
-from graphique.core import Agg, ListChunk, Nodes, Column as C, Table as T
+from graphique.core import ListChunk, Nodes, Column as C, Table as T
 from graphique.scalars import parse_duration, duration_isoformat
 
 
@@ -41,19 +41,11 @@ def test_dictionary(table):
 
 
 def test_chunks():
-    array = pa.chunked_array([list('aba'), list('bcb')])
-    table = pa.table({'col': array})
-    groups = T.group(table, 'col', counts='counts')
-    assert dict(zip(*groups.to_pydict().values())) == {'a': 2, 'b': 3, 'c': 1}
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
     assert C.index(array, 'a') == 0
     assert C.index(array, 'c') == 3
     assert C.index(array, 'a', start=3) == 4
     assert C.index(array, 'b', start=2) == -1
-    table = pa.table({'col': array})
-    tbl = T.group(table, 'col', ordered=True, count_distinct=[Agg('col', 'count')])
-    assert tbl['col'].to_pylist() == list('abc')
-    assert tbl['count'].to_pylist() == [1] * 3
 
 
 def test_lists():
@@ -81,6 +73,8 @@ def test_lists():
     assert not T.from_offsets(pa.table({}), pa.array([0]))
     array = ListChunk.from_counts(pa.array([3, None, 2]), list('abcde'))
     assert array.to_pylist() == [list('abc'), None, list('de')]
+    with pytest.raises(ValueError):
+        T.list_value_length(pa.table({'x': array, 'y': array[::-1]}))
 
 
 def test_membership():
@@ -95,7 +89,7 @@ def test_nodes(table):
     assert Nodes.scan(dataset).to_table()['state'].unique().to_pylist() == ['CA']
     (column,) = Nodes.scan(dataset, columns={'_': pc.field('state')}).to_table()
     assert column.unique().to_pylist() == ['CA']
-    table = Nodes.group(dataset, 'county', 'city', counts=Agg.count_all).to_table()
+    table = Nodes.group(dataset, 'county', 'city', counts=([], 'hash_count_all', None)).to_table()
     assert len(table) == 1241
     assert pc.sum(table['counts']).as_py() == 2647
     scanner = Nodes.scan(dataset, columns=['state'])
@@ -104,65 +98,6 @@ def test_nodes(table):
     assert scanner.count_rows() == 2647
     assert scanner.head(3) == pa.table({'state': ['CA'] * 3})
     assert scanner.take([0, 2]) == pa.table({'state': ['CA'] * 2})
-
-
-def test_group(table):
-    groups = T.group(table, 'state', list=[Agg('county'), Agg('city')])
-    assert len(groups) == 52
-    assert groups['state'][0].as_py() == 'NY'
-    assert len(pa.Table.from_batches(T.flatten(groups))) == len(table)
-    table = T.filter_list(groups, pc.field('county') == pc.field('city'))
-    assert len(pc.list_flatten(table['city'])) == 2805
-    groups = T.map_list(groups, T.sort, 'county')
-    assert groups['county'][0].values[0].as_py() == 'Albany'
-    groups = T.map_list(groups, T.sort, '-county', '-city', length=1, null_placement='at_start')
-    assert groups['county'][0].values.to_pylist() == ['Yates']
-    assert groups['city'][0].values.to_pylist() == ['Rushville']
-    groups = groups.append_column('other', pa.array([[0]] * len(groups)))
-    with pytest.raises(ValueError):
-        T.map_list(groups, T.sort, 'county')
-    groups = T.group(table, first=[Agg('state')])
-    assert groups['state'].to_pylist() == ['NY']
-
-
-def test_aggregate(table):
-    tbl = T.union(table, table.select([0]).rename_columns(['test']))
-    assert tbl.schema.names == table.schema.names + ['test']
-    groups = T.group(table, 'state', 'county')
-    assert len(groups) == 3216
-    assert groups.schema.names == ['state', 'county']
-    groups = T.group(table, 'state', counts='counts', first=[Agg('county')])
-    assert len(groups) == 52
-    assert groups['state'][0].as_py() == 'NY'
-    assert groups['counts'][0].as_py() == 2205
-    assert groups['county'][0].as_py() == 'Suffolk'
-    groups = T.group(table, 'state', last=[Agg('city', 'last')], min=[Agg('zipcode')])
-    assert groups['last'][0].as_py() == 'Elmira'
-    assert groups['zipcode'][0].as_py() == 501
-    groups = T.group(table, 'state', max=[Agg('zipcode', 'max', skip_nulls=False)])
-    assert groups['max'][0].as_py() == 14925
-    groups = T.group(table, 'state', min_max=[Agg('zipcode')])
-    assert groups['zipcode'][0].as_py() == {'min': 501, 'max': 14925}
-    groups = T.group(
-        table, 'state', approximate_median=[Agg('longitude')], tdigest=[Agg('latitude')]
-    )
-    assert groups['longitude'][0].as_py() == pytest.approx(-74.25370)
-    assert groups['latitude'][0].as_py() == [pytest.approx(42.34672)]
-    row = T.aggregate(table, min=[Agg('state')], list=[Agg('zipcode')])
-    assert row['state'].as_py() == 'AK'
-    assert row['zipcode'] == table['zipcode'].combine_chunks()
-    row = T.aggregate(table, counts='counts')
-    assert row['counts'] == 41700
-    row = T.aggregate(table, first=[Agg('zipcode')])
-    assert row['zipcode'].as_py() == 501
-    row = T.aggregate(table, last=[Agg('zipcode')])
-    assert row['zipcode'].as_py() == 99950
-    nulls = pa.table({'': [0, None, 0]})
-    row = T.aggregate(nulls, list=[Agg('')])
-    assert row[''].to_pylist() == [0, None, 0]
-    row = T.aggregate(nulls, distinct=[Agg('', 'd1'), Agg('', 'd2', mode='all')])
-    assert row['d1'].to_pylist() == [0]
-    assert row['d2'].to_pylist() == [0, None]
 
 
 def test_runs(table):

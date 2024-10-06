@@ -1,10 +1,10 @@
 import pytest
-from graphique.core import Table as T
+from graphique.core import Nodes, Table as T
 
 
 @pytest.mark.benchmark
 def test_group(table):
-    T.group(table, 'state', 'county', 'city')
+    Nodes('table_source', table).group('state', 'county', 'city')
     T.runs(table, 'state', 'county', 'city')
 
 

@@ -18,7 +18,7 @@ import strawberry.asgi
 from strawberry import Info
 from strawberry.extensions.utils import get_path_from_info
 from typing_extensions import Self
-from .core import Batch, Column as C, ListChunk, Nodes, Table as T
+from .core import Agg, Batch, Column as C, ListChunk, Nodes, Table as T
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
 from .inputs import HashAggregates, ListFunction, Pairwise, Projection, Rank
 from .inputs import ScalarAggregate, TDigestAggregate, VarianceAggregate, links, provisional
@@ -247,58 +247,23 @@ class Dataset:
         ordered: bool = False,
         aggregate: HashAggregates = {},  # type: ignore
     ) -> Self:
-        """Return table grouped by columns.
-
-        See `column` for accessing any column which has changed type. See `tables` to split on any
-        aggregated list columns.
-        """
-        source, aggs = self.source, dict(aggregate)
-        refs = {agg.name for values in aggs.values() for agg in values}
-        fragments = set(T.fragment_keys(self.source))
-        if isinstance(source, ds.Scanner):
-            source = self.to_table(info)
-        if fragments and set(by) <= fragments:
-            if set(by) == fragments:
-                return type(self)(self.fragments(info, counts, aggregate))
-            if fragments.isdisjoint(refs) and set(aggs) <= Field.associatives:
-                source = self.fragments(info, counts, aggregate)
-                aggs.setdefault('sum', []).extend(Field(agg.alias) for agg in aggs.pop('count', []))
-                if counts:
-                    aggs['sum'].append(Field(counts))
-                    counts = ''
-                for agg in itertools.chain(*aggs.values()):
-                    agg.name = agg.alias
-        loaded = isinstance(source, pa.Table)
-        table = T.group(source, *by, counts=counts, ordered=ordered, **aggs)
-        return type(self)(table if loaded else self.add_metric(info, table, mode='group'))
-
-    def fragments(self, info: Info, counts: str = '', aggregate: HashAggregates = {}) -> pa.Table:  # type: ignore
-        """Return table from scanning fragments and grouping by partitions.
-
-        Requires a partitioned dataset. Faster and less memory intensive than `group`.
-        """
-        schema = self.source.partitioning.schema  # requires a Dataset
-        aggs = dict(aggregate)
-        names = self.references(info, level=1)
-        names.update(agg.name for value in aggs.values() for agg in value)
-        projection = {name: pc.field(name) for name in names - set(schema.names)}
-        columns = collections.defaultdict(list)
-        for fragment in T.get_fragments(self.source):
-            row = ds.get_partition_keys(fragment.partition_expression)
-            if projection:
-                table = fragment.to_table(columns=projection)
-                row |= T.aggregate(table, counts=counts, **aggs)
-            elif counts:
-                row[counts] = fragment.count_rows()
-            arrays = {name: value for name, value in row.items() if isinstance(value, pa.Array)}
-            row |= T.columns(pa.RecordBatch.from_pydict(arrays))
-            for name in row:
-                columns[name].append(row[name])
-        for name, values in columns.items():
-            if isinstance(values[0], pa.Array):
-                columns[name] = ListChunk.from_scalars(values)
-        columns |= {field.name: pa.array(columns[field.name], field.type) for field in schema}
-        return self.add_metric(info, pa.table(columns), mode='fragment')
+        if not any(aggregate.keys()):
+            fragments = T.fragments(self.source, *by, counts=counts)
+            if set(fragments.schema.names) >= set(by):
+                return type(self)(fragments)
+        prefix = 'hash_' if by else ''
+        aggs: dict = {counts: ([], prefix + 'count_all', None)} if counts else {}
+        for func, values in dict(aggregate).items():
+            ordered = ordered or func in Agg.ordered
+            for agg in values:
+                aggs[agg.alias] = (agg.name, prefix + func, agg.func_options(func))
+        source = self.to_table(info) if isinstance(self.source, ds.Scanner) else self.source
+        if isinstance(source, pa.Table):
+            source = ds.dataset(source)
+        source = Nodes.group(source, *by, **aggs)
+        if ordered:
+            source = self.add_metric(info, source.to_table(use_threads=False), mode='group')
+        return type(self)(source)
 
     @doc_field(
         by="column names",
@@ -476,7 +441,7 @@ class Dataset:
                 else:
                     columns[agg.alias] = func(table[agg.name], **agg.options)
         for name, aggs in agg_fields.items():
-            funcs = {key: agg.astuple(key)[2] for key, agg in aggs.items()}
+            funcs = {key: agg.func_options(key) for key, agg in aggs.items()}
             batch = ListChunk.aggregate(table[name], **funcs)
             columns.update(zip([agg.alias for agg in aggs.values()], batch))
         return type(self)(pa.table(columns))

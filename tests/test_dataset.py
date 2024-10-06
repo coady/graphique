@@ -1,13 +1,11 @@
 import asyncio
 import pytest
-import strawberry
 from graphique import middleware
 from .conftest import load
 
 
 def test_extensions():
-    context = strawberry.types.ExecutionContext(None, None, [], context={})
-    ext = middleware.MetricsExtension(execution_context=context)
+    ext = middleware.MetricsExtension(type('', (), {'context': {}}))
     for name in ('operation', 'parse', 'validate'):
         assert list(getattr(ext, 'on_' + name)()) == [None]
     assert set(ext.get_results()['metrics']) == {'duration', 'execution'}
@@ -127,7 +125,7 @@ def test_fragments(partclient):
     data = partclient.execute(
         '{ group(by: ["north"], aggregate: {max: {name: "zipcode"}}) { row { north zipcode } } }'
     )
-    assert data == {'group': {'row': {'north': 0, 'zipcode': 96898}}}
+    assert data['group']['row']['zipcode'] >= 96898
     data = partclient.execute(
         '{ group(by: [], aggregate: {min: {name: "state"}}) { length row { state } } }'
     )
@@ -136,7 +134,7 @@ def test_fragments(partclient):
         """{ group(by: ["north", "west"], aggregate: {distinct: {name: "city"}, mean: {name: "zipcode"}}) {
         length column(name: "city") { type } } }"""
     )
-    assert data == {'group': {'length': 4, 'column': {'type': 'large_list<item: string>'}}}
+    assert data == {'group': {'length': 4, 'column': {'type': 'list<item: string>'}}}
     data = partclient.execute("""{ group(by: "north", aggregate: {countDistinct: {name: "west"}}) { 
         column(name: "west") { ... on LongColumn { values } } } }""")
     assert data == {'group': {'column': {'values': [2, 2]}}}

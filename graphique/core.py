@@ -12,7 +12,7 @@ import inspect
 import itertools
 import operator
 import json
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Optional, Union, get_type_hints
 import numpy as np
@@ -57,26 +57,14 @@ class Agg:
     associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
     associatives |= {'count'}  # transformed to be associative
     ordered = {'first', 'last'}
-    count_all: tuple = [], 'hash_count_all', None
 
     def __init__(self, name: str, alias: str = '', **options):
         self.name = name
         self.alias = alias or name
         self.options = options
 
-    def astuple(self, func: str) -> tuple:
-        options = self.option_map[func.rpartition('hash_')[-1]](**self.options)
-        return self.name, func, options, self.alias
-
-    one = operator.itemgetter(0)
-    list = staticmethod(lambda array: array)
-
-    @staticmethod
-    def distinct(array: Array, mode: str = 'only_valid') -> pa.Array:
-        values = pc.unique(array)
-        if not values.null_count or mode == 'all':
-            return values
-        return values.drop_null() if mode == 'only_valid' else pa.array([None], array.type)
+    def func_options(self, func: str) -> pc.FunctionOptions:
+        return self.option_map[func.removeprefix('hash_')](**self.options)
 
 
 @dataclass(frozen=True)
@@ -405,44 +393,6 @@ class Table(pa.Table):
         table = Table.union(scalars, Table.from_offsets(lists, offsets))
         return table, Column.diff(offsets)
 
-    def group(
-        self, *names: str, counts: str = '', ordered: bool = False, **funcs: Sequence[Agg]
-    ) -> pa.Table:
-        """Group by and aggregate.
-
-        Args:
-            *names: columns to group by
-            counts: alias for optional row counts
-            ordered: do not use threads
-            **funcs: aggregate funcs with columns options
-        """
-        prefix = 'hash_' if names else ''
-        aggs = {}
-        for func in funcs:
-            for agg in funcs[func]:
-                *value, name = agg.astuple(prefix + func)
-                aggs[name] = tuple(value)
-        if counts:
-            aggs[counts] = Agg.count_all
-        if isinstance(self, pa.Table):
-            self = ds.dataset(self)
-        use_threads = not ordered and Agg.ordered.isdisjoint(funcs)
-        return Nodes.group(self, *names, **aggs).to_table(use_threads)
-
-    def aggregate(self, counts: str = '', **funcs: Sequence[Agg]) -> dict:
-        """Return aggregated scalars as a row of data."""
-        row = {counts: len(self)} if counts else {}
-        for key in ('one', 'list', 'distinct'):  # hash only functions
-            func, aggs = getattr(Agg, key), funcs.pop(key, [])
-            row |= {agg.alias: func(self[agg.name], **agg.options) for agg in aggs}
-        if funcs:
-            table = Table.group(self, **funcs)  # type: ignore
-            row |= {name: table[name][0] for name in table.schema.names}
-        for name, value in row.items():
-            if isinstance(value, pa.ChunkedArray):
-                row[name] = value.combine_chunks()
-        return row
-
     def list_fields(self) -> set:
         return {field.name for field in self.schema if Column.is_list_type(field)}
 
@@ -543,19 +493,26 @@ class Table(pa.Table):
             return Table.min_max(self, *names)
         return next(Table.rank(ds.dataset(self), k, *names).to_batches())
 
-    def get_fragments(self) -> Iterator[ds.Fragment]:
-        """Support filtered datasets if it only references partition keys."""
-        expr = self._scan_options.get('filter')
-        if expr is not None:  # raise ValueError if filter references other fields
-            ds.dataset([], schema=self.partitioning.schema).scanner(filter=expr)
-        return self._get_fragments(expr)
-
-    def fragment_keys(self) -> list:
-        """Filtered partitioned datasets may not have fragments."""
-        with contextlib.suppress(AttributeError, ValueError):
-            Table.get_fragments(self)
-            return self.partitioning.schema.names
-        return []
+    def fragments(self, *names, counts: str = '') -> pa.Table:
+        """Return selected fragment keys in a table."""
+        try:
+            expr = self._scan_options.get('filter')
+            if expr is not None:  # raise ValueError if filter references other fields
+                ds.dataset([], schema=self.partitioning.schema).scanner(filter=expr)
+        except (AttributeError, ValueError):
+            return pa.table({})
+        fragments = self._get_fragments(expr)
+        parts = [ds.get_partition_keys(frag.partition_expression) for frag in fragments]
+        names, table = set(names), pa.Table.from_pylist(parts)  # type: ignore
+        keys = [name for name in table.schema.names if name in names]
+        table = table.group_by(keys, use_threads=False).aggregate([])
+        if not counts:
+            return table
+        if not table.schema:
+            return table.append_column(counts, pa.array([self.count_rows()]))
+        exprs = [bit_all(pc.field(key) == row[key] for key in row) for row in table.to_pylist()]
+        column = [self.filter(expr).count_rows() for expr in exprs]
+        return table.append_column(counts, pa.array(column))
 
     def rank_keys(self, k: int, *names: str, dense: bool = True) -> tuple:
         """Return expression and unmatched fields for partitioned dataset which filters by rank.
@@ -565,21 +522,19 @@ class Table(pa.Table):
             *names: columns to rank by
             dense: use dense rank; false indicates sorting
         """
-        schema = set(Table.fragment_keys(self))
-        keys = dict(itertools.takewhile(lambda key: key[0] in schema, map(sort_key, names)))
+        keys = dict(map(sort_key, names))
+        table = Table.fragments(self, *keys, counts='' if dense else '_')
+        keys = {name: keys[name] for name in table.schema.names if name in keys}
         if not keys:
             return None, names
-        parts = [ds.get_partition_keys(frag.partition_expression) for frag in self.get_fragments()]
-        table = pa.Table.from_pylist(parts).group_by(keys).aggregate([])
         if dense:
             table = table.take(pc.select_k_unstable(table, k, keys.items()))
         else:
             table = table.sort_by(keys.items())
+            totals = itertools.accumulate(table['_'].to_pylist())
+            counts = (count for count, total in enumerate(totals, 1) if total >= k)
+            table = table[: next(counts, None)].remove_column(len(table) - 1)
         exprs = [bit_all(pc.field(key) == row[key] for key in row) for row in table.to_pylist()]
-        totals = itertools.accumulate(self.filter(expr).count_rows() for expr in exprs)
-        counts = (count for count, total in enumerate(totals, 1) if total >= k)
-        if not dense:
-            table = table[: next(counts, None)]
         remaining = names[len(keys) :]
         if remaining or not dense:  # fields with a single value are no longer needed
             selectors = [len(table[key].unique()) > 1 for key in keys]
