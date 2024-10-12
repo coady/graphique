@@ -53,9 +53,6 @@ class Agg:
         'tdigest': pc.TDigestOptions,
         'variance': pc.VarianceOptions,
     }
-
-    associatives = {'all', 'any', 'first', 'last', 'max', 'min', 'one', 'product', 'sum'}
-    associatives |= {'count'}  # transformed to be associative
     ordered = {'first', 'last'}
 
     def __init__(self, name: str, alias: str = '', **options):
@@ -597,14 +594,18 @@ class Nodes(ac.Declaration):
     def __init__(self, name, *args, inputs=None, **options):
         super().__init__(name, self.option_map[name](*args, **options), inputs)
 
-    @classmethod
-    def scan(cls, dataset: ds.Dataset, columns: Optional[Iterable] = None) -> Self:
-        """Return source node from a dataset."""
-        self = cls('scan', dataset, columns=columns)
-        expr = dataset._scan_options.get('filter')
-        if expr is not None:
-            self = self.apply('filter', expr)
-        return self if columns is None else self.project(columns)
+    def scan(self, columns: Iterable[str]) -> Self:
+        """Return projected source node, supporting datasets and tables."""
+        if isinstance(self, ds.Dataset):
+            expr = self._scan_options.get('filter')
+            self = Nodes('scan', self, columns=columns)
+            if expr is not None:
+                self = self.apply('filter', expr)
+        elif isinstance(self, pa.Table):
+            self = Nodes('table_source', self)
+        if isinstance(columns, Mapping):
+            return self.apply('project', columns.values(), columns)
+        return self.apply('project', map(pc.field, columns))
 
     @property
     def schema(self) -> pa.Schema:
@@ -633,12 +634,6 @@ class Nodes(ac.Declaration):
 
     filter = functools.partialmethod(apply, 'filter')
 
-    def project(self, columns: Union[Mapping[str, pc.Expression], Iterable[str]]) -> Self:
-        """Add `project` node from columns names with optional expressions."""
-        if isinstance(columns, Mapping):
-            return self.apply('project', columns.values(), columns)
-        return self.apply('project', map(pc.field, columns))
-
     def group(self, *names, **aggs: tuple) -> Self:
         """Add `aggregate` node with dictionary support.
 
@@ -653,8 +648,4 @@ class Nodes(ac.Declaration):
             field = self.schema.field(name)
             if pa.types.is_dictionary(field.type):
                 columns[name] = columns[name].cast(field.type.value_type)
-        if isinstance(self, ds.Dataset):
-            self = Nodes.scan(self, columns)
-        else:
-            self = self.project(columns)
-        return self.apply('aggregate', aggregates, names)
+        return Nodes.scan(self, columns).apply('aggregate', aggregates, names)

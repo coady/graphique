@@ -76,14 +76,12 @@ class Dataset:
         names = list(self.references(info))
         if len(names) >= len(self.schema().names):
             return self.source
-        if isinstance(self.source, ds.Dataset):
-            return Nodes.scan(self.source, names)
-        if isinstance(self.source, Nodes):
-            return self.source.project(names)
         if isinstance(self.source, ds.Scanner):
             schema = self.source.projected_schema
             return ds.Scanner.from_batches(self.source.to_batches(), schema=schema, columns=names)
-        return self.source.select(names)
+        if isinstance(self.source, pa.Table):
+            return self.source.select(names)
+        return Nodes.scan(self.source, names)
 
     def to_table(self, info: Info, length: Optional[int] = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
@@ -143,9 +141,7 @@ class Dataset:
                 source = T.range(source, name, lower, upper, **includes)
             if len(query.pop('eq', [])) != 1 or query:
                 break
-        self = type(self)(source)
-        expr = Expression.from_query(**queries)
-        return self if expr.to_arrow() is None else self.scan(info, filter=expr)
+        return type(self)(source).scan(info, filter=Expression.from_query(**queries))
 
     @doc_field
     def type(self) -> str:
@@ -258,8 +254,6 @@ class Dataset:
             for agg in values:
                 aggs[agg.alias] = (agg.name, prefix + func, agg.func_options(func))
         source = self.to_table(info) if isinstance(self.source, ds.Scanner) else self.source
-        if isinstance(source, pa.Table):
-            source = ds.dataset(source)
         source = Nodes.group(source, *by, **aggs)
         if ordered:
             source = self.add_metric(info, source.to_table(use_threads=False), mode='group')
@@ -461,13 +455,7 @@ class Dataset:
             scanner = ds.Scanner.from_batches(self.source.to_batches(), **options)
             return type(self)(self.add_metric(info, scanner.to_table(), mode='batch'))
         source = self.source if expr is None else self.source.filter(expr)
-        if isinstance(source, ds.Dataset):
-            return type(self)(Nodes.scan(source, projection) if columns else source)
-        if isinstance(source, pa.Table):
-            if not columns:
-                return type(self)(source.select(list(projection)))
-            source = Nodes('table_source', source)
-        return type(self)(source.project(projection))
+        return type(self)(Nodes.scan(source, projection) if columns else source)
 
     @doc_field(
         right="name of right table; must be on root Query type",

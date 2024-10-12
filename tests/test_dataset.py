@@ -252,11 +252,9 @@ def test_federation(fedclient):
 
     data = fedclient.execute(
         """{ _entities(representations: {__typename: "ZipcodesTable", zipcode: 90001}) {
-        ... on ZipcodesTable { length row { state } schema { names } } } }"""
+        ... on ZipcodesTable { length type row { state } } } }"""
     )
-    assert data == {
-        '_entities': [{'length': 1, 'row': {'state': 'CA'}, 'schema': {'names': ['state']}}]
-    }
+    assert data == {'_entities': [{'length': 1, 'type': 'Nodes', 'row': {'state': 'CA'}}]}
     data = fedclient.execute("""{ states { filter(state: {eq: "CA"}) { columns { indices {
         takeFrom(field: "zipcodes") { __typename column(name: "state") { length } } } } } } }""")
     table = data['states']['filter']['columns']['indices']['takeFrom']

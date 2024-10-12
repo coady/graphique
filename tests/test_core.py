@@ -85,7 +85,6 @@ def test_membership():
 
 def test_nodes(table):
     dataset = ds.dataset(table).filter(pc.field('state') == 'CA')
-    assert Nodes.scan(dataset).to_table()['state'].unique().to_pylist() == ['CA']
     (column,) = Nodes.scan(dataset, columns={'_': pc.field('state')}).to_table()
     assert column.unique().to_pylist() == ['CA']
     table = Nodes.group(dataset, 'county', 'city', counts=([], 'hash_count_all', None)).to_table()
