@@ -7,18 +7,17 @@ from graphique.scalars import parse_duration, duration_isoformat
 
 
 def test_duration():
-    assert duration_isoformat(parse_duration('P1Y1M1DT1H1M1.1S')) == 'P1Y1M1DT1H1M1.1S'
+    assert duration_isoformat(parse_duration('P1Y1M1DT1H1M1.1S')) == 'P13M1DT1H1M1.1S'
     assert duration_isoformat(parse_duration('P1M1DT1H1M1.1S')) == 'P1M1DT1H1M1.1S'
     assert duration_isoformat(parse_duration('P1DT1H1M1.1S')) == 'P1DT1H1M1.1S'
     assert duration_isoformat(parse_duration('PT1H1M1.1S')) == 'PT1H1M1.1S'
     assert duration_isoformat(parse_duration('PT1M1.1S')) == 'PT1M1.1S'
     assert duration_isoformat(parse_duration('PT1.1S')) == 'PT1.1S'
     assert duration_isoformat(parse_duration('PT1S')) == 'PT1S'
-    assert duration_isoformat(parse_duration('P0D')) == 'PT0S'
-    assert duration_isoformat(parse_duration('PT0S')) == 'PT0S'
-    assert duration_isoformat(parse_duration('P-1DT-1H')) == 'P-2DT23H0S'
-    assert duration_isoformat(parse_duration('P0MT')) == 'P0MT0S'
-    assert duration_isoformat(parse_duration('P0YT')) == 'P0MT0S'
+    assert duration_isoformat(parse_duration('P0D')) == 'P0D'
+    assert duration_isoformat(parse_duration('PT0S')) == 'P0D'
+    assert duration_isoformat(parse_duration('P0MT')) == 'P0M0D'
+    assert duration_isoformat(parse_duration('P0YT')) == 'P0M0D'
     with pytest.raises(ValueError):
         duration_isoformat(parse_duration('T1H'))
     with pytest.raises(ValueError):

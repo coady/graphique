@@ -1,2 +1,3 @@
 pyarrow>=17
 strawberry-graphql[asgi,cli]>=0.236
+isodate>=0.7

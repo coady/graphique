@@ -222,13 +222,15 @@ def test_duration(executor):
         """{ scan(columns: {alias: "diff", checked: true, subtract: [{name: "timestamp"}, {name: "timestamp"}]})
         { column(name: "diff") { ... on DurationColumn { unique { values } } } } }"""
     )
-    assert data == {'scan': {'column': {'unique': {'values': ['PT0S', None]}}}}
+    assert data == {'scan': {'column': {'unique': {'values': ['P0D', None]}}}}
     data = executor('{ runs(split: [{name: "timestamp", gt: 0.0}]) { length } }')
     assert data == {'runs': {'length': 1}}
-    data = executor("""{ scan(columns: {alias: "diff", temporal:
+    data = executor(
+        """{ scan(columns: {alias: "diff", temporal:
         {monthDayNanoIntervalBetween: [{name: "timestamp"}, {name: "timestamp"}]}})
-        { column(name: "diff") { ... on DurationColumn { values } } } }""")
-    assert data == {'scan': {'column': {'values': ['P0MT0S', None]}}}
+        { column(name: "diff") { ... on DurationColumn { values } } } }"""
+    )
+    assert data == {'scan': {'column': {'values': ['P0M0D', None]}}}
 
 
 def test_list(executor):

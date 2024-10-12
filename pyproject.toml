@@ -50,7 +50,7 @@ line-length = 100
 quote-style = "preserve"
 
 [[tool.mypy.overrides]]
-module = ["numpy.*", "pyarrow.*", "strawberry.*", "starlette.*"]
+module = ["numpy.*", "pyarrow.*", "strawberry.*", "starlette.*", "isodate.*"]
 ignore_missing_imports = true
 
 [tool.coverage.run]

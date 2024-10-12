@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 ### Changed
+* `isodate` dependency for durations
 * Acero engine used for scanning
 * Grouping defaults to parallelized but unordered
 * Partitioning supports arbitrary functions
