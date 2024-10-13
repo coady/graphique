@@ -26,9 +26,6 @@ def test_duration():
 
 def test_dictionary(table):
     array = table['state'].dictionary_encode()
-    assert C.min(array) == 'AK'
-    assert C.max(array) == 'WY'
-    assert C.min_max(array[:0]) == {'min': None, 'max': None}
     table = pa.table({'state': array})
     assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
     array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()

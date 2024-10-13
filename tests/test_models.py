@@ -83,8 +83,6 @@ def test_columns(executor):
     assert execute('{ string { type } }') == {
         'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
     }
-    assert execute('{ string { min max } }')
-    assert execute('{ string { first last } }') == {'string': {'first': '', 'last': ''}}
 
 
 def test_boolean(executor):

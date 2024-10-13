@@ -140,19 +140,19 @@ class NominalColumn(Generic[T], Column):
 class OrdinalColumn(NominalColumn[T]):
     @compute_field
     def first(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
-        return C.first_last(self.array, skip_nulls=skip_nulls, min_count=min_count)['first']
+        return pc.first(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
     def last(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
-        return C.first_last(self.array, skip_nulls=skip_nulls, min_count=min_count)['last']
+        return pc.last(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
     def min(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
-        return C.min_max(self.array, skip_nulls=skip_nulls, min_count=min_count)['min']
+        return pc.min(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
     def max(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
-        return C.min_max(self.array, skip_nulls=skip_nulls, min_count=min_count)['max']
+        return pc.max(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
     def index(self, value: T, start: Long = 0, end: Optional[Long] = None) -> Long:

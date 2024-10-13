@@ -265,26 +265,6 @@ class Column(pa.ChunkedArray):
         mask = predicate(Column.diff(self), *args) if args else Column.diff(self, predicate)
         return pc.indices_nonzero(pa.chunked_array(ends + mask.chunks + ends))
 
-    def first_last(self, **options):
-        if not pa.types.is_dictionary(self.type):
-            return pc.first_last(self, **options).as_py()
-        self = self.combine_chunks()
-        indices = pc.first_last(self.indices, **options).as_py().items()
-        return {key: None if index is None else self.dictionary[index] for key, index in indices}
-
-    def min_max(self, **options):
-        if pa.types.is_dictionary(self.type):
-            self = self.unique().dictionary_decode()
-        return pc.min_max(self, **options).as_py()
-
-    def min(self, **options):
-        """Return min of the values."""
-        return Column.min_max(self, **options)['min']
-
-    def max(self, **options):
-        """Return max of the values."""
-        return Column.min_max(self, **options)['max']
-
     def index(self, value, start=0, end=None) -> int:
         """Return the first index of a value."""
         with contextlib.suppress(NotImplementedError):
