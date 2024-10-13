@@ -321,12 +321,10 @@ class Dataset:
     def rank(self, info: Info, by: list[str], max: int = 1) -> Self:
         """Return table selected by maximum dense rank."""
         expr, by = T.rank_keys(self.source, max, *by)
-        source = self.source if expr is None else self.source.filter(expr)
-        if not by:
-            return type(self)(source)
-        if not isinstance(source, ds.Dataset):
-            source = self.to_table(info)
-        return type(self)(T.rank(source, max, *by))
+        if expr is not None:
+            self = type(self)(self.source.filter(expr))
+        source = self.select(info)
+        return type(self)(T.rank(source, max, *by) if by else source)
 
     @staticmethod
     def apply_list(table: Batch, list_: ListFunction) -> Batch:

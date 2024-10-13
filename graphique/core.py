@@ -436,7 +436,7 @@ class Table(pa.Table):
             indices: include original indices in the table
         """
         if length == 1 and not indices:
-            return Table.min_max(self, *names, skip_nulls=null_placement == 'at_end')[:1]
+            return Table.min_max(self, *names)[:1]
         indices_ = Table.sort_indices(self, *names, length=length, null_placement=null_placement)
         table = self.take(indices_)
         if indices:
@@ -456,17 +456,18 @@ class Table(pa.Table):
         table = pa.concat_tables(table for table in tables if table is not None)
         return Table.union(self, Table.from_counts(table, counts))
 
-    def min_max(self, *names: str, **options) -> Batch:
+    def min_max(self, *names: str) -> Self:
         """Return table filtered by minimum or maximum values."""
         for key, order in map(sort_key, names):
-            field = pc.field(key)
-            value = (Column.min if order == 'ascending' else Column.max)(self[key], **options)
-            self = self.filter(field.is_null() if value is None else field == value)
+            field, asc = pc.field(key), (order == 'ascending')
+            ((value,),) = Nodes.group(self, _=(key, ('min' if asc else 'max'), None)).to_table()
+            self = self.filter(field <= value if asc else field >= value)
         return self
 
-    @functools.singledispatch
     def rank(self, k: int, *names: str) -> Self:
         """Return table filtered by values within dense rank, similar to `select_k_unstable`."""
+        if k == 1:
+            return Table.min_max(self, *names)
         keys = dict(map(sort_key, names))
         table = Nodes.group(self, *keys).to_table()
         table = table.take(pc.select_k_unstable(table, k, keys.items()))
@@ -475,20 +476,6 @@ class Table(pa.Table):
             field, asc = pc.field(key), (order == 'ascending')
             exprs.append(field <= pc.max(table[key]) if asc else field >= pc.min(table[key]))
         return self.filter(bit_all(exprs))
-
-    @rank.register
-    def _(self: pa.Table, k, *names):
-        if k >= len(self):
-            return self
-        if k == 1:
-            return Table.min_max(self, *names)
-        return Table.rank(ds.dataset(self), k, *names).to_table()
-
-    @rank.register
-    def _(self: pa.RecordBatch, k, *names):
-        if k == 1:
-            return Table.min_max(self, *names)
-        return next(Table.rank(ds.dataset(self), k, *names).to_batches())
 
     def fragments(self, *names, counts: str = '') -> pa.Table:
         """Return selected fragment keys in a table."""
@@ -603,6 +590,8 @@ class Nodes(ac.Declaration):
                 self = self.apply('filter', expr)
         elif isinstance(self, pa.Table):
             self = Nodes('table_source', self)
+        elif isinstance(self, pa.RecordBatch):
+            self = Nodes('table_source', pa.table(self))
         if isinstance(columns, Mapping):
             return self.apply('project', columns.values(), columns)
         return self.apply('project', map(pc.field, columns))
