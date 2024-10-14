@@ -320,10 +320,10 @@ class Dataset:
     )
     def rank(self, info: Info, by: list[str], max: int = 1) -> Self:
         """Return table selected by maximum dense rank."""
-        expr, by = T.rank_keys(self.source, max, *by)
+        source = self.to_table(info) if isinstance(self.source, ds.Scanner) else self.source
+        expr, by = T.rank_keys(source, max, *by)
         if expr is not None:
-            self = type(self)(self.source.filter(expr))
-        source = self.select(info)
+            source = source.filter(expr)
         return type(self)(T.rank(source, max, *by) if by else source)
 
     @staticmethod

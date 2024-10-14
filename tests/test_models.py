@@ -12,6 +12,8 @@ def test_camel(aliasclient):
     assert data == {'filter': {'length': 1}}
     data = aliasclient.execute('{ group(by: "camelId") { length } }')
     assert data == {'group': {'length': 2}}
+    data = aliasclient.execute('{ rank(by: "camelId") { length } }')
+    assert data == {'rank': {'length': 1}}
 
 
 def test_snake(executor):
