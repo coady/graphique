@@ -224,7 +224,10 @@ class Dataset:
     def slice(
         self, info: Info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
     ) -> Self:
-        """Return zero-copy slice of table."""
+        """Return zero-copy slice of table.
+
+        Can also be sued to force loading a dataset.
+        """
         table = self.to_table(info, length and (offset + length if offset >= 0 else None))
         table = table[offset:][:length]  # `slice` bug: ARROW-15412
         return type(self)(table[::-1] if reverse else table)
@@ -232,7 +235,7 @@ class Dataset:
     @doc_field(
         by="column names; empty will aggregate into a single row table",
         counts="optionally include counts in an aliased column",
-        ordered="optinally disable parallelization to maintain ordering",
+        ordered="optionally disable parallelization to maintain ordering",
         aggregate="aggregation functions applied to other columns",
     )
     def group(
@@ -243,6 +246,11 @@ class Dataset:
         ordered: bool = False,
         aggregate: HashAggregates = {},  # type: ignore
     ) -> Self:
+        """Return table grouped by columns.
+
+        See `column` for accessing any column which has changed type. See `tables` to split on any
+        aggregated list columns.
+        """
         if not any(aggregate.keys()):
             fragments = T.fragments(self.source, *by, counts=counts)
             if set(fragments.schema.names) >= set(by):

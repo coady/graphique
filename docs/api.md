@@ -42,9 +42,8 @@ Note list inputs allow passing a single value, [coercing the input](https://spec
 ## Batches
 Datasets and scanners are processed in batches when possible, instead of loading the table into memory.
 
-* `scan` and `filter` - native parallel batch processing
+* `group`, `scan`, and `filter` - native parallel batch processing
 * `sort` with `length`
-* `group` with associated aggregates
 * `apply` with `list` functions
 * `rank`
 * `flatten`
@@ -52,24 +51,20 @@ Datasets and scanners are processed in batches when possible, instead of loading
 ## Partitions
 Partitioned datasets use fragment keys when possible.
 
-* `group` on fragment keys with associated aggregates
-* `rank` on fragment key
+* `group` on fragment keys with counts
+* `rank` and `sort` with length on fragment keys
 
 ## Column selection
 Each field resolver transforms a table or array as needed. When working with an embedded library like [pandas](https://pandas.pydata.org), it's common to select a working set of columns for efficiency. Whereas GraphQL has the advantage of knowing the entire query up front, so there is no `select` field because it's done automatically at every level of resolvers.
 
 ## List Arrays
-Arrow ListArrays are supported as ListColumns. `group: {aggregate: {list: ...}}` and `partition` leverage that feature to transform columns into ListColumns, which can be accessed via inline fragments and further aggregated. Though `group` hash aggregate functions are more efficient than creating lists.
+Arrow ListArrays are supported as ListColumns. `group: {aggregate: {list: ...}}` and `runs` leverage that feature to transform columns into ListColumns, which can be accessed via inline fragments and further aggregated. Though `group` hash aggregate functions are more efficient than creating lists.
 
 * `tables` returns a list of tables based on the list scalars.
 * `flatten` flattens the list columns and repeats the scalar columns as needed.
-* `apply(list: {...})` applies vector functions to the list scalars.
+* `apply(list: {filter:, ..., sort: ..., rank: ...})` applies vector functions to the list scalars.
 
-ListColumns support sorting and filtering within their list scalars. They must all have the same value lengths, which is naturally the case when the result of grouping. Iterating scalars (in Python) is not ideal, but it can be faster than re-aggregating, depending on the average list size. Alternatively, `flatten` can be used to transform lists, ignoring null or empty scalars.
-
-1. `flatten` with `indices`
-1. `scan`, `filter`, or `sort(by: ["<indices>", ...])`
-1. `partition(by: ["<indices>", ...])` or `group(by: "<indices>", aggregate: {...})`
+The list in use must all have the same value lengths, which is naturally the case when the result of grouping. Iterating scalars (in Python) is not ideal, but it can be faster than re-aggregating, depending on the average list size.
 
 ## Dictionary Arrays
 Arrow has dictionary-encoded arrays as a space optimization, but doesn't natively support some builtin functions on them. Support for dictionaries is extended, and often faster by only having to apply functions to the unique values.

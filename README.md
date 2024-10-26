@@ -40,8 +40,9 @@ Supply a mapping of names to datasets for multiple roots, and to enable federati
 import pyarrow.dataset as ds
 from graphique import GraphQL
 
-app = GraphQL(ds.dataset(...))  # Table is root query type
-app = GraphQL.federated({<name>: ds.dataset(...), ...}, keys={...})  # Tables on federated fields
+source = ds.dataset(...)
+app = GraphQL(source)  # Table is root query type
+app = GraphQL.federated({<name>: source, ...}, keys={<name>: [], ...})  # Tables on federated fields
 ```
 
 Start like any ASGI app.
