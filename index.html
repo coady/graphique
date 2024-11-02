@@ -1,0 +1,779 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="GraphQL service for arrow tables and parquet data sets.">
+      
+      
+      
+        <link rel="canonical" href="https://coady.github.io/graphique/">
+      
+      
+      
+        <link rel="next" href="api/">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.43">
+    
+    
+      
+        <title>graphique</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.0253249f.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#usage" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="graphique" class="md-header__button md-logo" aria-label="graphique" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            graphique
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Introduction
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/coady/graphique" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    coady/graphique
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="graphique" class="md-nav__button md-logo" aria-label="graphique" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    graphique
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/coady/graphique" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    coady/graphique
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      API
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#types" class="md-nav__link">
+    <span class="md-ellipsis">
+      types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      selection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projection" class="md-nav__link">
+    <span class="md-ellipsis">
+      projection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      aggregation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      ordering
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependencies
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tests
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    GraphQL API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Example Schema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="examples/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Example Queries
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Core Reference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      API
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#types" class="md-nav__link">
+    <span class="md-ellipsis">
+      types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      selection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projection" class="md-nav__link">
+    <span class="md-ellipsis">
+      projection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aggregation" class="md-nav__link">
+    <span class="md-ellipsis">
+      aggregation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      ordering
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependencies
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tests
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  <h1>Introduction</h1>
+
+<p><a href="https://pypi.org/project/graphique/"><img alt="image" src="https://img.shields.io/pypi/v/graphique.svg" /></a>
+<img alt="image" src="https://img.shields.io/pypi/pyversions/graphique.svg" />
+<a href="https://pepy.tech/project/graphique"><img alt="image" src="https://pepy.tech/badge/graphique" /></a>
+<img alt="image" src="https://img.shields.io/pypi/status/graphique.svg" />
+<a href="https://github.com/coady/graphique/actions/workflows/build.yml"><img alt="build" src="https://github.com/coady/graphique/actions/workflows/build.yml/badge.svg" /></a>
+<a href="https://codecov.io/gh/coady/graphique/"><img alt="image" src="https://codecov.io/gh/coady/graphique/branch/main/graph/badge.svg" /></a>
+<a href="https://github.com/coady/graphique/actions/workflows/github-code-scanning/codeql"><img alt="CodeQL" src="https://github.com/coady/graphique/actions/workflows/github-code-scanning/codeql/badge.svg" /></a>
+<a href="https://codspeed.io/coady/graphique"><img alt="CodSpeed Badge" src="https://img.shields.io/endpoint?url=https://codspeed.io/badge.json" /></a>
+<a href="https://github.com/astral-sh/ruff"><img alt="image" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" /></a>
+<a href="https://mypy-lang.org/"><img alt="image" src="https://mypy-lang.org/static/mypy_badge.svg" /></a></p>
+<p><a href="https://graphql.org">GraphQL</a> service for <a href="https://arrow.apache.org">arrow</a> tables and <a href="https://parquet.apache.org">parquet</a> data sets. The schema for a query API is derived automatically.</p>
+<h2 id="usage">Usage</h2>
+<pre><code class="language-console">% env PARQUET_PATH=... uvicorn graphique.service:app
+</code></pre>
+<p>Open http://localhost:8000/ to try out the API in <a href="https://github.com/graphql/graphiql/tree/main/packages/graphiql#readme">GraphiQL</a>. There is a test fixture at <code>./tests/fixtures/zipcodes.parquet</code>.</p>
+<pre><code class="language-console">% env PARQUET_PATH=... strawberry export-schema graphique.service:app.schema
+</code></pre>
+<p>outputs the graphql schema for a parquet data set.</p>
+<h3 id="configuration">Configuration</h3>
+<p>Graphique uses <a href="https://www.starlette.io/config/">Starlette's config</a>: in environment variables or a <code>.env</code> file. Config variables are used as input to a <a href="https://arrow.apache.org/docs/python/dataset.html">parquet dataset</a>.</p>
+<ul>
+<li>PARQUET_PATH: path to the parquet directory or file</li>
+<li>FEDERATED = '': field name to extend type <code>Query</code> with a federated <code>Table</code> </li>
+<li>DEBUG = False: run service in debug mode, which includes metrics</li>
+<li>COLUMNS = None: list of names, or mapping of aliases, of columns to select</li>
+<li>FILTERS = None: json <code>filter</code> query for which rows to read at startup</li>
+</ul>
+<p>For more options create a custom <a href="https://asgi.readthedocs.io/en/latest/index.html">ASGI</a> app. Call graphique's <code>GraphQL</code> on an arrow <a href="https://arrow.apache.org/docs/python/api/dataset.html">Dataset</a>, <a href="https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html">Scanner</a>, or <a href="https://arrow.apache.org/docs/python/generated/pyarrow.Table.html">Table</a>. The GraphQL <code>Table</code> type will be the root Query type.</p>
+<p>Supply a mapping of names to datasets for multiple roots, and to enable federation.</p>
+<pre><code class="language-python">import pyarrow.dataset as ds
+from graphique import GraphQL
+
+source = ds.dataset(...)
+app = GraphQL(source)  # Table is root query type
+app = GraphQL.federated({&lt;name&gt;: source, ...}, keys={&lt;name&gt;: [], ...})  # Tables on federated fields
+</code></pre>
+<p>Start like any ASGI app.</p>
+<pre><code class="language-console">uvicorn &lt;module&gt;:app
+</code></pre>
+<p>Configuration options exist to provide a convenient no-code solution, but are subject to change in the future. Using a custom app is recommended for production usage.</p>
+<h3 id="api">API</h3>
+<h4 id="types">types</h4>
+<ul>
+<li><code>Dataset</code>: interface for an arrow dataset, scanner, or table.</li>
+<li><code>Table</code>: implements the <code>Dataset</code> interface. Adds typed <code>row</code>, <code>columns</code>, and <code>filter</code> fields from introspecting the schema.</li>
+<li><code>Column</code>: interface for an arrow column (a.k.a. ChunkedArray). Each arrow data type has a corresponding column implementation: Boolean, Int, Long, Float, Decimal, Date, Datetime, Time, Duration, Base64, String, List, Struct. All columns have a <code>values</code> field for their list of scalars. Additional fields vary by type.</li>
+<li><code>Row</code>: scalar fields. Arrow tables are column-oriented, and graphique encourages that usage for performance. A single <code>row</code> field is provided for convenience, but a field for a list of rows is not. Requesting parallel columns is far more efficient.</li>
+</ul>
+<h4 id="selection">selection</h4>
+<ul>
+<li><code>slice</code>: contiguous selection of rows</li>
+<li><code>filter</code>: select rows with simple predicates</li>
+<li><code>scan</code>: select rows and project columns with expressions</li>
+</ul>
+<h4 id="projection">projection</h4>
+<ul>
+<li><code>columns</code>: provides a field for every <code>Column</code> in the schema</li>
+<li><code>column</code>: access a column of any type by name</li>
+<li><code>row</code>: provides a field for each scalar of a single row</li>
+<li><code>apply</code>: transform columns by applying a function</li>
+<li><code>join</code>: join tables by key columns</li>
+</ul>
+<h4 id="aggregation">aggregation</h4>
+<ul>
+<li><code>group</code>: group by given columns, and aggregate the others</li>
+<li><code>runs</code>: partition on adjacent values in given columns, transforming the others into list columns</li>
+<li><code>tables</code>: return a list of tables by splitting on the scalars in list columns</li>
+<li><code>flatten</code>: flatten list columns with repeated scalars</li>
+</ul>
+<h4 id="ordering">ordering</h4>
+<ul>
+<li><code>sort</code>: sort table by given columns</li>
+<li><code>rank</code>: select rows with smallest or largest values</li>
+</ul>
+<h3 id="performance">Performance</h3>
+<p>Graphique relies on native <a href="https://arrow.apache.org/docs/python/index.html">PyArrow</a> routines wherever possible. Otherwise it falls back to using <a href="https://numpy.org/doc/stable/">NumPy</a> or custom optimizations.</p>
+<p>By default, datasets are read on-demand, with only the necessary rows and columns scanned. Although graphique is a running service, <a href="https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html">parquet is performant</a> at reading a subset of data. Optionally specify <code>FILTERS</code> in the json <code>filter</code> format to read a subset of rows at startup, trading-off memory for latency. An empty filter (<code>{}</code>) will read the whole table.</p>
+<p>Specifying <code>COLUMNS</code> will limit memory usage when reading at startup (<code>FILTERS</code>). There is little speed difference as unused columns are inherently ignored. Optional aliasing can also be used for camel casing.</p>
+<p>If index columns are detected in the schema metadata, then an initial <code>filter</code> will also attempt a binary search on tables.</p>
+<h2 id="installation">Installation</h2>
+<pre><code class="language-console">% pip install graphique[server]
+</code></pre>
+<h2 id="dependencies">Dependencies</h2>
+<ul>
+<li>pyarrow</li>
+<li>strawberry-graphql[asgi,cli]</li>
+<li>numpy</li>
+<li>isodate</li>
+<li>uvicorn (or other <a href="https://asgi.readthedocs.io/en/latest/implementations.html">ASGI server</a>)</li>
+</ul>
+<h2 id="tests">Tests</h2>
+<p>100% branch coverage.</p>
+<pre><code class="language-console">% pytest [--cov]
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": ".", "features": [], "search": "assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.83f73b43.min.js"></script>
+      
+    
+  </body>
+</html>
