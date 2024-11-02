@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "graphique"
-version = "1.7"
+version = "1.8"
 dynamic = ["dependencies"]
 description = "GraphQL service for arrow tables and parquet data sets."
 readme = "README.md"
