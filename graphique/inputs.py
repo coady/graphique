@@ -2,13 +2,14 @@
 GraphQL input types.
 """
 
+from __future__ import annotations
 import functools
 import inspect
 import operator
 from collections.abc import Callable, Iterable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Generic, Optional, TypeVar, no_type_check
+from typing import Generic, TypeVar, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -71,7 +72,7 @@ class provisional:
 
 
 def default_field(
-    default=UNSET, func: Optional[Callable] = None, nullable: bool = False, **kwargs
+    default=UNSET, func: Callable | None = None, nullable: bool = False, **kwargs
 ) -> StrawberryField:
     """Use dataclass `default_factory` for `UNSET` or mutables."""
     if func is not None:
@@ -83,16 +84,16 @@ def default_field(
 
 @strawberry.input(description="predicates for scalars")
 class Filter(Generic[T], Input):
-    eq: Optional[list[Optional[T]]] = default_field(
+    eq: list[T | None] | None = default_field(
         description="== or `isin`; `null` is equivalent to arrow `is_null`.", nullable=True
     )
-    ne: Optional[T] = default_field(
+    ne: T | None = default_field(
         description="!=; `null` is equivalent to arrow `is_valid`.", nullable=True
     )
-    lt: Optional[T] = default_field(description="<")
-    le: Optional[T] = default_field(description="<=")
-    gt: Optional[T] = default_field(description=r"\>")
-    ge: Optional[T] = default_field(description=r"\>=")
+    lt: T | None = default_field(description="<")
+    le: T | None = default_field(description="<=")
+    gt: T | None = default_field(description=r"\>")
+    ge: T | None = default_field(description=r"\>=")
 
     nullables = {'eq', 'ne'}
 
@@ -133,7 +134,7 @@ class Pairwise(Field):
 class Index(Field):
     value: JSON
     start: Long = 0
-    end: Optional[Long] = None
+    end: Long | None = None
 
 
 @strawberry.input
@@ -161,7 +162,7 @@ class Rank(Field):
 @strawberry.input
 class Sort:
     by: list[str]
-    length: Optional[Long] = None
+    length: Long | None = None
 
 
 @strawberry.input
@@ -174,12 +175,12 @@ class Ranked:
 class ListFunction(Input):
     deprecation = "List scalar functions will be moved to `scan(...: {list: ...})`"
 
-    filter: 'Expression' = default_field({}, description="filter within list scalars")
-    sort: Optional[Sort] = default_field(description="sort within list scalars")
-    rank: Optional[Ranked] = default_field(description="select by dense rank within list scalars")
-    index: Optional[Index] = default_field(func=pc.index, deprecation_reason=deprecation)
-    mode: Optional[Mode] = default_field(func=pc.mode, deprecation_reason=deprecation)
-    quantile: Optional[Quantile] = default_field(func=pc.quantile, deprecation_reason=deprecation)
+    filter: Expression = default_field({}, description="filter within list scalars")
+    sort: Sort | None = default_field(description="sort within list scalars")
+    rank: Ranked | None = default_field(description="select by dense rank within list scalars")
+    index: Index | None = default_field(func=pc.index, deprecation_reason=deprecation)
+    mode: Mode | None = default_field(func=pc.mode, deprecation_reason=deprecation)
+    quantile: Quantile | None = default_field(func=pc.quantile, deprecation_reason=deprecation)
 
     def keys(self):
         return set(super().keys()) - {'filter', 'sort', 'rank'}
@@ -252,10 +253,10 @@ class Diff(Input):
     """
 
     name: str
-    less: Optional[float] = default_field(name='lt', description="<", nullable=True)
-    less_equal: Optional[float] = default_field(name='le', description="<=", nullable=True)
-    greater: Optional[float] = default_field(name='gt', description=r"\>", nullable=True)
-    greater_equal: Optional[float] = default_field(name='ge', description=r"\>=", nullable=True)
+    less: float | None = default_field(name='lt', description="<", nullable=True)
+    less_equal: float | None = default_field(name='le', description="<=", nullable=True)
+    greater: float | None = default_field(name='gt', description=r"\>", nullable=True)
+    greater_equal: float | None = default_field(name='ge', description=r"\>=", nullable=True)
 
     nullables = {'less', 'less_equal', 'greater', 'greater_equal'}
 
@@ -275,7 +276,7 @@ class Expression:
     name: list[str] = default_field([], description="field name(s)")
     cast: str = strawberry.field(default='', description=f"cast as {links.type}")
     safe: bool = strawberry.field(default=True, description="check for conversion errors on cast")
-    value: Optional[JSON] = default_field(
+    value: JSON | None = default_field(
         description="JSON scalar; also see typed scalars", nullable=True
     )
     kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
@@ -288,58 +289,56 @@ class Expression:
     duration: list[timedelta] = default_field([])
     time_: list[time] = default_field([], name='time')
 
-    eq: list['Expression'] = default_field([], description="==")
-    ne: list['Expression'] = default_field([], description="!=")
-    lt: list['Expression'] = default_field([], description="<")
-    le: list['Expression'] = default_field([], description="<=")
-    gt: list['Expression'] = default_field([], description=r"\>")
-    ge: list['Expression'] = default_field([], description=r"\>=")
-    inv: Optional['Expression'] = default_field(description="~")
+    eq: list[Expression] = default_field([], description="==")
+    ne: list[Expression] = default_field([], description="!=")
+    lt: list[Expression] = default_field([], description="<")
+    le: list[Expression] = default_field([], description="<=")
+    gt: list[Expression] = default_field([], description=r"\>")
+    ge: list[Expression] = default_field([], description=r"\>=")
+    inv: Expression | None = default_field(description="~")
 
-    abs: Optional['Expression'] = default_field(func=pc.abs)
-    add: list['Expression'] = default_field([], func=pc.add)
-    divide: list['Expression'] = default_field([], func=pc.divide)
-    multiply: list['Expression'] = default_field([], func=pc.multiply)
-    negate: Optional['Expression'] = default_field(func=pc.negate)
-    power: list['Expression'] = default_field([], func=pc.power)
-    sign: Optional['Expression'] = default_field(func=pc.sign)
-    subtract: list['Expression'] = default_field([], func=pc.subtract)
+    abs: Expression | None = default_field(func=pc.abs)
+    add: list[Expression] = default_field([], func=pc.add)
+    divide: list[Expression] = default_field([], func=pc.divide)
+    multiply: list[Expression] = default_field([], func=pc.multiply)
+    negate: Expression | None = default_field(func=pc.negate)
+    power: list[Expression] = default_field([], func=pc.power)
+    sign: Expression | None = default_field(func=pc.sign)
+    subtract: list[Expression] = default_field([], func=pc.subtract)
 
-    bit_wise: Optional['BitWise'] = default_field(description="bit-wise functions")
-    rounding: Optional['Rounding'] = default_field(description="rounding functions")
-    log: Optional['Log'] = default_field(description="logarithmic functions")
-    trig: Optional['Trig'] = default_field(description="trigonometry functions")
-    element_wise: Optional['ElementWise'] = default_field(
-        description="element-wise aggregate functions"
-    )
+    bit_wise: BitWise | None = default_field(description="bit-wise functions")
+    rounding: Rounding | None = default_field(description="rounding functions")
+    log: Log | None = default_field(description="logarithmic functions")
+    trig: Trig | None = default_field(description="trigonometry functions")
+    element_wise: ElementWise | None = default_field(description="element-wise aggregate functions")
 
-    and_: list['Expression'] = default_field([], name='and', description="&")
-    and_not: list['Expression'] = default_field([], func=pc.and_not)
-    or_: list['Expression'] = default_field([], name='or', description="|")
-    xor: list['Expression'] = default_field([], func=pc.xor)
+    and_: list[Expression] = default_field([], name='and', description="&")
+    and_not: list[Expression] = default_field([], func=pc.and_not)
+    or_: list[Expression] = default_field([], name='or', description="|")
+    xor: list[Expression] = default_field([], func=pc.xor)
 
-    utf8: Optional['Utf8'] = default_field(description="utf8 string functions")
-    string_is_ascii: Optional['Expression'] = default_field(func=pc.string_is_ascii)
-    substring: Optional['MatchSubstring'] = default_field(description="match substring functions")
+    utf8: Utf8 | None = default_field(description="utf8 string functions")
+    string_is_ascii: Expression | None = default_field(func=pc.string_is_ascii)
+    substring: MatchSubstring | None = default_field(description="match substring functions")
 
-    binary: Optional['Binary'] = default_field(description="binary functions")
-    set_lookup: Optional['SetLookup'] = default_field(description="set lookup functions")
+    binary: Binary | None = default_field(description="binary functions")
+    set_lookup: SetLookup | None = default_field(description="set lookup functions")
 
-    is_finite: Optional['Expression'] = default_field(func=pc.is_finite)
-    is_inf: Optional['Expression'] = default_field(func=pc.is_inf)
-    is_nan: Optional['Expression'] = default_field(func=pc.is_nan)
-    true_unless_null: Optional['Expression'] = default_field(func=pc.true_unless_null)
+    is_finite: Expression | None = default_field(func=pc.is_finite)
+    is_inf: Expression | None = default_field(func=pc.is_inf)
+    is_nan: Expression | None = default_field(func=pc.is_nan)
+    true_unless_null: Expression | None = default_field(func=pc.true_unless_null)
 
-    case_when: list['Expression'] = default_field([], func=pc.case_when)
-    choose: list['Expression'] = default_field([], func=pc.choose)
-    coalesce: list['Expression'] = default_field([], func=pc.coalesce)
-    if_else: list['Expression'] = default_field([], func=pc.if_else)
+    case_when: list[Expression] = default_field([], func=pc.case_when)
+    choose: list[Expression] = default_field([], func=pc.choose)
+    coalesce: list[Expression] = default_field([], func=pc.coalesce)
+    if_else: list[Expression] = default_field([], func=pc.if_else)
 
-    temporal: Optional['Temporal'] = default_field(description="temporal functions")
+    temporal: Temporal | None = default_field(description="temporal functions")
 
-    replace_with_mask: list['Expression'] = default_field([], func=pc.replace_with_mask)
+    replace_with_mask: list[Expression] = default_field([], func=pc.replace_with_mask)
 
-    list: Optional['Lists'] = default_field(description="list array functions")
+    list: Lists | None = default_field(description="list array functions")
 
     unaries = ('inv', 'abs', 'negate', 'sign', 'string_is_ascii', 'is_finite', 'is_inf', 'is_nan')
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
@@ -349,7 +348,7 @@ class Expression:
     groups = ('bit_wise', 'rounding', 'log', 'trig', 'element_wise', 'utf8', 'substring', 'binary')
     groups += ('set_lookup', 'temporal', 'list')  # type: ignore
 
-    def to_arrow(self) -> Optional[ds.Expression]:
+    def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
         fields = []
         if self.name:
@@ -457,11 +456,11 @@ class BitWise(Fields):
 
 @strawberry.input(description="Rounding functions.")
 class Rounding(Fields):
-    ceil: Optional[Expression] = default_field(func=pc.ceil)
-    floor: Optional[Expression] = default_field(func=pc.floor)
-    trunc: Optional[Expression] = default_field(func=pc.trunc)
+    ceil: Expression | None = default_field(func=pc.ceil)
+    floor: Expression | None = default_field(func=pc.floor)
+    trunc: Expression | None = default_field(func=pc.trunc)
 
-    round: Optional[Expression] = default_field(func=pc.round)
+    round: Expression | None = default_field(func=pc.round)
     ndigits: int = 0
     round_mode: str = 'half_to_even'
     multiple: float = 1.0
@@ -474,8 +473,8 @@ class Rounding(Fields):
 
 @strawberry.input(description="Logarithmic functions.")
 class Log(Fields):
-    ln: Optional[Expression] = default_field(func=pc.ln)
-    log1p: Optional[Expression] = default_field(func=pc.log1p)
+    ln: Expression | None = default_field(func=pc.ln)
+    log1p: Expression | None = default_field(func=pc.log1p)
     logb: list[Expression] = default_field([], func=pc.logb)
 
 
@@ -483,13 +482,13 @@ class Log(Fields):
 class Trig(Fields):
     checked: bool = strawberry.field(default=False, description="check for overflow errors")
 
-    acos: Optional[Expression] = default_field(func=pc.acos)
-    asin: Optional[Expression] = default_field(func=pc.asin)
-    atan: Optional[Expression] = default_field(func=pc.atan)
+    acos: Expression | None = default_field(func=pc.acos)
+    asin: Expression | None = default_field(func=pc.asin)
+    atan: Expression | None = default_field(func=pc.atan)
     atan2: list[Expression] = default_field([], func=pc.atan2)
-    cos: Optional[Expression] = default_field(func=pc.cos)
-    sin: Optional[Expression] = default_field(func=pc.sin)
-    tan: Optional[Expression] = default_field(func=pc.tan)
+    cos: Expression | None = default_field(func=pc.cos)
+    sin: Expression | None = default_field(func=pc.sin)
+    tan: Expression | None = default_field(func=pc.tan)
 
     def getfunc(self, name):
         return getattr(pc, name + ('_checked' * self.checked))
@@ -504,40 +503,40 @@ class ElementWise(Fields):
 
 @strawberry.input(description="Utf8 string functions.")
 class Utf8(Fields):
-    is_alnum: Optional[Expression] = default_field(func=pc.utf8_is_alnum)
-    is_alpha: Optional[Expression] = default_field(func=pc.utf8_is_alpha)
-    is_decimal: Optional[Expression] = default_field(func=pc.utf8_is_decimal)
-    is_digit: Optional[Expression] = default_field(func=pc.utf8_is_digit)
-    is_lower: Optional[Expression] = default_field(func=pc.utf8_is_lower)
-    is_numeric: Optional[Expression] = default_field(func=pc.utf8_is_numeric)
-    is_printable: Optional[Expression] = default_field(func=pc.utf8_is_printable)
-    is_space: Optional[Expression] = default_field(func=pc.utf8_is_space)
-    is_title: Optional[Expression] = default_field(func=pc.utf8_is_title)
-    is_upper: Optional[Expression] = default_field(func=pc.utf8_is_upper)
+    is_alnum: Expression | None = default_field(func=pc.utf8_is_alnum)
+    is_alpha: Expression | None = default_field(func=pc.utf8_is_alpha)
+    is_decimal: Expression | None = default_field(func=pc.utf8_is_decimal)
+    is_digit: Expression | None = default_field(func=pc.utf8_is_digit)
+    is_lower: Expression | None = default_field(func=pc.utf8_is_lower)
+    is_numeric: Expression | None = default_field(func=pc.utf8_is_numeric)
+    is_printable: Expression | None = default_field(func=pc.utf8_is_printable)
+    is_space: Expression | None = default_field(func=pc.utf8_is_space)
+    is_title: Expression | None = default_field(func=pc.utf8_is_title)
+    is_upper: Expression | None = default_field(func=pc.utf8_is_upper)
 
-    capitalize: Optional[Expression] = default_field(func=pc.utf8_capitalize)
-    length: Optional[Expression] = default_field(func=pc.utf8_length)
-    lower: Optional[Expression] = default_field(func=pc.utf8_lower)
-    reverse: Optional[Expression] = default_field(func=pc.utf8_reverse)
-    swapcase: Optional[Expression] = default_field(func=pc.utf8_swapcase)
-    title: Optional[Expression] = default_field(func=pc.utf8_title)
-    upper: Optional[Expression] = default_field(func=pc.utf8_upper)
+    capitalize: Expression | None = default_field(func=pc.utf8_capitalize)
+    length: Expression | None = default_field(func=pc.utf8_length)
+    lower: Expression | None = default_field(func=pc.utf8_lower)
+    reverse: Expression | None = default_field(func=pc.utf8_reverse)
+    swapcase: Expression | None = default_field(func=pc.utf8_swapcase)
+    title: Expression | None = default_field(func=pc.utf8_title)
+    upper: Expression | None = default_field(func=pc.utf8_upper)
 
-    ltrim: Optional[Expression] = default_field(func=pc.utf8_ltrim)
-    rtrim: Optional[Expression] = default_field(func=pc.utf8_rtrim)
-    trim: Optional[Expression] = default_field(func=pc.utf8_trim)
+    ltrim: Expression | None = default_field(func=pc.utf8_ltrim)
+    rtrim: Expression | None = default_field(func=pc.utf8_rtrim)
+    trim: Expression | None = default_field(func=pc.utf8_trim)
     characters: str = default_field('', description="trim options; by default trims whitespace")
 
-    replace_slice: Optional[Expression] = default_field(func=pc.utf8_replace_slice)
-    slice_codeunits: Optional[Expression] = default_field(func=pc.utf8_slice_codeunits)
+    replace_slice: Expression | None = default_field(func=pc.utf8_replace_slice)
+    slice_codeunits: Expression | None = default_field(func=pc.utf8_slice_codeunits)
     start: int = 0
-    stop: Optional[int] = UNSET
+    stop: int | None = UNSET
     step: int = 1
     replacement: str = ''
 
-    center: Optional[Expression] = default_field(func=pc.utf8_center)
-    lpad: Optional[Expression] = default_field(func=pc.utf8_lpad)
-    rpad: Optional[Expression] = default_field(func=pc.utf8_rpad)
+    center: Expression | None = default_field(func=pc.utf8_center)
+    lpad: Expression | None = default_field(func=pc.utf8_lpad)
+    rpad: Expression | None = default_field(func=pc.utf8_rpad)
     width: int = 0
     padding: str = ''
 
@@ -549,16 +548,16 @@ class Utf8(Fields):
 
 @strawberry.input(description="Binary functions.")
 class Binary(Fields):
-    length: Optional[Expression] = default_field(func=pc.binary_length)
+    length: Expression | None = default_field(func=pc.binary_length)
     repeat: list[Expression] = default_field([], func=pc.binary_repeat)
-    reverse: Optional[Expression] = default_field(func=pc.binary_reverse)
+    reverse: Expression | None = default_field(func=pc.binary_reverse)
 
     join: list[Expression] = default_field([], func=pc.binary_join)
     join_element_wise: list[Expression] = default_field([], func=pc.binary_join_element_wise)
     null_handling: str = 'emit_null'
     null_replacement: str = ''
 
-    replace_slice: Optional[Expression] = default_field(func=pc.binary_replace_slice)
+    replace_slice: Expression | None = default_field(func=pc.binary_replace_slice)
     start: int = 0
     stop: int = 0
     replacement: bytes = b''
@@ -568,22 +567,20 @@ class Binary(Fields):
 
 @strawberry.input(description="Match substring functions.")
 class MatchSubstring(Fields):
-    count_substring: Optional[Expression] = default_field(name='count', func=pc.count_substring)
-    ends_with: Optional[Expression] = default_field(func=pc.ends_with)
-    find_substring: Optional[Expression] = default_field(name='find', func=pc.find_substring)
-    match_substring: Optional[Expression] = default_field(name='match', func=pc.match_substring)
-    starts_with: Optional[Expression] = default_field(func=pc.starts_with)
-    replace_substring: Optional[Expression] = default_field(
-        name='replace', func=pc.replace_substring
-    )
-    split_pattern: Optional[Expression] = default_field(name='split', func=pc.split_pattern)
-    extract: Optional[Expression] = default_field(func=pc.extract_regex)
+    count_substring: Expression | None = default_field(name='count', func=pc.count_substring)
+    ends_with: Expression | None = default_field(func=pc.ends_with)
+    find_substring: Expression | None = default_field(name='find', func=pc.find_substring)
+    match_substring: Expression | None = default_field(name='match', func=pc.match_substring)
+    starts_with: Expression | None = default_field(func=pc.starts_with)
+    replace_substring: Expression | None = default_field(name='replace', func=pc.replace_substring)
+    split_pattern: Expression | None = default_field(name='split', func=pc.split_pattern)
+    extract: Expression | None = default_field(func=pc.extract_regex)
     pattern: str = ''
     ignore_case: bool = False
     regex: bool = False
     replacement: str = ''
-    max_replacements: Optional[int] = None
-    max_splits: Optional[int] = None
+    max_replacements: int | None = None
+    max_splits: int | None = None
     reverse: bool = False
 
     def getfunc(self, name):
@@ -594,26 +591,26 @@ class MatchSubstring(Fields):
 
 @strawberry.input(description="Temporal functions.")
 class Temporal(Fields):
-    day: Optional[Expression] = default_field(func=pc.day)
-    day_of_year: Optional[Expression] = default_field(func=pc.day_of_year)
-    hour: Optional[Expression] = default_field(func=pc.hour)
-    iso_week: Optional[Expression] = default_field(func=pc.iso_week)
-    iso_year: Optional[Expression] = default_field(func=pc.iso_year)
-    iso_calendar: Optional[Expression] = default_field(func=pc.iso_calendar)
-    is_leap_year: Optional[Expression] = default_field(func=pc.is_leap_year)
+    day: Expression | None = default_field(func=pc.day)
+    day_of_year: Expression | None = default_field(func=pc.day_of_year)
+    hour: Expression | None = default_field(func=pc.hour)
+    iso_week: Expression | None = default_field(func=pc.iso_week)
+    iso_year: Expression | None = default_field(func=pc.iso_year)
+    iso_calendar: Expression | None = default_field(func=pc.iso_calendar)
+    is_leap_year: Expression | None = default_field(func=pc.is_leap_year)
 
-    microsecond: Optional[Expression] = default_field(func=pc.microsecond)
-    millisecond: Optional[Expression] = default_field(func=pc.millisecond)
-    minute: Optional[Expression] = default_field(func=pc.minute)
-    month: Optional[Expression] = default_field(func=pc.month)
-    nanosecond: Optional[Expression] = default_field(func=pc.nanosecond)
-    quarter: Optional[Expression] = default_field(func=pc.quarter)
-    second: Optional[Expression] = default_field(func=pc.second)
-    subsecond: Optional[Expression] = default_field(func=pc.subsecond)
-    us_week: Optional[Expression] = default_field(func=pc.us_week)
-    us_year: Optional[Expression] = default_field(func=pc.us_year)
-    year: Optional[Expression] = default_field(func=pc.year)
-    year_month_day: Optional[Expression] = default_field(func=pc.year_month_day)
+    microsecond: Expression | None = default_field(func=pc.microsecond)
+    millisecond: Expression | None = default_field(func=pc.millisecond)
+    minute: Expression | None = default_field(func=pc.minute)
+    month: Expression | None = default_field(func=pc.month)
+    nanosecond: Expression | None = default_field(func=pc.nanosecond)
+    quarter: Expression | None = default_field(func=pc.quarter)
+    second: Expression | None = default_field(func=pc.second)
+    subsecond: Expression | None = default_field(func=pc.subsecond)
+    us_week: Expression | None = default_field(func=pc.us_week)
+    us_year: Expression | None = default_field(func=pc.us_year)
+    year: Expression | None = default_field(func=pc.year)
+    year_month_day: Expression | None = default_field(func=pc.year_month_day)
 
     day_time_interval_between: list[Expression] = default_field(
         [], func=pc.day_time_interval_between
@@ -633,29 +630,29 @@ class Temporal(Fields):
     weeks_between: list[Expression] = default_field([], func=pc.weeks_between)
     years_between: list[Expression] = default_field([], func=pc.years_between)
 
-    ceil_temporal: Optional[Expression] = default_field(name='ceil', func=pc.ceil_temporal)
-    floor_temporal: Optional[Expression] = default_field(name='floor', func=pc.floor_temporal)
-    round_temporal: Optional[Expression] = default_field(name='round', func=pc.round_temporal)
+    ceil_temporal: Expression | None = default_field(name='ceil', func=pc.ceil_temporal)
+    floor_temporal: Expression | None = default_field(name='floor', func=pc.floor_temporal)
+    round_temporal: Expression | None = default_field(name='round', func=pc.round_temporal)
     multiple: int = 1
     unit: str = 'day'
     week_starts_monday: bool = True
     ceil_is_strictly_greater: bool = False
     calendar_based_origin: bool = False
 
-    week: Optional[Expression] = default_field(func=pc.week)
-    count_from_zero: Optional[bool] = UNSET
+    week: Expression | None = default_field(func=pc.week)
+    count_from_zero: bool | None = UNSET
     first_week_is_fully_in_year: bool = False
 
-    day_of_week: Optional[Expression] = default_field(func=pc.day_of_week)
+    day_of_week: Expression | None = default_field(func=pc.day_of_week)
     week_start: int = 1
 
-    strftime: Optional[Expression] = default_field(func=pc.strftime)
-    strptime: Optional[Expression] = default_field(func=pc.strptime)
+    strftime: Expression | None = default_field(func=pc.strftime)
+    strptime: Expression | None = default_field(func=pc.strptime)
     format: str = '%Y-%m-%dT%H:%M:%S'
     locale: str = 'C'
     error_is_null: bool = False
 
-    assume_timezone: Optional[Expression] = default_field(func=pc.assume_timezone)
+    assume_timezone: Expression | None = default_field(func=pc.assume_timezone)
     timezone: str = ''
     ambiguous: str = 'raise'
     nonexistent: str = 'raise'
@@ -684,16 +681,16 @@ class SetLookup(Fields):
 @strawberry.input(description="List array functions.")
 class Lists(Fields):
     element: list[Expression] = default_field([], func=pc.list_element)
-    value_length: Optional[Expression] = default_field(func=pc.list_value_length)
+    value_length: Expression | None = default_field(func=pc.list_value_length)
     # user defined functions
-    all: Optional[Expression] = default_field(func=pc.all)
-    any: Optional[Expression] = default_field(func=pc.any)
+    all: Expression | None = default_field(func=pc.all)
+    any: Expression | None = default_field(func=pc.any)
 
-    slice: Optional[Expression] = default_field(func=pc.list_slice)
+    slice: Expression | None = default_field(func=pc.list_slice)
     start: int = 0
-    stop: Optional[int] = None
+    stop: int | None = None
     step: int = 1
-    return_fixed_size_list: Optional[bool] = None
+    return_fixed_size_list: bool | None = None
 
     prefix = 'list_'
 

@@ -5,7 +5,6 @@ GraphQL scalars.
 import functools
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Union
 import isodate
 import pyarrow as pa
 import strawberry
@@ -39,7 +38,7 @@ def _(mdn: pa.MonthDayNano) -> str:
 
 Long = strawberry.scalar(int, name='Long', description="64-bit int", parse_value=parse_long)
 Duration = strawberry.scalar(
-    Union[timedelta, pa.MonthDayNano],
+    timedelta | pa.MonthDayNano,
     name='Duration',
     description="Duration (isoformat)",
     specified_by_url="https://en.wikipedia.org/wiki/ISO_8601#Durations",

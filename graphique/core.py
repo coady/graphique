@@ -14,7 +14,7 @@ import operator
 import json
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
-from typing import Optional, Union, get_type_hints
+from typing import TypeAlias, get_type_hints
 import numpy as np
 import pyarrow as pa
 import pyarrow.acero as ac
@@ -22,8 +22,8 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 from typing_extensions import Self
 
-Array = Union[pa.Array, pa.ChunkedArray]
-Batch = Union[pa.RecordBatch, pa.Table]
+Array: TypeAlias = pa.Array | pa.ChunkedArray
+Batch: TypeAlias = pa.RecordBatch | pa.Table
 bit_any = functools.partial(functools.reduce, operator.or_)
 bit_all = functools.partial(functools.reduce, operator.and_)
 
@@ -152,7 +152,7 @@ class ListChunk(pa.lib.BaseListArray):
         offsets = self.values.offsets.take(self.offsets)
         return type(self).from_arrays(offsets, self.values.values)
 
-    def aggregate(self, **funcs: Optional[pc.FunctionOptions]) -> pa.RecordBatch:
+    def aggregate(self, **funcs: pc.FunctionOptions | None) -> pa.RecordBatch:
         """Return aggregated scalars by grouping each hash function on the parent indices.
 
         If there are empty or null scalars, then the result must be padded with null defaults and
@@ -391,7 +391,7 @@ class Table(pa.Table):
         return Table.union(self, Table.from_counts(table, counts))
 
     def sort_indices(
-        self, *names: str, length: Optional[int] = None, null_placement: str = 'at_end'
+        self, *names: str, length: int | None = None, null_placement: str = 'at_end'
     ) -> pa.Array:
         """Return indices which would sort the table by columns, optimized for fixed length."""
         func = functools.partial(pc.sort_indices, null_placement=null_placement)
@@ -404,7 +404,7 @@ class Table(pa.Table):
     def sort(
         self,
         *names: str,
-        length: Optional[int] = None,
+        length: int | None = None,
         indices: str = '',
         null_placement: str = 'at_end',
     ) -> Batch:
@@ -521,7 +521,7 @@ class Table(pa.Table):
             offset += len(batch)
             yield pa.RecordBatch.from_pydict(columns)
 
-    def split(self) -> Iterator[Optional[pa.RecordBatch]]:
+    def split(self) -> Iterator[pa.RecordBatch | None]:
         """Generate tables from splitting list scalars."""
         lists = Table.list_fields(self)
         scalars = set(self.schema.names) - lists

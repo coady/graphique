@@ -2,12 +2,13 @@
 GraphQL output types and resolvers.
 """
 
+from __future__ import annotations
 import functools
 import inspect
 from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Annotated, Generic, Optional, TypeVar, TYPE_CHECKING, get_args
+from typing import Annotated, Generic, TypeVar, TYPE_CHECKING, get_args
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
@@ -27,7 +28,7 @@ def selections(*fields) -> set:
     return {selection.name for field in fields for selection in field.selections}
 
 
-def doc_field(func: Optional[Callable] = None, **kwargs: str) -> StrawberryField:
+def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
     """Return strawberry field with argument and docstring descriptions."""
     if func is None:
         return functools.partial(doc_field, **kwargs)  # type: ignore
@@ -77,12 +78,12 @@ class Column:
         return self.array.nbytes
 
     @classmethod
-    def cast(cls, array: pa.ChunkedArray) -> 'Column':
+    def cast(cls, array: pa.ChunkedArray) -> Column:
         """Return typed column based on array type."""
         return cls.registry[py_type(array.type)](array)
 
     @classmethod
-    def fromscalar(cls, scalar: pa.ListScalar) -> Optional['Column']:
+    def fromscalar(cls, scalar: pa.ListScalar) -> Column | None:
         return None if scalar.values is None else cls.cast(pa.chunked_array([scalar.values]))
 
     @compute_field
@@ -105,7 +106,7 @@ class Set(Generic[T]):
         self.array, self.counts = array, counts.to_pylist()
 
     @doc_field
-    def values(self) -> list[Optional[T]]:
+    def values(self) -> list[T | None]:
         """list of values"""
         return self.array.to_pylist()
 
@@ -126,7 +127,7 @@ class NominalColumn(Generic[T], Column):
         return Set(self.array.unique())
 
     @doc_field
-    def value(self, index: Long = 0) -> Optional[T]:
+    def value(self, index: Long = 0) -> T | None:
         """scalar value at index"""
         return self.array[index].as_py()
 
@@ -139,23 +140,23 @@ class NominalColumn(Generic[T], Column):
 @strawberry.type(name='Column', description="column of ordinal values")
 class OrdinalColumn(NominalColumn[T]):
     @compute_field
-    def first(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+    def first(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.first(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def last(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+    def last(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.last(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def min(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+    def min(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.min(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def max(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+    def max(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.max(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def index(self, value: T, start: Long = 0, end: Optional[Long] = None) -> Long:
+    def index(self, value: T, start: Long = 0, end: Long | None = None) -> Long:
         return C.index(self.array, value, start, end)
 
     @compute_field
@@ -175,15 +176,15 @@ class IntervalColumn(OrdinalColumn[T]):
         return Set(*pc.mode(self.array, n, skip_nulls=skip_nulls, min_count=min_count).flatten())
 
     @compute_field
-    def sum(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+    def sum(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.sum(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def product(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[T]:
+    def product(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.product(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def mean(self, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
+    def mean(self, skip_nulls: bool = True, min_count: int = 0) -> float | None:
         return pc.mean(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
@@ -195,13 +196,11 @@ class IntervalColumn(OrdinalColumn[T]):
 @strawberry.type(name='Column', description="column of floats or decimals")
 class RatioColumn(IntervalColumn[T]):
     @compute_field
-    def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> Optional[float]:
+    def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> float | None:
         return pc.stddev(self.array, ddof=ddof, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def variance(
-        self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0
-    ) -> Optional[float]:
+    def variance(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> float | None:
         options = {'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.variance(self.array, ddof=ddof, **options).as_py()
 
@@ -212,7 +211,7 @@ class RatioColumn(IntervalColumn[T]):
         interpolation: str = 'linear',
         skip_nulls: bool = True,
         min_count: int = 0,
-    ) -> list[Optional[float]]:
+    ) -> list[float | None]:
         options = {'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.quantile(self.array, q=q, interpolation=interpolation, **options).to_pylist()
 
@@ -224,7 +223,7 @@ class RatioColumn(IntervalColumn[T]):
         buffer_size: int = 500,
         skip_nulls: bool = True,
         min_count: int = 0,
-    ) -> list[Optional[float]]:
+    ) -> list[float | None]:
         options = {'buffer_size': buffer_size, 'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
 
@@ -233,11 +232,11 @@ class RatioColumn(IntervalColumn[T]):
 @strawberry.type(name='eanColumn', description="column of booleans")
 class BooleanColumn(IntervalColumn[T]):
     @compute_field
-    def any(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
+    def any(self, skip_nulls: bool = True, min_count: int = 1) -> bool | None:
         return pc.any(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def all(self, skip_nulls: bool = True, min_count: int = 1) -> Optional[bool]:
+    def all(self, skip_nulls: bool = True, min_count: int = 1) -> bool | None:
         return pc.all(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
 
@@ -247,7 +246,7 @@ class IntColumn(RatioColumn[T]):
     @doc_field
     def take_from(
         self, info: Info, field: str
-    ) -> Optional[Annotated['Dataset', strawberry.lazy('.interface')]]:
+    ) -> Annotated['Dataset', strawberry.lazy('.interface')] | None:
         """Select indices from a table on the root Query type."""
         root = getattr(info.root_value, field)
         return type(root)(root.select(info).take(self.array.combine_chunks()))
@@ -257,12 +256,12 @@ class IntColumn(RatioColumn[T]):
 @strawberry.type(description="column of lists")
 class ListColumn(Column):
     @doc_field
-    def value(self, index: Long = 0) -> Optional[Column]:
+    def value(self, index: Long = 0) -> Column | None:
         """scalar column at index"""
         return self.fromscalar(self.array[index])
 
     @doc_field
-    def values(self) -> list[Optional[Column]]:
+    def values(self) -> list[Column | None]:
         """list of columns"""
         return list(map(self.fromscalar, self.array))
 
@@ -280,7 +279,7 @@ class ListColumn(Column):
 @strawberry.type(description="column of structs")
 class StructColumn(Column):
     @doc_field
-    def value(self, index: Long = 0) -> Optional[dict]:
+    def value(self, index: Long = 0) -> dict | None:
         """scalar json object at index"""
         return self.array[index].as_py()
 
@@ -290,6 +289,6 @@ class StructColumn(Column):
         return [field.name for field in self.array.type]
 
     @doc_field(name="field name(s); multiple names access nested fields")
-    def column(self, name: list[str]) -> Optional[Column]:
+    def column(self, name: list[str]) -> Column | None:
         """Return struct field as a column."""
         return self.cast(pc.struct_field(self.array, name))

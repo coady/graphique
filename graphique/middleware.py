@@ -6,7 +6,6 @@ import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
 from keyword import iskeyword
-from typing import Optional
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info, UNSET
@@ -33,7 +32,7 @@ class MetricsExtension(tracing.ApolloTracingExtension):
         return {'metrics': metrics}
 
     @staticmethod
-    def duration(data: dict) -> Optional[str]:
+    def duration(data: dict) -> str | None:
         return data['duration'] and str(timedelta(microseconds=data['duration'] / 1e3))
 
 
@@ -87,12 +86,12 @@ def implemented(root: Source, name: str = '', keys: Iterable = ()):
     prefix = to_camel_case(name.title())
 
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
-    annotations = {name: Optional[Column.registry[types[name]]] for name in types}
+    annotations = {name: Column.registry[types[name]] | None for name in types}
     cls = type(prefix + 'Columns', (), dict(namespace, __annotations__=annotations))
     Columns = strawberry.type(cls, description="fields for each column")
 
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
-    annotations = {name: Optional[Column if cls is list else cls] for name, cls in types.items()}
+    annotations = {name: (Column if cls is list else cls) | None for name, cls in types.items()}
     cls = type(prefix + 'Row', (), dict(namespace, __annotations__=annotations))
     Row = strawberry.type(cls, description="scalar fields")
 
@@ -104,7 +103,7 @@ def implemented(root: Source, name: str = '', keys: Iterable = ()):
             """fields for each column"""
             return Columns(**super().columns(info))
 
-        def row(self, info: Info, index: Long = 0) -> Optional[Row]:  # type: ignore
+        def row(self, info: Info, index: Long = 0) -> Row | None:  # type: ignore
             """Return scalar values at index."""
             row = super().row(info, index)
             for name, value in row.items():

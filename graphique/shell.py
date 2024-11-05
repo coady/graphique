@@ -12,7 +12,7 @@ progress on the second pass.
 import operator
 import shutil
 from pathlib import Path
-from typing import Annotated, Callable, Optional
+from typing import Annotated, Callable
 import numpy as np
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -43,7 +43,7 @@ def write_batches(
             pbar.update(len(batch))
 
 
-def write_fragments(dataset: ds.Dataset, base_dir: str, func: Optional[Callable] = None, **options):
+def write_fragments(dataset: ds.Dataset, base_dir: str, func: Callable | None = None, **options):
     """Rewrite partition files by fragment to consolidate, optionally transforming."""
     options['format'] = 'parquet'
     exprs = {Path(frag.path).parent: frag.partition_expression for frag in dataset.get_fragments()}

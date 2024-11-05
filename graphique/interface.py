@@ -10,7 +10,7 @@ import inspect
 import itertools
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sized
 from datetime import timedelta
-from typing import Annotated, Optional, Union, no_type_check
+from typing import Annotated, TypeAlias, no_type_check
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -25,7 +25,7 @@ from .inputs import ScalarAggregate, TDigestAggregate, VarianceAggregate, links,
 from .models import Column, doc_field
 from .scalars import Long
 
-Source = Union[ds.Dataset, Nodes, ds.Scanner, pa.Table]
+Source: TypeAlias = ds.Dataset | Nodes | ds.Scanner | pa.Table
 
 
 def references(field) -> Iterator:
@@ -83,7 +83,7 @@ class Dataset:
             return self.source.select(names)
         return Nodes.scan(self.source, names)
 
-    def to_table(self, info: Info, length: Optional[int] = None) -> pa.Table:
+    def to_table(self, info: Info, length: int | None = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
         source = self.select(info)
         if isinstance(source, pa.Table):
@@ -163,7 +163,7 @@ class Dataset:
         )  # type: ignore
 
     @doc_field
-    def optional(self) -> Optional[Self]:
+    def optional(self) -> Self | None:
         """Nullable field to stop error propagation, enabling partial query results.
 
         Will be replaced by client controlled nullability.
@@ -192,7 +192,7 @@ class Dataset:
         return len(table) >= length
 
     @doc_field
-    def size(self) -> Optional[Long]:
+    def size(self) -> Long | None:
         """buffer size in bytes; null if table is not loaded"""
         return getattr(self.source, 'nbytes', None)
 
@@ -203,7 +203,7 @@ class Dataset:
     )
     def column(
         self, info: Info, name: list[str], cast: str = '', safe: bool = True
-    ) -> Optional[Column]:
+    ) -> Column | None:
         """Return column of any type by name.
 
         This is typically only needed for aliased or casted columns.
@@ -222,7 +222,7 @@ class Dataset:
         reverse="reverse order after slicing; forces a copy",
     )
     def slice(
-        self, info: Info, offset: Long = 0, length: Optional[Long] = None, reverse: bool = False
+        self, info: Info, offset: Long = 0, length: Long | None = None, reverse: bool = False
     ) -> Self:
         """Return zero-copy slice of table.
 
@@ -301,7 +301,7 @@ class Dataset:
         self,
         info: Info,
         by: list[str],
-        length: Optional[Long] = None,
+        length: Long | None = None,
         null_placement: str = 'at_end',
     ) -> Self:
         """Return table slice sorted by specified columns.
@@ -396,7 +396,7 @@ class Dataset:
         return type(self)(self.add_metric(info, table, mode='batch'))
 
     @doc_field
-    def tables(self, info: Info) -> list[Optional[Self]]:  # type: ignore
+    def tables(self, info: Info) -> list[Self | None]:  # type: ignore
         """Return a list of tables by splitting list columns.
 
         At least one list column must be referenced, and all list columns must have the same lengths.
@@ -477,7 +477,7 @@ class Dataset:
         info: Info,
         right: str,
         keys: list[str],
-        right_keys: Optional[list[str]] = None,
+        right_keys: list[str] | None = None,
         join_type: str = 'left outer',
         left_suffix: str = '',
         right_suffix: str = '',
