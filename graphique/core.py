@@ -64,12 +64,11 @@ class Agg:
         return self.option_map[func.removeprefix('hash_')](**self.options)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Compare:
     """Comparable wrapper for bisection search."""
 
     value: object
-    __slots__ = ('value',)  # slots keyword in Python >=3.10
 
     def __lt__(self, other):
         return self.value < other.as_py()

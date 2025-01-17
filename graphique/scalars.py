@@ -65,6 +65,8 @@ type_map = {
     pa.lib.Type_HALF_FLOAT: float,
     pa.lib.Type_FLOAT: float,
     pa.lib.Type_DOUBLE: float,
+    pa.lib.Type_DECIMAL32: Decimal,
+    pa.lib.Type_DECIMAL64: Decimal,
     pa.lib.Type_DECIMAL128: Decimal,
     pa.lib.Type_DECIMAL256: Decimal,
     pa.lib.Type_DATE32: date,

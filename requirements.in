@@ -1,4 +1,4 @@
-pyarrow>=18
+pyarrow>=19
 strawberry-graphql[asgi,cli]>=0.236
 numpy
 isodate>=0.7
