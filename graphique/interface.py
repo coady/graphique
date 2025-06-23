@@ -20,7 +20,7 @@ from strawberry.extensions.utils import get_path_from_info
 from typing_extensions import Self
 from .core import Agg, Batch, Column as C, ListChunk, Nodes, Table as T
 from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
-from .inputs import HashAggregates, ListFunction, Pairwise, Projection, Rank
+from .inputs import HashAggregates, ListFunction, Pairwise, Projection, Rank, RankQuantile
 from .inputs import ScalarAggregate, TDigestAggregate, VarianceAggregate, links, provisional
 from .models import Column, doc_field
 from .scalars import Long
@@ -226,10 +226,10 @@ class Dataset:
     ) -> Self:
         """Return zero-copy slice of table.
 
-        Can also be sued to force loading a dataset.
+        Can also be used to force loading a dataset.
         """
         table = self.to_table(info, length and (offset + length if offset >= 0 else None))
-        table = table[offset:][:length]  # `slice` bug: ARROW-15412
+        table = table[offset:][:length]  # `slice` bug: apache/arrow#30894
         return type(self)(table[::-1] if reverse else table)
 
     @doc_field(
@@ -362,6 +362,8 @@ class Dataset:
         fill_null_forward: doc_argument(list[Field], func=pc.fill_null_forward) = [],
         pairwise_diff: doc_argument(list[Pairwise], func=pc.pairwise_diff) = [],
         rank: doc_argument(list[Rank], func=pc.rank) = [],
+        rank_quantile: doc_argument(list[RankQuantile], func=pc.rank_quantile) = [],
+        rank_normal: doc_argument(list[RankQuantile], func=pc.rank_normal) = [],
         list_: Annotated[
             ListFunction,
             strawberry.argument(name='list', description="functions for list arrays."),
@@ -377,7 +379,7 @@ class Dataset:
         columns = {}
         funcs = pc.cumulative_max, pc.cumulative_mean, pc.cumulative_min, pc.cumulative_prod
         funcs += pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, C.pairwise_diff
-        funcs += (pc.rank,)
+        funcs += pc.rank, pc.rank_quantile, pc.rank_normal
         for func in funcs:
             for field in locals()[func.__name__]:
                 callable = func

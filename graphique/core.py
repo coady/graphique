@@ -240,7 +240,7 @@ class Column(pa.ChunkedArray):
         if not pa.types.is_dictionary(self.type):
             return self
         array = self if isinstance(self, pa.Array) else self.combine_chunks()
-        return pc.rank(array.dictionary, 'ascending').take(array.indices)
+        return pc.rank(array.dictionary).take(array.indices)
 
     def pairwise_diff(self, period: int = 1) -> Array:
         """`pairwise_diff` with chunked array support."""

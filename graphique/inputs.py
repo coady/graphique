@@ -153,9 +153,13 @@ class Quantile(Field):
 
 
 @strawberry.input
-class Rank(Field):
+class RankQuantile(Field):
     sort_keys: str = 'ascending'
     null_placement: str = 'at_end'
+
+
+@strawberry.input
+class Rank(RankQuantile):
     tiebreaker: str = 'first'
 
 
