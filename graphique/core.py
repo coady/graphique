@@ -125,9 +125,11 @@ class ListChunk(pa.lib.BaseListArray):
         size = -index if index < 0 else index + 1
         if isinstance(self, pa.ChunkedArray):
             self = self.combine_chunks()
-        mask = np.asarray(Column.fill_null(pc.list_value_length(self), 0)) < size
-        offsets = np.asarray(self.offsets[1:] if index < 0 else self.offsets[:-1])
-        return pc.list_flatten(self).take(pa.array(offsets + index, mask=mask))
+        mask = pc.less(pc.list_value_length(self), size)
+        offsets = self.offsets[1:] if index < 0 else self.offsets[:-1]
+        index, null = pa.scalar(index, offsets.type), pa.scalar(None, offsets.type)
+        indices = pc.replace_with_mask(pc.add(offsets, index), mask, null)
+        return pc.list_flatten(self).take(indices)
 
     def first(self) -> pa.Array:
         """first value of each list scalar"""
@@ -466,8 +468,8 @@ class Table(pa.Table):
             return pa.table({})
         fragments = self._get_fragments(expr)
         parts = [ds.get_partition_keys(frag.partition_expression) for frag in fragments]
-        names, table = set(names), pa.Table.from_pylist(parts)  # type: ignore
-        keys = [name for name in table.schema.names if name in names]
+        table = pa.Table.from_pylist(parts)
+        keys = [name for name in names if name in table.schema.names]
         table = table.group_by(keys, use_threads=False).aggregate([])
         if not counts:
             return table
@@ -496,7 +498,7 @@ class Table(pa.Table):
             table = table.sort_by(keys.items())
             totals = itertools.accumulate(table['_'].to_pylist())
             counts = (count for count, total in enumerate(totals, 1) if total >= k)
-            table = table[: next(counts, None)].remove_column(len(table) - 1)
+            table = table[: next(counts, None)].remove_column(len(table.schema) - 1)
         exprs = [bit_all(pc.field(key) == row[key] for key in row) for row in table.to_pylist()]
         remaining = names[len(keys) :]
         if remaining or not dense:  # fields with a single value are no longer needed
