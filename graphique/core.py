@@ -15,13 +15,21 @@ import json
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import TypeAlias, get_type_hints
-import numpy as np
+import ibis.backends.duckdb
 import pyarrow as pa
 import pyarrow.acero as ac
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 from typing_extensions import Self
 
+
+def to_pyarrow(self, expr, **kwargs):
+    table = self._to_duckdb_relation(expr, **kwargs).arrow()
+    return expr.__pyarrow_result__(table, data_mapper=ibis.formats.pyarrow.PyArrowData)
+
+
+# shim to avoid pandas dependency: ibis-project/ibis#11430
+ibis.backends.duckdb.Backend.to_pyarrow = to_pyarrow
 Array: TypeAlias = pa.Array | pa.ChunkedArray
 Batch: TypeAlias = pa.RecordBatch | pa.Table
 bit_any = functools.partial(functools.reduce, operator.or_)
@@ -93,6 +101,11 @@ def register(func: Callable, kind: str = 'scalar') -> pc.Function:
     return pc.get_function(func.__name__)
 
 
+def memcolumn(array: Array) -> ibis.Column:
+    """Convert pyarrow array to ibis column."""
+    return ibis.memtable(pa.table({'_': array}))['_']
+
+
 @register
 def digitize(
     ctx,
@@ -101,7 +114,13 @@ def digitize(
     right: pa.bool_(),  # type: ignore
 ) -> pa.int64():  # type: ignore
     """Return the indices of the bins to which each value in input array belongs."""
-    return pa.array(np.digitize(array, bins.values, right.as_py()))
+    column = memcolumn(array).bucket(
+        bins.values.to_pylist(),
+        include_under=True,
+        include_over=True,
+        closed='right' if right.as_py() else 'left',
+    )
+    return column.to_pyarrow().combine_chunks().cast('int64')
 
 
 class ListChunk(pa.lib.BaseListArray):
@@ -122,14 +141,7 @@ class ListChunk(pa.lib.BaseListArray):
         """element at index of each list scalar; defaults to null"""
         with contextlib.suppress(ValueError):
             return pc.list_element(self, index)
-        size = -index if index < 0 else index + 1
-        if isinstance(self, pa.ChunkedArray):
-            self = self.combine_chunks()
-        mask = pc.less(pc.list_value_length(self), size)
-        offsets = self.offsets[1:] if index < 0 else self.offsets[:-1]
-        index, null = pa.scalar(index, offsets.type), pa.scalar(None, offsets.type)
-        indices = pc.replace_with_mask(pc.add(offsets, index), mask, null)
-        return pc.list_flatten(self).take(indices)
+        return memcolumn(self)[index].to_pyarrow()
 
     def first(self) -> pa.Array:
         """first value of each list scalar"""

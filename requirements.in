@@ -1,4 +1,6 @@
 pyarrow>=20
 strawberry-graphql[asgi,cli]>=0.236
-numpy
+ibis-framework
+duckdb
+pyarrow-hotfix
 isodate>=0.7

@@ -230,7 +230,9 @@ class Dataset:
         """
         table = self.to_table(info, length and (offset + length if offset >= 0 else None))
         table = table[offset:][:length]  # `slice` bug: apache/arrow#30894
-        return type(self)(table[::-1] if reverse else table)
+        if reverse:
+            table = table.take(pc.cumulative_sum(pa.repeat(-1, len(table)), len(table)))
+        return type(self)(table)
 
     @doc_field(
         by="column names; empty will aggregate into a single row table",

@@ -70,7 +70,7 @@ def test_lists():
     array = ListChunk.from_counts(pa.array([3, None, 2]), list('abcde'))
     assert array.to_pylist() == [list('abc'), None, list('de')]
     with pytest.raises(ValueError):
-        T.list_value_length(pa.table({'x': array, 'y': array[::-1]}))
+        T.list_value_length(pa.table({'x': array, 'y': pa.array([[''], [], []])}))
 
 
 def test_membership():

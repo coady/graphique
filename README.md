@@ -11,6 +11,11 @@
 
 [GraphQL](https://graphql.org) service for [arrow](https://arrow.apache.org) tables and [parquet](https://parquet.apache.org) data sets. The schema for a query API is derived automatically.
 
+## Roadmap
+When this project started, there was no out-of-core execution engine with performance comparable to [PyArrow](https://arrow.apache.org/docs/python/index.html). So it effectively includes one, based on datasets and [Acero](https://arrow.apache.org/docs/python/api/acero.html).
+
+Since then the ecosystem has grown considerably: [DuckDB](https://duckdb.org), [DataFusion](https://datafusion.apache.org), and [Ibis](https://ibis-project.org). The next major version plans to reuse `ibis`, because it provides a common expression API for multiple backends. Graphique can similarly offer a default but configurable backend.
+
 ## Usage
 ```console
 % env PARQUET_PATH=... uvicorn graphique.service:app
@@ -83,9 +88,9 @@ Configuration options exist to provide a convenient no-code solution, but are su
 * `rank`: select rows with smallest or largest values
 
 ### Performance
-Graphique relies on native [PyArrow](https://arrow.apache.org/docs/python/index.html) routines wherever possible. Otherwise it falls back to using [NumPy](https://numpy.org/doc/stable/) or custom optimizations.
+Graphique relies on `pyarrow`, `ibis`, and custom optimizations.
 
-By default, datasets are read on-demand, with only the necessary rows and columns scanned. Although graphique is a running service, [parquet is performant](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html) at reading a subset of data. Optionally specify `FILTERS` in the json `filter` format to read a subset of rows at startup, trading-off memory for latency. An empty filter (`{}`) will read the whole table.
+By default, datasets are read on-demand, with only the necessary rows and columns scanned. Although graphique is a running service, parquet is performant at reading a subset of data. Optionally specify `FILTERS` in the json `filter` format to read a subset of rows at startup, trading-off memory for latency. An empty filter (`{}`) will read the whole table.
 
 Specifying `COLUMNS` will limit memory usage when reading at startup (`FILTERS`). There is little speed difference as unused columns are inherently ignored. Optional aliasing can also be used for camel casing.
 
@@ -99,7 +104,7 @@ If index columns are detected in the schema metadata, then an initial `filter` w
 ## Dependencies
 * pyarrow
 * strawberry-graphql[asgi,cli]
-* numpy
+* ibis-framework[duckdb]
 * isodate
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 
