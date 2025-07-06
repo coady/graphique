@@ -5,7 +5,6 @@ Doesn't require knowledge of the schema.
 """
 
 # mypy: disable-error-code=valid-type
-import collections
 import inspect
 import itertools
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sized
@@ -19,9 +18,8 @@ from strawberry import Info
 from strawberry.extensions.utils import get_path_from_info
 from typing_extensions import Self
 from .core import Agg, Batch, Column as C, ListChunk, Nodes, Table as T
-from .inputs import CountAggregate, Cumulative, Diff, Expression, Field, Filter
-from .inputs import HashAggregates, ListFunction, Pairwise, Projection, Rank, RankQuantile
-from .inputs import ScalarAggregate, TDigestAggregate, VarianceAggregate, links, provisional
+from .inputs import Cumulative, Diff, Expression, Field, Filter, HashAggregates, ListFunction
+from .inputs import Pairwise, Projection, Rank, RankQuantile, links, provisional
 from .models import Column, doc_field
 from .scalars import Long
 
@@ -413,41 +411,25 @@ class Dataset:
     def aggregate(
         self,
         info: Info,
-        approximate_median: doc_argument(list[ScalarAggregate], func=pc.approximate_median) = [],
-        count: doc_argument(list[CountAggregate], func=pc.count) = [],
-        count_distinct: doc_argument(list[CountAggregate], func=pc.count_distinct) = [],
+        count: doc_argument(list[Field], func=pc.count) = [],
         distinct: Annotated[
-            list[CountAggregate],
+            list[Field],
             strawberry.argument(description="distinct values within each scalar"),
         ] = [],
         first: doc_argument(list[Field], func=ListChunk.first) = [],
         last: doc_argument(list[Field], func=ListChunk.last) = [],
-        max: doc_argument(list[ScalarAggregate], func=pc.max) = [],
-        mean: doc_argument(list[ScalarAggregate], func=pc.mean) = [],
-        min: doc_argument(list[ScalarAggregate], func=pc.min) = [],
-        product: doc_argument(list[ScalarAggregate], func=pc.product) = [],
-        stddev: doc_argument(list[VarianceAggregate], func=pc.stddev) = [],
-        sum: doc_argument(list[ScalarAggregate], func=pc.sum) = [],
-        tdigest: doc_argument(list[TDigestAggregate], func=pc.tdigest) = [],
-        variance: doc_argument(list[VarianceAggregate], func=pc.variance) = [],
+        max: doc_argument(list[Field], func=pc.max) = [],
+        mean: doc_argument(list[Field], func=pc.mean) = [],
+        min: doc_argument(list[Field], func=pc.min) = [],
+        sum: doc_argument(list[Field], func=pc.sum) = [],
     ) -> Self:
         """Return table with scalar aggregate functions applied to list columns."""
         table = self.to_table(info)
         columns = T.columns(table)
-        agg_fields: dict = collections.defaultdict(dict)
-        keys: tuple = 'approximate_median', 'count', 'count_distinct', 'distinct', 'first', 'last'
-        keys += 'max', 'mean', 'min', 'product', 'stddev', 'sum', 'tdigest', 'variance'
-        for key in keys:
-            func = getattr(ListChunk, key, None)
+        for key in ('count', 'distinct', 'first', 'last', 'max', 'mean', 'min', 'sum'):
+            func = getattr(ListChunk, key)
             for agg in locals()[key]:
-                if func is None or key == 'sum':  # `sum` is a method on `Array``
-                    agg_fields[agg.name][key] = agg
-                else:
-                    columns[agg.alias] = func(table[agg.name], **agg.options)
-        for name, aggs in agg_fields.items():
-            funcs = {key: agg.func_options(key) for key, agg in aggs.items()}
-            batch = ListChunk.aggregate(table[name], **funcs)
-            columns.update(zip([agg.alias for agg in aggs.values()], batch))
+                columns[agg.alias] = func(table[agg.name])
         return type(self)(pa.table(columns))
 
     aggregate.deprecation_reason = ListFunction.deprecation

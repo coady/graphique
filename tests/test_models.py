@@ -244,13 +244,6 @@ def test_list(executor):
     assert data == {'row': {'list': {'values': [0, 1, 2]}}}
     data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
     assert data == {'row': {'list': None}}
-    data = executor("""{ aggregate(approximateMedian: {name: "list"}) {
-        column(name: "list") { ... on FloatColumn { values } } } }""")
-    assert data == {'aggregate': {'column': {'values': [1.0, None]}}}
-    data = executor("""{ aggregate(tdigest: {name: "list", q: [0.25, 0.75]}) {
-        columns { list { flatten { ... on FloatColumn { values } } } } } }""")
-    column = data['aggregate']['columns']['list']
-    assert column == {'flatten': {'values': [0.0, 2.0]}}
 
     data = executor("""{ apply(list: {index: {name: "list", value: 1}}) {
         column(name: "list") { ... on LongColumn { values } } } }""")
@@ -263,22 +256,15 @@ def test_list(executor):
     data = executor("""{ scan(columns: {list: {slice: {name: "list"}, stop: 1}, alias: "value"}) {
         column(name: "value") { ... on ListColumn { flatten { ... on IntColumn { values } } } } } }""")
     assert data == {'scan': {'column': {'flatten': {'values': [0]}}}}
-    data = executor("""{ aggregate(distinct: {name: "list", mode: "only_null"})
+    data = executor("""{ aggregate(distinct: {name: "list"})
         { columns { list { flatten { length } } } } }""")
-    assert data['aggregate']['columns']['list'] == {'flatten': {'length': 0}}
+    assert data['aggregate']['columns']['list'] == {'flatten': {'length': 3}}
     data = executor("""{ apply(list: {filter: {ne: [{name: "list"}, {value: 1}]}}) {
         columns { list { values { ... on IntColumn { values } } } } } }""")
     column = data['apply']['columns']['list']
     assert column == {'values': [{'values': [0, 2]}, None]}
     data = executor('{ apply(list: {mode: {name: "list"}}) { column(name: "list") { type } } }')
     assert data['apply']['column']['type'] == 'int32'
-    data = executor(
-        """{ aggregate(stddev: {name: "list"}, variance: {name: "list", alias: "var", ddof: 1}) {
-        column(name: "list") { ... on FloatColumn { values } }
-        var: column(name: "var") { ... on FloatColumn { values } } } }"""
-    )
-    assert data['aggregate']['column']['values'] == [pytest.approx((2 / 3) ** 0.5), None]
-    assert data['aggregate']['var']['values'] == [1, None]
     data = executor(
         """{ runs(by: "int32") { scan(columns: {binary: {join: [{name: "binary"}, {base64: ""}]}, alias: "binary"}) {
         column(name: "binary") { ... on Base64Column { values } } } } }"""

@@ -124,6 +124,18 @@ def digitize(
 
 
 class ListChunk(pa.lib.BaseListArray):
+    def count(self):
+        return memcolumn(self).length().to_pyarrow()
+
+    def distinct(self):
+        return memcolumn(self).unique().to_pyarrow().combine_chunks()
+
+    def mean(self, **option):
+        return memcolumn(self).means().to_pyarrow()
+
+    def sum(self):
+        return memcolumn(self).sums().to_pyarrow()
+
     def first(self) -> pa.Array:
         """first value of each list scalar"""
         return memcolumn(self)[0].to_pyarrow()
@@ -131,29 +143,6 @@ class ListChunk(pa.lib.BaseListArray):
     def last(self) -> pa.Array:
         """last value of each list scalar"""
         return memcolumn(self)[-1].to_pyarrow()
-
-    def aggregate(self, **funcs: pc.FunctionOptions | None) -> pa.RecordBatch:
-        """Return aggregated scalars by grouping each hash function on the parent indices.
-
-        If there are empty or null scalars, then the result must be padded with null defaults and
-        reordered. If the function is a `count`, then the default is 0.
-        """
-        columns = {'key': pc.list_parent_indices(self), '': pc.list_flatten(self)}
-        items = [('', name, funcs[name]) for name in funcs]
-        table = pa.table(columns).group_by(['key']).aggregate(items)
-        indices, table = table['key'], table.remove_column(table.schema.get_field_index('key'))
-        (batch,) = table.to_batches()
-        if len(batch) == len(self):  # no empty or null scalars
-            return batch
-        mask = pc.equal(pc.list_value_length(self), 0)
-        empties = pc.indices_nonzero(Column.fill_null(mask, True))
-        indices = pa.chunked_array(indices.chunks + [empties.cast(indices.type)])
-        columns = {}
-        for field in batch.schema:
-            scalar = pa.scalar(0 if 'count' in field.name else None, field.type)
-            columns[field.name] = pa.repeat(scalar, len(empties))
-        table = pa.concat_tables([table, pa.table(columns)]).combine_chunks()
-        return table.to_batches()[0].take(pc.sort_indices(indices))
 
     def min(self, **options) -> pa.Array:
         """min value of each list scalar"""
