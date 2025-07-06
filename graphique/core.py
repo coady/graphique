@@ -124,46 +124,13 @@ def digitize(
 
 
 class ListChunk(pa.lib.BaseListArray):
-    def from_counts(counts: pa.IntegerArray, values: pa.Array) -> pa.LargeListArray:
-        """Return list array by converting counts into offsets."""
-        mask = None
-        if counts.null_count:
-            mask, counts = counts.is_null(), counts.fill_null(0)
-        offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum_checked(counts)])
-        cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
-        return cls.from_arrays(offsets, values, mask=mask)
-
-    def from_scalars(values: Iterable) -> pa.LargeListArray:
-        """Return list array from array scalars."""
-        return ListChunk.from_counts(pa.array(map(len, values)), pa.concat_arrays(values))
-
-    def element(self, index: int) -> pa.Array:
-        """element at index of each list scalar; defaults to null"""
-        with contextlib.suppress(ValueError):
-            return pc.list_element(self, index)
-        return memcolumn(self)[index].to_pyarrow()
-
     def first(self) -> pa.Array:
         """first value of each list scalar"""
-        return ListChunk.element(self, 0)
+        return memcolumn(self)[0].to_pyarrow()
 
     def last(self) -> pa.Array:
         """last value of each list scalar"""
-        return ListChunk.element(self, -1)
-
-    def scalars(self) -> Iterable:
-        empty = pa.array([], self.type.value_type)
-        return (scalar.values or empty for scalar in self)
-
-    def map_list(self, func: Callable, **kwargs) -> pa.lib.BaseListArray:
-        """Return list array by mapping function across scalars, with null handling."""
-        values = [func(value, **kwargs) for value in ListChunk.scalars(self)]
-        return ListChunk.from_scalars(values)
-
-    def inner_flatten(self) -> pa.lib.BaseListArray:
-        """Return flattened inner lists from a nested list array."""
-        offsets = self.values.offsets.take(self.offsets)
-        return type(self).from_arrays(offsets, self.values.values)
+        return memcolumn(self)[-1].to_pyarrow()
 
     def aggregate(self, **funcs: pc.FunctionOptions | None) -> pa.RecordBatch:
         """Return aggregated scalars by grouping each hash function on the parent indices.
@@ -188,41 +155,31 @@ class ListChunk(pa.lib.BaseListArray):
         table = pa.concat_tables([table, pa.table(columns)]).combine_chunks()
         return table.to_batches()[0].take(pc.sort_indices(indices))
 
-    def min_max(self, **options) -> pa.Array:
-        if pa.types.is_dictionary(self.type.value_type):
-            (self,) = ListChunk.aggregate(self, distinct=None)
-            self = type(self).from_arrays(self.offsets, self.values.dictionary_decode())
-        return ListChunk.aggregate(self, min_max=pc.ScalarAggregateOptions(**options))[0]
-
     def min(self, **options) -> pa.Array:
         """min value of each list scalar"""
-        return ListChunk.min_max(self, **options).field('min')
+        return memcolumn(self).mins().to_pyarrow()
 
     def max(self, **options) -> pa.Array:
         """max value of each list scalar"""
-        return ListChunk.min_max(self, **options).field('max')
+        return memcolumn(self).maxs().to_pyarrow()
 
     def mode(self, **options) -> pa.Array:
         """modes of each list scalar"""
-        return ListChunk.map_list(self, pc.mode, **options)
+        return memcolumn(self).modes().to_pyarrow().combine_chunks()
 
-    def quantile(self, **options) -> pa.Array:
-        """quantiles of each list scalar"""
-        return ListChunk.map_list(self, pc.quantile, **options)
-
-    def index(self, **options) -> pa.Array:
+    def index(self, value) -> pa.Array:
         """index for first occurrence of each list scalar"""
-        return pa.array(pc.index(value, **options) for value in ListChunk.scalars(self))
+        return memcolumn(self).index(value).to_pyarrow().combine_chunks()
 
     @register
     def list_all(ctx, self: pa.list_(pa.bool_())) -> pa.bool_():  # type: ignore
         """Test whether all elements in a boolean array evaluate to true."""
-        return ListChunk.aggregate(self, all=None)[0]
+        return memcolumn(self).alls().to_pyarrow().combine_chunks()
 
     @register
     def list_any(ctx, self: pa.list_(pa.bool_())) -> pa.bool_():  # type: ignore
         """Test whether any element in a boolean array evaluates to true."""
-        return ListChunk.aggregate(self, any=None)[0]
+        return memcolumn(self).anys().to_pyarrow().combine_chunks()
 
 
 class Column(pa.ChunkedArray):

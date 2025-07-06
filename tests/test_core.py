@@ -47,30 +47,21 @@ def test_chunks():
 def test_lists():
     array = pa.array([[2, 1], [0, 0], [None], [], None])
     assert ListChunk.first(array).to_pylist() == [2, 0, None, None, None]
-    assert ListChunk.element(array, -2).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.last(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.last(pa.chunked_array([array])).to_pylist() == [1, 0, None, None, None]
-    assert ListChunk.element(array, 1).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.min(array).to_pylist() == [1, 0, None, None, None]
     assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
-    assert ListChunk.mode(array)[0].as_py() == [{'mode': 1, 'count': 1}]
-    assert ListChunk.quantile(array).to_pylist() == [[1.5], [0.0], [None], [None], [None]]
-    quantile = ListChunk.quantile(array, q=[0.75])
-    assert quantile.to_pylist() == [[1.75], [0.0], [None], [None], [None]]
+    assert ListChunk.mode(array).to_pylist() == [2, 0, None, None, None]
     array = pa.array([[True, True], [False, False], [None], [], None])
     array = pa.ListArray.from_arrays([0, 2, 3], pa.array(["a", "b", None]).dictionary_encode())
     assert ListChunk.min(array).to_pylist() == ["a", None]
     assert ListChunk.max(array).to_pylist() == ["b", None]
     assert C.is_list_type(pa.FixedSizeListArray.from_arrays([], 1))
-    array = pa.array([[list('ab'), ['c']], [list('de')]])
-    assert ListChunk.inner_flatten(array).to_pylist() == [list('abc'), list('de')]
     batch = T.from_offsets(pa.record_batch([list('abcde')], ['col']), pa.array([0, 3, 5]))
     assert batch['col'].to_pylist() == [list('abc'), list('de')]
     assert not T.from_offsets(pa.table({}), pa.array([0]))
-    array = ListChunk.from_counts(pa.array([3, None, 2]), list('abcde'))
-    assert array.to_pylist() == [list('abc'), None, list('de')]
     with pytest.raises(ValueError):
-        T.list_value_length(pa.table({'x': array, 'y': pa.array([[''], [], []])}))
+        T.list_value_length(pa.table({'x': pa.array([[''], []]), 'y': pa.array([[], ['']])}))
 
 
 def test_membership():

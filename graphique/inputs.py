@@ -133,21 +133,11 @@ class Pairwise(Field):
 @strawberry.input
 class Index(Field):
     value: JSON
-    start: Long = 0
-    end: Long | None = None
 
 
 @strawberry.input
 class Mode(Field):
     n: int = 1
-    skip_nulls: bool = True
-    min_count: int = 1
-
-
-@strawberry.input
-class Quantile(Field):
-    q: list[float] = (0.5,)  # type: ignore
-    interpolation: str = 'linear'
     skip_nulls: bool = True
     min_count: int = 1
 
@@ -184,7 +174,6 @@ class ListFunction(Input):
     rank: Ranked | None = default_field(description="select by dense rank within list scalars")
     index: Index | None = default_field(func=pc.index, deprecation_reason=deprecation)
     mode: Mode | None = default_field(func=pc.mode, deprecation_reason=deprecation)
-    quantile: Quantile | None = default_field(func=pc.quantile, deprecation_reason=deprecation)
 
     def keys(self):
         return set(super().keys()) - {'filter', 'sort', 'rank'}

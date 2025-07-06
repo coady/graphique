@@ -252,12 +252,9 @@ def test_list(executor):
     column = data['aggregate']['columns']['list']
     assert column == {'flatten': {'values': [0.0, 2.0]}}
 
-    data = executor("""{ apply(list: {quantile: {name: "list", q: 0.5}}) {
-        columns { list { flatten { ... on FloatColumn { values } } } } } }""")
-    assert data == {'apply': {'columns': {'list': {'flatten': {'values': [1.0, None]}}}}}
     data = executor("""{ apply(list: {index: {name: "list", value: 1}}) {
         column(name: "list") { ... on LongColumn { values } } } }""")
-    assert data == {'apply': {'column': {'values': [1, -1]}}}
+    assert data == {'apply': {'column': {'values': [1, None]}}}
     data = executor(
         """{ scan(columns: {list: {element: [{name: "list"}, {value: 1}]}, alias: "value"}) {
         column(name: "value") { ... on IntColumn { values } } } }"""
@@ -274,7 +271,7 @@ def test_list(executor):
     column = data['apply']['columns']['list']
     assert column == {'values': [{'values': [0, 2]}, None]}
     data = executor('{ apply(list: {mode: {name: "list"}}) { column(name: "list") { type } } }')
-    assert data['apply']['column']['type'] == 'large_list<item: struct<mode: int32, count: int64>>'
+    assert data['apply']['column']['type'] == 'int32'
     data = executor(
         """{ aggregate(stddev: {name: "list"}, variance: {name: "list", alias: "var", ddof: 1}) {
         column(name: "list") { ... on FloatColumn { values } }
