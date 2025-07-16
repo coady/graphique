@@ -37,7 +37,7 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
 * FILTERS = None: json `filter` query for which rows to read at startup
 
-For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html), [Scanner](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html), or [Table](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html). The GraphQL `Table` type will be the root Query type.
+For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html) or [Table](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html). The GraphQL `Table` type will be the root Query type.
 
 Supply a mapping of names to datasets for multiple roots, and to enable federation.
 
@@ -60,7 +60,7 @@ Configuration options exist to provide a convenient no-code solution, but are su
 
 ### API
 #### types
-* `Dataset`: interface for an arrow dataset, scanner, or table.
+* `Dataset`: interface for an arrow dataset or table.
 * `Table`: implements the `Dataset` interface. Adds typed `row`, `columns`, and `filter` fields from introspecting the schema.
 * `Column`: interface for an arrow column (a.k.a. ChunkedArray). Each arrow data type has a corresponding column implementation: Boolean, Int, Long, Float, Decimal, Date, Datetime, Time, Duration, Base64, String, List, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
 * `Row`: scalar fields. Arrow tables are column-oriented, and graphique encourages that usage for performance. A single `row` field is provided for convenience, but a field for a list of rows is not. Requesting parallel columns is far more efficient.

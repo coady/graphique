@@ -10,6 +10,7 @@ import itertools
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sized
 from datetime import timedelta
 from typing import Annotated, TypeAlias, no_type_check
+import ibis
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -23,7 +24,7 @@ from .inputs import Pairwise, Projection, Rank, RankQuantile, links, provisional
 from .models import Column, doc_field
 from .scalars import Long
 
-Source: TypeAlias = ds.Dataset | Nodes | ds.Scanner | pa.Table
+Source: TypeAlias = ds.Dataset | Nodes | ibis.Table | pa.Table
 
 
 def references(field) -> Iterator:
@@ -74,10 +75,9 @@ class Dataset:
         names = list(self.references(info))
         if len(names) >= len(self.schema().names):
             return self.source
-        if isinstance(self.source, ds.Scanner):
-            schema = self.source.projected_schema
-            return ds.Scanner.from_batches(self.source.to_batches(), schema=schema, columns=names)
         if isinstance(self.source, pa.Table):
+            return self.source.select(names)
+        if isinstance(self.source, ibis.Table):
             return self.source.select(names)
         return Nodes.scan(self.source, names)
 
@@ -86,6 +86,8 @@ class Dataset:
         source = self.select(info)
         if isinstance(source, pa.Table):
             return source
+        if isinstance(self.source, ibis.Table):
+            return self.source.head(None).to_pyarrow()
         if length is None:
             return self.add_metric(info, source.to_table(), mode='read')
         return self.add_metric(info, source.head(length), mode='head')
@@ -150,9 +152,9 @@ class Dataset:
     def schema(self) -> Schema:
         """dataset schema"""
         source = self.source
-        schema = source.projected_schema if isinstance(source, ds.Scanner) else source.schema
+        schema = source.schema() if isinstance(source, ibis.Table) else source.schema
         partitioning = getattr(source, 'partitioning', None)
-        index = (schema.pandas_metadata or {}).get('index_columns', [])
+        index = (getattr(schema, 'pandas_metadata', {}) or {}).get('index_columns', [])
         return Schema(
             names=schema.names,
             types=schema.types,
@@ -261,7 +263,7 @@ class Dataset:
             ordered = ordered or func in Agg.ordered
             for agg in values:
                 aggs[agg.alias] = (agg.name, prefix + func, agg.func_options(func))
-        source = self.to_table(info) if isinstance(self.source, ds.Scanner) else self.source
+        source = self.to_table(info) if isinstance(self.source, ibis.Table) else self.source
         source = Nodes.group(source, *by, **aggs)
         if ordered:
             source = self.add_metric(info, source.to_table(use_threads=False), mode='group')
@@ -328,7 +330,7 @@ class Dataset:
     )
     def rank(self, info: Info, by: list[str], max: int = 1) -> Self:
         """Return table selected by maximum dense rank."""
-        source = self.to_table(info) if isinstance(self.source, ds.Scanner) else self.source
+        source = self.to_table(info) if isinstance(self.source, ibis.Table) else self.source
         expr, by = T.rank_keys(source, max, *by)
         if expr is not None:
             source = source.filter(expr)
@@ -442,11 +444,9 @@ class Dataset:
         projection |= {col.alias or '.'.join(col.name): col.to_arrow() for col in columns}
         if '' in projection:
             raise ValueError(f"projected columns need a name or alias: {projection['']}")
-        if isinstance(self.source, ds.Scanner):
-            options = dict(schema=self.source.projected_schema, filter=expr, columns=projection)
-            scanner = ds.Scanner.from_batches(self.source.to_batches(), **options)
-            return type(self)(self.add_metric(info, scanner.to_table(), mode='batch'))
-        source = self.source if expr is None else self.source.filter(expr)
+        source = self.source.to_pyarrow() if isinstance(self.source, ibis.Table) else self.source
+        if expr is not None:
+            source = source.filter(expr)
         return type(self)(Nodes.scan(source, projection) if columns else source)
 
     @doc_field(

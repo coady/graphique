@@ -257,7 +257,7 @@ class Diff(Input):
 @use_doc(strawberry.input)
 class Expression:
     """[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
-    used for [scanning](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html).
+    used for scanning.
 
     Expects one of: a field `name`, a scalar, or an operator with expressions. Single values can be passed for an
     [input `List`](https://spec.graphql.org/October2021/#sec-List.Input-Coercion).

@@ -6,7 +6,7 @@ import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
 from keyword import iskeyword
-import pyarrow.dataset as ds
+import ibis
 import strawberry.asgi
 from strawberry import Info, UNSET
 from strawberry.extensions import tracing
@@ -78,8 +78,12 @@ class GraphQL(strawberry.asgi.GraphQL):
 
 def implemented(root: Source, name: str = '', keys: Iterable = ()):
     """Return type which extends the Dataset interface with knowledge of the schema."""
-    schema = root.projected_schema if isinstance(root, ds.Scanner) else root.schema
-    types = {field.name: py_type(field.type) for field in schema}
+    if isinstance(root, ibis.Table):
+        schema = root.schema()
+        types = {name: py_type(value.to_pyarrow()) for name, value in schema.items()}
+    else:
+        schema = root.schema
+        types = {field.name: py_type(field.type) for field in schema}
     types = {name: types[name] for name in types if name.isidentifier() and not iskeyword(name)}
     if invalid := set(schema.names) - set(types):
         warnings.warn(f'invalid field names: {invalid}')
