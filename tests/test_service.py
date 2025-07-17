@@ -2,8 +2,8 @@ import pytest
 
 
 def test_slice(client):
-    data = client.execute('{ length slice(limit: 3) { columns { zipcode { values } } } }')
-    assert data == {'length': 41700, 'slice': {'columns': {'zipcode': {'values': [501, 544, 601]}}}}
+    data = client.execute('{ count slice(limit: 3) { columns { zipcode { values } } } }')
+    assert data == {'count': 41700, 'slice': {'columns': {'zipcode': {'values': [501, 544, 601]}}}}
     data = client.execute('{ slice(offset: 1) { columns { zipcode { values } } } }')
     zipcodes = data['slice']['columns']['zipcode']['values']
     assert zipcodes[0] == 544
@@ -12,8 +12,8 @@ def test_slice(client):
     assert data['columns']['zipcode']['count'] == 41700
     data = client.execute('{ columns { zipcode { count(mode: "only_null") } } }')
     assert data['columns']['zipcode']['count'] == 0
-    data = client.execute('{ cache { length } }')
-    assert data == {'cache': {'length': 41700}}
+    data = client.execute('{ cache { count } }')
+    assert data == {'cache': {'count': 41700}}
 
 
 def test_ints(client):
@@ -72,8 +72,8 @@ def test_floats(client):
         '{ scan(columns: {alias: "latitude", trig: {sin: {name: "latitude"}}}) {row { latitude } } }'
     )
     assert data == {'scan': {'row': {'latitude': pytest.approx(0.02273553)}}}
-    data = client.execute('{ scan(filter: {isFinite: {name: "longitude"}}) { length } }')
-    assert data == {'scan': {'length': 41700}}
+    data = client.execute('{ scan(filter: {isFinite: {name: "longitude"}}) { count } }')
+    assert data == {'scan': {'count': 41700}}
     data = client.execute('{ column(name: "latitude", cast: "int32", safe: false) { type } }')
     assert data == {'column': {'type': 'int32'}}
 
@@ -92,8 +92,8 @@ def test_strings(client):
     assert len(counties['unique']['values']) == counties['unique']['length'] == 1920
     assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
     data = client.execute("""{ filter(state: {eq: "CA"}) {
-        scan(filter: {gt: [{utf8: {length: {name: "city"}}}, {value: 23}]}) { length } } }""")
-    assert data == {'filter': {'scan': {'length': 1}}}
+        scan(filter: {gt: [{utf8: {length: {name: "city"}}}, {value: 23}]}) { count } } }""")
+    assert data == {'filter': {'scan': {'count': 1}}}
     data = client.execute(
         '{ scan(columns: {utf8: {swapcase: {name: "city"}}, alias: "city"}) { row { city } } }'
     )
@@ -102,25 +102,25 @@ def test_strings(client):
         '{ scan(columns: {utf8: {capitalize: {name: "state"}}, alias: "state"}) { row { state } } }'
     )
     assert data == {'scan': {'row': {'state': 'Ny'}}}
-    data = client.execute('{ scan(filter: {utf8: {isLower: {name: "city"}}}) { length } }')
-    assert data == {'scan': {'length': 0}}
-    data = client.execute('{ scan(filter: {utf8: {isTitle: {name: "city"}}}) { length } }')
-    assert data == {'scan': {'length': 41700}}
+    data = client.execute('{ scan(filter: {utf8: {isLower: {name: "city"}}}) { count } }')
+    assert data == {'scan': {'count': 0}}
+    data = client.execute('{ scan(filter: {utf8: {isTitle: {name: "city"}}}) { count } }')
+    assert data == {'scan': {'count': 41700}}
     data = client.execute(
         """{ scan(columns: {alias: "city", substring: {match: {name: "city"}, pattern: "Mountain"}})
-        { scan(filter: {name: "city"}) { length } } }"""
+        { scan(filter: {name: "city"}) { count } } }"""
     )
-    assert data == {'scan': {'scan': {'length': 88}}}
+    assert data == {'scan': {'scan': {'count': 88}}}
     data = client.execute(
         """{ scan(filter: {substring: {match: {name: "city"}, pattern: "mountain", ignoreCase: true}})
-        { length } }"""
+        { count } }"""
     )
-    assert data == {'scan': {'length': 88}}
+    assert data == {'scan': {'count': 88}}
     data = client.execute(
         """{ scan(filter: {substring: {match: {name: "city"}, pattern: "^Mountain", regex: true}})
-        { length } }"""
+        { count } }"""
     )
-    assert data == {'scan': {'length': 42}}
+    assert data == {'scan': {'count': 42}}
     data = client.execute(
         """{ scan(columns: {alias: "idx", setLookup: {indexIn: [{name: "state"}, {value: ["CA", "OR"]}]}})
         { column(name: "idx") { ... on IntColumn { unique { values } } } } }"""
@@ -144,9 +144,9 @@ def test_string_methods(client):
     states = data['scan']['columns']['state']['values']
     assert 'CA' not in states and 'A' in states
     data = client.execute(
-        '{ scan(columns: {alias: "state", utf8: {ltrim: {name: "state"}}}) { length } }'
+        '{ scan(columns: {alias: "state", utf8: {ltrim: {name: "state"}}}) { count } }'
     )
-    assert data == {'scan': {'length': 41700}}
+    assert data == {'scan': {'count': 41700}}
     data = client.execute(
         """{ scan(columns: {alias: "state", utf8: {center: {name: "state"}, width: 4, padding: "_"}})
         { row { state } } }"""
@@ -169,12 +169,12 @@ def test_string_methods(client):
 
 
 def test_search(client):
-    data = client.execute('{ schema { index } filter { length } }')
-    assert data == {'schema': {'index': ['zipcode']}, 'filter': {'length': 41700}}
+    data = client.execute('{ schema { index } filter { count } }')
+    assert data == {'schema': {'index': ['zipcode']}, 'filter': {'count': 41700}}
     data = client.execute('{ filter(zipcode: {eq: 501}) { columns { zipcode { values } } } }')
     assert data == {'filter': {'columns': {'zipcode': {'values': [501]}}}}
-    data = client.execute('{ filter(zipcode: {ne: 501}) { length } }')
-    assert data['filter']['length'] == 41699
+    data = client.execute('{ filter(zipcode: {ne: 501}) { count } }')
+    assert data['filter']['count'] == 41699
 
     data = client.execute('{ filter(zipcode: {ge: 99929}) { columns { zipcode { values } } } }')
     assert data == {'filter': {'columns': {'zipcode': {'values': [99929, 99950]}}}}
@@ -185,10 +185,10 @@ def test_search(client):
     )
     assert data == {'filter': {'columns': {'zipcode': {'values': [544, 601]}}}}
 
-    data = client.execute('{ filter(zipcode: {eq: []}) { length } }')
-    assert data == {'filter': {'length': 0}}
-    data = client.execute('{ filter(zipcode: {eq: [0]}) { length } }')
-    assert data == {'filter': {'length': 0}}
+    data = client.execute('{ filter(zipcode: {eq: []}) { count } }')
+    assert data == {'filter': {'count': 0}}
+    data = client.execute('{ filter(zipcode: {eq: [0]}) { count } }')
+    assert data == {'filter': {'count': 0}}
     data = client.execute(
         '{ filter(zipcode: {eq: [501, 601]}) { columns { zipcode { values } } } }'
     )
@@ -196,30 +196,30 @@ def test_search(client):
 
 
 def test_filter(client):
-    data = client.execute('{ filter { length } }')
-    assert data['filter']['length'] == 41700
-    data = client.execute('{ filter(city: {eq: "Mountain View"}) { length } }')
-    assert data['filter']['length'] == 11
-    data = client.execute('{ filter(state: {ne: "CA"}) { length } }')
-    assert data['filter']['length'] == 39053
-    data = client.execute('{ filter(city: {eq: "Mountain View"}, state: {le: "CA"}) { length } }')
-    assert data['filter']['length'] == 7
+    data = client.execute('{ filter { count } }')
+    assert data['filter']['count'] == 41700
+    data = client.execute('{ filter(city: {eq: "Mountain View"}) { count } }')
+    assert data['filter']['count'] == 11
+    data = client.execute('{ filter(state: {ne: "CA"}) { count } }')
+    assert data['filter']['count'] == 39053
+    data = client.execute('{ filter(city: {eq: "Mountain View"}, state: {le: "CA"}) { count } }')
+    assert data['filter']['count'] == 7
     data = client.execute('{ filter(state: {eq: null}) { columns { state { values } } } }')
     assert data['filter']['columns']['state']['values'] == []
     data = client.execute(
-        '{ scan(filter: {le: [{abs: {name: "longitude"}}, {value: 66}]}) { length } }'
+        '{ scan(filter: {le: [{abs: {name: "longitude"}}, {value: 66}]}) { count } }'
     )
-    assert data['scan']['length'] == 30
+    assert data['scan']['count'] == 30
     with pytest.raises(ValueError, match="optional, not nullable"):
-        client.execute('{ filter(city: {le: null}) { length } }')
+        client.execute('{ filter(city: {le: null}) { count } }')
 
 
 def test_scan(client):
-    data = client.execute('{ scan(filter: {eq: [{name: "county"}, {name: "city"}]}) { length } }')
-    assert data['scan']['length'] == 2805
+    data = client.execute('{ scan(filter: {eq: [{name: "county"}, {name: "city"}]}) { count } }')
+    assert data['scan']['count'] == 2805
     data = client.execute("""{ scan(filter: {or: [{eq: [{name: "state"}, {name: "county"}]},
-        {eq: [{name: "county"}, {name: "city"}]}]}) { length } }""")
-    assert data['scan']['length'] == 2805
+        {eq: [{name: "county"}, {name: "city"}]}]}) { count } }""")
+    assert data['scan']['count'] == 2805
     data = client.execute(
         """{ scan(columns: {alias: "zipcode", add: [{name: "zipcode"}, {name: "zipcode"}]})
         { columns { zipcode { min } } } }"""
@@ -232,17 +232,17 @@ def test_scan(client):
     assert data['scan']['columns']['zipcode']['unique']['values'] == [0]
     data = client.execute(
         """{ scan(columns: {alias: "product", multiply: [{name: "latitude"}, {name: "longitude"}]})
-        { scan(filter: {gt: [{name: "product"}, {value: 0}]}) { length } } }"""
+        { scan(filter: {gt: [{name: "product"}, {value: 0}]}) { count } } }"""
     )
-    assert data['scan']['scan']['length'] == 0
+    assert data['scan']['scan']['count'] == 0
     data = client.execute(
         '{ scan(columns: {name: "zipcode", cast: "float"}) { column(name: "zipcode") { type } } }'
     )
     assert data['scan']['column']['type'] == 'float'
     data = client.execute(
-        '{ scan(filter: {inv: {eq: [{name: "state"}, {value: "CA"}]}}) { length } }'
+        '{ scan(filter: {inv: {eq: [{name: "state"}, {value: "CA"}]}}) { count } }'
     )
-    assert data == {'scan': {'length': 39053}}
+    assert data == {'scan': {'count': 39053}}
     data = client.execute(
         '{ scan(columns: {name: "latitude", cast: "int32", safe: false}) { column(name: "latitude") { type } } }'
     )
@@ -328,25 +328,25 @@ def test_sort(client):
     assert data['group']['apply']['aggregate']['row'] == {'state': 'NY', 'county': 'Yates'}
     data = client.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: "county", length: 2}})
-        { row { state } column(name: "county") { ... on ListColumn { value { length } } } } } }"""
+        { row { state } column(name: "county") { ... on ListColumn { value { count } } } } } }"""
     )
-    assert data['group']['apply'] == {'row': {'state': 'NY'}, 'column': {'value': {'length': 2}}}
+    assert data['group']['apply'] == {'row': {'state': 'NY'}, 'column': {'value': {'count': 2}}}
 
 
 def test_group(client):
     with pytest.raises(ValueError, match="list"):
-        client.execute('{ group(by: ["state"]) { tables { length } } }')
+        client.execute('{ group(by: ["state"]) { tables { count } } }')
     with pytest.raises(ValueError, match="cannot represent"):
         client.execute('{ group(by: "state", aggregate: {list: {name: "city"}}) { row { city } } }')
     data = client.execute(
-        """{ group(by: ["state"], ordered: true, aggregate: {list: {name: "county"}}) { length tables { length
+        """{ group(by: ["state"], ordered: true, aggregate: {list: {name: "county"}}) { count tables { count
         columns { state { values } county { min max } } }
         scan(columns: {list: {valueLength: {name: "county"}}, alias: "c"}) {
         column(name: "c") { ... on IntColumn { values } } } } }"""
     )
-    assert len(data['group']['tables']) == data['group']['length'] == 52
+    assert len(data['group']['tables']) == data['group']['count'] == 52
     table = data['group']['tables'][0]
-    assert table['length'] == data['group']['scan']['column']['values'][0] == 2205
+    assert table['count'] == data['group']['scan']['column']['values'][0] == 2205
     assert set(table['columns']['state']['values']) == {'NY'}
     assert table['columns']['county'] == {'min': 'Albany', 'max': 'Yates'}
     data = client.execute(
@@ -380,9 +380,9 @@ def test_group(client):
         'b': {'values': [True, True, True]},
         'column': {'type': 'list<item: bool>'},
     }
-    data = client.execute("""{ sc: group(by: ["state", "county"]) { length }
-        cs: group(by: ["county", "state"]) { length } }""")
-    assert data['sc']['length'] == data['cs']['length'] == 3216
+    data = client.execute("""{ sc: group(by: ["state", "county"]) { count }
+        cs: group(by: ["county", "state"]) { count } }""")
+    assert data['sc']['count'] == data['cs']['count'] == 3216
 
 
 def test_flatten(client):
@@ -429,24 +429,24 @@ def test_aggregate(client):
 
 
 def test_runs(client):
-    data = client.execute("""{ runs(by: ["state"]) { aggregate { length columns { state { values } }
+    data = client.execute("""{ runs(by: ["state"]) { aggregate { count columns { state { values } }
         column(name: "county") { type } } } }""")
     agg = data['runs']['aggregate']
-    assert agg['length'] == 66
+    assert agg['count'] == 66
     assert agg['columns']['state']['values'][:3] == ['NY', 'PR', 'MA']
     assert agg['column']['type'] == 'list<item: string>'
     data = client.execute("""{ sort(by: ["state", "longitude"]) {
         runs(by: ["state"], split: [{name: "longitude", gt: 1.0}]) {
-        length columns { state { values } }
+        count columns { state { values } }
         column(name: "longitude") { type } } } }""")
     groups = data['sort']['runs']
-    assert groups['length'] == 62
+    assert groups['count'] == 62
     assert groups['columns']['state']['values'][:7] == ['AK'] * 7
     assert groups['column']['type'] == 'list<item: double>'
     data = client.execute("""{ runs(split: [{name: "state", lt: null}]) {
-        length column(name: "state") {
+        count column(name: "state") {
         ... on ListColumn {values { ... on StringColumn { values } } } } } }""")
-    assert data['runs']['length'] == 34
+    assert data['runs']['count'] == 34
     assert data['runs']['column']['values'][0]['values'] == (['NY'] * 2) + (['PR'] * 176)
     data = client.execute("""{ runs(by: ["state"]) { sort(by: ["state"]) {
         columns { state { values } } } } }""")
@@ -466,10 +466,10 @@ def test_runs(client):
     agg = data['runs']['filter']
     assert agg['column']['values'] == [2, 1, 2202]
     assert agg['columns']['state']['values'] == ['NY'] * 3
-    data = client.execute('{ runs(split: {name: "zipcode", lt: 0}) { length } }')
-    assert data == {'runs': {'length': 1}}
-    data = client.execute('{ runs(split: {name: "zipcode", lt: null}) { length } }')
-    assert data == {'runs': {'length': 1}}
+    data = client.execute('{ runs(split: {name: "zipcode", lt: 0}) { count } }')
+    assert data == {'runs': {'count': 1}}
+    data = client.execute('{ runs(split: {name: "zipcode", lt: null}) { count } }')
+    assert data == {'runs': {'count': 1}}
 
 
 def test_rows(client):

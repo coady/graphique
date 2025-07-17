@@ -6,14 +6,14 @@ def test_camel(aliasclient):
     assert data == {'schema': {'index': [], 'names': ['snakeId', 'camelId']}}
     data = aliasclient.execute('{ row { snakeId } columns { snakeId { type } } }')
     assert data == {'row': {'snakeId': 1}, 'columns': {'snakeId': {'type': 'int64'}}}
-    data = aliasclient.execute('{ filter(snakeId: {eq: 1}) { length } }')
-    assert data == {'filter': {'length': 1}}
-    data = aliasclient.execute('{ filter(camelId: {eq: 1}) { length } }')
-    assert data == {'filter': {'length': 1}}
-    data = aliasclient.execute('{ group(by: "camelId") { length } }')
-    assert data == {'group': {'length': 2}}
-    data = aliasclient.execute('{ rank(by: "camelId") { length } }')
-    assert data == {'rank': {'length': 1}}
+    data = aliasclient.execute('{ filter(snakeId: {eq: 1}) { count } }')
+    assert data == {'filter': {'count': 1}}
+    data = aliasclient.execute('{ filter(camelId: {eq: 1}) { count } }')
+    assert data == {'filter': {'count': 1}}
+    data = aliasclient.execute('{ group(by: "camelId") { count } }')
+    assert data == {'group': {'count': 2}}
+    data = aliasclient.execute('{ rank(by: "camelId") { count } }')
+    assert data == {'rank': {'count': 1}}
 
 
 def test_snake(executor):
@@ -21,10 +21,10 @@ def test_snake(executor):
     assert 'snake_id' in data['schema']['names']
     data = executor('{ row { snake_id } columns { snake_id { type } } }')
     assert data == {'row': {'snake_id': 1}, 'columns': {'snake_id': {'type': 'int64'}}}
-    data = executor('{ filter(snake_id: {eq: 1}) { length } }')
-    assert data == {'filter': {'length': 1}}
-    data = executor('{ filter(camelId: {eq: 1}) { length } }')
-    assert data == {'filter': {'length': 1}}
+    data = executor('{ filter(snake_id: {eq: 1}) { count } }')
+    assert data == {'filter': {'count': 1}}
+    data = executor('{ filter(camelId: {eq: 1}) { count } }')
+    assert data == {'filter': {'count': 1}}
 
 
 def test_columns(executor):
@@ -99,8 +99,8 @@ def test_boolean(executor):
     assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
     assert execute('{ bool { indicesNonzero } }') == {'bool': {'indicesNonzero': []}}
 
-    data = executor('{ scan(filter: {xor: [{name: "bool"}, {inv: {name: "bool"}}]}) { length } }')
-    assert data == {'scan': {'length': 1}}
+    data = executor('{ scan(filter: {xor: [{name: "bool"}, {inv: {name: "bool"}}]}) { count } }')
+    assert data == {'scan': {'count': 1}}
     data = executor(
         """{ scan(columns: {alias: "bool", andNot: [{inv: {name: "bool"}}, {name: "bool"}], kleene: true})
         { columns { bool { values } } } }"""
@@ -223,8 +223,8 @@ def test_duration(executor):
         { column(name: "diff") { ... on DurationColumn { unique { values } } } } }"""
     )
     assert data == {'scan': {'column': {'unique': {'values': ['P0D', None]}}}}
-    data = executor('{ runs(split: [{name: "timestamp", gt: 0.0}]) { length } }')
-    assert data == {'runs': {'length': 1}}
+    data = executor('{ runs(split: [{name: "timestamp", gt: 0.0}]) { count } }')
+    assert data == {'runs': {'count': 1}}
     data = executor(
         """{ scan(columns: {alias: "diff", temporal:
         {monthDayNanoIntervalBetween: [{name: "timestamp"}, {name: "timestamp"}]}})
@@ -320,10 +320,10 @@ def test_dictionary(executor):
 
 
 def test_selections(executor):
-    data = executor('{ slice { length } slice { sort(by: "snake_id") { length } } }')
-    assert data == {'slice': {'length': 2, 'sort': {'length': 2}}}
-    data = executor('{ dropNull { length } }')
-    assert data == {'dropNull': {'length': 2}}
+    data = executor('{ slice { count } slice { sort(by: "snake_id") { count } } }')
+    assert data == {'slice': {'count': 2, 'sort': {'count': 2}}}
+    data = executor('{ dropNull { count } }')
+    assert data == {'dropNull': {'count': 2}}
     data = executor('{ dropNull { columns { float { values } } } }')
     assert data == {'dropNull': {'columns': {'float': {'values': [0.0]}}}}
 
@@ -369,5 +369,5 @@ def test_base64(executor):
     data = executor("""{ scan(columns: {alias: "binary", binary: {replaceSlice: {name: "binary"}
         start: 0, stop: 1, replacement: "Xw=="}}) { columns { binary { values } } } }""")
     assert data == {'scan': {'columns': {'binary': {'values': ['Xw==', None]}}}}
-    data = executor('{ scan(filter: {eq: [{name: "binary"}, {base64: "Xw=="}]}) { length } }')
-    assert data == {'scan': {'length': 0}}
+    data = executor('{ scan(filter: {eq: [{name: "binary"}, {base64: "Xw=="}]}) { count } }')
+    assert data == {'scan': {'count': 0}}

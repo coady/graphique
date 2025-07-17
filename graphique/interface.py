@@ -176,8 +176,10 @@ class Dataset:
         return table
 
     @doc_field
-    def length(self) -> Long:
+    def count(self) -> Long:
         """number of rows"""
+        if isinstance(self.source, ibis.Table):  # pragma: no cover
+            return self.source.count()
         return len(self.source) if isinstance(self.source, Sized) else self.source.count_rows()
 
     @doc_field

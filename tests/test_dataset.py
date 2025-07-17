@@ -12,47 +12,47 @@ def test_extensions():
 
 
 def test_filter(dsclient):
-    data = dsclient.execute('{ column(name: "state") { length } }')
-    assert data == {'column': {'length': 41700}}
-    data = dsclient.execute('{ length row { state } }')
-    assert data == {'length': 41700, 'row': {'state': 'NY'}}
-    data = dsclient.execute('{ filter(state: {eq: ["CA", "NY"]}) { length } }')
-    assert data == {'filter': {'length': 4852}}
-    data = dsclient.execute('{ filter(state: {ne: "CA"}) { length } }')
-    assert data == {'filter': {'length': 39053}}
-    data = dsclient.execute('{ filter { length } }')
-    assert data == {'filter': {'length': 41700}}
-    data = dsclient.execute('{ filter(state: {ne: null}) { length } }')
-    assert data == {'filter': {'length': 41700}}
-    data = dsclient.execute('{ dropNull { length } }')
-    assert data == {'dropNull': {'length': 41700}}
+    data = dsclient.execute('{ column(name: "state") { count } }')
+    assert data == {'column': {'count': 41700}}
+    data = dsclient.execute('{ count row { state } }')
+    assert data == {'count': 41700, 'row': {'state': 'NY'}}
+    data = dsclient.execute('{ filter(state: {eq: ["CA", "NY"]}) { count } }')
+    assert data == {'filter': {'count': 4852}}
+    data = dsclient.execute('{ filter(state: {ne: "CA"}) { count } }')
+    assert data == {'filter': {'count': 39053}}
+    data = dsclient.execute('{ filter { count } }')
+    assert data == {'filter': {'count': 41700}}
+    data = dsclient.execute('{ filter(state: {ne: null}) { count } }')
+    assert data == {'filter': {'count': 41700}}
+    data = dsclient.execute('{ dropNull { count } }')
+    assert data == {'dropNull': {'count': 41700}}
 
 
 def test_search(dsclient):
-    data = dsclient.execute('{ filter(zipcode: {lt: 10000}) { length } }')
-    assert data == {'filter': {'length': 3224}}
-    data = dsclient.execute('{ filter(zipcode: {}) { length } }')
-    assert data == {'filter': {'length': 41700}}
+    data = dsclient.execute('{ filter(zipcode: {lt: 10000}) { count } }')
+    assert data == {'filter': {'count': 3224}}
+    data = dsclient.execute('{ filter(zipcode: {}) { count } }')
+    assert data == {'filter': {'count': 41700}}
     data = dsclient.execute('{ filter(zipcode: {}) { row { zipcode } } }')
     assert data == {'filter': {'row': {'zipcode': 501}}}
     data = dsclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
-        length } } }""")
-    assert data == {'filter': {'filter': {'length': 2647}}}
+        count } } }""")
+    assert data == {'filter': {'filter': {'count': 2647}}}
     data = dsclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
-        length row { zipcode } } } }""")
-    assert data == {'filter': {'filter': {'length': 2647, 'row': {'zipcode': 90001}}}}
+        count row { zipcode } } } }""")
+    assert data == {'filter': {'filter': {'count': 2647, 'row': {'zipcode': 90001}}}}
     data = dsclient.execute("""{ filter(zipcode: {lt: 90000}) { filter(state: {eq: "CA"}) {
-        group(by: "county") { length } } } }""")
-    assert data == {'filter': {'filter': {'group': {'length': 0}}}}
+        group(by: "county") { count } } } }""")
+    assert data == {'filter': {'filter': {'group': {'count': 0}}}}
 
 
 def test_slice(dsclient):
-    data = dsclient.execute('{ slice(limit: 3) { length } }')
-    assert data == {'slice': {'length': 3}}
-    data = dsclient.execute('{ slice(offset: -3) { length } }')
-    assert data == {'slice': {'length': 3}}
-    data = dsclient.execute('{ slice { length } }')
-    assert data == {'slice': {'length': 41700}}
+    data = dsclient.execute('{ slice(limit: 3) { count } }')
+    assert data == {'slice': {'count': 3}}
+    data = dsclient.execute('{ slice(offset: -3) { count } }')
+    assert data == {'slice': {'count': 3}}
+    data = dsclient.execute('{ slice { count } }')
+    assert data == {'slice': {'count': 41700}}
     data = dsclient.execute('{ take(indices: [0]) { row { zipcode } } }')
     assert data == {'take': {'row': {'zipcode': 501}}}
     data = dsclient.execute('{ any many: any(length: 50000)}')
@@ -99,15 +99,15 @@ def test_group(dsclient):
 def test_list(partclient):
     data = partclient.execute(
         """{ group(by: "state", aggregate: {distinct: {alias: "counties", name: "county"}}) {
-        tables { row { state } column(name: "counties") { length } } } } """
+        tables { row { state } column(name: "counties") { count } } } } """
     )
     (table,) = [table for table in data['group']['tables'] if table['row']['state'] == 'PR']
-    assert table == {'row': {'state': 'PR'}, 'column': {'length': 78}}
+    assert table == {'row': {'state': 'PR'}, 'column': {'count': 78}}
     data = partclient.execute("""{ group(by: "north", aggregate: {distinct: {name: "west"}}) {
-        tables { row { north } columns { west { length } } } } }""")
+        tables { row { north } columns { west { count } } } } }""")
     tables = data['group']['tables']
     assert {table['row']['north'] for table in tables} == {0, 1}
-    assert [table['columns'] for table in tables] == [{'west': {'length': 2}}] * 2
+    assert [table['columns'] for table in tables] == [{'west': {'count': 2}}] * 2
 
 
 def test_fragments(partclient):
@@ -127,14 +127,14 @@ def test_fragments(partclient):
     )
     assert data['group']['row']['zipcode'] >= 96898
     data = partclient.execute(
-        '{ group(by: [], aggregate: {min: {name: "state"}}) { length row { state } } }'
+        '{ group(by: [], aggregate: {min: {name: "state"}}) { count row { state } } }'
     )
-    assert data == {'group': {'length': 1, 'row': {'state': 'AK'}}}
+    assert data == {'group': {'count': 1, 'row': {'state': 'AK'}}}
     data = partclient.execute(
         """{ group(by: ["north", "west"], aggregate: {distinct: {name: "city"}, mean: {name: "zipcode"}}) {
-        length column(name: "city") { type } } }"""
+        count column(name: "city") { type } } }"""
     )
-    assert data == {'group': {'length': 4, 'column': {'type': 'list<item: string>'}}}
+    assert data == {'group': {'count': 4, 'column': {'type': 'list<item: string>'}}}
     data = partclient.execute("""{ group(by: "north", aggregate: {countDistinct: {name: "west"}}) { 
         column(name: "west") { ... on LongColumn { values } } } }""")
     assert data == {'group': {'column': {'values': [2, 2]}}}
@@ -153,8 +153,8 @@ def test_schema(dsclient):
     assert data == {'scan': {'type': 'FileSystemDataset'}}
     data = dsclient.execute('{ scan(columns: {name: "zipcode"}) { type } }')
     assert data == {'scan': {'type': 'Nodes'}}
-    result = dsclient._execute('{ length optional { tables { length } } }')
-    assert result.data == {'length': 41700, 'optional': None}
+    result = dsclient._execute('{ count optional { tables { count } } }')
+    assert result.data == {'count': 41700, 'optional': None}
     assert len(result.errors) == 1
 
 
@@ -163,62 +163,60 @@ def test_scan(dsclient):
         '{ scan(columns: {name: "zipcode", alias: "zip"}) { column(name: "zip") { type } } }'
     )
     assert data == {'scan': {'column': {'type': 'int32'}}}
+    data = dsclient.execute('{ scan(filter: {eq: [{name: "county"}, {name: "state"}]}) { count } }')
+    assert data == {'scan': {'count': 0}}
+    data = dsclient.execute('{ scan(filter: {eq: [{name: "zipcode"}, {value: null}]}) { count } }')
+    assert data == {'scan': {'count': 0}}
     data = dsclient.execute(
-        '{ scan(filter: {eq: [{name: "county"}, {name: "state"}]}) { length } }'
+        '{ scan(filter: {inv: {ne: [{name: "zipcode"}, {value: null}]}}) { count } }'
     )
-    assert data == {'scan': {'length': 0}}
-    data = dsclient.execute('{ scan(filter: {eq: [{name: "zipcode"}, {value: null}]}) { length } }')
-    assert data == {'scan': {'length': 0}}
+    assert data == {'scan': {'count': 0}}
     data = dsclient.execute(
-        '{ scan(filter: {inv: {ne: [{name: "zipcode"}, {value: null}]}}) { length } }'
+        '{ scan(filter: {eq: [{name: "state"} {value: "CA", cast: "string"}]}) { count } }'
     )
-    assert data == {'scan': {'length': 0}}
+    assert data == {'scan': {'count': 2647}}
     data = dsclient.execute(
-        '{ scan(filter: {eq: [{name: "state"} {value: "CA", cast: "string"}]}) { length } }'
+        '{ scan(filter: {eq: [{name: "state"} {value: ["CA", "OR"]}]}) { count } }'
     )
-    assert data == {'scan': {'length': 2647}}
-    data = dsclient.execute(
-        '{ scan(filter: {eq: [{name: "state"} {value: ["CA", "OR"]}]}) { length } }'
-    )
-    assert data == {'scan': {'length': 3131}}
+    assert data == {'scan': {'count': 3131}}
     with pytest.raises(ValueError, match="conflicting inputs"):
-        dsclient.execute('{ scan(filter: {name: "state", value: "CA"}) { length } }')
+        dsclient.execute('{ scan(filter: {name: "state", value: "CA"}) { count } }')
     with pytest.raises(ValueError, match="name or alias"):
-        dsclient.execute('{ scan(columns: {}) { length } }')
+        dsclient.execute('{ scan(columns: {}) { count } }')
     data = dsclient.execute("""{ scan(filter: {eq: [{name: "state"}, {value: "CA"}]})
         { scan(filter: {eq: [{name: "county"}, {value: "Santa Clara"}]})
-        { length row { county } } } }""")
-    assert data == {'scan': {'scan': {'length': 108, 'row': {'county': 'Santa Clara'}}}}
+        { count row { county } } } }""")
+    assert data == {'scan': {'scan': {'count': 108, 'row': {'county': 'Santa Clara'}}}}
     data = dsclient.execute("""{ scan(filter: {or: [{eq: [{name: "state"}, {value: "CA"}]},
-        {eq: [{name: "county"}, {value: "Santa Clara"}]}]}) { length } }""")
-    assert data == {'scan': {'length': 2647}}
+        {eq: [{name: "county"}, {value: "Santa Clara"}]}]}) { count } }""")
+    assert data == {'scan': {'count': 2647}}
 
 
 def test_rank(partclient):
-    data = partclient.execute('{ rank(by: ["state"]) { length row { state } } }')
-    assert data == {'rank': {'length': 273, 'row': {'state': 'AK'}}}
-    data = partclient.execute('{ rank(by: ["-state", "-county"]) { length row { state county } } }')
-    assert data == {'rank': {'length': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
+    data = partclient.execute('{ rank(by: ["state"]) { count row { state } } }')
+    assert data == {'rank': {'count': 273, 'row': {'state': 'AK'}}}
+    data = partclient.execute('{ rank(by: ["-state", "-county"]) { count row { state county } } }')
+    assert data == {'rank': {'count': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
     data = partclient.execute('{ sort(by: "state", length: 3) { columns { state { values } } } }')
     assert data == {'sort': {'columns': {'state': {'values': ['AK'] * 3}}}}
-    data = partclient.execute('{ rank(by: "north") { length } }')
-    assert data == {'rank': {'length': 20850}}
-    data = partclient.execute('{ rank(by: "north", max: 2) { length } }')
-    assert data == {'rank': {'length': 41700}}
-    data = partclient.execute('{ rank(by: ["north", "west"]) { length } }')
-    assert data == {'rank': {'length': 9301}}
-    data = partclient.execute('{ rank(by: ["north", "west"], max: 2) { length } }')
-    assert data == {'rank': {'length': 20850}}
-    data = partclient.execute('{ rank(by: ["north", "west"], max: 3) { length } }')
-    assert data == {'rank': {'length': 32399}}
+    data = partclient.execute('{ rank(by: "north") { count } }')
+    assert data == {'rank': {'count': 20850}}
+    data = partclient.execute('{ rank(by: "north", max: 2) { count } }')
+    assert data == {'rank': {'count': 41700}}
+    data = partclient.execute('{ rank(by: ["north", "west"]) { count } }')
+    assert data == {'rank': {'count': 9301}}
+    data = partclient.execute('{ rank(by: ["north", "west"], max: 2) { count } }')
+    assert data == {'rank': {'count': 20850}}
+    data = partclient.execute('{ rank(by: ["north", "west"], max: 3) { count } }')
+    assert data == {'rank': {'count': 32399}}
     data = partclient.execute(
         '{ rank(by: ["north", "state"], max: 2) { columns { state { unique { values } } } } }'
     )
     assert data == {'rank': {'columns': {'state': {'unique': {'values': ['AL', 'AR']}}}}}
-    data = partclient.execute('{ sort(by: "north", length: 3) { length } }')
-    assert data == {'sort': {'length': 3}}
-    data = partclient.execute('{ sort(by: "north", length: 50000) { length } }')
-    assert data == {'sort': {'length': 41700}}
+    data = partclient.execute('{ sort(by: "north", length: 3) { count } }')
+    assert data == {'sort': {'count': 3}}
+    data = partclient.execute('{ sort(by: "north", length: 50000) { count } }')
+    assert data == {'sort': {'count': 41700}}
 
 
 def test_root():
@@ -231,48 +229,48 @@ def test_root():
 
 def test_federation(fedclient):
     data = fedclient.execute(
-        '{ _service { sdl } zipcodes { __typename length } zipDb { __typename length } }'
+        '{ _service { sdl } zipcodes { __typename count } zipDb { __typename count } }'
     )
     assert data['_service']['sdl']
-    assert data['zipcodes'] == {'__typename': 'ZipcodesTable', 'length': 41700}
-    assert data['zipDb'] == {'__typename': 'ZipDbTable', 'length': 42724}
+    assert data['zipcodes'] == {'__typename': 'ZipcodesTable', 'count': 41700}
+    assert data['zipDb'] == {'__typename': 'ZipDbTable', 'count': 42724}
 
     data = fedclient.execute("""{ zipcodes { scan(columns: {name: "zipcode", cast: "int64"}) {
-        join(right: "zip_db", keys: "zipcode", rightKeys: "zip") { length schema { names } } } } }""")
+        join(right: "zip_db", keys: "zipcode", rightKeys: "zip") { count schema { names } } } } }""")
     table = data['zipcodes']['scan']['join']
-    assert table['length'] == 41700
+    assert table['count'] == 41700
     assert set(table['schema']['names']) > {'zipcode', 'timezone', 'latitude'}
     data = fedclient.execute(
         """{ zipcodes { scan(columns: {alias: "zip", name: "zipcode", cast: "int64"}) {
-        join(right: "zip_db", keys: "zip", joinType: "right outer") { length schema { names } } } } }"""
+        join(right: "zip_db", keys: "zip", joinType: "right outer") { count schema { names } } } } }"""
     )
     table = data['zipcodes']['scan']['join']
-    assert table['length'] == 42724
+    assert table['count'] == 42724
     assert set(table['schema']['names']) > {'zip', 'timezone', 'latitude'}
 
     data = fedclient.execute(
         """{ _entities(representations: {__typename: "ZipcodesTable", zipcode: 90001}) {
-        ... on ZipcodesTable { length type row { state } } } }"""
+        ... on ZipcodesTable { count type row { state } } } }"""
     )
-    assert data == {'_entities': [{'length': 1, 'type': 'Nodes', 'row': {'state': 'CA'}}]}
+    assert data == {'_entities': [{'count': 1, 'type': 'Nodes', 'row': {'state': 'CA'}}]}
     data = fedclient.execute("""{ states { filter(state: {eq: "CA"}) { columns { indices {
-        takeFrom(field: "zipcodes") { __typename column(name: "state") { length } } } } } } }""")
+        takeFrom(field: "zipcodes") { __typename column(name: "state") { count } } } } } } }""")
     table = data['states']['filter']['columns']['indices']['takeFrom']
-    assert table == {'__typename': 'ZipcodesTable', 'column': {'length': 2647}}
+    assert table == {'__typename': 'ZipcodesTable', 'column': {'count': 2647}}
 
 
 def test_sorted(fedclient):
     data = fedclient.execute(
-        '{ states { filter(state: {eq: "CA"}, county: {eq: "Santa Clara"}) { length } } }'
+        '{ states { filter(state: {eq: "CA"}, county: {eq: "Santa Clara"}) { count } } }'
     )
-    assert data == {'states': {'filter': {'length': 108}}}
+    assert data == {'states': {'filter': {'count': 108}}}
     data = fedclient.execute(
-        '{ states { filter(state: {eq: ["CA", "OR"]}, county: {eq: "Santa Clara"}) { length } } }'
+        '{ states { filter(state: {eq: ["CA", "OR"]}, county: {eq: "Santa Clara"}) { count } } }'
     )
-    assert data == {'states': {'filter': {'length': 108}}}
+    assert data == {'states': {'filter': {'count': 108}}}
     data = fedclient.execute(
-        '{ states { filter(state: {le: "CA"}, county: {eq: "Santa Clara"}) { length } } }'
+        '{ states { filter(state: {le: "CA"}, county: {eq: "Santa Clara"}) { count } } }'
     )
-    assert data == {'states': {'filter': {'length': 108}}}
-    data = fedclient.execute('{ states { filter { filter(state: {eq: "CA"}) { length } } } }')
-    assert data == {'states': {'filter': {'filter': {'length': 2647}}}}
+    assert data == {'states': {'filter': {'count': 108}}}
+    data = fedclient.execute('{ states { filter { filter(state: {eq: "CA"}) { count } } } }')
+    assert data == {'states': {'filter': {'filter': {'count': 2647}}}}
