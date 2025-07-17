@@ -75,9 +75,7 @@ class Dataset:
         names = list(self.references(info))
         if len(names) >= len(self.schema().names):
             return self.source
-        if isinstance(self.source, pa.Table):
-            return self.source.select(names)
-        if isinstance(self.source, ibis.Table):
+        if isinstance(self.source, (ibis.Table, pa.Table)):
             return self.source.select(names)
         return Nodes.scan(self.source, names)
 
@@ -87,7 +85,7 @@ class Dataset:
         if isinstance(source, pa.Table):
             return source
         if isinstance(self.source, ibis.Table):
-            return self.source.head(None).to_pyarrow()
+            return self.source.head(length).to_pyarrow()
         if length is None:
             return self.add_metric(info, source.to_table(), mode='read')
         return self.add_metric(info, source.head(length), mode='head')
@@ -216,23 +214,21 @@ class Dataset:
         source = self.scan(info, Expression(), [column]).source
         return Column.cast(*(source if isinstance(source, pa.Table) else source.to_table()))
 
+    @doc_field
+    def cache(self, info: Info) -> Self:
+        """Evaluate and cache the table."""
+        return type(self)(self.to_table(info))
+
     @doc_field(
         offset="number of rows to skip; negative value skips from the end",
-        length="maximum number of rows to return",
-        reverse="reverse order after slicing; forces a copy",
+        limit="maximum number of rows to return",
     )
-    def slice(
-        self, info: Info, offset: Long = 0, length: Long | None = None, reverse: bool = False
-    ) -> Self:
-        """Return zero-copy slice of table.
-
-        Can also be used to force loading a dataset.
-        """
-        table = self.to_table(info, length and (offset + length if offset >= 0 else None))
-        table = table[offset:][:length]  # `slice` bug: apache/arrow#30894
-        if reverse:
-            table = table.take(pc.cumulative_sum(pa.repeat(-1, len(table)), len(table)))
-        return type(self)(table)
+    def slice(self, info: Info, offset: Long = 0, limit: Long | None = None) -> Self:
+        """Return zero-copy slice of table."""
+        table = self.source
+        if not isinstance(self.source, (ibis.Table, pa.Table)):
+            table = self.to_table(info, limit and (offset + limit if offset >= 0 else None))
+        return type(self)(table[offset:][:limit])
 
     @doc_field(
         by="column names; empty will aggregate into a single row table",

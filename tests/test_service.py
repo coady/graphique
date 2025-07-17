@@ -2,18 +2,18 @@ import pytest
 
 
 def test_slice(client):
-    data = client.execute('{ length slice(length: 3) { columns { zipcode { values } } } }')
+    data = client.execute('{ length slice(limit: 3) { columns { zipcode { values } } } }')
     assert data == {'length': 41700, 'slice': {'columns': {'zipcode': {'values': [501, 544, 601]}}}}
     data = client.execute('{ slice(offset: 1) { columns { zipcode { values } } } }')
     zipcodes = data['slice']['columns']['zipcode']['values']
     assert zipcodes[0] == 544
     assert len(zipcodes) == 41699
-    data = client.execute('{ slice(offset: -1, reverse: true) { columns { zipcode { values } } } }')
-    assert data['slice']['columns']['zipcode']['values'] == [99950]
     data = client.execute('{ columns { zipcode { count } } }')
     assert data['columns']['zipcode']['count'] == 41700
     data = client.execute('{ columns { zipcode { count(mode: "only_null") } } }')
     assert data['columns']['zipcode']['count'] == 0
+    data = client.execute('{ cache { length } }')
+    assert data == {'cache': {'length': 41700}}
 
 
 def test_ints(client):
@@ -193,8 +193,6 @@ def test_search(client):
         '{ filter(zipcode: {eq: [501, 601]}) { columns { zipcode { values } } } }'
     )
     assert data == {'filter': {'columns': {'zipcode': {'values': [501, 601]}}}}
-    data = client.execute('{ slice(reverse: true) { filter(zipcode: {ge: 90000}) { length } } }')
-    assert data == {'slice': {'filter': {'length': 4275}}}
 
 
 def test_filter(client):
@@ -372,7 +370,7 @@ def test_group(client):
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
     data = client.execute("""{ scan(columns: {name: "zipcode", cast: "bool"})
-        { group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { slice(length: 3) {
+        { group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { slice(limit: 3) {
         scan(columns: [{alias: "a", list: {any: {name: "zipcode"}}}, {alias: "b", list: {all: {name: "zipcode"}}}]) {
         a: column(name: "a") { ... on BooleanColumn { values } }
         b: column(name: "b") { ... on BooleanColumn { values } }
@@ -405,7 +403,7 @@ def test_flatten(client):
 def test_aggregate(client):
     data = client.execute(
         """{ group(by: ["state"] counts: "c", aggregate: {first: [{name: "county"}]
-        countDistinct: [{name: "city", alias: "cd"}]}) { slice(length: 3) {
+        countDistinct: [{name: "city", alias: "cd"}]}) { slice(limit: 3) {
         c: column(name: "c") { ... on LongColumn { values } }
         cd: column(name: "cd") { ... on LongColumn { values } }
         columns { state { values } county { values } } } } }"""
@@ -420,7 +418,7 @@ def test_aggregate(client):
     }
     data = client.execute(
         """{ group(by: ["state", "county"], aggregate: {list: {name: "city"}, min: {name: "city", alias: "first"}}) {
-        aggregate(max: {name: "city", alias: "last"}) { slice(length: 3) {
+        aggregate(max: {name: "city", alias: "last"}) { slice(limit: 3) {
         first: column(name: "first") { ... on StringColumn { values } }
         last: column(name: "last") { ... on StringColumn { values } } } } } }"""
     )
@@ -453,7 +451,7 @@ def test_runs(client):
     data = client.execute("""{ runs(by: ["state"]) { sort(by: ["state"]) {
         columns { state { values } } } } }""")
     assert data['runs']['sort']['columns']['state']['values'][-2:] == ['WY', 'WY']
-    data = client.execute("""{ runs(by: ["state"]) { slice(offset: 2, length: 2) {
+    data = client.execute("""{ runs(by: ["state"]) { slice(offset: 2, limit: 2) {
         aggregate(count: {name: "zipcode", alias: "c"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } } }""")
     agg = data['runs']['slice']['aggregate']

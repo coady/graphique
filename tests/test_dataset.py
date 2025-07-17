@@ -47,7 +47,7 @@ def test_search(dsclient):
 
 
 def test_slice(dsclient):
-    data = dsclient.execute('{ slice(length: 3) { length } }')
+    data = dsclient.execute('{ slice(limit: 3) { length } }')
     assert data == {'slice': {'length': 3}}
     data = dsclient.execute('{ slice(offset: -3) { length } }')
     assert data == {'slice': {'length': 3}}
@@ -68,7 +68,7 @@ def test_group(dsclient):
         """{ group(by: ["state"], aggregate: {min: {name: "county"}}) { row { state county } } }"""
     )
     assert data == {'group': {'row': {'state': 'NY', 'county': 'Albany'}}}
-    data = dsclient.execute("""{ group(by: ["state"], counts: "c") { slice(length: 1) {
+    data = dsclient.execute("""{ group(by: ["state"], counts: "c") { slice(limit: 1) {
         column(name: "c") { ... on LongColumn { values } } } } }""")
     assert data == {'group': {'slice': {'column': {'values': [2205]}}}}
     data = dsclient.execute(
@@ -80,13 +80,13 @@ def test_group(dsclient):
     )
     assert data['group']['row']['county']
     data = dsclient.execute(
-        """{ group(by: ["state"], aggregate: {mean: {name: "zipcode"}}) { slice(length: 1) {
+        """{ group(by: ["state"], aggregate: {mean: {name: "zipcode"}}) { slice(limit: 1) {
         column(name: "zipcode") { ... on FloatColumn { values } } } } }"""
     )
     assert data == {'group': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
     data = dsclient.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { aggregate(mean: {name: "zipcode"}) {
-        slice(length: 1) { column(name: "zipcode") { ... on FloatColumn { values } } } } } }"""
+        slice(limit: 1) { column(name: "zipcode") { ... on FloatColumn { values } } } } } }"""
     )
     assert data == {
         'group': {'aggregate': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
