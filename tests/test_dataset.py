@@ -57,10 +57,6 @@ def test_slice(dsclient):
     assert data == {'take': {'row': {'zipcode': 501}}}
     data = dsclient.execute('{ any many: any(length: 50000)}')
     assert data == {'any': True, 'many': False}
-    data = dsclient.execute('{ size }')
-    assert data == {'size': None}
-    data = dsclient.execute('{ slice { size } }')
-    assert data == {'slice': {'size': 0}}
 
 
 def test_group(dsclient):

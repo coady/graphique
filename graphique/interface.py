@@ -172,7 +172,7 @@ class Dataset:
     def add_metric(info: Info, table: pa.Table, **data):
         """Add memory usage and other metrics to context with path info."""
         path = tuple(get_path_from_info(info))
-        info.context.setdefault('metrics', {})[path] = dict(data, memory=T.size(table))
+        info.context.setdefault('metrics', {})[path] = data
         return table
 
     @doc_field
@@ -190,11 +190,6 @@ class Dataset:
         """
         table = self.to_table(info, length)
         return len(table) >= length
-
-    @doc_field
-    def size(self) -> Long | None:
-        """buffer size in bytes; null if table is not loaded"""
-        return getattr(self.source, 'nbytes', None)
 
     @doc_field(
         name="column name(s); multiple names access nested struct fields",

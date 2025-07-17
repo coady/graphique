@@ -492,13 +492,6 @@ class Table(pa.Table):
                 row |= {name: self[name][index].values for name in lists}
                 yield pa.RecordBatch.from_pydict(row)
 
-    def size(self) -> str:
-        """Return buffer size in readable units."""
-        size, prefix = self.nbytes, ''
-        for prefix in itertools.takewhile(lambda _: size >= 1e3, 'kMGT'):
-            size /= 1e3
-        return f'{size:n} {prefix}B'
-
 
 class Nodes(ac.Declaration):
     """[Acero](https://arrow.apache.org/docs/python/api/acero.html) engine declaration.
