@@ -16,7 +16,6 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
-from strawberry.extensions.utils import get_path_from_info
 from typing_extensions import Self
 from .core import Agg, Batch, Column as C, ListChunk, Nodes, Table as T
 from .inputs import Cumulative, Diff, Expression, Field, Filter, HashAggregates, ListFunction
@@ -86,9 +85,7 @@ class Dataset:
             return source
         if isinstance(self.source, ibis.Table):
             return self.source.head(length).to_pyarrow()
-        if length is None:
-            return self.add_metric(info, source.to_table(), mode='read')
-        return self.add_metric(info, source.head(length), mode='head')
+        return source.to_table() if length is None else source.head(length)
 
     @classmethod
     @no_type_check
@@ -167,13 +164,6 @@ class Dataset:
         Will be replaced by client controlled nullability.
         """
         return self
-
-    @staticmethod
-    def add_metric(info: Info, table: pa.Table, **data):
-        """Add memory usage and other metrics to context with path info."""
-        path = tuple(get_path_from_info(info))
-        info.context.setdefault('metrics', {})[path] = data
-        return table
 
     @doc_field
     def count(self) -> Long:
@@ -258,9 +248,7 @@ class Dataset:
                 aggs[agg.alias] = (agg.name, prefix + func, agg.func_options(func))
         source = self.to_table(info) if isinstance(self.source, ibis.Table) else self.source
         source = Nodes.group(source, *by, **aggs)
-        if ordered:
-            source = self.add_metric(info, source.to_table(use_threads=False), mode='group')
-        return type(self)(source)
+        return type(self)(source.to_table(use_threads=False) if ordered else source)
 
     @doc_field(
         by="column names",
@@ -312,9 +300,8 @@ class Dataset:
                 self = type(self)(self.source.filter(expr))
             source = self.select(info)
             if not by:
-                return type(self)(self.add_metric(info, source.head(length), mode='head'))
+                return type(self)(source.head(length))
             table = T.map_batch(source, T.sort, *by, **kwargs)
-            self.add_metric(info, table, mode='batch')
         return type(self)(T.sort(table, *by, **kwargs))  # type: ignore
 
     @doc_field(
@@ -370,7 +357,6 @@ class Dataset:
         which do not require loading.
         """
         table = T.map_batch(self.select(info), self.apply_list, list_)
-        self.add_metric(info, table, mode='batch')
         columns = {}
         funcs = pc.cumulative_max, pc.cumulative_mean, pc.cumulative_min, pc.cumulative_prod
         funcs += pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, C.pairwise_diff
@@ -390,7 +376,7 @@ class Dataset:
         At least one list column must be referenced, and all list columns must have the same lengths.
         """
         table = pa.Table.from_batches(T.flatten(self.select(info), indices))
-        return type(self)(self.add_metric(info, table, mode='batch'))
+        return type(self)(table)
 
     @doc_field
     def tables(self, info: Info) -> list[Self | None]:  # type: ignore
@@ -484,7 +470,7 @@ class Dataset:
     def take(self, info: Info, indices: list[Long]) -> Self:
         """Select rows from indices."""
         table = self.select(info).take(indices)
-        return type(self)(self.add_metric(info, table, mode='take'))
+        return type(self)(table)
 
     @doc_field
     def drop_null(self, info: Info) -> Self:
@@ -492,4 +478,4 @@ class Dataset:
         if isinstance(self.source, pa.Table):
             return type(self)(pc.drop_null(self.to_table(info)))
         table = T.map_batch(self.select(info), pc.drop_null)
-        return type(self)(self.add_metric(info, table, mode='batch'))
+        return type(self)(table)
