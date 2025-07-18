@@ -116,10 +116,6 @@ def test_decimal(executor):
     assert execute('{ decimal { min max } }')
     assert execute('{ decimal { indicesNonzero } }') == {'decimal': {'indicesNonzero': []}}
     assert execute('{ decimal { index(value: 0) } }')
-    data = executor(
-        '{ sort(by: "decimal", nullPlacement: "at_start") { columns { decimal { values } } } }'
-    )
-    assert data == {'sort': {'columns': {'decimal': {'values': [None, '0']}}}}
     data = executor('{ rank(by: "decimal") { columns { decimal { values } } } }')
     assert data == {'rank': {'columns': {'decimal': {'values': ['0']}}}}
     data = executor('{ rank(by: "-decimal") { columns { decimal { values } } } }')

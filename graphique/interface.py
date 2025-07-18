@@ -278,20 +278,12 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         length="maximum number of rows to return; may be significantly faster but is unstable",
-        null_placement="where nulls in input should be sorted; incompatible with `length`",
     )
-    def sort(
-        self,
-        info: Info,
-        by: list[str],
-        length: Long | None = None,
-        null_placement: str = 'at_end',
-    ) -> Self:
+    def sort(self, info: Info, by: list[str], length: Long | None = None) -> Self:
         """Return table slice sorted by specified columns.
 
         Optimized for length == 1; matches min or max values.
         """
-        kwargs = dict(length=length, null_placement=null_placement)
         if isinstance(self.source, pa.Table) or length is None:
             table = self.to_table(info)
         else:
@@ -301,8 +293,8 @@ class Dataset:
             source = self.select(info)
             if not by:
                 return type(self)(source.head(length))
-            table = T.map_batch(source, T.sort, *by, **kwargs)
-        return type(self)(T.sort(table, *by, **kwargs))  # type: ignore
+            table = T.map_batch(source, T.sort, *by, length=length)
+        return type(self)(T.sort(table, *by, length=length))  # type: ignore
 
     @doc_field(
         by="column names; prefix with `-` for descending order",

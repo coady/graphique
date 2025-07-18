@@ -349,24 +349,16 @@ class Table(pa.Table):
         table = pa.Table.from_batches(batch for batch in batches if batch is not None)
         return Table.union(self, Table.from_counts(table, counts))
 
-    def sort_indices(
-        self, *names: str, length: int | None = None, null_placement: str = 'at_end'
-    ) -> pa.Array:
+    def sort_indices(self, *names: str, length: int | None = None) -> pa.Array:
         """Return indices which would sort the table by columns, optimized for fixed length."""
-        func = functools.partial(pc.sort_indices, null_placement=null_placement)
+        func = pc.sort_indices
         if length is not None and length < len(self):
             func = functools.partial(pc.select_k_unstable, k=length)
         keys = dict(map(sort_key, names))
         table = pa.table({name: Column.sort_values(self[name]) for name in keys})
         return func(table, sort_keys=keys.items()) if table else pa.array([], 'int64')
 
-    def sort(
-        self,
-        *names: str,
-        length: int | None = None,
-        indices: str = '',
-        null_placement: str = 'at_end',
-    ) -> Batch:
+    def sort(self, *names: str, length: int | None = None, indices: str = '') -> Batch:
         """Return table sorted by columns, optimized for fixed length.
 
         Args:
@@ -376,7 +368,7 @@ class Table(pa.Table):
         """
         if length == 1 and not indices:
             return Table.min_max(self, *names)[:1]
-        indices_ = Table.sort_indices(self, *names, length=length, null_placement=null_placement)
+        indices_ = Table.sort_indices(self, *names, length=length)
         table = self.take(indices_)
         if indices:
             table = table.append_column(indices, indices_)

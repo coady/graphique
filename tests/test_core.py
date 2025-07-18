@@ -110,10 +110,6 @@ def test_sort(table):
     assert (data['state'][0], data['county'][0]) == ('AK', 'Anchorage')
     data = T.sort(table, 'state', 'county', length=1).to_pydict()
     assert (data['state'], data['county']) == (['AK'], ['Aleutians East'])
-    tbl = T.sort(table, 'state', '-county', length=2, null_placement='at_start')
-    assert tbl.schema.pandas_metadata == {'index_columns': ['state']}
-    assert tbl['state'].to_pylist() == ['AK'] * 2
-    assert tbl['county'].to_pylist() == ['Yukon Koyukuk'] * 2
     counts = T.rank(table, 1, 'state')['state'].value_counts().to_pylist()
     assert counts == [{'values': 'AK', 'counts': 273}]
     counts = T.rank(table, 1, 'state', '-county')['county'].value_counts().to_pylist()
