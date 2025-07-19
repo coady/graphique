@@ -17,7 +17,7 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
-from .core import Agg, Batch, Column as C, ListChunk, Nodes, Table as T
+from .core import Agg, Batch, Column as C, ListChunk, Nodes, Table as T, order_key
 from .inputs import Cumulative, Diff, Expression, Field, Filter, HashAggregates, ListFunction
 from .inputs import Pairwise, Projection, Rank, RankQuantile, links, provisional
 from .models import Column, doc_field
@@ -83,8 +83,8 @@ class Dataset:
         source = self.select(info)
         if isinstance(source, pa.Table):
             return source
-        if isinstance(self.source, ibis.Table):
-            return self.source.head(length).to_pyarrow()
+        if isinstance(source, ibis.Table):
+            return source.head(length).to_pyarrow()
         return source.to_table() if length is None else source.head(length)
 
     @classmethod
@@ -168,8 +168,8 @@ class Dataset:
     @doc_field
     def count(self) -> Long:
         """number of rows"""
-        if isinstance(self.source, ibis.Table):  # pragma: no cover
-            return self.source.count()
+        if isinstance(self.source, ibis.Table):
+            return self.source.count().to_pyarrow().as_py()
         return len(self.source) if isinstance(self.source, Sized) else self.source.count_rows()
 
     @doc_field
@@ -277,24 +277,21 @@ class Dataset:
 
     @doc_field(
         by="column names; prefix with `-` for descending order",
-        length="maximum number of rows to return; may be significantly faster but is unstable",
+        limit="maximum number of rows to return; optimized for partitioned dataset keys",
     )
-    def sort(self, info: Info, by: list[str], length: Long | None = None) -> Self:
-        """Return table slice sorted by specified columns.
-
-        Optimized for length == 1; matches min or max values.
-        """
-        if isinstance(self.source, pa.Table) or length is None:
-            table = self.to_table(info)
-        else:
-            expr, by = T.rank_keys(self.source, length, *by, dense=False)
+    def order(self, info: Info, by: list[str], limit: Long | None = None) -> Self:
+        """Return table sorted by specified columns."""
+        source = self.source
+        if isinstance(source, ds.Dataset) and limit is not None:
+            expr, by = T.rank_keys(self.source, limit, *by, dense=False)
             if expr is not None:
                 self = type(self)(self.source.filter(expr))
             source = self.select(info)
             if not by:
-                return type(self)(source.head(length))
-            table = T.map_batch(source, T.sort, *by, length=length)
-        return type(self)(T.sort(table, *by, length=length))  # type: ignore
+                return type(self)(source.head(limit))
+        if not isinstance(source, ibis.Table):  # pragma: no branch
+            source = ibis.memtable(self.to_table(info))
+        return type(self)(source.order_by(*map(order_key, by))[:limit])
 
     @doc_field(
         by="column names; prefix with `-` for descending order",

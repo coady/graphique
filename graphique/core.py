@@ -90,6 +90,11 @@ def sort_key(name: str) -> tuple:
     return name.lstrip('-'), ('descending' if name.startswith('-') else 'ascending')
 
 
+def order_key(name: str) -> ibis.Deferred:
+    """Parse sort order."""
+    return (ibis.desc if name.startswith('-') else ibis.asc)(ibis._[name.lstrip('-')])
+
+
 def register(func: Callable, kind: str = 'scalar') -> pc.Function:
     """Register user defined function by kind."""
     doc = inspect.getdoc(func)

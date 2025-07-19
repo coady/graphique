@@ -316,8 +316,8 @@ def test_dictionary(executor):
 
 
 def test_selections(executor):
-    data = executor('{ slice { count } slice { sort(by: "snake_id") { count } } }')
-    assert data == {'slice': {'count': 2, 'sort': {'count': 2}}}
+    data = executor('{ slice { count } slice { order(by: "snake_id") { count } } }')
+    assert data == {'slice': {'count': 2, 'order': {'count': 2}}}
     data = executor('{ dropNull { count } }')
     assert data == {'dropNull': {'count': 2}}
     data = executor('{ dropNull { columns { float { values } } } }')

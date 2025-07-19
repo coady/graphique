@@ -297,25 +297,25 @@ def test_apply(client):
     assert data == {'apply': {'row': {'zipcode': 41700}}}
 
 
-def test_sort(client):
+def test_order(client):
     with pytest.raises(ValueError, match="is required"):
-        client.execute('{ sort { columns { state { values } } } }')
-    data = client.execute('{ sort(by: ["state"]) { columns { state { values } } } }')
-    assert data['sort']['columns']['state']['values'][0] == 'AK'
-    data = client.execute('{ sort(by: "-state") { columns { state { values } } } }')
-    assert data['sort']['columns']['state']['values'][0] == 'WY'
-    data = client.execute('{ sort(by: ["state"], length: 1) { columns { state { values } } } }')
-    assert data['sort']['columns']['state']['values'] == ['AK']
-    data = client.execute('{ sort(by: "-state", length: 1) { columns { state { values } } } }')
-    assert data['sort']['columns']['state']['values'] == ['WY']
-    data = client.execute('{ sort(by: ["state", "county"]) { columns { county { values } } } }')
-    assert data['sort']['columns']['county']['values'][0] == 'Aleutians East'
+        client.execute('{ order { columns { state { values } } } }')
+    data = client.execute('{ order(by: ["state"]) { columns { state { values } } } }')
+    assert data['order']['columns']['state']['values'][0] == 'AK'
+    data = client.execute('{ order(by: "-state") { columns { state { values } } } }')
+    assert data['order']['columns']['state']['values'][0] == 'WY'
+    data = client.execute('{ order(by: ["state"], limit: 1) { columns { state { values } } } }')
+    assert data['order']['columns']['state']['values'] == ['AK']
+    data = client.execute('{ order(by: "-state", limit: 1) { columns { state { values } } } }')
+    assert data['order']['columns']['state']['values'] == ['WY']
+    data = client.execute('{ order(by: ["state", "county"]) { columns { county { values } } } }')
+    assert data['order']['columns']['county']['values'][0] == 'Aleutians East'
     data = client.execute(
-        """{ sort(by: ["-state", "-county"], length: 1) { columns { county { values } } } }"""
+        """{ order(by: ["-state", "-county"], limit: 1) { columns { county { values } } } }"""
     )
-    assert data['sort']['columns']['county']['values'] == ['Weston']
-    data = client.execute('{ sort(by: ["state"], length: 2) { columns { state { values } } } }')
-    assert data['sort']['columns']['state']['values'] == ['AK', 'AK']
+    assert data['order']['columns']['county']['values'] == ['Weston']
+    data = client.execute('{ order(by: ["state"], limit: 2) { columns { state { values } } } }')
+    assert data['order']['columns']['state']['values'] == ['AK', 'AK']
     data = client.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: ["county"]}})
         { aggregate(first: [{name: "county"}]) { row { state county } } } } }"""
@@ -361,12 +361,12 @@ def test_group(client):
     assert agg['max']['values'] == ['Washington Navy Yard', 'Worth', 'Webster', 'Woodland Hills']
     data = client.execute(
         """{ group(by: ["state", "county"], counts: "c", aggregate: {list: [{name: "zipcode"}, {name: "latitude"}, {name: "longitude"}]}) {
-        sort(by: ["-c"], length: 4) { aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
+        order(by: ["-c"], limit: 4) { aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
         columns { latitude { values } longitude { values } }
         column(name: "zipcode") { type } } } } }"""
     )
-    agg = data['group']['sort']['aggregate']
-    assert agg['column']['type'] == 'list<item: int32>'
+    agg = data['group']['order']['aggregate']
+    assert agg['column']['type'] == 'list<l: int32>'
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
     data = client.execute("""{ scan(columns: {name: "zipcode", cast: "bool"})
@@ -435,11 +435,11 @@ def test_runs(client):
     assert agg['count'] == 66
     assert agg['columns']['state']['values'][:3] == ['NY', 'PR', 'MA']
     assert agg['column']['type'] == 'list<item: string>'
-    data = client.execute("""{ sort(by: ["state", "longitude"]) {
+    data = client.execute("""{ order(by: ["state", "longitude"]) {
         runs(by: ["state"], split: [{name: "longitude", gt: 1.0}]) {
         count columns { state { values } }
         column(name: "longitude") { type } } } }""")
-    groups = data['sort']['runs']
+    groups = data['order']['runs']
     assert groups['count'] == 62
     assert groups['columns']['state']['values'][:7] == ['AK'] * 7
     assert groups['column']['type'] == 'list<item: double>'
@@ -448,9 +448,9 @@ def test_runs(client):
         ... on ListColumn {values { ... on StringColumn { values } } } } } }""")
     assert data['runs']['count'] == 34
     assert data['runs']['column']['values'][0]['values'] == (['NY'] * 2) + (['PR'] * 176)
-    data = client.execute("""{ runs(by: ["state"]) { sort(by: ["state"]) {
+    data = client.execute("""{ runs(by: ["state"]) { order(by: ["state"]) {
         columns { state { values } } } } }""")
-    assert data['runs']['sort']['columns']['state']['values'][-2:] == ['WY', 'WY']
+    assert data['runs']['order']['columns']['state']['values'][-2:] == ['WY', 'WY']
     data = client.execute("""{ runs(by: ["state"]) { slice(offset: 2, limit: 2) {
         aggregate(count: {name: "zipcode", alias: "c"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } } }""")

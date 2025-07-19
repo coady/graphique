@@ -116,8 +116,8 @@ def test_fragments(partclient):
     assert data == {'rank': {'row': {'north': 0}}}
     data = partclient.execute('{ rank(by: ["-north", "-zipcode"]) { row { zipcode } } }')
     assert data == {'rank': {'row': {'zipcode': 99950}}}
-    data = partclient.execute('{ sort(by: "north", length: 1) { row { north } } }')
-    assert data == {'sort': {'row': {'north': 0}}}
+    data = partclient.execute('{ order(by: "north", limit: 1) { row { north } } }')
+    assert data == {'order': {'row': {'north': 0}}}
     data = partclient.execute(
         '{ group(by: ["north"], aggregate: {max: {name: "zipcode"}}) { row { north zipcode } } }'
     )
@@ -193,8 +193,8 @@ def test_rank(partclient):
     assert data == {'rank': {'count': 273, 'row': {'state': 'AK'}}}
     data = partclient.execute('{ rank(by: ["-state", "-county"]) { count row { state county } } }')
     assert data == {'rank': {'count': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
-    data = partclient.execute('{ sort(by: "state", length: 3) { columns { state { values } } } }')
-    assert data == {'sort': {'columns': {'state': {'values': ['AK'] * 3}}}}
+    data = partclient.execute('{ order(by: "state", limit: 3) { columns { state { values } } } }')
+    assert data == {'order': {'columns': {'state': {'values': ['AK'] * 3}}}}
     data = partclient.execute('{ rank(by: "north") { count } }')
     assert data == {'rank': {'count': 20850}}
     data = partclient.execute('{ rank(by: "north", max: 2) { count } }')
@@ -209,10 +209,10 @@ def test_rank(partclient):
         '{ rank(by: ["north", "state"], max: 2) { columns { state { unique { values } } } } }'
     )
     assert data == {'rank': {'columns': {'state': {'unique': {'values': ['AL', 'AR']}}}}}
-    data = partclient.execute('{ sort(by: "north", length: 3) { count } }')
-    assert data == {'sort': {'count': 3}}
-    data = partclient.execute('{ sort(by: "north", length: 50000) { count } }')
-    assert data == {'sort': {'count': 41700}}
+    data = partclient.execute('{ order(by: "north", limit: 3) { count } }')
+    assert data == {'order': {'count': 3}}
+    data = partclient.execute('{ order(by: "north", limit: 50000) { count } }')
+    assert data == {'order': {'count': 41700}}
 
 
 def test_root():
