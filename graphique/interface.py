@@ -17,7 +17,7 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
-from .core import Agg, Batch, Column as C, ListChunk, Nodes, Table as T, order_key
+from .core import Agg, Batch, Column as C, ListChunk, Nodes, Parquet, Table as T, order_key
 from .inputs import Cumulative, Diff, Expression, Field, Filter, HashAggregates, ListFunction
 from .inputs import Pairwise, Projection, Rank, RankQuantile, links, provisional
 from .models import Column, doc_field
@@ -73,8 +73,11 @@ class Dataset:
         names = list(self.references(info))
         if len(names) >= len(self.schema().names):
             return self.source
-        if isinstance(self.source, (ibis.Table, pa.Table)):
+        if isinstance(self.source, pa.Table):
             return self.source.select(names)
+        if isinstance(self.source, ibis.Table):
+            projection = {} if names else {'_': ibis.row_number()}
+            return self.source.select(names, **projection)
         return Nodes.scan(self.source, names)
 
     def to_table(self, info: Info, length: int | None = None) -> pa.Table:
@@ -114,7 +117,9 @@ class Dataset:
 
         See `scan(filter: ...)` for more advanced queries.
         """
-        return self.scan(info, filter=Expression.from_query(**queries))
+        expr = Expression.from_query(**queries)
+        source = Parquet.filter(self.source, expr.to_arrow())
+        return self.scan(info, filter=expr) if source is None else type(self)(source)
 
     @doc_field
     def type(self) -> str:
@@ -349,7 +354,11 @@ class Dataset:
 
         At least one list column must be referenced, and all list columns must have the same lengths.
         """
-        for batch in self.select(info).to_batches():
+        source = self.select(info)
+        batches = (
+            source.to_pyarrow_batches() if isinstance(source, ibis.Table) else source.to_batches()
+        )
+        for batch in batches:
             for row in T.split(batch):
                 yield None if row is None else type(self)(pa.Table.from_batches([row]))
 
@@ -391,7 +400,9 @@ class Dataset:
         source = self.source.to_pyarrow() if isinstance(self.source, ibis.Table) else self.source
         if expr is not None:
             source = source.filter(expr)
-        return type(self)(Nodes.scan(source, projection) if columns else source)
+        if columns or isinstance(source, ds.Dataset):
+            source = Nodes.scan(source, projection)
+        return type(self)(source)
 
     @doc_field(
         right="name of right table; must be on root Query type",
@@ -434,13 +445,15 @@ class Dataset:
     @doc_field
     def take(self, info: Info, indices: list[Long]) -> Self:
         """Select rows from indices."""
-        table = self.select(info).take(indices)
-        return type(self)(table)
+        source = self.select(info)
+        if isinstance(source, ibis.Table):  # pragma: no branch
+            source = ds.Scanner.from_batches(source.to_pyarrow_batches())
+        return type(self)(source.take(indices))
 
     @doc_field
     def drop_null(self, info: Info) -> Self:
         """Remove missing values from referenced columns in the table."""
-        if isinstance(self.source, pa.Table):
-            return type(self)(pc.drop_null(self.to_table(info)))
-        table = T.map_batch(self.select(info), pc.drop_null)
-        return type(self)(table)
+        source = self.source
+        if not isinstance(source, ibis.Table):  # pragma: no coverage
+            source = ibis.memtable(self.to_table(info))
+        return type(self)(source.drop_null())

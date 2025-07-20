@@ -233,7 +233,8 @@ class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
     def map_batch(self, func: Callable, *args, **kwargs) -> pa.Table:
-        return pa.Table.from_batches(func(batch, *args, **kwargs) for batch in self.to_batches())
+        batches = self.to_pyarrow_batches() if isinstance(self, ibis.Table) else self.to_batches()
+        return pa.Table.from_batches(func(batch, *args, **kwargs) for batch in batches)
 
     def columns(self) -> dict:
         """Return columns as a dictionary."""
@@ -363,8 +364,7 @@ class Table(pa.Table):
         """Return selected fragment keys in a table."""
         try:
             expr = self._scan_options.get('filter')
-            if expr is not None:  # raise ValueError if filter references other fields
-                ds.dataset([], schema=self.partitioning.schema).scanner(filter=expr)
+            ds.dataset([], schema=self.partitioning.schema).scanner(filter=expr)
         except (AttributeError, ValueError):
             return pa.table({})
         fragments = self._get_fragments(expr)
@@ -507,9 +507,26 @@ class Nodes(ac.Declaration):
         for name, (target, _, _) in aggs.items():
             aggregates.append(aggs[name] + (name,))
             targets.update([target] if isinstance(target, str) else target)
-        columns = {name: pc.field(name) for name in targets}
-        for name in columns:
-            field = self.schema.field(name)
-            if pa.types.is_dictionary(field.type):
-                columns[name] = columns[name].cast(field.type.value_type)
-        return Nodes.scan(self, columns).apply('aggregate', aggregates, names)
+        return Nodes.scan(self, list(targets)).apply('aggregate', aggregates, names)
+
+
+class Parquet(ds.Dataset):
+    """Parquet dataset converters."""
+
+    def partition_keys(self) -> pa.Schema:
+        """partition schema"""
+        return self.partitioning.schema if hasattr(self, 'partitioning') else pa.schema([])
+
+    def filter(self, expr: ds.Expression) -> ds.Dataset | None:
+        """Attempt to apply filter to partition keys."""
+        try:  # raises ValueError if filter references non-partition keys
+            ds.dataset([], schema=self.partitioning.schema).scanner(filter=expr)
+        except (AttributeError, ValueError):
+            return None
+        return self.filter(expr)  # pragma: no cover
+
+    def to_table(self) -> ibis.Table:
+        """Return ibis `Table` from filtered dataset."""
+        paths = [frag.path for frag in self._get_fragments(self._scan_options.get('filter'))]
+        hive = isinstance(self.partitioning, ds.HivePartitioning)
+        return ibis.read_parquet(paths, hive_partitioning=hive)

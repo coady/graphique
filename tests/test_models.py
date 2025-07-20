@@ -82,10 +82,6 @@ def test_columns(executor):
         data = execute(f'{{ {name} {{ fillNull(value: "") }} }}')
         assert data == {name: {'fillNull': ['', '']}}
 
-    assert execute('{ string { type } }') == {
-        'string': {'type': 'dictionary<values=string, indices=int32, ordered=0>'}
-    }
-
 
 def test_boolean(executor):
     def execute(query):
@@ -231,7 +227,7 @@ def test_duration(executor):
 
 def test_list(executor):
     data = executor('{ columns { list { length type } } }')
-    assert data == {'columns': {'list': {'length': 2, 'type': 'list<item: int32>'}}}
+    assert data == {'columns': {'list': {'length': 2, 'type': 'list<l: int32>'}}}
     data = executor('{ columns { list { values { length } } } }')
     assert data == {'columns': {'list': {'values': [{'length': 3}, None]}}}
     data = executor('{ columns { list { dropNull { length } } } }')
@@ -319,7 +315,7 @@ def test_selections(executor):
     data = executor('{ slice { count } slice { order(by: "snake_id") { count } } }')
     assert data == {'slice': {'count': 2, 'order': {'count': 2}}}
     data = executor('{ dropNull { count } }')
-    assert data == {'dropNull': {'count': 2}}
+    assert data == {'dropNull': {'count': 1}}
     data = executor('{ dropNull { columns { float { values } } } }')
     assert data == {'dropNull': {'columns': {'float': {'values': [0.0]}}}}
 

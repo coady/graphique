@@ -146,7 +146,7 @@ def test_schema(dsclient):
     assert set(schema['types']) >= {'int32', 'string'}
     assert len(schema['partitioning']) in (0, 6)
     data = dsclient.execute('{ scan(filter: {}) { type } }')
-    assert data == {'scan': {'type': 'FileSystemDataset'}}
+    assert data == {'scan': {'type': 'Table'}}
     data = dsclient.execute('{ scan(columns: {name: "zipcode"}) { type } }')
     assert data == {'scan': {'type': 'Nodes'}}
     result = dsclient._execute('{ count optional { tables { count } } }')
