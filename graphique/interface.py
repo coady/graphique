@@ -54,7 +54,6 @@ class Schema:
         description="[arrow types](https://arrow.apache.org/docs/python/api/datatypes.html), corresponding to `names`"
     )
     partitioning: list[str] = strawberry.field(description="partition keys")
-    index: list[str] = strawberry.field(description="sorted index columns")
 
 
 @strawberry.interface(description="an arrow dataset, scanner, or table")
@@ -113,30 +112,9 @@ class Dataset:
     def filter(self, info: Info, **queries: Filter) -> Self:
         """Return table with rows which match all queries.
 
-        See `scan(filter: ...)` for more advanced queries. Additional feature: sorted tables
-        support binary search
+        See `scan(filter: ...)` for more advanced queries.
         """
-        source = self.source
-        prev = info.path.prev
-        search = isinstance(source, pa.Table) and (prev is None or prev.typename == 'Query')
-        for name in self.schema().index if search else []:
-            assert not source[name].null_count, f"search requires non-null column: {name}"
-            query = dict(queries.pop(name))
-            if 'eq' in query:
-                source = T.is_in(source, name, *query['eq'])
-            if 'ne' in query:
-                source = T.not_equal(source, name, query['ne'])
-            lower, upper = query.get('gt'), query.get('lt')
-            includes = {'include_lower': False, 'include_upper': False}
-            if 'ge' in query and (lower is None or query['ge'] > lower):
-                lower, includes['include_lower'] = query['ge'], True
-            if 'le' in query and (upper is None or query['le'] > upper):
-                upper, includes['include_upper'] = query['le'], True
-            if {lower, upper} != {None}:
-                source = T.range(source, name, lower, upper, **includes)
-            if len(query.pop('eq', [])) != 1 or query:
-                break
-        return type(self)(source).scan(info, filter=Expression.from_query(**queries))
+        return self.scan(info, filter=Expression.from_query(**queries))
 
     @doc_field
     def type(self) -> str:
@@ -149,12 +127,10 @@ class Dataset:
         source = self.source
         schema = source.schema() if isinstance(source, ibis.Table) else source.schema
         partitioning = getattr(source, 'partitioning', None)
-        index = (getattr(schema, 'pandas_metadata', {}) or {}).get('index_columns', [])
         return Schema(
             names=schema.names,
             types=schema.types,
             partitioning=partitioning.schema.names if partitioning else [],
-            index=[name for name in index if isinstance(name, str)],
         )  # type: ignore
 
     @doc_field

@@ -169,8 +169,8 @@ def test_string_methods(client):
 
 
 def test_search(client):
-    data = client.execute('{ schema { index } filter { count } }')
-    assert data == {'schema': {'index': ['zipcode']}, 'filter': {'count': 41700}}
+    data = client.execute('{ filter { count } }')
+    assert data == {'filter': {'count': 41700}}
     data = client.execute('{ filter(zipcode: {eq: 501}) { columns { zipcode { values } } } }')
     assert data == {'filter': {'columns': {'zipcode': {'values': [501]}}}}
     data = client.execute('{ filter(zipcode: {ne: 501}) { count } }')

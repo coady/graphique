@@ -94,8 +94,6 @@ By default, datasets are read on-demand, with only the necessary rows and column
 
 Specifying `COLUMNS` will limit memory usage when reading at startup (`FILTERS`). There is little speed difference as unused columns are inherently ignored. Optional aliasing can also be used for camel casing.
 
-If index columns are detected in the schema metadata, then an initial `filter` will also attempt a binary search on tables.
-
 ## Installation
 ```console
 % pip install graphique[server]

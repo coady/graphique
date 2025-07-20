@@ -5,7 +5,6 @@ Arrow forbids subclassing, so the classes are for logical grouping.
 Their methods are called as functions.
 """
 
-import bisect
 import contextlib
 import functools
 import inspect
@@ -13,7 +12,6 @@ import itertools
 import operator
 import json
 from collections.abc import Callable, Iterable, Iterator, Mapping
-from dataclasses import dataclass
 from typing import TypeAlias, get_type_hints
 import ibis.backends.duckdb
 import pyarrow as pa
@@ -70,19 +68,6 @@ class Agg:
 
     def func_options(self, func: str) -> pc.FunctionOptions:
         return self.option_map[func.removeprefix('hash_')](**self.options)
-
-
-@dataclass(frozen=True, slots=True)
-class Compare:
-    """Comparable wrapper for bisection search."""
-
-    value: object
-
-    def __lt__(self, other):
-        return self.value < other.as_py()
-
-    def __gt__(self, other):
-        return self.value > other.as_py()
 
 
 def sort_key(name: str) -> tuple:
@@ -243,22 +228,6 @@ class Column(pa.ChunkedArray):
             offset += len(chunk)
         return -1
 
-    def range(self, lower=None, upper=None, include_lower=True, include_upper=False) -> slice:
-        """Return slice within range from a sorted array, by default a half-open interval."""
-        method = bisect.bisect_left if include_lower else bisect.bisect_right
-        start = 0 if lower is None else method(self, Compare(lower))
-        method = bisect.bisect_right if include_upper else bisect.bisect_left
-        stop = None if upper is None else method(self, Compare(upper), start)
-        return slice(start, stop)
-
-    def find(self, *values) -> Iterator[slice]:
-        """Generate slices of matching rows from a sorted array."""
-        stop = 0
-        for value in map(Compare, sorted(values)):
-            start = bisect.bisect_left(self, value, stop)
-            stop = bisect.bisect_right(self, value, start)
-            yield slice(start, stop)
-
 
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
@@ -276,29 +245,6 @@ class Table(pa.Table):
         for table in tables:
             columns |= Table.columns(table)
         return type(tables[0]).from_pydict(columns)
-
-    def range(self, name: str, lower=None, upper=None, **includes) -> pa.Table:
-        """Return rows within range, by default a half-open interval.
-
-        Assumes the table is sorted by the column name, i.e., indexed.
-        """
-        return self[Column.range(self[name], lower, upper, **includes)]
-
-    def is_in(self, name: str, *values) -> pa.Table:
-        """Return rows which matches one of the values.
-
-        Assumes the table is sorted by the column name, i.e., indexed.
-        """
-        slices = list(Column.find(self[name], *values)) or [slice(0)]
-        return pa.concat_tables(self[slc] for slc in slices)
-
-    def not_equal(self, name: str, value) -> pa.Table:
-        """Return rows which don't match the value.
-
-        Assumes the table is sorted by the column name, i.e., indexed.
-        """
-        (slc,) = Column.find(self[name], value)
-        return pa.concat_tables([self[: slc.start], self[slc.stop :]])
 
     def from_offsets(self, offsets: pa.IntegerArray, mask=None) -> pa.RecordBatch:
         """Return record batch with columns converted into list columns."""

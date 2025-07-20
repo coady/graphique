@@ -2,8 +2,8 @@ import pytest
 
 
 def test_camel(aliasclient):
-    data = aliasclient.execute('{ schema { index names } }')
-    assert data == {'schema': {'index': [], 'names': ['snakeId', 'camelId']}}
+    data = aliasclient.execute('{ schema { names } }')
+    assert data == {'schema': {'names': ['snakeId', 'camelId']}}
     data = aliasclient.execute('{ row { snakeId } columns { snakeId { type } } }')
     assert data == {'row': {'snakeId': 1}, 'columns': {'snakeId': {'type': 'int64'}}}
     data = aliasclient.execute('{ filter(snakeId: {eq: 1}) { count } }')
