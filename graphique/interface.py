@@ -19,7 +19,7 @@ from strawberry import Info
 from typing_extensions import Self
 from .core import Agg, Batch, Column as C, ListChunk, Nodes, Parquet, Table as T, order_key
 from .inputs import Cumulative, Diff, Expression, Field, Filter, HashAggregates, ListFunction
-from .inputs import Pairwise, Projection, Rank, RankQuantile, links, provisional
+from .inputs import Pairwise, IProjection, Projection, Rank, RankQuantile, links, provisional
 from .models import Column, doc_field
 from .scalars import Long
 
@@ -56,7 +56,7 @@ class Schema:
     partitioning: list[str] = strawberry.field(description="partition keys")
 
 
-@strawberry.interface(description="an arrow dataset, scanner, or table")
+@strawberry.interface(description="an arrow dataset or ibis table")
 class Dataset:
     def __init__(self, source: Source):
         self.source = source
@@ -88,6 +88,14 @@ class Dataset:
         if isinstance(source, ibis.Table):
             return source.head(length).to_pyarrow()
         return source.to_table() if length is None else source.head(length)
+
+    def to_ibis(self, info: Info) -> ibis.Table:
+        """Return table with only the rows and columns necessary to proceed."""
+        if isinstance(self.source, ibis.Table):
+            return self.source
+        if isinstance(self.source, ds.Dataset):  # pragma: no cover
+            return Parquet.to_table(self.source)
+        return ibis.memtable(self.to_table(info))
 
     @classmethod
     @no_type_check
@@ -453,7 +461,16 @@ class Dataset:
     @doc_field
     def drop_null(self, info: Info) -> Self:
         """Remove missing values from referenced columns in the table."""
-        source = self.source
-        if not isinstance(source, ibis.Table):  # pragma: no coverage
-            source = ibis.memtable(self.to_table(info))
-        return type(self)(source.drop_null())
+        table = self.to_ibis(info)
+        return type(self)(table.drop_null())
+
+    @doc_field
+    def project(self, info: Info, columns: list[IProjection]) -> Self:
+        """Apply functions to columns.
+
+        Equivalent to [mutate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.mutate);
+        renamed to not be confused with a mutation.
+        """
+        table = self.to_ibis(info)
+        projection = {column.alias or column.name: column.to_ibis() for column in columns}
+        return type(self)(table.mutate(projection))

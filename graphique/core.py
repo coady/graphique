@@ -150,16 +150,6 @@ class ListChunk(pa.lib.BaseListArray):
         """index for first occurrence of each list scalar"""
         return memcolumn(self).index(value).to_pyarrow().combine_chunks()
 
-    @register
-    def list_all(ctx, self: pa.list_(pa.bool_())) -> pa.bool_():  # type: ignore
-        """Test whether all elements in a boolean array evaluate to true."""
-        return memcolumn(self).alls().to_pyarrow().combine_chunks()
-
-    @register
-    def list_any(ctx, self: pa.list_(pa.bool_())) -> pa.bool_():  # type: ignore
-        """Test whether any element in a boolean array evaluates to true."""
-        return memcolumn(self).anys().to_pyarrow().combine_chunks()
-
 
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""

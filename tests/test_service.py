@@ -341,12 +341,12 @@ def test_group(client):
     data = client.execute(
         """{ group(by: ["state"], ordered: true, aggregate: {list: {name: "county"}}) { count tables { count
         columns { state { values } county { min max } } }
-        scan(columns: {list: {valueLength: {name: "county"}}, alias: "c"}) {
-        column(name: "c") { ... on IntColumn { values } } } } }"""
+        project(columns: {array: {length: {name: "county"}}, alias: "c"}) {
+        column(name: "c") { ... on LongColumn { values } } } } }"""
     )
     assert len(data['group']['tables']) == data['group']['count'] == 52
     table = data['group']['tables'][0]
-    assert table['count'] == data['group']['scan']['column']['values'][0] == 2205
+    assert table['count'] == data['group']['project']['column']['values'][0] == 2205
     assert set(table['columns']['state']['values']) == {'NY'}
     assert table['columns']['county'] == {'min': 'Albany', 'max': 'Yates'}
     data = client.execute(
@@ -371,14 +371,14 @@ def test_group(client):
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
     data = client.execute("""{ scan(columns: {name: "zipcode", cast: "bool"})
         { group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { slice(limit: 3) {
-        scan(columns: [{alias: "a", list: {any: {name: "zipcode"}}}, {alias: "b", list: {all: {name: "zipcode"}}}]) {
+        project(columns: [{alias: "a", array: {anys: {name: "zipcode"}}}, {alias: "b", array: {alls: {name: "zipcode"}}}]) {
         a: column(name: "a") { ... on BooleanColumn { values } }
         b: column(name: "b") { ... on BooleanColumn { values } }
         column(name: "zipcode") { type } } } } } }""")
-    assert data['scan']['group']['slice']['scan'] == {
+    assert data['scan']['group']['slice']['project'] == {
         'a': {'values': [True, True, True]},
         'b': {'values': [True, True, True]},
-        'column': {'type': 'list<item: bool>'},
+        'column': {'type': 'list<l: bool>'},
     }
     data = client.execute("""{ sc: group(by: ["state", "county"]) { count }
         cs: group(by: ["county", "state"]) { count } }""")

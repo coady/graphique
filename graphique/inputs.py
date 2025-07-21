@@ -10,6 +10,7 @@ from collections.abc import Callable, Iterable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Generic, TypeVar, no_type_check
+import ibis
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -674,10 +675,6 @@ class SetLookup(Fields):
 @strawberry.input(description="List array functions.")
 class Lists(Fields):
     element: list[Expression] = default_field([], func=pc.list_element)
-    value_length: Expression | None = default_field(func=pc.list_value_length)
-    # user defined functions
-    all: Expression | None = default_field(func=pc.all)
-    any: Expression | None = default_field(func=pc.any)
 
     slice: Expression | None = default_field(func=pc.list_slice)
     start: int = 0
@@ -688,6 +685,42 @@ class Lists(Fields):
     prefix = 'list_'
 
     def getfunc(self, name):
-        if name in ('element', 'value_length', 'slice'):  # built-ins
-            return super().getfunc(name)
-        return lambda *args: ds.Expression._call(self.prefix + name, list(args))
+        return super().getfunc(name)
+
+
+@use_doc(strawberry.input)
+class IExpression:
+    """[Ibis expression](https://ibis-project.org/reference/#expression-api)."""
+
+    name: str = strawberry.field(default='', description="field name")
+
+    array: Array | None = default_field(description="array value functions")
+
+    def to_ibis(self) -> ibis.Deferred | None:  # pragma: no cover
+        fields: list = []
+        if self.array:
+            fields += self.array.to_ibis()
+        match len(fields):
+            case 0:
+                return None
+            case 1:
+                return fields[0]
+        raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
+
+
+@strawberry.input(description="an `IExpression` with an optional alias")
+class IProjection(IExpression):
+    alias: str = strawberry.field(default='', description="name of projected column")
+
+
+@strawberry.input(description="Array value functions.")
+class Array:
+    alls: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.alls)
+    anys: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.anys)
+    length: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.length)
+
+    def to_ibis(self) -> Iterable[ibis.Deferred]:
+        for field in self.__strawberry_definition__.fields:  # type: ignore
+            expr = getattr(self, field.name)
+            if expr is not UNSET:
+                yield getattr(ibis._[expr.name], field.name)()

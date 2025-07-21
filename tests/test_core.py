@@ -130,12 +130,6 @@ def test_numeric():
     assert pc.call_function('digitize', [array, scalar, True]).to_pylist() == [0, 0, 1]
 
 
-def test_list():
-    array = pa.array([[False], [True], [False, True]])
-    assert pc.call_function('list_all', [array]).to_pylist() == [False, True, False]
-    assert pc.call_function('list_any', [array]).to_pylist() == [False, True, True]
-
-
 def test_not_implemented():
     dictionary = pa.array(['']).dictionary_encode()
     with pytest.raises((NotImplementedError, TypeError)):
