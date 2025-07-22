@@ -332,15 +332,13 @@ class Expression:
 
     replace_with_mask: list[Expression] = default_field([], func=pc.replace_with_mask)
 
-    list: Lists | None = default_field(description="list array functions")
-
     unaries = ('inv', 'abs', 'negate', 'sign', 'string_is_ascii', 'is_finite', 'is_inf', 'is_nan')
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
     variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract', 'and_not')
     variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
     groups = ('bit_wise', 'rounding', 'log', 'trig', 'element_wise', 'utf8', 'substring', 'binary')
-    groups += ('set_lookup', 'temporal', 'list')  # type: ignore
+    groups += ('set_lookup', 'temporal')  # type: ignore
 
     def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
@@ -670,22 +668,6 @@ class SetLookup(Fields):
             values, value_set = [expr.to_arrow() for expr in self.digitize]
             args = values.cast('float64'), list(map(float, value_set)), self.right  # type: ignore
             yield ds.Expression._call('digitize', list(args))
-
-
-@strawberry.input(description="List array functions.")
-class Lists(Fields):
-    element: list[Expression] = default_field([], func=pc.list_element)
-
-    slice: Expression | None = default_field(func=pc.list_slice)
-    start: int = 0
-    stop: int | None = None
-    step: int = 1
-    return_fixed_size_list: bool | None = None
-
-    prefix = 'list_'
-
-    def getfunc(self, name):
-        return super().getfunc(name)
 
 
 @use_doc(strawberry.input)

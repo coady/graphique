@@ -240,14 +240,6 @@ def test_list(executor):
     data = executor("""{ apply(list: {index: {name: "list", value: 1}}) {
         column(name: "list") { ... on LongColumn { values } } } }""")
     assert data == {'apply': {'column': {'values': [1, None]}}}
-    data = executor(
-        """{ scan(columns: {list: {element: [{name: "list"}, {value: 1}]}, alias: "value"}) {
-        column(name: "value") { ... on IntColumn { values } } } }"""
-    )
-    assert data == {'scan': {'column': {'values': [1, None]}}}
-    data = executor("""{ scan(columns: {list: {slice: {name: "list"}, stop: 1}, alias: "value"}) {
-        column(name: "value") { ... on ListColumn { flatten { ... on IntColumn { values } } } } } }""")
-    assert data == {'scan': {'column': {'flatten': {'values': [0]}}}}
     data = executor("""{ project(columns: {array: {unique: {name: "list"}}, alias: "list"})
         { columns { list { flatten { length } } } } }""")
     assert data['project']['columns']['list'] == {'flatten': {'length': 3}}
