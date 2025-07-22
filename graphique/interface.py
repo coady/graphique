@@ -370,33 +370,6 @@ class Dataset:
             for row in T.split(batch):
                 yield None if row is None else type(self)(pa.Table.from_batches([row]))
 
-    @doc_field
-    def aggregate(
-        self,
-        info: Info,
-        count: doc_argument(list[Field], func=pc.count) = [],
-        distinct: Annotated[
-            list[Field],
-            strawberry.argument(description="distinct values within each scalar"),
-        ] = [],
-        first: doc_argument(list[Field], func=ListChunk.first) = [],
-        last: doc_argument(list[Field], func=ListChunk.last) = [],
-        max: doc_argument(list[Field], func=pc.max) = [],
-        mean: doc_argument(list[Field], func=pc.mean) = [],
-        min: doc_argument(list[Field], func=pc.min) = [],
-        sum: doc_argument(list[Field], func=pc.sum) = [],
-    ) -> Self:
-        """Return table with scalar aggregate functions applied to list columns."""
-        table = self.to_table(info)
-        columns = T.columns(table)
-        for key in ('count', 'distinct', 'first', 'last', 'max', 'mean', 'min', 'sum'):
-            func = getattr(ListChunk, key)
-            for agg in locals()[key]:
-                columns[agg.alias] = func(table[agg.name])
-        return type(self)(pa.table(columns))
-
-    aggregate.deprecation_reason = ListFunction.deprecation
-
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(self, info: Info, filter: Expression = {}, columns: list[Projection] = []) -> Self:  # type: ignore
         """Select rows and project columns without memory usage."""

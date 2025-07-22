@@ -114,34 +114,6 @@ def digitize(
 
 
 class ListChunk(pa.lib.BaseListArray):
-    def count(self):
-        return memcolumn(self).length().to_pyarrow()
-
-    def distinct(self):
-        return memcolumn(self).unique().to_pyarrow().combine_chunks()
-
-    def mean(self, **option):
-        return memcolumn(self).means().to_pyarrow()
-
-    def sum(self):
-        return memcolumn(self).sums().to_pyarrow()
-
-    def first(self) -> pa.Array:
-        """first value of each list scalar"""
-        return memcolumn(self)[0].to_pyarrow()
-
-    def last(self) -> pa.Array:
-        """last value of each list scalar"""
-        return memcolumn(self)[-1].to_pyarrow()
-
-    def min(self, **options) -> pa.Array:
-        """min value of each list scalar"""
-        return memcolumn(self).mins().to_pyarrow()
-
-    def max(self, **options) -> pa.Array:
-        """max value of each list scalar"""
-        return memcolumn(self).maxs().to_pyarrow()
-
     def mode(self, **options) -> pa.Array:
         """modes of each list scalar"""
         return memcolumn(self).modes().to_pyarrow().combine_chunks()

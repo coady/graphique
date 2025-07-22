@@ -248,9 +248,9 @@ def test_list(executor):
     data = executor("""{ scan(columns: {list: {slice: {name: "list"}, stop: 1}, alias: "value"}) {
         column(name: "value") { ... on ListColumn { flatten { ... on IntColumn { values } } } } } }""")
     assert data == {'scan': {'column': {'flatten': {'values': [0]}}}}
-    data = executor("""{ aggregate(distinct: {name: "list"})
+    data = executor("""{ project(columns: {array: {unique: {name: "list"}}, alias: "list"})
         { columns { list { flatten { length } } } } }""")
-    assert data['aggregate']['columns']['list'] == {'flatten': {'length': 3}}
+    assert data['project']['columns']['list'] == {'flatten': {'length': 3}}
     data = executor("""{ apply(list: {filter: {ne: [{name: "list"}, {value: 1}]}}) {
         columns { list { values { ... on IntColumn { values } } } } } }""")
     column = data['apply']['columns']['list']

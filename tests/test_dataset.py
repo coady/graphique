@@ -81,11 +81,11 @@ def test_group(dsclient):
     )
     assert data == {'group': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
     data = dsclient.execute(
-        """{ group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { aggregate(mean: {name: "zipcode"}) {
+        """{ group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { project(columns: {alias: "zipcode", array: {means: {name: "zipcode"}}}) {
         slice(limit: 1) { column(name: "zipcode") { ... on FloatColumn { values } } } } } }"""
     )
     assert data == {
-        'group': {'aggregate': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
+        'group': {'project': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
     }
     data = dsclient.execute("""{ group(aggregate: {min: {alias: "st", name: "state"}}) {
         column(name: "st") { ... on StringColumn { values } } } }""")

@@ -46,16 +46,7 @@ def test_chunks():
 
 def test_lists():
     array = pa.array([[2, 1], [0, 0], [None], [], None])
-    assert ListChunk.first(array).to_pylist() == [2, 0, None, None, None]
-    assert ListChunk.last(array).to_pylist() == [1, 0, None, None, None]
-    assert ListChunk.last(pa.chunked_array([array])).to_pylist() == [1, 0, None, None, None]
-    assert ListChunk.min(array).to_pylist() == [1, 0, None, None, None]
-    assert ListChunk.max(array).to_pylist() == [2, 0, None, None, None]
     assert ListChunk.mode(array).to_pylist() == [2, 0, None, None, None]
-    array = pa.array([[True, True], [False, False], [None], [], None])
-    array = pa.ListArray.from_arrays([0, 2, 3], pa.array(["a", "b", None]).dictionary_encode())
-    assert ListChunk.min(array).to_pylist() == ["a", None]
-    assert ListChunk.max(array).to_pylist() == ["b", None]
     assert C.is_list_type(pa.FixedSizeListArray.from_arrays([], 1))
     batch = T.from_offsets(pa.record_batch([list('abcde')], ['col']), pa.array([0, 3, 5]))
     assert batch['col'].to_pylist() == [list('abc'), list('de')]

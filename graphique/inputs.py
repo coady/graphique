@@ -718,9 +718,26 @@ class Array:
     alls: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.alls)
     anys: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.anys)
     length: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.length)
+    maxs: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.maxs)
+    means: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.means)
+    mins: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.mins)
+    sums: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.sums)
+    unique: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.unique)
+
+    slice: IExpression | None = default_field(description="array slice")
+    value: IExpression | None = default_field(description="value at offset")
+    offset: int = 0
+    limit: int | None = None
 
     def to_ibis(self) -> Iterable[ibis.Deferred]:
         for field in self.__strawberry_definition__.fields:  # type: ignore
-            expr = getattr(self, field.name)
-            if expr is not UNSET:
-                yield getattr(ibis._[expr.name], field.name)()
+            value = getattr(self, field.name)
+            if isinstance(value, IExpression):
+                expr = ibis._[value.name]
+                match field.name:
+                    case 'slice':
+                        yield expr[self.offset :][: self.limit]
+                    case 'value':
+                        yield expr[self.offset]
+                    case _:
+                        yield getattr(expr, field.name)()

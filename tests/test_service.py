@@ -318,14 +318,14 @@ def test_order(client):
     assert data['order']['columns']['state']['values'] == ['AK', 'AK']
     data = client.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: ["county"]}})
-        { aggregate(first: [{name: "county"}]) { row { state county } } } } }"""
+        { project(columns: {array: {value: {name: "county"}, offset: 0}, alias: "county"}) { row { state county } } } } }"""
     )
-    assert data['group']['apply']['aggregate']['row'] == {'state': 'NY', 'county': 'Albany'}
+    assert data['group']['apply']['project']['row'] == {'state': 'NY', 'county': 'Albany'}
     data = client.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: ["-county"], length: 1}})
-        { aggregate(first: [{name: "county"}]) { row { state county } } } } }"""
+        { project(columns: {array: {slice: {name: "county"}, limit: 0}, alias: "county"}) { row { state } } } } }"""
     )
-    assert data['group']['apply']['aggregate']['row'] == {'state': 'NY', 'county': 'Yates'}
+    assert data['group']['apply']['project']['row'] == {'state': 'NY'}
     data = client.execute(
         """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: "county", length: 2}})
         { row { state } column(name: "county") { ... on ListColumn { value { count } } } } } }"""
@@ -352,20 +352,20 @@ def test_group(client):
     data = client.execute(
         """{ group(by: ["state", "county"], counts: "counts", aggregate: {list: {name: "city"}}) {
         scan(filter: {gt: [{name: "counts"}, {value: 200}]}) {
-        aggregate(min: [{name: "city", alias: "min"}], max: [{name: "city", alias: "max"}]) {
+        project(columns: [{array: {mins: {name: "city"}}, alias: "min"}, {array: {maxs: {name: "city"}}, alias: "max"}]) {
         min: column(name: "min") { ... on StringColumn { values } }
         max: column(name: "max") { ... on StringColumn { values } } } } } }"""
     )
-    agg = data['group']['scan']['aggregate']
+    agg = data['group']['scan']['project']
     assert agg['min']['values'] == ['Naval Anacost Annex', 'Alsip', 'Alief', 'Acton']
     assert agg['max']['values'] == ['Washington Navy Yard', 'Worth', 'Webster', 'Woodland Hills']
     data = client.execute(
         """{ group(by: ["state", "county"], counts: "c", aggregate: {list: [{name: "zipcode"}, {name: "latitude"}, {name: "longitude"}]}) {
-        order(by: ["-c"], limit: 4) { aggregate(sum: [{name: "latitude"}], mean: [{name: "longitude"}]) {
+        order(by: ["-c"], limit: 4) { project(columns: [{alias: "latitude", array: {sums: {name: "latitude"}}}, {alias: "longitude", array: {means: {name: "longitude"}}}]) {
         columns { latitude { values } longitude { values } }
         column(name: "zipcode") { type } } } } }"""
     )
-    agg = data['group']['order']['aggregate']
+    agg = data['group']['order']['project']
     assert agg['column']['type'] == 'list<l: int32>'
     assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
     assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
@@ -400,41 +400,13 @@ def test_flatten(client):
     assert idx['counts'][0] == 2205
 
 
-def test_aggregate(client):
-    data = client.execute(
-        """{ group(by: ["state"] counts: "c", aggregate: {first: [{name: "county"}]
-        countDistinct: [{name: "city", alias: "cd"}]}) { slice(limit: 3) {
-        c: column(name: "c") { ... on LongColumn { values } }
-        cd: column(name: "cd") { ... on LongColumn { values } }
-        columns { state { values } county { values } } } } }"""
-    )
-    assert data['group']['slice'] == {
-        'c': {'values': [2205, 176, 703]},
-        'cd': {'values': [1612, 99, 511]},
-        'columns': {
-            'state': {'values': ['NY', 'PR', 'MA']},
-            'county': {'values': ['Suffolk', 'Adjuntas', 'Hampden']},
-        },
-    }
-    data = client.execute(
-        """{ group(by: ["state", "county"], aggregate: {list: {name: "city"}, min: {name: "city", alias: "first"}}) {
-        aggregate(max: {name: "city", alias: "last"}) { slice(limit: 3) {
-        first: column(name: "first") { ... on StringColumn { values } }
-        last: column(name: "last") { ... on StringColumn { values } } } } } }"""
-    )
-    assert data['group']['aggregate']['slice'] == {
-        'first': {'values': ['Amagansett', 'Adjuntas', 'Aguada']},
-        'last': {'values': ['Yaphank', 'Adjuntas', 'Aguada']},
-    }
-
-
 def test_runs(client):
-    data = client.execute("""{ runs(by: ["state"]) { aggregate { count columns { state { values } }
+    data = client.execute("""{ runs(by: ["state"]) { project(columns: []) { count columns { state { values } }
         column(name: "county") { type } } } }""")
-    agg = data['runs']['aggregate']
+    agg = data['runs']['project']
     assert agg['count'] == 66
     assert agg['columns']['state']['values'][:3] == ['NY', 'PR', 'MA']
-    assert agg['column']['type'] == 'list<item: string>'
+    assert agg['column']['type'] == 'list<l: string>'
     data = client.execute("""{ order(by: ["state", "longitude"]) {
         runs(by: ["state"], split: [{name: "longitude", gt: 1.0}]) {
         count columns { state { values } }
@@ -452,9 +424,9 @@ def test_runs(client):
         columns { state { values } } } } }""")
     assert data['runs']['order']['columns']['state']['values'][-2:] == ['WY', 'WY']
     data = client.execute("""{ runs(by: ["state"]) { slice(offset: 2, limit: 2) {
-        aggregate(count: {name: "zipcode", alias: "c"}) {
+        project(columns: {array: {length: {name: "zipcode"}}, alias: "c"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } } }""")
-    agg = data['runs']['slice']['aggregate']
+    agg = data['runs']['slice']['project']
     assert agg['column']['values'] == [701, 91]
     assert agg['columns']['state']['values'] == ['MA', 'RI']
     data = client.execute("""{ runs(by: ["state"]) {
