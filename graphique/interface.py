@@ -17,7 +17,7 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
-from .core import Agg, Batch, Column as C, ListChunk, Nodes, Parquet, Table as T, order_key
+from .core import Agg, Batch, Column as C, Nodes, Parquet, Table as T, order_key
 from .inputs import Cumulative, Diff, Expression, Field, Filter, HashAggregates, ListFunction
 from .inputs import Pairwise, IProjection, Projection, Rank, RankQuantile, links, provisional
 from .models import Column, doc_field
@@ -303,10 +303,7 @@ class Dataset:
             table = T.map_list(table, T.rank, list_.rank.max, *list_.rank.by)
         if list_.sort:
             table = T.map_list(table, T.sort, *list_.sort.by, length=list_.sort.length)
-        columns = {}
-        for func, field in dict(list_).items():
-            columns[field.alias] = getattr(ListChunk, func)(table[field.name], **field.options)
-        return T.union(table, pa.RecordBatch.from_pydict(columns))
+        return table
 
     @doc_field
     @no_type_check

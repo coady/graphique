@@ -132,18 +132,6 @@ class Pairwise(Field):
 
 
 @strawberry.input
-class Index(Field):
-    value: JSON
-
-
-@strawberry.input
-class Mode(Field):
-    n: int = 1
-    skip_nulls: bool = True
-    min_count: int = 1
-
-
-@strawberry.input
 class RankQuantile(Field):
     sort_keys: str = 'ascending'
     null_placement: str = 'at_end'
@@ -173,11 +161,6 @@ class ListFunction(Input):
     filter: Expression = default_field({}, description="filter within list scalars")
     sort: Sort | None = default_field(description="sort within list scalars")
     rank: Ranked | None = default_field(description="select by dense rank within list scalars")
-    index: Index | None = default_field(func=pc.index, deprecation_reason=deprecation)
-    mode: Mode | None = default_field(func=pc.mode, deprecation_reason=deprecation)
-
-    def keys(self):
-        return set(super().keys()) - {'filter', 'sort', 'rank'}
 
 
 @strawberry.input(description=f"options for count [aggregation]({links.compute}#aggregations)")
@@ -675,11 +658,16 @@ class IExpression:
     """[Ibis expression](https://ibis-project.org/reference/#expression-api)."""
 
     name: str = strawberry.field(default='', description="field name")
+    value: JSON | None = default_field(description="JSON scalar", nullable=True)
 
     array: Array | None = default_field(description="array value functions")
 
     def to_ibis(self) -> ibis.Deferred | None:  # pragma: no cover
         fields: list = []
+        if self.name:
+            fields.append(ibis._[self.name])
+        if self.value is not UNSET:
+            fields.append(self.value)
         if self.array:
             fields += self.array.to_ibis()
         match len(fields):
@@ -702,20 +690,24 @@ class Array:
     length: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.length)
     maxs: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.maxs)
     means: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.means)
+    modes: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.modes)
     mins: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.mins)
     sums: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.sums)
     unique: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.unique)
+
+    index: list[IExpression] = default_field([], func=ibis.expr.types.ArrayValue.index)
 
     slice: IExpression | None = default_field(description="array slice")
     value: IExpression | None = default_field(description="value at offset")
     offset: int = 0
     limit: int | None = None
 
+    @no_type_check
     def to_ibis(self) -> Iterable[ibis.Deferred]:
-        for field in self.__strawberry_definition__.fields:  # type: ignore
+        for field in self.__strawberry_definition__.fields:
             value = getattr(self, field.name)
             if isinstance(value, IExpression):
-                expr = ibis._[value.name]
+                expr = value.to_ibis()
                 match field.name:
                     case 'slice':
                         yield expr[self.offset :][: self.limit]
@@ -723,3 +715,6 @@ class Array:
                         yield expr[self.offset]
                     case _:
                         yield getattr(expr, field.name)()
+            elif isinstance(value, list) and value:
+                exprs = map(IExpression.to_ibis, value)
+                yield getattr(next(exprs), field.name)(*exprs)

@@ -113,16 +113,6 @@ def digitize(
     return column.to_pyarrow().combine_chunks().cast('int64')
 
 
-class ListChunk(pa.lib.BaseListArray):
-    def mode(self, **options) -> pa.Array:
-        """modes of each list scalar"""
-        return memcolumn(self).modes().to_pyarrow().combine_chunks()
-
-    def index(self, value) -> pa.Array:
-        """index for first occurrence of each list scalar"""
-        return memcolumn(self).index(value).to_pyarrow().combine_chunks()
-
-
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 

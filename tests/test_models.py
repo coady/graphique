@@ -237,9 +237,9 @@ def test_list(executor):
     data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
     assert data == {'row': {'list': None}}
 
-    data = executor("""{ apply(list: {index: {name: "list", value: 1}}) {
+    data = executor("""{ project(columns: {array: {index: [{name: "list"}, {value: 1}]}, alias: "list"}) {
         column(name: "list") { ... on LongColumn { values } } } }""")
-    assert data == {'apply': {'column': {'values': [1, None]}}}
+    assert data == {'project': {'column': {'values': [1, None]}}}
     data = executor("""{ project(columns: {array: {unique: {name: "list"}}, alias: "list"})
         { columns { list { flatten { length } } } } }""")
     assert data['project']['columns']['list'] == {'flatten': {'length': 3}}
@@ -247,8 +247,10 @@ def test_list(executor):
         columns { list { values { ... on IntColumn { values } } } } } }""")
     column = data['apply']['columns']['list']
     assert column == {'values': [{'values': [0, 2]}, None]}
-    data = executor('{ apply(list: {mode: {name: "list"}}) { column(name: "list") { type } } }')
-    assert data['apply']['column']['type'] == 'int32'
+    data = executor(
+        '{ project(columns: {array: {modes: {name: "list"}}, alias: "list"}) { column(name: "list") { type } } }'
+    )
+    assert data['project']['column']['type'] == 'int32'
     data = executor(
         """{ runs(by: "int32") { scan(columns: {binary: {join: [{name: "binary"}, {base64: ""}]}, alias: "binary"}) {
         column(name: "binary") { ... on Base64Column { values } } } } }"""
