@@ -23,7 +23,6 @@ from strawberry.types.field import StrawberryField
 from strawberry.scalars import JSON
 from typing_extensions import Self
 from .core import Agg
-from .scalars import Long
 
 T = TypeVar('T')
 
@@ -143,12 +142,6 @@ class Rank(RankQuantile):
 
 
 @strawberry.input
-class Sort:
-    by: list[str]
-    length: Long | None = None
-
-
-@strawberry.input
 class Ranked:
     by: list[str]
     max: int = 1
@@ -159,7 +152,6 @@ class ListFunction(Input):
     deprecation = "List scalar functions will be moved to `scan(...: {list: ...})`"
 
     filter: Expression = default_field({}, description="filter within list scalars")
-    sort: Sort | None = default_field(description="sort within list scalars")
     rank: Ranked | None = default_field(description="select by dense rank within list scalars")
 
 
@@ -660,14 +652,18 @@ class IExpression:
     name: str = strawberry.field(default='', description="field name")
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
 
+    row_number: None = default_field(func=ibis.row_number)
+
     array: Array | None = default_field(description="array value functions")
 
-    def to_ibis(self) -> ibis.Deferred | None:  # pragma: no cover
+    def to_ibis(self) -> ibis.Deferred | None:
         fields: list = []
         if self.name:
             fields.append(ibis._[self.name])
         if self.value is not UNSET:
             fields.append(self.value)
+        if self.row_number is not UNSET:
+            fields.append(ibis.row_number())
         if self.array:
             fields += self.array.to_ibis()
         match len(fields):
@@ -692,6 +688,7 @@ class Array:
     means: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.means)
     modes: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.modes)
     mins: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.mins)
+    sort: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.sort)
     sums: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.sums)
     unique: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.unique)
 

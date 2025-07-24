@@ -301,8 +301,6 @@ class Dataset:
             table = T.filter_list(table, expr)
         if list_.rank:
             table = T.map_list(table, T.rank, list_.rank.max, *list_.rank.by)
-        if list_.sort:
-            table = T.map_list(table, T.sort, *list_.sort.by, length=list_.sort.length)
         return table
 
     @doc_field

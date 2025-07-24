@@ -25,15 +25,11 @@ def test_duration():
 
 
 def test_dictionary(table):
-    array = table['state'].dictionary_encode()
-    table = pa.table({'state': array})
-    assert T.sort(table, 'state')['state'][0].as_py() == 'AK'
     array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()
     assert C.fill_null_backward(array) == array.combine_chunks()
     assert C.fill_null_forward(array)[-1].as_py() == 'b'
     assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
     assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
-    assert C.sort_values(array.combine_chunks()).to_pylist() == [1, 2, 1, 2, None]
 
 
 def test_chunks():
@@ -85,7 +81,7 @@ def test_runs(table):
     assert len(groups) == len(counts) == 22751
     groups, counts = T.runs(table, zipcode=(pc.greater, 100))
     assert len(groups) == len(counts) == 59
-    tbl = T.sort(table, 'state', 'longitude')
+    tbl = table.sort_by([('state', 'ascending'), ('longitude', 'ascending')])
     groups, counts = T.runs(tbl, 'state', longitude=(pc.greater, 1.0))
     assert len(groups) == len(counts) == 62
     assert groups['state'].value_counts()[0].as_py() == {'values': 'AK', 'counts': 7}
@@ -95,10 +91,6 @@ def test_runs(table):
 
 
 def test_sort(table):
-    data = T.sort(table, 'state').to_pydict()
-    assert (data['state'][0], data['county'][0]) == ('AK', 'Anchorage')
-    data = T.sort(table, 'state', 'county', length=1).to_pydict()
-    assert (data['state'], data['county']) == (['AK'], ['Aleutians East'])
     counts = T.rank(table, 1, 'state')['state'].value_counts().to_pylist()
     assert counts == [{'values': 'AK', 'counts': 273}]
     counts = T.rank(table, 1, 'state', '-county')['county'].value_counts().to_pylist()
@@ -107,9 +99,6 @@ def test_sort(table):
     assert counts == [{'values': 'AL', 'counts': 838}, {'values': 'AK', 'counts': 273}]
     counts = T.rank(table, 2, 'state', '-county')['county'].value_counts().to_pylist()
     assert counts == [{'counts': 30, 'values': 'Yukon Koyukuk'}, {'counts': 1, 'values': 'Yakutat'}]
-    table = pa.table({'x': [list('ab'), [], None, ['c']]})
-    (column,) = T.map_list(table, T.sort, '-x', length=2)
-    assert column.to_pylist() == [list('ba'), [], None, ['c']]
 
 
 def test_numeric():

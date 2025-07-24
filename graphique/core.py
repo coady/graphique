@@ -10,7 +10,6 @@ import functools
 import inspect
 import itertools
 import operator
-import json
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from typing import TypeAlias, get_type_hints
 import ibis.backends.duckdb
@@ -138,12 +137,6 @@ class Column(pa.ChunkedArray):
         """Optimized `fill_null` to check `null_count`."""
         return self.fill_null(value) if self.null_count else self
 
-    def sort_values(self) -> Array:
-        if not pa.types.is_dictionary(self.type):
-            return self
-        array = self if isinstance(self, pa.Array) else self.combine_chunks()
-        return pc.rank(array.dictionary).take(array.indices)
-
     def pairwise_diff(self, period: int = 1) -> Array:
         """`pairwise_diff` with chunked array support."""
         return pc.pairwise_diff(self.combine_chunks(), period)
@@ -252,33 +245,6 @@ class Table(pa.Table):
         counts = pa.array(None if batch is None else len(batch) for batch in batches)
         table = pa.Table.from_batches(batch for batch in batches if batch is not None)
         return Table.union(self, Table.from_counts(table, counts))
-
-    def sort_indices(self, *names: str, length: int | None = None) -> pa.Array:
-        """Return indices which would sort the table by columns, optimized for fixed length."""
-        func = pc.sort_indices
-        if length is not None and length < len(self):
-            func = functools.partial(pc.select_k_unstable, k=length)
-        keys = dict(map(sort_key, names))
-        table = pa.table({name: Column.sort_values(self[name]) for name in keys})
-        return func(table, sort_keys=keys.items()) if table else pa.array([], 'int64')
-
-    def sort(self, *names: str, length: int | None = None, indices: str = '') -> Batch:
-        """Return table sorted by columns, optimized for fixed length.
-
-        Args:
-            *names: columns to sort by
-            length: maximum number of rows to return
-            indices: include original indices in the table
-        """
-        if length == 1 and not indices:
-            return Table.min_max(self, *names)[:1]
-        indices_ = Table.sort_indices(self, *names, length=length)
-        table = self.take(indices_)
-        if indices:
-            table = table.append_column(indices, indices_)
-        func = lambda name: not name.startswith('-') and not self[name].null_count  # noqa: E731
-        metadata = {'index_columns': list(itertools.takewhile(func, names))}
-        return table.replace_schema_metadata({'pandas': json.dumps(metadata)})
 
     def filter_list(self, expr: ds.Expression) -> Batch:
         """Return table with list columns filtered within scalars."""

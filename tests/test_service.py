@@ -264,6 +264,13 @@ def test_scan(client):
     assert data['scan']['columns']['state']['values'][0] == 'NY'
 
 
+def test_project(client):
+    assert client.execute('{ project(columns: []) { type } }')
+    assert client.execute('{ project(columns: [{}]) { type } }')
+    with pytest.raises(ValueError, match="conflict"):
+        client.execute('{ project(columns: [{name: "state", value: ""}]) { type } }')
+
+
 def test_apply(client):
     data = client.execute(
         """{ scan(columns: {alias: "city", substring: {find: {name: "city"}, pattern: "mountain"}})
@@ -317,20 +324,19 @@ def test_order(client):
     data = client.execute('{ order(by: ["state"], limit: 2) { columns { state { values } } } }')
     assert data['order']['columns']['state']['values'] == ['AK', 'AK']
     data = client.execute(
-        """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: ["county"]}})
-        { project(columns: {array: {value: {name: "county"}, offset: 0}, alias: "county"}) { row { state county } } } } }"""
+        """{ group(by: ["state"], aggregate: {list: {name: "county"}}) {
+        project(columns: {array: {value: {array: {sort: {name: "county"}}}, offset: 0}, alias: "county"}) {
+        row { state county } } } }"""
     )
-    assert data['group']['apply']['project']['row'] == {'state': 'NY', 'county': 'Albany'}
+    assert data['group']['project']['row'] == {'state': 'NY', 'county': 'Albany'}
     data = client.execute(
-        """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: ["-county"], length: 1}})
-        { project(columns: {array: {slice: {name: "county"}, limit: 0}, alias: "county"}) { row { state } } } } }"""
+        """{ project(columns: {alias: "index", rowNumber: null}) {
+        group(by: "state", aggregate: {first: {name: "index"}, list: {name: "city"}}) {
+        order(by: "index") {
+        project(columns: {alias: "city", array: {slice: {name: "city"}, limit: 1}}) {
+        row { state } } } } } }"""
     )
-    assert data['group']['apply']['project']['row'] == {'state': 'NY'}
-    data = client.execute(
-        """{ group(by: ["state"], aggregate: {list: {name: "county"}}) { apply(list: {sort: {by: "county", length: 2}})
-        { row { state } column(name: "county") { ... on ListColumn { value { count } } } } } }"""
-    )
-    assert data['group']['apply'] == {'row': {'state': 'NY'}, 'column': {'value': {'count': 2}}}
+    assert data['project']['group']['order']['project']['row'] == {'state': 'NY'}
 
 
 def test_group(client):
