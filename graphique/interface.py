@@ -18,7 +18,7 @@ import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
 from .core import Agg, Batch, Column as C, Nodes, Parquet, Table as T, order_key
-from .inputs import Cumulative, Diff, Expression, Filter, HashAggregates, ListFunction
+from .inputs import Diff, Expression, Filter, HashAggregates, ListFunction
 from .inputs import Pairwise, IProjection, Projection, Rank, RankQuantile, links, provisional
 from .models import Column, doc_field
 from .scalars import Long
@@ -306,11 +306,6 @@ class Dataset:
     def apply(
         self,
         info: Info,
-        cumulative_max: doc_argument(list[Cumulative], func=pc.cumulative_max) = [],
-        cumulative_mean: doc_argument(list[Cumulative], func=pc.cumulative_mean) = [],
-        cumulative_min: doc_argument(list[Cumulative], func=pc.cumulative_min) = [],
-        cumulative_prod: doc_argument(list[Cumulative], func=pc.cumulative_prod) = [],
-        cumulative_sum: doc_argument(list[Cumulative], func=pc.cumulative_sum) = [],
         pairwise_diff: doc_argument(list[Pairwise], func=pc.pairwise_diff) = [],
         rank: doc_argument(list[Rank], func=pc.rank) = [],
         rank_quantile: doc_argument(list[RankQuantile], func=pc.rank_quantile) = [],
@@ -327,14 +322,10 @@ class Dataset:
         """
         table = T.map_batch(self.select(info), self.apply_list, list_)
         columns = {}
-        funcs = pc.cumulative_max, pc.cumulative_mean, pc.cumulative_min, pc.cumulative_prod
-        funcs += pc.cumulative_sum, C.pairwise_diff, pc.rank, pc.rank_quantile, pc.rank_normal
+        funcs = C.pairwise_diff, pc.rank, pc.rank_quantile, pc.rank_normal
         for func in funcs:
             for field in locals()[func.__name__]:
-                callable = func
-                if field.options.pop('checked', False):
-                    callable = getattr(pc, func.__name__ + '_checked')
-                columns[field.alias] = callable(table[field.name], **field.options)
+                columns[field.alias] = func(table[field.name], **field.options)
         return type(self)(T.union(table, pa.table(columns)))
 
     @doc_field

@@ -118,16 +118,8 @@ class Field(Agg):
 
 
 @strawberry.input
-class Cumulative(Field):
-    start: float = 0.0
-    skip_nulls: bool = False
-    checked: bool = False
-
-
-@strawberry.input
 class Pairwise(Field):
     period: int = 1
-    checked: bool = False
 
 
 @strawberry.input
@@ -625,30 +617,39 @@ class IExpression:
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
     row_number: None = default_field(func=ibis.row_number)
 
-    isin: list[IExpression] = default_field([], func=ibis.expr.types.ArrayValue.isin)
+    cummax: IExpression | None = default_field(func=ibis.expr.types.Column.cummax)
+    cummin: IExpression | None = default_field(func=ibis.expr.types.Column.cummin)
+
+    isin: list[IExpression] = default_field([], func=ibis.expr.types.Column.isin)
 
     numeric: Numeric | None = default_field(description="numeric functions")
     array: Array | None = default_field(description="array value functions")
 
-    def to_ibis(self) -> ibis.Deferred | None:
-        fields: list = []
+    def items(self) -> Iterable[tuple]:
+        for field in self.__strawberry_definition__.fields:  # type: ignore
+            value = getattr(self, field.name)
+            if isinstance(value, IExpression):
+                yield field.name, [value.to_ibis()]
+            elif isinstance(value, list) and value and isinstance(value[0], IExpression):
+                yield field.name, map(IExpression.to_ibis, value)
+
+    def __iter__(self) -> Iterable[ibis.Deferred]:
         if self.name:
-            fields.append(ibis._[self.name])
+            yield ibis._[self.name]
         if self.value is not UNSET:
-            fields.append(self.value)
+            yield self.value
         if self.row_number is not UNSET:
-            fields.append(ibis.row_number())
-        if self.isin:
-            exprs = map(IExpression.to_ibis, self.isin)
-            fields.append(next(exprs).isin(*exprs))  # type: ignore
+            yield ibis.row_number()
+        for name, (expr, *args) in self.items():
+            yield getattr(expr, name)(*args)
         for field in (self.numeric, self.array):
             if field:
-                fields += field.to_ibis()
-        match len(fields):
-            case 0:
-                return None
-            case 1:
-                return fields[0]
+                yield from field  # type: ignore
+
+    def to_ibis(self) -> ibis.Deferred | None:
+        fields = list(self) or [None]  # type: ignore
+        if len(fields) == 1:
+            return fields[0]
         raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
 
 
@@ -677,40 +678,39 @@ class Array:
     offset: int = 0
     limit: int | None = None
 
-    @no_type_check
-    def to_ibis(self) -> Iterable[ibis.Deferred]:
-        for field in self.__strawberry_definition__.fields:
-            value = getattr(self, field.name)
-            if isinstance(value, IExpression):
-                expr = value.to_ibis()
-                match field.name:
-                    case 'slice':
-                        yield expr[self.offset :][: self.limit]
-                    case 'value':
-                        yield expr[self.offset]
-                    case _:
-                        yield getattr(expr, field.name)()
-            elif isinstance(value, list) and value:
-                exprs = map(IExpression.to_ibis, value)
-                yield getattr(next(exprs), field.name)(*exprs)
+    def __iter__(self) -> Iterable[ibis.Deferred]:
+        for name, (expr, *args) in IExpression.items(self):  # type: ignore
+            match name:
+                case 'slice':
+                    yield expr[self.offset :][: self.limit]
+                case 'value':
+                    yield expr[self.offset]
+                case _:
+                    yield getattr(expr, name)(*args)
 
 
 @strawberry.input(description="Numeric functions.")
 class Numeric:
     bucket: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.bucket)
+    cummean: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cummean)
+    cumsum: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cumsum)
 
-    buckets: list[JSON]
+    buckets: list[JSON] = default_field([])
     closed: str = 'left'
     close_extreme: bool = True
     include_under: bool = False
     include_over: bool = False
 
-    def to_ibis(self) -> Iterable[ibis.Deferred]:
-        if self.bucket is not UNSET:  # pragma: no branch
-            yield self.bucket.to_ibis().bucket(  # type: ignore
-                self.buckets,
-                closed=self.closed,
-                close_extreme=self.close_extreme,
-                include_under=self.include_under,
-                include_over=self.include_over,
-            )
+    def __iter__(self) -> Iterable[ibis.Deferred]:
+        for name, (expr, *args) in IExpression.items(self):  # type: ignore
+            match name:
+                case 'bucket':
+                    yield expr.bucket(
+                        self.buckets,
+                        closed=self.closed,
+                        close_extreme=self.close_extreme,
+                        include_under=self.include_under,
+                        include_over=self.include_over,
+                    )
+                case _:
+                    yield getattr(expr, name)(*args)

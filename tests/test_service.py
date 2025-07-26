@@ -269,6 +269,12 @@ def test_project(client):
     assert client.execute('{ project(columns: [{}]) { type } }')
     with pytest.raises(ValueError, match="conflict"):
         client.execute('{ project(columns: [{name: "state", value: ""}]) { type } }')
+    data = client.execute("""{ project(columns: {alias: "zipcode", numeric: {cumsum: {name: "zipcode"}}}) {
+        columns { zipcode { value(index: -1) } } } }""")
+    assert data == {'project': {'columns': {'zipcode': {'value': 2066562337}}}}
+    data = client.execute("""{ project(columns: {alias: "state", cummin: {name: "state"}}) {
+        columns { state { value(index: -1) } } } }""")
+    assert data == {'project': {'columns': {'state': {'value': "AK"}}}}
 
 
 def test_apply(client):
@@ -285,12 +291,6 @@ def test_apply(client):
     data = client.execute("""{ scan(columns: {alias: "state", binary: {joinElementWise: [
         {name: "state"}, {name: "county"}, {value: " "}]}}) { columns { state { values } } } }""")
     assert data['scan']['columns']['state']['values'][0] == 'NY Suffolk'
-    data = client.execute("""{ apply(cumulativeSum: {name: "zipcode", skipNulls: false})
-        { columns { zipcode { value(index: -1) } } } }""")
-    assert data == {'apply': {'columns': {'zipcode': {'value': 2066562337}}}}
-    data = client.execute("""{ apply(cumulativeSum: {name: "zipcode", checked: true})
-        { columns { zipcode { value(index: -1) } } } }""")
-    assert data == {'apply': {'columns': {'zipcode': {'value': 2066562337}}}}
     data = client.execute(
         '{ apply(pairwiseDiff: {name: "zipcode"}) { columns { zipcode { value } } } }'
     )
