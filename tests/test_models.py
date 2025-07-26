@@ -33,28 +33,24 @@ def test_columns(executor):
 
     for name in ('uint8', 'int8', 'uint16', 'int16', 'int32'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
-        assert execute(f'{{ {name} {{ index(value: 0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull }} }}')
         assert data == {name: {'dropNull': [0]}}
         assert execute(f'{{ {name} {{ type }} }}') == {name: {'type': name}}
         assert execute(f'{{ {name} {{ min max }} }}')
     for name in ('uint32', 'uint64', 'int64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0, None]}}
-        assert execute(f'{{ {name} {{ index(value: 0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull }} }}')
         assert data == {name: {'dropNull': [0]}}
         assert execute(f'{{ {name} {{ min max }} }}')
 
     for name in ('float', 'double'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': [0.0, None]}}
-        assert execute(f'{{ {name} {{ index(value: 0.0) }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull }} }}')
         assert data == {name: {'dropNull': [0.0]}}
         assert execute(f'{{ {name} {{ min max }} }}')
 
     for name in ('date32', 'date64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['1970-01-01', None]}}
-        assert execute(f'{{ {name} {{ index(value: "1970-01-01") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull }} }}')
         assert data == {name: {'dropNull': ['1970-01-01']}}
         assert execute(f'{{ {name} {{ min max }} }}')
@@ -64,19 +60,16 @@ def test_columns(executor):
     assert data == {'timestamp': {'values': ['1970-01-01T00:00:00', None]}}
     data = execute(f'{{ {name} {{ dropNull }} }}')
     assert data == {name: {'dropNull': ['1970-01-01']}}
-    assert execute('{ timestamp { index(value: "1970-01-01") } }') == {'timestamp': {'index': 0}}
     assert execute('{ timestamp { min max } }')
 
     for name in ('time32', 'time64'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['00:00:00', None]}}
-        assert execute(f'{{ {name} {{ index(value: "00:00:00") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull }} }}')
         assert data == {name: {'dropNull': ['00:00:00']}}
         assert execute(f'{{ {name} {{ min max }} }}')
 
     for name in ('binary', 'string'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
-        assert execute(f'{{ {name} {{ index(value: "") }} }}') == {name: {'index': 0}}
         data = execute(f'{{ {name} {{ dropNull }} }}')
         assert data == {name: {'dropNull': ['']}}
         data = execute(f'{{ {name} {{ fillNull(value: "") }} }}')
@@ -88,8 +81,6 @@ def test_boolean(executor):
         return executor(f'{{ columns {query} }}')['columns']
 
     assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
-    assert execute('{ bool { index(value: false) } }') == {'bool': {'index': 0}}
-    assert execute('{ bool { index(value: false, start: 1, end: 2) } }') == {'bool': {'index': -1}}
     assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
     assert execute('{ bool { unique { length } } }') == {'bool': {'unique': {'length': 2}}}
     assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
@@ -111,7 +102,6 @@ def test_decimal(executor):
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
     assert execute('{ decimal { min max } }')
     assert execute('{ decimal { indicesNonzero } }') == {'decimal': {'indicesNonzero': []}}
-    assert execute('{ decimal { index(value: 0) } }')
     data = executor('{ rank(by: "decimal") { columns { decimal { values } } } }')
     assert data == {'rank': {'columns': {'decimal': {'values': ['0']}}}}
     data = executor('{ rank(by: "-decimal") { columns { decimal { values } } } }')

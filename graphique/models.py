@@ -14,7 +14,6 @@ import pyarrow.compute as pc
 import strawberry
 from strawberry import Info
 from strawberry.types.field import StrawberryField
-from .core import Column as C
 from .inputs import links
 from .scalars import Long, py_type, scalar_map
 
@@ -154,10 +153,6 @@ class OrdinalColumn(NominalColumn[T]):
     @compute_field
     def max(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.max(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
-
-    @compute_field
-    def index(self, value: T, start: Long = 0, end: Long | None = None) -> Long:
-        return C.index(self.array, value, start, end)
 
     @compute_field
     def fill_null(self, value: T) -> list[T]:

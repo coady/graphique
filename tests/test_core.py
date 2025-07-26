@@ -24,14 +24,6 @@ def test_duration():
         duration_isoformat(parse_duration('P1H'))
 
 
-def test_chunks():
-    array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
-    assert C.index(array, 'a') == 0
-    assert C.index(array, 'c') == 3
-    assert C.index(array, 'a', start=3) == 4
-    assert C.index(array, 'b', start=2) == -1
-
-
 def test_lists():
     assert C.is_list_type(pa.FixedSizeListArray.from_arrays([], 1))
     batch = T.from_offsets(pa.record_batch([list('abcde')], ['col']), pa.array([0, 3, 5]))
@@ -39,13 +31,6 @@ def test_lists():
     assert not T.from_offsets(pa.table({}), pa.array([0]))
     with pytest.raises(ValueError):
         T.list_value_length(pa.table({'x': pa.array([[''], []]), 'y': pa.array([[], ['']])}))
-
-
-def test_membership():
-    array = pa.chunked_array([[1, 1]])
-    assert C.index(array, 1) == C.index(array, 1, end=1) == 0
-    assert C.index(array, 1, start=1) == 1
-    assert C.index(array, 1, start=2) == -1
 
 
 def test_nodes(table):
@@ -97,8 +82,6 @@ def test_not_implemented():
     dictionary = pa.array(['']).dictionary_encode()
     with pytest.raises((NotImplementedError, TypeError)):
         pc.sort_indices(pa.table({'': dictionary}), [('', 'ascending')])
-    with pytest.raises(NotImplementedError):
-        dictionary.index('')
     with pytest.raises(NotImplementedError):
         pc.first_last(dictionary)
     with pytest.raises(NotImplementedError):

@@ -5,7 +5,6 @@ Arrow forbids subclassing, so the classes are for logical grouping.
 Their methods are called as functions.
 """
 
-import contextlib
 import functools
 import itertools
 import operator
@@ -106,20 +105,6 @@ class Column(pa.ChunkedArray):
         ends = [pa.array([True])]
         mask = predicate(Column.diff(self), *args) if args else Column.diff(self, predicate)
         return pc.indices_nonzero(pa.chunked_array(ends + mask.chunks + ends))
-
-    def index(self, value, start=0, end=None) -> int:
-        """Return the first index of a value."""
-        with contextlib.suppress(NotImplementedError):
-            return self.index(value, start, end).as_py()  # type: ignore
-        offset = start
-        for chunk in self[start:end].iterchunks():
-            index = chunk.dictionary.index(value).as_py()
-            if index >= 0:
-                index = chunk.indices.index(index).as_py()
-            if index >= 0:
-                return offset + index
-            offset += len(chunk)
-        return -1
 
 
 class Table(pa.Table):
