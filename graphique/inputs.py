@@ -291,7 +291,6 @@ class Expression:
     substring: MatchSubstring | None = default_field(description="match substring functions")
 
     binary: Binary | None = default_field(description="binary functions")
-    set_lookup: SetLookup | None = default_field(description="set lookup functions")
 
     is_finite: Expression | None = default_field(func=pc.is_finite)
     is_inf: Expression | None = default_field(func=pc.is_inf)
@@ -313,7 +312,7 @@ class Expression:
     variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
     groups = ('bit_wise', 'rounding', 'log', 'trig', 'element_wise', 'utf8', 'substring', 'binary')
-    groups += ('set_lookup', 'temporal')  # type: ignore
+    groups += ('temporal',)  # type: ignore
 
     def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
@@ -625,35 +624,17 @@ class Temporal(Fields):
     nonexistent: str = 'raise'
 
 
-@strawberry.input(description="Set lookup functions.")
-class SetLookup(Fields):
-    index_in: list[Expression] = default_field([], func=pc.index_in)
-    digitize: list[Expression] = default_field(
-        [],
-        description="numpy [digitize](https://numpy.org/doc/stable/reference/generated/numpy.digitize.html)",
-    )
-    skip_nulls: bool = False
-    right: bool = False
-
-    def to_fields(self) -> Iterable[ds.Expression]:
-        if self.index_in:
-            values, value_set = [expr.to_arrow() for expr in self.index_in]
-            yield pc.index_in(values, pa.array(value_set), skip_nulls=self.skip_nulls)
-        if self.digitize:
-            values, value_set = [expr.to_arrow() for expr in self.digitize]
-            args = values.cast('float64'), list(map(float, value_set)), self.right  # type: ignore
-            yield ds.Expression._call('digitize', list(args))
-
-
 @use_doc(strawberry.input)
 class IExpression:
     """[Ibis expression](https://ibis-project.org/reference/#expression-api)."""
 
     name: str = strawberry.field(default='', description="field name")
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
-
     row_number: None = default_field(func=ibis.row_number)
 
+    isin: list[IExpression] = default_field([], func=ibis.expr.types.ArrayValue.isin)
+
+    numeric: Numeric | None = default_field(description="numeric functions")
     array: Array | None = default_field(description="array value functions")
 
     def to_ibis(self) -> ibis.Deferred | None:
@@ -664,8 +645,12 @@ class IExpression:
             fields.append(self.value)
         if self.row_number is not UNSET:
             fields.append(ibis.row_number())
-        if self.array:
-            fields += self.array.to_ibis()
+        if self.isin:
+            exprs = map(IExpression.to_ibis, self.isin)
+            fields.append(next(exprs).isin(*exprs))  # type: ignore
+        for field in (self.numeric, self.array):
+            if field:
+                fields += field.to_ibis()
         match len(fields):
             case 0:
                 return None
@@ -715,3 +700,24 @@ class Array:
             elif isinstance(value, list) and value:
                 exprs = map(IExpression.to_ibis, value)
                 yield getattr(next(exprs), field.name)(*exprs)
+
+
+@strawberry.input(description="Numeric functions.")
+class Numeric:
+    bucket: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.bucket)
+
+    buckets: list[JSON]
+    closed: str = 'left'
+    close_extreme: bool = True
+    include_under: bool = False
+    include_over: bool = False
+
+    def to_ibis(self) -> Iterable[ibis.Deferred]:
+        if self.bucket is not UNSET:  # pragma: no branch
+            yield self.bucket.to_ibis().bucket(  # type: ignore
+                self.buckets,
+                closed=self.closed,
+                close_extreme=self.close_extreme,
+                include_under=self.include_under,
+                include_over=self.include_over,
+            )

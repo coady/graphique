@@ -52,10 +52,10 @@ def test_floats(client):
     )
     assert data == {'scan': {'columns': {'latitude': {'min': pytest.approx(-174.213333)}}}}
     data = client.execute(
-        """{scan(columns: {alias: "l", setLookup: {digitize: [{name: "latitude"}, {value: [40]}]}}) {
-        column(name: "l") { ... on LongColumn { unique { values counts } } } } }"""
+        """{project(columns: {alias: "l", numeric: {bucket: {name: "latitude"}, buckets: [40, 50]}}) {
+        column(name: "l") { ... on IntColumn { unique { values } } } } }"""
     )
-    assert data == {"scan": {"column": {"unique": {"values": [1, 0], "counts": [17955, 23745]}}}}
+    assert data == {"project": {"column": {"unique": {"values": [0, None]}}}}
     data = client.execute(
         '{ scan(columns: {alias: "latitude", log: {logb: [{name: "latitude"}, {value: 3}]}}) { row { latitude } } }'
     )
@@ -122,10 +122,10 @@ def test_strings(client):
     )
     assert data == {'scan': {'count': 42}}
     data = client.execute(
-        """{ scan(columns: {alias: "idx", setLookup: {indexIn: [{name: "state"}, {value: ["CA", "OR"]}]}})
-        { column(name: "idx") { ... on IntColumn { unique { values } } } } }"""
+        """{ project(columns: {alias: "has", isin: [{name: "state"}, {value: ["CA", "OR"]}]})
+        { column(name: "has") { ... on BooleanColumn { unique { values } } } } }"""
     )
-    assert data == {'scan': {'column': {'unique': {'values': [None, 0, 1]}}}}
+    assert data == {'project': {'column': {'unique': {'values': [False, True]}}}}
 
 
 def test_string_methods(client):

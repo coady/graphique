@@ -7,11 +7,10 @@ Their methods are called as functions.
 
 import contextlib
 import functools
-import inspect
 import itertools
 import operator
 from collections.abc import Callable, Iterable, Iterator, Mapping
-from typing import TypeAlias, get_type_hints
+from typing import TypeAlias
 import ibis.backends.duckdb
 import pyarrow as pa
 import pyarrow.acero as ac
@@ -77,39 +76,6 @@ def sort_key(name: str) -> tuple:
 def order_key(name: str) -> ibis.Deferred:
     """Parse sort order."""
     return (ibis.desc if name.startswith('-') else ibis.asc)(ibis._[name.lstrip('-')])
-
-
-def register(func: Callable, kind: str = 'scalar') -> pc.Function:
-    """Register user defined function by kind."""
-    doc = inspect.getdoc(func)
-    doc = {'summary': doc.splitlines()[0], 'description': doc}  # type: ignore
-    annotations = dict(get_type_hints(func))
-    result = annotations.pop('return')
-    with contextlib.suppress(pa.ArrowKeyError):  # apache/arrow#{31611,31612}
-        getattr(pc, f'register_{kind}_function')(func, func.__name__, doc, annotations, result)
-    return pc.get_function(func.__name__)
-
-
-def memcolumn(array: Array) -> ibis.Column:
-    """Convert pyarrow array to ibis column."""
-    return ibis.memtable(pa.table({'_': array}))['_']
-
-
-@register
-def digitize(
-    ctx,
-    array: pa.float64(),  # type: ignore
-    bins: pa.list_(pa.float64()),  # type: ignore
-    right: pa.bool_(),  # type: ignore
-) -> pa.int64():  # type: ignore
-    """Return the indices of the bins to which each value in input array belongs."""
-    column = memcolumn(array).bucket(
-        bins.values.to_pylist(),
-        include_under=True,
-        include_over=True,
-        closed='right' if right.as_py() else 'left',
-    )
-    return column.to_pyarrow().combine_chunks().cast('int64')
 
 
 class Column(pa.ChunkedArray):
