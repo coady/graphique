@@ -119,24 +119,6 @@ class Column(pa.ChunkedArray):
         funcs = pa.types.is_list, pa.types.is_large_list, pa.types.is_fixed_size_list
         return any(func(self.type) for func in funcs)
 
-    def call_indices(self, func: Callable) -> Array:
-        if not pa.types.is_dictionary(self.type):
-            return func(self)
-        array = self.combine_chunks()
-        return pa.DictionaryArray.from_arrays(func(array.indices), array.dictionary)
-
-    def fill_null_backward(self) -> Array:
-        """`fill_null_backward` with dictionary support."""
-        return Column.call_indices(self, pc.fill_null_backward)
-
-    def fill_null_forward(self) -> Array:
-        """`fill_null_forward` with dictionary support."""
-        return Column.call_indices(self, pc.fill_null_forward)
-
-    def fill_null(self, value) -> pa.ChunkedArray:
-        """Optimized `fill_null` to check `null_count`."""
-        return self.fill_null(value) if self.null_count else self
-
     def pairwise_diff(self, period: int = 1) -> Array:
         """`pairwise_diff` with chunked array support."""
         return pc.pairwise_diff(self.combine_chunks(), period)

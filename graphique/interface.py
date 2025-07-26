@@ -18,7 +18,7 @@ import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
 from .core import Agg, Batch, Column as C, Nodes, Parquet, Table as T, order_key
-from .inputs import Cumulative, Diff, Expression, Field, Filter, HashAggregates, ListFunction
+from .inputs import Cumulative, Diff, Expression, Filter, HashAggregates, ListFunction
 from .inputs import Pairwise, IProjection, Projection, Rank, RankQuantile, links, provisional
 from .models import Column, doc_field
 from .scalars import Long
@@ -313,8 +313,6 @@ class Dataset:
         cumulative_min: doc_argument(list[Cumulative], func=pc.cumulative_min) = [],
         cumulative_prod: doc_argument(list[Cumulative], func=pc.cumulative_prod) = [],
         cumulative_sum: doc_argument(list[Cumulative], func=pc.cumulative_sum) = [],
-        fill_null_backward: doc_argument(list[Field], func=pc.fill_null_backward) = [],
-        fill_null_forward: doc_argument(list[Field], func=pc.fill_null_forward) = [],
         pairwise_diff: doc_argument(list[Pairwise], func=pc.pairwise_diff) = [],
         rank: doc_argument(list[Rank], func=pc.rank) = [],
         rank_quantile: doc_argument(list[RankQuantile], func=pc.rank_quantile) = [],
@@ -332,8 +330,7 @@ class Dataset:
         table = T.map_batch(self.select(info), self.apply_list, list_)
         columns = {}
         funcs = pc.cumulative_max, pc.cumulative_mean, pc.cumulative_min, pc.cumulative_prod
-        funcs += pc.cumulative_sum, C.fill_null_backward, C.fill_null_forward, C.pairwise_diff
-        funcs += pc.rank, pc.rank_quantile, pc.rank_normal
+        funcs += pc.cumulative_sum, C.pairwise_diff, pc.rank, pc.rank_quantile, pc.rank_normal
         for func in funcs:
             for field in locals()[func.__name__]:
                 callable = func

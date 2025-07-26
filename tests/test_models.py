@@ -340,10 +340,6 @@ def test_base64(executor):
     )
     assert data == {'scan': {'columns': {'binary': {'values': ['', None]}}}}
     data = executor(
-        '{ apply(fillNullForward: {name: "binary"}) { columns { binary { values } } } }'
-    )
-    assert data == {'apply': {'columns': {'binary': {'values': ['', '']}}}}
-    data = executor(
         """{ scan(columns: {alias: "binary", coalesce: [{name: "binary"}, {base64: "Xw=="}]}) {
         columns { binary { values } } } }"""
     )

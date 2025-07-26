@@ -24,14 +24,6 @@ def test_duration():
         duration_isoformat(parse_duration('P1H'))
 
 
-def test_dictionary(table):
-    array = pa.chunked_array([['a', 'b'], ['a', 'b', None]]).dictionary_encode()
-    assert C.fill_null_backward(array) == array.combine_chunks()
-    assert C.fill_null_forward(array)[-1].as_py() == 'b'
-    assert C.fill_null(array[3:], "c").to_pylist() == list('bc')
-    assert C.fill_null(array[:3], "c").to_pylist() == list('aba')
-
-
 def test_chunks():
     array = pa.chunked_array([pa.array(list(chunk)).dictionary_encode() for chunk in ('aba', 'ca')])
     assert C.index(array, 'a') == 0
@@ -140,8 +132,6 @@ def test_not_implemented():
     assert table['value_max'].to_pylist() == list('cb')  # min_count has no effect
     for name in ('one', 'list', 'distinct'):
         assert not hasattr(pc, name)
-    with pytest.raises(NotImplementedError):
-        pc.fill_null_forward(dictionary)
     with pytest.raises(NotImplementedError):
         pa.table({'': list('aba')}).group_by([]).aggregate([('', 'first'), ('', 'last')])
     with pytest.raises(ValueError):
