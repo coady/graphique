@@ -171,14 +171,6 @@ class Table(pa.Table):
             raise ValueError(f"list columns have different value lengths: {lists}")
         return counts if isinstance(counts, pa.Array) else counts.chunk(0)
 
-    def map_list(self, func: Callable, *args, **kwargs) -> Batch:
-        """Return table with function mapped across list scalars."""
-        batches: Iterable = Table.split(self.select(Table.list_fields(self)))
-        batches = [None if batch is None else func(batch, *args, **kwargs) for batch in batches]
-        counts = pa.array(None if batch is None else len(batch) for batch in batches)
-        table = pa.Table.from_batches(batch for batch in batches if batch is not None)
-        return Table.union(self, Table.from_counts(table, counts))
-
     def filter_list(self, expr: ds.Expression) -> Batch:
         """Return table with list columns filtered within scalars."""
         fields = Table.list_fields(self)
@@ -316,8 +308,6 @@ class Nodes(ac.Declaration):
                 self = self.apply('filter', expr)
         elif isinstance(self, pa.Table):
             self = Nodes('table_source', self)
-        elif isinstance(self, pa.RecordBatch):
-            self = Nodes('table_source', pa.table(self))
         if isinstance(columns, Mapping):
             return self.apply('project', columns.values(), columns)
         return self.apply('project', map(pc.field, columns))

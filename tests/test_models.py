@@ -250,14 +250,6 @@ def test_list(executor):
     assert data == {'columns': {'list': {'value': {'type': 'int32'}}}}
     data = executor('{ tables { column(name: "list") { type } } }')
     assert data == {'tables': [{'column': {'type': 'int32'}}, None]}
-    data = executor(
-        '{ apply(list: {rank: {by: "list"}}) { columns { list { values { length } } } } }'
-    )
-    assert data == {'apply': {'columns': {'list': {'values': [{'length': 1}, None]}}}}
-    data = executor(
-        '{ apply(list: {rank: {by: "list", max: 2}}) { columns { list { flatten { ... on IntColumn { values } } } } } }'
-    )
-    assert data == {'apply': {'columns': {'list': {'flatten': {'values': [0, 1]}}}}}
 
 
 def test_struct(executor):

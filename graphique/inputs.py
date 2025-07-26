@@ -141,18 +141,11 @@ class Rank(RankQuantile):
     tiebreaker: str = 'first'
 
 
-@strawberry.input
-class Ranked:
-    by: list[str]
-    max: int = 1
-
-
 @strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for lists")
 class ListFunction(Input):
     deprecation = "List scalar functions will be moved to `scan(...: {list: ...})`"
 
     filter: Expression = default_field({}, description="filter within list scalars")
-    rank: Ranked | None = default_field(description="select by dense rank within list scalars")
 
 
 @strawberry.input(description=f"options for count [aggregation]({links.compute}#aggregations)")

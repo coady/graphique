@@ -295,13 +295,6 @@ def test_apply(client):
         '{ apply(pairwiseDiff: {name: "zipcode"}) { columns { zipcode { value } } } }'
     )
     assert data == {'apply': {'columns': {'zipcode': {'value': None}}}}
-    data = client.execute('{ apply(rank: {name: "zipcode"}) { row { zipcode } } }')
-    assert data == {'apply': {'row': {'zipcode': 1}}}
-    data = client.execute(
-        """{ apply(rank: {name: "zipcode", sortKeys: "descending", nullPlacement: "at_start", tiebreaker: "dense"})
-        { row { zipcode } } }"""
-    )
-    assert data == {'apply': {'row': {'zipcode': 41700}}}
 
 
 def test_order(client):

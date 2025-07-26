@@ -299,8 +299,6 @@ class Dataset:
         expr = list_.filter.to_arrow() if list_.filter else None
         if expr is not None:
             table = T.filter_list(table, expr)
-        if list_.rank:
-            table = T.map_list(table, T.rank, list_.rank.max, *list_.rank.by)
         return table
 
     @doc_field
