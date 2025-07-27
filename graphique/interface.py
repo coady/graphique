@@ -288,13 +288,10 @@ class Dataset:
         return type(self)(T.rank(source, max, *by) if by else source)
 
     @doc_field
-    def flatten(self, info: Info, indices: str = '') -> Self:
-        """Return table with list arrays flattened.
-
-        At least one list column must be referenced, and all list columns must have the same lengths.
-        """
-        table = pa.Table.from_batches(T.flatten(self.select(info), indices))
-        return type(self)(table)
+    def unnest(self, info: Info, name: str, offset: str = '', keep_empty: bool = False) -> Self:
+        """[Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table."""
+        table = self.to_ibis(info)
+        return type(self)(table.unnest(name, offset=offset or None, keep_empty=keep_empty))
 
     @doc_field
     def tables(self, info: Info) -> list[Self | None]:  # type: ignore

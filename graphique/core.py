@@ -223,22 +223,6 @@ class Table(pa.Table):
             remaining = tuple(itertools.compress(names, selectors)) + remaining
         return bit_any(exprs[: len(table)]), remaining
 
-    def flatten(self, indices: str = '') -> Iterator[pa.RecordBatch]:
-        """Generate batches with list arrays flattened, optionally with parent indices."""
-        offset = 0
-        for batch in self.to_batches():
-            _ = Table.list_value_length(batch)
-            indices_ = pc.list_parent_indices(batch[Table.list_fields(batch).pop()])
-            arrays = [
-                pc.list_flatten(array) if Column.is_list_type(array) else array.take(indices_)
-                for array in batch
-            ]
-            columns = dict(zip(batch.schema.names, arrays))
-            if indices:
-                columns[indices] = pc.add(indices_, offset)
-            offset += len(batch)
-            yield pa.RecordBatch.from_pydict(columns)
-
     def split(self) -> Iterator[pa.RecordBatch | None]:
         """Generate tables from splitting list scalars."""
         lists = Table.list_fields(self)

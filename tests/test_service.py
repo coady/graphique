@@ -367,19 +367,13 @@ def test_group(client):
     assert data['sc']['count'] == data['cs']['count'] == 3216
 
 
-def test_flatten(client):
-    data = client.execute(
-        '{ group(by: "state", aggregate: {list: {name: "city"}}) { flatten { columns { city { type } } } } }'
-    )
-    assert data == {'group': {'flatten': {'columns': {'city': {'type': 'string'}}}}}
-    data = client.execute(
-        """{ group(by: "state", aggregate: {list: {name: "city"}}) { flatten(indices: "idx") { columns { city { type } }
-        column(name: "idx") { ... on LongColumn { unique { values counts } } } } } }"""
-    )
-    idx = data['group']['flatten']['column']['unique']
-    assert idx['values'] == list(range(52))
-    assert sum(idx['counts']) == 41700
-    assert idx['counts'][0] == 2205
+def test_unnest(client):
+    data = client.execute("""{ group(by: "state", aggregate: {list: {name: "city"}}) {
+        unnest(name: "city") { columns { city { type } } } } }""")
+    assert data == {'group': {'unnest': {'columns': {'city': {'type': 'string'}}}}}
+    data = client.execute("""{ group(by: "state", aggregate: {list: {name: "city"}}) {
+        unnest(name: "city", offset: "idx") { column(name: "idx") { type } } } }""")
+    assert data == {'group': {'unnest': {'column': {'type': 'int64'}}}}
 
 
 def test_runs(client):

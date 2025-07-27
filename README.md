@@ -74,14 +74,13 @@ Configuration options exist to provide a convenient no-code solution, but are su
 * `columns`: provides a field for every `Column` in the schema
 * `column`: access a column of any type by name
 * `row`: provides a field for each scalar of a single row
-* `apply`: transform columns by applying a function
 * `join`: join tables by key columns
 
 #### aggregation
 * `group`: group by given columns, and aggregate the others
 * `runs`: partition on adjacent values in given columns, transforming the others into list columns
 * `tables`: return a list of tables by splitting on the scalars in list columns
-* `flatten`: flatten list columns with repeated scalars
+* `unnest`: unnest an array column
 
 #### ordering
 * `sort`: sort table by given columns

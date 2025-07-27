@@ -45,7 +45,6 @@ Datasets and scanners are processed in batches when possible, instead of loading
 * `group`, `scan`, and `filter` - native parallel batch processing
 * `sort` with `length`
 * `rank`
-* `flatten`
 
 ## Partitions
 Partitioned datasets use fragment keys when possible.
@@ -60,7 +59,6 @@ Each field resolver transforms a table or array as needed. When working with an 
 Arrow ListArrays are supported as ListColumns. `group: {aggregate: {list: ...}}` and `runs` leverage that feature to transform columns into ListColumns, which can be accessed via inline fragments and further aggregated. Though `group` hash aggregate functions are more efficient than creating lists.
 
 * `tables` returns a list of tables based on the list scalars.
-* `flatten` flattens the list columns and repeats the scalar columns as needed.
 
 The list in use must all have the same value lengths, which is naturally the case when the result of grouping. Iterating scalars (in Python) is not ideal, but it can be faster than re-aggregating, depending on the average list size.
 
