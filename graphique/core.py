@@ -84,10 +84,6 @@ class Column(pa.ChunkedArray):
         funcs = pa.types.is_list, pa.types.is_large_list, pa.types.is_fixed_size_list
         return any(func(self.type) for func in funcs)
 
-    def pairwise_diff(self, period: int = 1) -> Array:
-        """`pairwise_diff` with chunked array support."""
-        return pc.pairwise_diff(self.combine_chunks(), period)
-
     def diff(self, func: Callable = pc.subtract, period: int = 1) -> Array:
         """Compute first order difference of an array.
 

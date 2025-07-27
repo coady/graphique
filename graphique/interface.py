@@ -5,9 +5,8 @@ Doesn't require knowledge of the schema.
 """
 
 # mypy: disable-error-code=valid-type
-import inspect
 import itertools
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sized
+from collections.abc import Iterable, Iterator, Mapping, Sized
 from datetime import timedelta
 from typing import Annotated, TypeAlias, no_type_check
 import ibis
@@ -17,9 +16,9 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
-from .core import Agg, Batch, Column as C, Nodes, Parquet, Table as T, order_key
+from .core import Agg, Batch, Nodes, Parquet, Table as T, order_key
 from .inputs import Diff, Expression, Filter, HashAggregates, ListFunction
-from .inputs import Pairwise, IProjection, Projection, Rank, RankQuantile, links, provisional
+from .inputs import IProjection, Projection, links, provisional
 from .models import Column, doc_field
 from .scalars import Long
 
@@ -39,12 +38,6 @@ def references(field) -> Iterator:
     else:
         for name in ('name', 'arguments', 'selections'):
             yield from references(getattr(field, name, []))
-
-
-def doc_argument(annotation, func: Callable, **kwargs):
-    """Use function doc for argument description."""
-    kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
-    return Annotated[annotation, strawberry.argument(**kwargs)]
 
 
 @strawberry.type(description="dataset schema")
@@ -297,19 +290,13 @@ class Dataset:
     @staticmethod
     def apply_list(table: Batch, list_: ListFunction) -> Batch:
         expr = list_.filter.to_arrow() if list_.filter else None
-        if expr is not None:
-            table = T.filter_list(table, expr)
-        return table
+        return T.filter_list(table, expr)
 
     @doc_field
     @no_type_check
     def apply(
         self,
         info: Info,
-        pairwise_diff: doc_argument(list[Pairwise], func=pc.pairwise_diff) = [],
-        rank: doc_argument(list[Rank], func=pc.rank) = [],
-        rank_quantile: doc_argument(list[RankQuantile], func=pc.rank_quantile) = [],
-        rank_normal: doc_argument(list[RankQuantile], func=pc.rank_normal) = [],
         list_: Annotated[
             ListFunction,
             strawberry.argument(name='list', description="functions for list arrays."),
@@ -321,12 +308,7 @@ class Dataset:
         which do not require loading.
         """
         table = T.map_batch(self.select(info), self.apply_list, list_)
-        columns = {}
-        funcs = C.pairwise_diff, pc.rank, pc.rank_quantile, pc.rank_normal
-        for func in funcs:
-            for field in locals()[func.__name__]:
-                columns[field.alias] = func(table[field.name], **field.options)
-        return type(self)(T.union(table, pa.table(columns)))
+        return type(self)(table)
 
     @doc_field
     def flatten(self, info: Info, indices: str = '') -> Self:

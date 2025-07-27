@@ -110,7 +110,5 @@ def test_not_implemented():
         assert not hasattr(pc, name)
     with pytest.raises(NotImplementedError):
         pa.table({'': list('aba')}).group_by([]).aggregate([('', 'first'), ('', 'last')])
-    with pytest.raises(ValueError):
-        pc.pairwise_diff(pa.chunked_array([[0]]))
     with pytest.raises(NotImplementedError):
         pc.rank(pa.table({'': array}), [('', 'ascending')])

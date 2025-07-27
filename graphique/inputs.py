@@ -117,22 +117,6 @@ class Field(Agg):
         cls.__init__ = cls.__init__
 
 
-@strawberry.input
-class Pairwise(Field):
-    period: int = 1
-
-
-@strawberry.input
-class RankQuantile(Field):
-    sort_keys: str = 'ascending'
-    null_placement: str = 'at_end'
-
-
-@strawberry.input
-class Rank(RankQuantile):
-    tiebreaker: str = 'first'
-
-
 @strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for lists")
 class ListFunction(Input):
     deprecation = "List scalar functions will be moved to `scan(...: {list: ...})`"
@@ -617,8 +601,12 @@ class IExpression:
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
     row_number: None = default_field(func=ibis.row_number)
 
+    cume_dist: IExpression | None = default_field(func=ibis.expr.types.Column.cume_dist)
     cummax: IExpression | None = default_field(func=ibis.expr.types.Column.cummax)
     cummin: IExpression | None = default_field(func=ibis.expr.types.Column.cummin)
+    dense_rank: IExpression | None = default_field(func=ibis.expr.types.Column.dense_rank)
+    percent_rank: IExpression | None = default_field(func=ibis.expr.types.Column.percent_rank)
+    rank: IExpression | None = default_field(func=ibis.expr.types.Column.rank)
 
     isin: list[IExpression] = default_field([], func=ibis.expr.types.Column.isin)
 

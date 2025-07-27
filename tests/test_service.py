@@ -275,6 +275,9 @@ def test_project(client):
     data = client.execute("""{ project(columns: {alias: "state", cummin: {name: "state"}}) {
         columns { state { value(index: -1) } } } }""")
     assert data == {'project': {'columns': {'state': {'value': "AK"}}}}
+    data = client.execute("""{ project(columns: {alias: "idx", denseRank: {name: "state"}}) {
+        column(name: "idx") { ... on LongColumn { min max } } } }""")
+    assert data == {'project': {'column': {'min': 0, 'max': 51}}}
 
 
 def test_apply(client):
@@ -291,10 +294,6 @@ def test_apply(client):
     data = client.execute("""{ scan(columns: {alias: "state", binary: {joinElementWise: [
         {name: "state"}, {name: "county"}, {value: " "}]}}) { columns { state { values } } } }""")
     assert data['scan']['columns']['state']['values'][0] == 'NY Suffolk'
-    data = client.execute(
-        '{ apply(pairwiseDiff: {name: "zipcode"}) { columns { zipcode { value } } } }'
-    )
-    assert data == {'apply': {'columns': {'zipcode': {'value': None}}}}
 
 
 def test_order(client):
