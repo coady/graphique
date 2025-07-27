@@ -280,22 +280,6 @@ def test_project(client):
     assert data == {'project': {'column': {'min': 0, 'max': 51}}}
 
 
-def test_apply(client):
-    data = client.execute(
-        """{ scan(columns: {alias: "city", substring: {find: {name: "city"}, pattern: "mountain"}})
-        { column(name: "city") { ... on IntColumn { unique { values } } } } }"""
-    )
-    assert data['scan']['column']['unique']['values'] == [-1]
-    data = client.execute(
-        """{ scan(columns: {alias: "city", substring: {count: {name: "city"}, pattern: "mountain", ignoreCase: true}})
-        { column(name: "city") { ... on IntColumn { unique { values } } } } }"""
-    )
-    assert data['scan']['column']['unique']['values'] == [0, 1]
-    data = client.execute("""{ scan(columns: {alias: "state", binary: {joinElementWise: [
-        {name: "state"}, {name: "county"}, {value: " "}]}}) { columns { state { values } } } }""")
-    assert data['scan']['columns']['state']['values'][0] == 'NY Suffolk'
-
-
 def test_order(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ order { columns { state { values } } } }')
@@ -427,10 +411,6 @@ def test_runs(client):
     agg = data['runs']['slice']['project']
     assert agg['column']['values'] == [701, 91]
     assert agg['columns']['state']['values'] == ['MA', 'RI']
-    data = client.execute("""{ runs(by: ["state"]) {
-        apply(list: {filter: {gt: [{name: "zipcode"}, {value: 90000}]}}) {
-        column(name: "zipcode") { type } } } }""")
-    assert data['runs']['apply']['column']['type'] == 'large_list<item: int32>'
     data = client.execute("""{ runs(by: ["state"], counts: "c") { filter(state: {eq: "NY"}) {
         column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }""")
     agg = data['runs']['filter']

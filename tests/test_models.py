@@ -233,10 +233,6 @@ def test_list(executor):
     data = executor("""{ project(columns: {array: {unique: {name: "list"}}, alias: "list"})
         { columns { list { flatten { length } } } } }""")
     assert data['project']['columns']['list'] == {'flatten': {'length': 3}}
-    data = executor("""{ apply(list: {filter: {ne: [{name: "list"}, {value: 1}]}}) {
-        columns { list { values { ... on IntColumn { values } } } } } }""")
-    column = data['apply']['columns']['list']
-    assert column == {'values': [{'values': [0, 2]}, None]}
     data = executor(
         '{ project(columns: {array: {modes: {name: "list"}}, alias: "list"}) { column(name: "list") { type } } }'
     )

@@ -117,13 +117,6 @@ class Field(Agg):
         cls.__init__ = cls.__init__
 
 
-@strawberry.input(description=f"[functions]({links.compute}#structural-transforms) for lists")
-class ListFunction(Input):
-    deprecation = "List scalar functions will be moved to `scan(...: {list: ...})`"
-
-    filter: Expression = default_field({}, description="filter within list scalars")
-
-
 @strawberry.input(description=f"options for count [aggregation]({links.compute}#aggregations)")
 class CountAggregate(Field):
     mode: str = 'only_valid'

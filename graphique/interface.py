@@ -8,7 +8,7 @@ Doesn't require knowledge of the schema.
 import itertools
 from collections.abc import Iterable, Iterator, Mapping, Sized
 from datetime import timedelta
-from typing import Annotated, TypeAlias, no_type_check
+from typing import TypeAlias, no_type_check
 import ibis
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -16,8 +16,8 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
-from .core import Agg, Batch, Nodes, Parquet, Table as T, order_key
-from .inputs import Diff, Expression, Filter, HashAggregates, ListFunction
+from .core import Agg, Nodes, Parquet, Table as T, order_key
+from .inputs import Diff, Expression, Filter, HashAggregates
 from .inputs import IProjection, Projection, links, provisional
 from .models import Column, doc_field
 from .scalars import Long
@@ -286,29 +286,6 @@ class Dataset:
         if expr is not None:
             source = source.filter(expr)
         return type(self)(T.rank(source, max, *by) if by else source)
-
-    @staticmethod
-    def apply_list(table: Batch, list_: ListFunction) -> Batch:
-        expr = list_.filter.to_arrow() if list_.filter else None
-        return T.filter_list(table, expr)
-
-    @doc_field
-    @no_type_check
-    def apply(
-        self,
-        info: Info,
-        list_: Annotated[
-            ListFunction,
-            strawberry.argument(name='list', description="functions for list arrays."),
-        ] = {},
-    ) -> Self:
-        """Return view of table with vector functions applied across columns.
-
-        Applied functions load arrays into memory as needed. See `scan` for scalar functions,
-        which do not require loading.
-        """
-        table = T.map_batch(self.select(info), self.apply_list, list_)
-        return type(self)(table)
 
     @doc_field
     def flatten(self, info: Info, indices: str = '') -> Self:

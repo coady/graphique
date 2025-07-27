@@ -106,10 +106,6 @@ class Column(pa.ChunkedArray):
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
 
-    def map_batch(self, func: Callable, *args, **kwargs) -> pa.Table:
-        batches = self.to_pyarrow_batches() if isinstance(self, ibis.Table) else self.to_batches()
-        return pa.Table.from_batches(func(batch, *args, **kwargs) for batch in batches)
-
     def columns(self) -> dict:
         """Return columns as a dictionary."""
         return dict(zip(self.schema.names, self))
@@ -128,14 +124,6 @@ class Table(pa.Table):
             (self,) = self.combine_chunks().to_batches() or [pa.record_batch([], self.schema)]
         arrays = [cls.from_arrays(offsets, array, mask=mask) for array in self]
         return pa.RecordBatch.from_arrays(arrays, self.schema.names)
-
-    def from_counts(self, counts: pa.IntegerArray) -> pa.RecordBatch:
-        """Return record batch with columns converted into list columns."""
-        mask = None
-        if counts.null_count:
-            mask, counts = counts.is_null(), counts.fill_null(0)
-        offsets = pa.concat_arrays([pa.array([0], counts.type), pc.cumulative_sum_checked(counts)])
-        return Table.from_offsets(self, offsets, mask=mask)
 
     def runs(self, *names: str, **predicates: tuple) -> tuple:
         """Return table grouped by pairwise differences, and corresponding counts.
@@ -166,17 +154,6 @@ class Table(pa.Table):
         if any(counts != other for other in others):
             raise ValueError(f"list columns have different value lengths: {lists}")
         return counts if isinstance(counts, pa.Array) else counts.chunk(0)
-
-    def filter_list(self, expr: ds.Expression) -> Batch:
-        """Return table with list columns filtered within scalars."""
-        fields = Table.list_fields(self)
-        tables = [
-            None if batch is None else pa.Table.from_batches([batch]).filter(expr).select(fields)
-            for batch in Table.split(self)
-        ]
-        counts = pa.array(None if table is None else len(table) for table in tables)
-        table = pa.concat_tables(table for table in tables if table is not None)
-        return Table.union(self, Table.from_counts(table, counts))
 
     def min_max(self, *names: str) -> Self:
         """Return table filtered by minimum or maximum values."""
