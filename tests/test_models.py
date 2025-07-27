@@ -244,8 +244,6 @@ def test_list(executor):
     assert data == {'runs': {'scan': {'column': {'values': [None]}}}}
     data = executor('{ columns { list { value { type } } } }')
     assert data == {'columns': {'list': {'value': {'type': 'int32'}}}}
-    data = executor('{ tables { column(name: "list") { type } } }')
-    assert data == {'tables': [{'column': {'type': 'int32'}}, None]}
 
 
 def test_struct(executor):
@@ -267,12 +265,6 @@ def test_struct(executor):
 def test_dictionary(executor):
     data = executor('{ column(name: "string") { length } }')
     assert data == {'column': {'length': 2}}
-    data = executor("""{ group(by: ["string"], aggregate: {list: {name: "camelId"}}) { tables {
-        columns { string { values } } column(name: "camelId") { length } } } }""")
-    assert data['group']['tables'] == [
-        {'columns': {'string': {'values': ['']}}, 'column': {'length': 1}},
-        {'columns': {'string': {'values': [None]}}, 'column': {'length': 1}},
-    ]
     data = executor("""{ group(by: ["camelId"], aggregate: {countDistinct: {name: "string"}}) {
         column(name: "string") { ... on LongColumn { values } } } }""")
     assert data == {'group': {'column': {'values': [1, 0]}}}

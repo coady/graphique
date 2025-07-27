@@ -266,7 +266,7 @@ def test_scan(client):
 
 def test_project(client):
     assert client.execute('{ project(columns: []) { type } }')
-    assert client.execute('{ project(columns: [{}]) { type } }')
+    assert client.execute('{ project(columns: [{}]) { optional { type } } }')
     with pytest.raises(ValueError, match="conflict"):
         client.execute('{ project(columns: [{name: "state", value: ""}]) { type } }')
     data = client.execute("""{ project(columns: {alias: "zipcode", numeric: {cumsum: {name: "zipcode"}}}) {
@@ -316,21 +316,8 @@ def test_order(client):
 
 
 def test_group(client):
-    with pytest.raises(ValueError, match="list"):
-        client.execute('{ group(by: ["state"]) { tables { count } } }')
     with pytest.raises(ValueError, match="cannot represent"):
         client.execute('{ group(by: "state", aggregate: {list: {name: "city"}}) { row { city } } }')
-    data = client.execute(
-        """{ group(by: ["state"], ordered: true, aggregate: {list: {name: "county"}}) { count tables { count
-        columns { state { values } county { min max } } }
-        project(columns: {array: {length: {name: "county"}}, alias: "c"}) {
-        column(name: "c") { ... on LongColumn { values } } } } }"""
-    )
-    assert len(data['group']['tables']) == data['group']['count'] == 52
-    table = data['group']['tables'][0]
-    assert table['count'] == data['group']['project']['column']['values'][0] == 2205
-    assert set(table['columns']['state']['values']) == {'NY'}
-    assert table['columns']['county'] == {'min': 'Albany', 'max': 'Yates'}
     data = client.execute(
         """{ group(by: ["state", "county"], counts: "counts", aggregate: {list: {name: "city"}}) {
         scan(filter: {gt: [{name: "counts"}, {value: 200}]}) {
@@ -374,6 +361,10 @@ def test_unnest(client):
     data = client.execute("""{ group(by: "state", aggregate: {list: {name: "city"}}) {
         unnest(name: "city", offset: "idx") { column(name: "idx") { type } } } }""")
     assert data == {'group': {'unnest': {'column': {'type': 'int64'}}}}
+    data = client.execute("""{ group(by: "state", aggregate: {list: {name: "city"}}) {
+         unnest(name: "city", rowNumber: "idx") { column(name: "idx") { 
+        ... on LongColumn { values } } } } }""")
+    assert set(data['group']['unnest']['column']['values']) == set(range(52))
 
 
 def test_runs(client):

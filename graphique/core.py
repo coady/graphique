@@ -8,7 +8,7 @@ Their methods are called as functions.
 import functools
 import itertools
 import operator
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from typing import TypeAlias
 import ibis.backends.duckdb
 import pyarrow as pa
@@ -80,10 +80,6 @@ def order_key(name: str) -> ibis.Deferred:
 class Column(pa.ChunkedArray):
     """Chunked array interface as a namespace of functions."""
 
-    def is_list_type(self):
-        funcs = pa.types.is_list, pa.types.is_large_list, pa.types.is_fixed_size_list
-        return any(func(self.type) for func in funcs)
-
     def diff(self, func: Callable = pc.subtract, period: int = 1) -> Array:
         """Compute first order difference of an array.
 
@@ -142,18 +138,6 @@ class Table(pa.Table):
         lists = self.select(set(self.schema.names) - set(names))
         table = Table.union(scalars, Table.from_offsets(lists, offsets))
         return table, Column.diff(offsets)
-
-    def list_fields(self) -> set:
-        return {field.name for field in self.schema if Column.is_list_type(field)}
-
-    def list_value_length(self) -> pa.Array:
-        lists = Table.list_fields(self)
-        if not lists:
-            raise ValueError(f"no list columns available: {self.schema.names}")
-        counts, *others = (pc.list_value_length(self[name]) for name in lists)
-        if any(counts != other for other in others):
-            raise ValueError(f"list columns have different value lengths: {lists}")
-        return counts if isinstance(counts, pa.Array) else counts.chunk(0)
 
     def min_max(self, *names: str) -> Self:
         """Return table filtered by minimum or maximum values."""
@@ -222,18 +206,6 @@ class Table(pa.Table):
             selectors = [len(table[key].unique()) > 1 for key in keys]
             remaining = tuple(itertools.compress(names, selectors)) + remaining
         return bit_any(exprs[: len(table)]), remaining
-
-    def split(self) -> Iterator[pa.RecordBatch | None]:
-        """Generate tables from splitting list scalars."""
-        lists = Table.list_fields(self)
-        scalars = set(self.schema.names) - lists
-        for index, count in enumerate(Table.list_value_length(self).to_pylist()):
-            if count is None:
-                yield None
-            else:
-                row = {name: pa.repeat(self[name][index], count) for name in scalars}
-                row |= {name: self[name][index].values for name in lists}
-                yield pa.RecordBatch.from_pydict(row)
 
 
 class Nodes(ac.Declaration):

@@ -2,7 +2,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import pytest
-from graphique.core import Nodes, Column as C, Table as T
+from graphique.core import Nodes, Table as T
 from graphique.scalars import parse_duration, duration_isoformat
 
 
@@ -25,12 +25,9 @@ def test_duration():
 
 
 def test_lists():
-    assert C.is_list_type(pa.FixedSizeListArray.from_arrays([], 1))
     batch = T.from_offsets(pa.record_batch([list('abcde')], ['col']), pa.array([0, 3, 5]))
     assert batch['col'].to_pylist() == [list('abc'), list('de')]
     assert not T.from_offsets(pa.table({}), pa.array([0]))
-    with pytest.raises(ValueError):
-        T.list_value_length(pa.table({'x': pa.array([[''], []]), 'y': pa.array([[], ['']])}))
 
 
 def test_nodes(table):

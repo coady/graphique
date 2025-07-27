@@ -288,24 +288,19 @@ class Dataset:
         return type(self)(T.rank(source, max, *by) if by else source)
 
     @doc_field
-    def unnest(self, info: Info, name: str, offset: str = '', keep_empty: bool = False) -> Self:
+    def unnest(
+        self,
+        info: Info,
+        name: str,
+        offset: str = '',
+        keep_empty: bool = False,
+        row_number: str = '',
+    ) -> Self:
         """[Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table."""
         table = self.to_ibis(info)
+        if row_number:
+            table = table.mutate({row_number: ibis.row_number()})
         return type(self)(table.unnest(name, offset=offset or None, keep_empty=keep_empty))
-
-    @doc_field
-    def tables(self, info: Info) -> list[Self | None]:  # type: ignore
-        """Return a list of tables by splitting list columns.
-
-        At least one list column must be referenced, and all list columns must have the same lengths.
-        """
-        source = self.select(info)
-        batches = (
-            source.to_pyarrow_batches() if isinstance(source, ibis.Table) else source.to_batches()
-        )
-        for batch in batches:
-            for row in T.split(batch):
-                yield None if row is None else type(self)(pa.Table.from_batches([row]))
 
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(self, info: Info, filter: Expression = {}, columns: list[Projection] = []) -> Self:  # type: ignore

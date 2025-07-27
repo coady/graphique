@@ -92,20 +92,6 @@ def test_group(dsclient):
     assert data == {'group': {'column': {'values': ['AK']}}}
 
 
-def test_list(partclient):
-    data = partclient.execute(
-        """{ group(by: "state", aggregate: {distinct: {alias: "counties", name: "county"}}) {
-        tables { row { state } column(name: "counties") { count } } } } """
-    )
-    (table,) = [table for table in data['group']['tables'] if table['row']['state'] == 'PR']
-    assert table == {'row': {'state': 'PR'}, 'column': {'count': 78}}
-    data = partclient.execute("""{ group(by: "north", aggregate: {distinct: {name: "west"}}) {
-        tables { row { north } columns { west { count } } } } }""")
-    tables = data['group']['tables']
-    assert {table['row']['north'] for table in tables} == {0, 1}
-    assert [table['columns'] for table in tables] == [{'west': {'count': 2}}] * 2
-
-
 def test_fragments(partclient):
     data = partclient.execute('{ group(by: ["north", "west"]) { columns { north { values } } } }')
     data = partclient.execute(
@@ -149,9 +135,6 @@ def test_schema(dsclient):
     assert data == {'scan': {'type': 'Table'}}
     data = dsclient.execute('{ scan(columns: {name: "zipcode"}) { type } }')
     assert data == {'scan': {'type': 'Nodes'}}
-    result = dsclient._execute('{ count optional { tables { count } } }')
-    assert result.data == {'count': 41700, 'optional': None}
-    assert len(result.errors) == 1
 
 
 def test_scan(dsclient):
