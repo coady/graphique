@@ -18,13 +18,6 @@ import pyarrow.dataset as ds
 from typing_extensions import Self
 
 
-def to_pyarrow(self, expr, **kwargs):
-    table = self._to_duckdb_relation(expr, **kwargs).arrow()
-    return expr.__pyarrow_result__(table, data_mapper=ibis.formats.pyarrow.PyArrowData)
-
-
-# shim to avoid pandas dependency: ibis-project/ibis#11430
-ibis.backends.duckdb.Backend.to_pyarrow = to_pyarrow
 Array: TypeAlias = pa.Array | pa.ChunkedArray
 Batch: TypeAlias = pa.RecordBatch | pa.Table
 bit_any = functools.partial(functools.reduce, operator.or_)
