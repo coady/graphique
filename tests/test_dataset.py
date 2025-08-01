@@ -215,13 +215,13 @@ def test_federation(fedclient):
     assert data['zipDb'] == {'__typename': 'ZipDbTable', 'count': 42724}
 
     data = fedclient.execute("""{ zipcodes { scan(columns: {name: "zipcode", cast: "int64"}) {
-        join(right: "zip_db", keys: "zipcode", rightKeys: "zip") { count schema { names } } } } }""")
+        join(right: "zip_db", keys: "zipcode", rkeys: "zip") { count schema { names } } } } }""")
     table = data['zipcodes']['scan']['join']
-    assert table['count'] == 41700
+    assert table['count'] == 41684
     assert set(table['schema']['names']) > {'zipcode', 'timezone', 'latitude'}
     data = fedclient.execute(
         """{ zipcodes { scan(columns: {alias: "zip", name: "zipcode", cast: "int64"}) {
-        join(right: "zip_db", keys: "zip", joinType: "right outer") { count schema { names } } } } }"""
+        join(right: "zip_db", keys: "zip", how: "right") { count schema { names } } } } }"""
     )
     table = data['zipcodes']['scan']['join']
     assert table['count'] == 42724

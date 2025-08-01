@@ -18,7 +18,7 @@ from strawberry import Info
 from typing_extensions import Self
 from .core import Agg, Nodes, Parquet, Table as T, order_key
 from .inputs import Diff, Expression, Filter, HashAggregates
-from .inputs import IProjection, Projection, links, provisional
+from .inputs import IProjection, Projection, links
 from .models import Column, doc_field
 from .scalars import Long
 
@@ -320,40 +320,27 @@ class Dataset:
     @doc_field(
         right="name of right table; must be on root Query type",
         keys="column names used as keys on the left side",
-        right_keys="column names used as keys on the right side; defaults to left side.",
-        join_type="the kind of join: 'left semi', 'right semi', 'left anti', 'right anti', 'inner', 'left outer', 'right outer', 'full outer'",
-        left_suffix="add suffix to left column names; for preventing collisions",
-        right_suffix="add suffix to right column names; for preventing collisions.",
-        coalesce_keys="omit duplicate keys",
+        rkeys="column names used as keys on the right side; defaults to left side",
+        how="the kind of join: 'inner', 'left', 'right', ...",
+        lname="format string to use to rename overlapping columns in the left table",
+        rname="format string to use to rename overlapping columns in the right table",
     )
     def join(
         self,
         info: Info,
         right: str,
         keys: list[str],
-        right_keys: list[str] | None = None,
-        join_type: str = 'left outer',
-        left_suffix: str = '',
-        right_suffix: str = '',
-        coalesce_keys: bool = True,
+        rkeys: list[str] = [],
+        how: str = 'inner',
+        lname: str = '',
+        rname: str = '{name}_right',
     ) -> Self:
-        """Provisional: [join](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.join) this table with another table on the root Query type."""
-        left, right = (
-            root.source if isinstance(root.source, ds.Dataset) else root.to_table(info)
-            for root in (self, getattr(info.root_value, right))
-        )
-        table = left.join(
-            right,
-            keys=keys,
-            right_keys=right_keys,
-            join_type=join_type,
-            left_suffix=left_suffix,
-            right_suffix=right_suffix,
-            coalesce_keys=coalesce_keys,
-        )
-        return type(self)(table)
-
-    join.directives = [provisional()]
+        """Perform a [join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.join) between two tables."""
+        left = self.to_ibis(info)
+        right = getattr(info.root_value, right).to_ibis(info)
+        if rkeys:
+            keys = [getattr(left, key) == getattr(right, rkey) for key, rkey in zip(keys, rkeys)]
+        return type(self)(left.join(right, predicates=keys, how=how, lname=lname, rname=rname))
 
     @doc_field
     def take(self, info: Info, indices: list[Long]) -> Self:
