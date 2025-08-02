@@ -1,5 +1,3 @@
-::: graphique.core.Column
-
 ::: graphique.core.Table
 
 ::: graphique.core.Nodes

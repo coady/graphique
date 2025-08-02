@@ -176,23 +176,6 @@ class HashAggregates(ScalarAggregates):
 
 
 @use_doc(strawberry.input)
-class Diff(Input):
-    """Discrete difference predicates, applied in forwards direction (array[i + 1] ? array[i]).
-
-    By default compares by not equal. Specifying `null` with a predicate compares pairwise.
-    A float computes the discrete difference first; durations may be in float seconds.
-    """
-
-    name: str
-    less: float | None = default_field(name='lt', description="<", nullable=True)
-    less_equal: float | None = default_field(name='le', description="<=", nullable=True)
-    greater: float | None = default_field(name='gt', description=r"\>", nullable=True)
-    greater_equal: float | None = default_field(name='ge', description=r"\>=", nullable=True)
-
-    nullables = {'less', 'less_equal', 'greater', 'greater_equal'}
-
-
-@use_doc(strawberry.input)
 class Expression:
     """[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
     used for scanning.

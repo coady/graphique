@@ -7,7 +7,6 @@ Doesn't require knowledge of the schema.
 # mypy: disable-error-code=valid-type
 import itertools
 from collections.abc import Iterable, Iterator, Mapping, Sized
-from datetime import timedelta
 from typing import TypeAlias, no_type_check
 import ibis
 import pyarrow as pa
@@ -17,8 +16,7 @@ import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
 from .core import Agg, Nodes, Parquet, Table as T, order_key
-from .inputs import Diff, Expression, Filter, HashAggregates
-from .inputs import IProjection, Projection, links
+from .inputs import Expression, Filter, HashAggregates, IProjection, Projection, links
 from .models import Column, doc_field
 from .scalars import Long
 
@@ -231,31 +229,6 @@ class Dataset:
         source = self.to_table(info) if isinstance(self.source, ibis.Table) else self.source
         source = Nodes.group(source, *by, **aggs)
         return type(self)(source.to_table(use_threads=False) if ordered else source)
-
-    @doc_field(
-        by="column names",
-        split="optional predicates to split on; scalars are compared to pairwise difference",
-        counts="optionally include counts in an aliased column",
-    )
-    @no_type_check
-    def runs(
-        self, info: Info, by: list[str] = [], split: list[Diff] = [], counts: str = ''
-    ) -> Self:
-        """Return table grouped by pairwise differences.
-
-        Differs from `group` by relying on adjacency, and is typically faster. Other columns are
-        transformed into list columns. See `column` and `tables` to further access lists.
-        """
-        table = self.to_table(info)
-        predicates = {}
-        for diff in map(dict, split):
-            name = diff.pop('name')
-            ((func, value),) = diff.items()
-            if pa.types.is_timestamp(table.field(name).type):
-                value = timedelta(seconds=value)
-            predicates[name] = (getattr(pc, func), value)[: 1 if value is None else 2]
-        table, counts_ = T.runs(table, *by, **predicates)
-        return type(self)(table.append_column(counts, counts_) if counts else table)
 
     @doc_field(
         by="column names; prefix with `-` for descending order",

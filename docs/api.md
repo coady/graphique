@@ -43,24 +43,20 @@ Note list inputs allow passing a single value, [coercing the input](https://spec
 Datasets and scanners are processed in batches when possible, instead of loading the table into memory.
 
 * `group`, `scan`, and `filter` - native parallel batch processing
-* `sort` with `length`
+* `order` with `length`
 * `rank`
 
 ## Partitions
 Partitioned datasets use fragment keys when possible.
 
 * `group` on fragment keys with counts
-* `rank` and `sort` with length on fragment keys
+* `rank` and `order` with length on fragment keys
 
 ## Column selection
 Each field resolver transforms a table or array as needed. When working with an embedded library like [pandas](https://pandas.pydata.org), it's common to select a working set of columns for efficiency. Whereas GraphQL has the advantage of knowing the entire query up front, so there is no `select` field because it's done automatically at every level of resolvers.
 
 ## List Arrays
-Arrow ListArrays are supported as ListColumns. `group: {aggregate: {list: ...}}` and `runs` leverage that feature to transform columns into ListColumns, which can be accessed via inline fragments and further aggregated. Though `group` hash aggregate functions are more efficient than creating lists.
-
-* `tables` returns a list of tables based on the list scalars.
-
-The list in use must all have the same value lengths, which is naturally the case when the result of grouping. Iterating scalars (in Python) is not ideal, but it can be faster than re-aggregating, depending on the average list size.
+Arrow ListArrays are supported as ListColumns. `group: {aggregate: {list: ...}}` leverages that feature to transform columns into ListColumns, which can be accessed via inline fragments and further aggregated. Though `group` hash aggregate functions are more efficient than creating lists.
 
 ## Dictionary Arrays
 Arrow has dictionary-encoded arrays as a space optimization, but doesn't natively support some builtin functions on them. Support for dictionaries is extended, and often faster by only having to apply functions to the unique values.

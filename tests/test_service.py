@@ -367,46 +367,6 @@ def test_unnest(client):
     assert set(data['group']['unnest']['column']['values']) == set(range(52))
 
 
-def test_runs(client):
-    data = client.execute("""{ runs(by: ["state"]) { project(columns: []) { count columns { state { values } }
-        column(name: "county") { type } } } }""")
-    agg = data['runs']['project']
-    assert agg['count'] == 66
-    assert agg['columns']['state']['values'][:3] == ['NY', 'PR', 'MA']
-    assert agg['column']['type'] == 'list<l: string>'
-    data = client.execute("""{ order(by: ["state", "longitude"]) {
-        runs(by: ["state"], split: [{name: "longitude", gt: 1.0}]) {
-        count columns { state { values } }
-        column(name: "longitude") { type } } } }""")
-    groups = data['order']['runs']
-    assert groups['count'] == 62
-    assert groups['columns']['state']['values'][:7] == ['AK'] * 7
-    assert groups['column']['type'] == 'list<item: double>'
-    data = client.execute("""{ runs(split: [{name: "state", lt: null}]) {
-        count column(name: "state") {
-        ... on ListColumn {values { ... on StringColumn { values } } } } } }""")
-    assert data['runs']['count'] == 34
-    assert data['runs']['column']['values'][0]['values'] == (['NY'] * 2) + (['PR'] * 176)
-    data = client.execute("""{ runs(by: ["state"]) { order(by: ["state"]) {
-        columns { state { values } } } } }""")
-    assert data['runs']['order']['columns']['state']['values'][-2:] == ['WY', 'WY']
-    data = client.execute("""{ runs(by: ["state"]) { slice(offset: 2, limit: 2) {
-        project(columns: {array: {length: {name: "zipcode"}}, alias: "c"}) {
-        column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } } }""")
-    agg = data['runs']['slice']['project']
-    assert agg['column']['values'] == [701, 91]
-    assert agg['columns']['state']['values'] == ['MA', 'RI']
-    data = client.execute("""{ runs(by: ["state"], counts: "c") { filter(state: {eq: "NY"}) {
-        column(name: "c") { ... on LongColumn { values } } columns { state { values } } } } }""")
-    agg = data['runs']['filter']
-    assert agg['column']['values'] == [2, 1, 2202]
-    assert agg['columns']['state']['values'] == ['NY'] * 3
-    data = client.execute('{ runs(split: {name: "zipcode", lt: 0}) { count } }')
-    assert data == {'runs': {'count': 1}}
-    data = client.execute('{ runs(split: {name: "zipcode", lt: null}) { count } }')
-    assert data == {'runs': {'count': 1}}
-
-
 def test_rows(client):
     with pytest.raises(ValueError, match="out of bounds"):
         client.execute('{ row(index: 100000) { zipcode } }')

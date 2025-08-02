@@ -77,12 +77,10 @@ Configuration options exist to provide a convenient no-code solution, but are su
 
 #### aggregation
 * `group`: group by given columns, and aggregate the others
-* `runs`: partition on adjacent values in given columns, transforming the others into list columns
-* `tables`: return a list of tables by splitting on the scalars in list columns
 * `unnest`: unnest an array column
 
 #### ordering
-* `sort`: sort table by given columns
+* `order`: sort table by given columns
 * `rank`: select rows with smallest or largest values
 
 ### Performance

@@ -205,8 +205,6 @@ def test_duration(executor):
         { column(name: "diff") { ... on DurationColumn { unique { values } } } } }"""
     )
     assert data == {'scan': {'column': {'unique': {'values': ['P0D', None]}}}}
-    data = executor('{ runs(split: [{name: "timestamp", gt: 0.0}]) { count } }')
-    assert data == {'runs': {'count': 1}}
     data = executor(
         """{ scan(columns: {alias: "diff", temporal:
         {monthDayNanoIntervalBetween: [{name: "timestamp"}, {name: "timestamp"}]}})
@@ -237,11 +235,6 @@ def test_list(executor):
         '{ project(columns: {array: {modes: {name: "list"}}, alias: "list"}) { column(name: "list") { type } } }'
     )
     assert data['project']['column']['type'] == 'int32'
-    data = executor(
-        """{ runs(by: "int32") { scan(columns: {binary: {join: [{name: "binary"}, {base64: ""}]}, alias: "binary"}) {
-        column(name: "binary") { ... on Base64Column { values } } } } }"""
-    )
-    assert data == {'runs': {'scan': {'column': {'values': [None]}}}}
     data = executor('{ columns { list { value { type } } } }')
     assert data == {'columns': {'list': {'value': {'type': 'int32'}}}}
 

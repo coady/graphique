@@ -24,12 +24,6 @@ def test_duration():
         duration_isoformat(parse_duration('P1H'))
 
 
-def test_lists():
-    batch = T.from_offsets(pa.record_batch([list('abcde')], ['col']), pa.array([0, 3, 5]))
-    assert batch['col'].to_pylist() == [list('abc'), list('de')]
-    assert not T.from_offsets(pa.table({}), pa.array([0]))
-
-
 def test_nodes(table):
     dataset = ds.dataset(table).filter(pc.field('state') == 'CA')
     (column,) = Nodes.scan(dataset, columns={'_': pc.field('state')}).to_table()
@@ -43,25 +37,6 @@ def test_nodes(table):
     assert scanner.count_rows() == 2647
     assert scanner.head(3) == pa.table({'state': ['CA'] * 3})
     assert scanner.take([0, 2]) == pa.table({'state': ['CA'] * 2})
-
-
-def test_runs(table):
-    groups, counts = T.runs(table, 'state')
-    assert len(groups) == len(counts) == 66
-    assert pc.sum(counts).as_py() == 41700
-    assert groups['state'][0].as_py() == 'NY'
-    assert groups['county'][0].values.to_pylist() == ['Suffolk', 'Suffolk']
-    groups, counts = T.runs(table, 'state', 'county')
-    assert len(groups) == len(counts) == 22751
-    groups, counts = T.runs(table, zipcode=(pc.greater, 100))
-    assert len(groups) == len(counts) == 59
-    tbl = table.sort_by([('state', 'ascending'), ('longitude', 'ascending')])
-    groups, counts = T.runs(tbl, 'state', longitude=(pc.greater, 1.0))
-    assert len(groups) == len(counts) == 62
-    assert groups['state'].value_counts()[0].as_py() == {'values': 'AK', 'counts': 7}
-    assert groups['longitude'][:2].to_pylist() == [[-174.213333], [-171.701685]]
-    groups, counts = T.runs(tbl, 'state', longitude=(pc.less,))
-    assert len(groups) == len(counts) == 52
 
 
 def test_sort(table):

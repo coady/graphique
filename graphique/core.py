@@ -8,7 +8,7 @@ Their methods are called as functions.
 import functools
 import itertools
 import operator
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Iterable, Mapping
 from typing import TypeAlias
 import ibis.backends.duckdb
 import pyarrow as pa
@@ -70,67 +70,8 @@ def order_key(name: str) -> ibis.Deferred:
     return (ibis.desc if name.startswith('-') else ibis.asc)(ibis._[name.lstrip('-')])
 
 
-class Column(pa.ChunkedArray):
-    """Chunked array interface as a namespace of functions."""
-
-    def diff(self, func: Callable = pc.subtract, period: int = 1) -> Array:
-        """Compute first order difference of an array.
-
-        Unlike `pairwise_diff`, does not return leading nulls.
-        """
-        return func(self[period:], self[:-period])
-
-    def run_offsets(self, predicate: Callable = pc.not_equal, *args) -> pa.IntegerArray:
-        """Run-end encode array with leading zero, suitable for list offsets.
-
-        Args:
-            predicate: binary function applied to adjacent values
-            *args: apply binary function to scalar, using `subtract` as the difference function
-        """
-        ends = [pa.array([True])]
-        mask = predicate(Column.diff(self), *args) if args else Column.diff(self, predicate)
-        return pc.indices_nonzero(pa.chunked_array(ends + mask.chunks + ends))
-
-
 class Table(pa.Table):
     """Table interface as a namespace of functions."""
-
-    def columns(self) -> dict:
-        """Return columns as a dictionary."""
-        return dict(zip(self.schema.names, self))
-
-    def union(*tables: Batch) -> Batch:
-        """Return table with union of columns."""
-        columns: dict = {}
-        for table in tables:
-            columns |= Table.columns(table)
-        return type(tables[0]).from_pydict(columns)
-
-    def from_offsets(self, offsets: pa.IntegerArray, mask=None) -> pa.RecordBatch:
-        """Return record batch with columns converted into list columns."""
-        cls = pa.LargeListArray if offsets.type == 'int64' else pa.ListArray
-        if isinstance(self, pa.Table):
-            (self,) = self.combine_chunks().to_batches() or [pa.record_batch([], self.schema)]
-        arrays = [cls.from_arrays(offsets, array, mask=mask) for array in self]
-        return pa.RecordBatch.from_arrays(arrays, self.schema.names)
-
-    def runs(self, *names: str, **predicates: tuple) -> tuple:
-        """Return table grouped by pairwise differences, and corresponding counts.
-
-        Args:
-            *names: columns to partition by `not_equal` which will return scalars
-            **predicates: pairwise predicates with optional args which will return list arrays;
-                if the predicate has args, it will be called on the differences
-        """
-        offsets = pa.chunked_array(
-            Column.run_offsets(self[name], *predicates.get(name, ()))
-            for name in names + tuple(predicates)
-        )
-        offsets = offsets.unique().sort()
-        scalars = self.select(names).take(offsets[:-1])
-        lists = self.select(set(self.schema.names) - set(names))
-        table = Table.union(scalars, Table.from_offsets(lists, offsets))
-        return table, Column.diff(offsets)
 
     def min_max(self, *names: str) -> Self:
         """Return table filtered by minimum or maximum values."""
