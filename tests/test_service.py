@@ -299,69 +299,42 @@ def test_order(client):
     assert data['order']['columns']['county']['values'] == ['Weston']
     data = client.execute('{ order(by: ["state"], limit: 2) { columns { state { values } } } }')
     assert data['order']['columns']['state']['values'] == ['AK', 'AK']
-    data = client.execute(
-        """{ group(by: ["state"], aggregate: {list: {name: "county"}}) {
+    data = client.execute("""{ group(by: ["state"], aggregate: {collect: {name: "county"}}) {
+        order(by: "state") {
         project(columns: {array: {value: {array: {sort: {name: "county"}}}, offset: 0}, alias: "county"}) {
-        row { state county } } } }"""
-    )
-    assert data['group']['project']['row'] == {'state': 'NY', 'county': 'Albany'}
-    data = client.execute(
-        """{ project(columns: {alias: "index", rowNumber: null}) {
-        group(by: "state", aggregate: {first: {name: "index"}, list: {name: "city"}}) {
+        row { state county } } } } }""")
+    assert data['group']['order']['project']['row'] == {'state': 'AK', 'county': 'Aleutians East'}
+    data = client.execute("""{ project(columns: {alias: "index", rowNumber: null}) {
+        group(by: "state", aggregate: {first: {name: "index"}, collect: {name: "city"}}) {
         order(by: "index") {
         project(columns: {alias: "city", array: {slice: {name: "city"}, limit: 1}}) {
-        row { state } } } } } }"""
-    )
+        row { state } } } } } }""")
     assert data['project']['group']['order']['project']['row'] == {'state': 'NY'}
 
 
 def test_group(client):
     with pytest.raises(ValueError, match="cannot represent"):
-        client.execute('{ group(by: "state", aggregate: {list: {name: "city"}}) { row { city } } }')
-    data = client.execute(
-        """{ group(by: ["state", "county"], counts: "counts", aggregate: {list: {name: "city"}}) {
-        scan(filter: {gt: [{name: "counts"}, {value: 200}]}) {
-        project(columns: [{array: {mins: {name: "city"}}, alias: "min"}, {array: {maxs: {name: "city"}}, alias: "max"}]) {
-        min: column(name: "min") { ... on StringColumn { values } }
-        max: column(name: "max") { ... on StringColumn { values } } } } } }"""
-    )
-    agg = data['group']['scan']['project']
-    assert agg['min']['values'] == ['Naval Anacost Annex', 'Alsip', 'Alief', 'Acton']
-    assert agg['max']['values'] == ['Washington Navy Yard', 'Worth', 'Webster', 'Woodland Hills']
-    data = client.execute(
-        """{ group(by: ["state", "county"], counts: "c", aggregate: {list: [{name: "zipcode"}, {name: "latitude"}, {name: "longitude"}]}) {
-        order(by: ["-c"], limit: 4) { project(columns: [{alias: "latitude", array: {sums: {name: "latitude"}}}, {alias: "longitude", array: {means: {name: "longitude"}}}]) {
-        columns { latitude { values } longitude { values } }
-        column(name: "zipcode") { type } } } } }"""
-    )
-    agg = data['group']['order']['project']
-    assert agg['column']['type'] == 'list<l: int32>'
-    assert all(latitude > 1000 for latitude in agg['columns']['latitude']['values'])
-    assert all(77 > longitude > -119 for longitude in agg['columns']['longitude']['values'])
-    data = client.execute("""{ scan(columns: {name: "zipcode", cast: "bool"})
-        { group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { slice(limit: 3) {
-        project(columns: [{alias: "a", array: {anys: {name: "zipcode"}}}, {alias: "b", array: {alls: {name: "zipcode"}}}]) {
-        a: column(name: "a") { ... on BooleanColumn { values } }
-        b: column(name: "b") { ... on BooleanColumn { values } }
-        column(name: "zipcode") { type } } } } } }""")
-    assert data['scan']['group']['slice']['project'] == {
-        'a': {'values': [True, True, True]},
-        'b': {'values': [True, True, True]},
-        'column': {'type': 'list<l: bool>'},
-    }
-    data = client.execute("""{ sc: group(by: ["state", "county"]) { count }
-        cs: group(by: ["county", "state"]) { count } }""")
-    assert data['sc']['count'] == data['cs']['count'] == 3216
+        client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
+            row { city } } }""")
+    data = client.execute("""{ group(by: [], counts: "c", aggregate: {max: {alias: "z", name: "zipcode"}}) {
+        c: column(name: "c") { ... on LongColumn { values } }
+        z: column(name: "z") { ... on IntColumn { values } } } }""")
+    assert data == {'group': {'c': {'values': [41700]}, 'z': {'values': [99950]}}}
+    data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "county", distinct: true}}) {
+        columns { state { values } }
+        c: column(name: "county") { ... on ListColumn { values { length } } } } }""")
+    index = data['group']['columns']['state']['values'].index('NY')
+    assert data['group']['c']['values'][index] == {'length': 62}
 
 
 def test_unnest(client):
-    data = client.execute("""{ group(by: "state", aggregate: {list: {name: "city"}}) {
+    data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
         unnest(name: "city") { columns { city { type } } } } }""")
     assert data == {'group': {'unnest': {'columns': {'city': {'type': 'string'}}}}}
-    data = client.execute("""{ group(by: "state", aggregate: {list: {name: "city"}}) {
+    data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
         unnest(name: "city", offset: "idx") { column(name: "idx") { type } } } }""")
     assert data == {'group': {'unnest': {'column': {'type': 'int64'}}}}
-    data = client.execute("""{ group(by: "state", aggregate: {list: {name: "city"}}) {
+    data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
          unnest(name: "city", rowNumber: "idx") { column(name: "idx") { 
         ... on LongColumn { values } } } } }""")
     assert set(data['group']['unnest']['column']['values']) == set(range(52))

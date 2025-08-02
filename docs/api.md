@@ -58,9 +58,6 @@ Each field resolver transforms a table or array as needed. When working with an 
 ## List Arrays
 Arrow ListArrays are supported as ListColumns. `group: {aggregate: {list: ...}}` leverages that feature to transform columns into ListColumns, which can be accessed via inline fragments and further aggregated. Though `group` hash aggregate functions are more efficient than creating lists.
 
-## Dictionary Arrays
-Arrow has dictionary-encoded arrays as a space optimization, but doesn't natively support some builtin functions on them. Support for dictionaries is extended, and often faster by only having to apply functions to the unique values.
-
 ## Nulls
 GraphQL continues the long tradition of confusing ["optional" with "nullable"](https://github.com/graphql/graphql-spec/issues/872). Graphique strives to be explicit regarding what may be omitted versus what may be null.
 

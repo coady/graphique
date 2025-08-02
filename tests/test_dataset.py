@@ -60,36 +60,15 @@ def test_slice(dsclient):
 
 
 def test_group(dsclient):
-    data = dsclient.execute(
-        """{ group(by: ["state"], aggregate: {min: {name: "county"}}) { row { state county } } }"""
-    )
-    assert data == {'group': {'row': {'state': 'NY', 'county': 'Albany'}}}
-    data = dsclient.execute("""{ group(by: ["state"], counts: "c") { slice(limit: 1) {
-        column(name: "c") { ... on LongColumn { values } } } } }""")
-    assert data == {'group': {'slice': {'column': {'values': [2205]}}}}
-    data = dsclient.execute(
-        '{ group(by: ["state"], aggregate: {first: {name: "county"}}) { row { county } } }'
-    )
-    assert data == {'group': {'row': {'county': 'Suffolk'}}}
-    data = dsclient.execute(
-        '{ group(by: ["state"], aggregate: {one: {name: "county"}}) { row { county } } }'
-    )
-    assert data['group']['row']['county']
-    data = dsclient.execute(
-        """{ group(by: ["state"], aggregate: {mean: {name: "zipcode"}}) { slice(limit: 1) {
-        column(name: "zipcode") { ... on FloatColumn { values } } } } }"""
-    )
-    assert data == {'group': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
-    data = dsclient.execute(
-        """{ group(by: ["state"], aggregate: {list: {name: "zipcode"}}) { project(columns: {alias: "zipcode", array: {means: {name: "zipcode"}}}) {
-        slice(limit: 1) { column(name: "zipcode") { ... on FloatColumn { values } } } } } }"""
-    )
-    assert data == {
-        'group': {'project': {'slice': {'column': {'values': [pytest.approx(12614.62721)]}}}}
-    }
-    data = dsclient.execute("""{ group(aggregate: {min: {alias: "st", name: "state"}}) {
-        column(name: "st") { ... on StringColumn { values } } } }""")
-    assert data == {'group': {'column': {'values': ['AK']}}}
+    data = dsclient.execute("""{ group(by: ["state"], rowNumber: "idx", aggregate: {min: {name: "county"}}) { 
+        order(by: "idx") { row { state county } } } }""")
+    assert data == {'group': {'order': {'row': {'state': 'NY', 'county': 'Albany'}}}}
+    data = dsclient.execute("""{ group(by: ["state"], counts: "c") {
+        column(name: "c") { ... on LongColumn { values } } } }""")
+    assert 2205 in data['group']['column']['values']
+    data = dsclient.execute("""{ group(by: ["state"], aggregate: {first: {name: "county"}}) {
+        columns { county { values } } } }""")
+    assert 'Suffolk' in data['group']['columns']['county']['values']
 
 
 def test_fragments(partclient):
@@ -113,13 +92,10 @@ def test_fragments(partclient):
     )
     assert data == {'group': {'count': 1, 'row': {'state': 'AK'}}}
     data = partclient.execute(
-        """{ group(by: ["north", "west"], aggregate: {distinct: {name: "city"}, mean: {name: "zipcode"}}) {
+        """{ group(by: ["north", "west"], aggregate: {collect: {name: "city", distinct: true}, mean: {name: "zipcode"}}) {
         count column(name: "city") { type } } }"""
     )
-    assert data == {'group': {'count': 4, 'column': {'type': 'list<item: string>'}}}
-    data = partclient.execute("""{ group(by: "north", aggregate: {countDistinct: {name: "west"}}) { 
-        column(name: "west") { ... on LongColumn { values } } } }""")
-    assert data == {'group': {'column': {'values': [2, 2]}}}
+    assert data == {'group': {'count': 4, 'column': {'type': 'list<l: string>'}}}
     data = partclient.execute(
         '{ group(by: "north", counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
     )

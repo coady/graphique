@@ -15,8 +15,8 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
-from .core import Agg, Nodes, Parquet, Table as T, order_key
-from .inputs import Expression, Filter, HashAggregates, IProjection, Projection, links
+from .core import Nodes, Parquet, Table as T, order_key
+from .inputs import Expression, Filter, Aggregates, IProjection, Projection, links
 from .models import Column, doc_field
 from .scalars import Long
 
@@ -200,7 +200,7 @@ class Dataset:
     @doc_field(
         by="column names; empty will aggregate into a single row table",
         counts="optionally include counts in an aliased column",
-        ordered="optionally disable parallelization to maintain ordering",
+        row_number="optionally include first row number in an aliased column",
         aggregate="aggregation functions applied to other columns",
     )
     def group(
@@ -208,27 +208,25 @@ class Dataset:
         info: Info,
         by: list[str] = [],
         counts: str = '',
-        ordered: bool = False,
-        aggregate: HashAggregates = {},  # type: ignore
+        row_number: str = '',
+        aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
         """Return table grouped by columns.
 
-        See `column` for accessing any column which has changed type. See `tables` to split on any
-        aggregated list columns.
+        See `column` for accessing any column which has changed type.
         """
-        if not any(aggregate.keys()):
+        aggs = dict(aggregate)  # type: ignore
+        if not aggs:
             fragments = T.fragments(self.source, *by, counts=counts)
             if set(fragments.schema.names) >= set(by):
                 return type(self)(fragments)
-        prefix = 'hash_' if by else ''
-        aggs: dict = {counts: ([], prefix + 'count_all', None)} if counts else {}
-        for func, values in dict(aggregate).items():
-            ordered = ordered or func in Agg.ordered
-            for agg in values:
-                aggs[agg.alias] = (agg.name, prefix + func, agg.func_options(func))
-        source = self.to_table(info) if isinstance(self.source, ibis.Table) else self.source
-        source = Nodes.group(source, *by, **aggs)
-        return type(self)(source.to_table(use_threads=False) if ordered else source)
+        if counts:
+            aggs[counts] = ibis._.count()
+        table = self.to_ibis(info)
+        if row_number:
+            table = table.mutate({row_number: ibis.row_number()})
+            aggs[row_number] = ibis._[row_number].first()
+        return type(self)(table.aggregate(aggs, by=by).cache())
 
     @doc_field(
         by="column names; prefix with `-` for descending order",

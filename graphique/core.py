@@ -24,42 +24,6 @@ bit_any = functools.partial(functools.reduce, operator.or_)
 bit_all = functools.partial(functools.reduce, operator.and_)
 
 
-class Agg:
-    """Aggregation options."""
-
-    option_map = {
-        'all': pc.ScalarAggregateOptions,
-        'any': pc.ScalarAggregateOptions,
-        'approximate_median': pc.ScalarAggregateOptions,
-        'count': pc.CountOptions,
-        'count_distinct': pc.CountOptions,
-        'distinct': pc.CountOptions,
-        'first': pc.ScalarAggregateOptions,
-        'first_last': pc.ScalarAggregateOptions,
-        'last': pc.ScalarAggregateOptions,
-        'list': type(None),
-        'max': pc.ScalarAggregateOptions,
-        'mean': pc.ScalarAggregateOptions,
-        'min': pc.ScalarAggregateOptions,
-        'min_max': pc.ScalarAggregateOptions,
-        'one': type(None),
-        'product': pc.ScalarAggregateOptions,
-        'stddev': pc.VarianceOptions,
-        'sum': pc.ScalarAggregateOptions,
-        'tdigest': pc.TDigestOptions,
-        'variance': pc.VarianceOptions,
-    }
-    ordered = {'first', 'last'}
-
-    def __init__(self, name: str, alias: str = '', **options):
-        self.name = name
-        self.alias = alias or name
-        self.options = options
-
-    def func_options(self, func: str) -> pc.FunctionOptions:
-        return self.option_map[func.removeprefix('hash_')](**self.options)
-
-
 def sort_key(name: str) -> tuple:
     """Parse sort order."""
     return name.lstrip('-'), ('descending' if name.startswith('-') else 'ascending')

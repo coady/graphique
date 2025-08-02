@@ -22,7 +22,6 @@ from strawberry.schema_directive import Location
 from strawberry.types.field import StrawberryField
 from strawberry.scalars import JSON
 from typing_extensions import Self
-from .core import Agg
 
 T = TypeVar('T')
 
@@ -107,72 +106,41 @@ class Filter(Generic[T], Input):
 
 
 @strawberry.input(description=f"name and optional alias for [compute functions]({links.compute})")
-class Field(Agg):
+class Aggregate:
     name: str = strawberry.field(description="column name")
     alias: str = strawberry.field(default='', description="output column name")
 
-    __init__ = Agg.__init__
-
-    def __init_subclass__(cls):
-        cls.__init__ = cls.__init__
-
-
-@strawberry.input(description=f"options for count [aggregation]({links.compute}#aggregations)")
-class CountAggregate(Field):
-    mode: str = 'only_valid'
-
-
-@strawberry.input(description=f"options for scalar [aggregation]({links.compute}#aggregations)")
-class ScalarAggregate(Field):
-    skip_nulls: bool = True
-
-
-@strawberry.input(description=f"options for variance [aggregation]({links.compute}#aggregations)")
-class VarianceAggregate(ScalarAggregate):
-    ddof: int = 0
+    def to_ibis(self, func: str, **options) -> tuple:
+        return (self.alias or self.name), getattr(ibis._[self.name], func)(**options)
 
 
 @strawberry.input(description=f"options for tdigest [aggregation]({links.compute}#aggregations)")
-class TDigestAggregate(ScalarAggregate):
-    q: list[float] = (0.5,)  # type: ignore
-    delta: int = 100
-    buffer_size: int = 500
+class CollectAggregate(Aggregate):
+    distinct: bool = False
+
+    def to_ibis(self, func: str) -> tuple:  # type: ignore
+        return super().to_ibis(func, distinct=self.distinct)
 
 
-@strawberry.input
-class ScalarAggregates(Input):
-    all: list[ScalarAggregate] = default_field([], func=pc.all)
-    any: list[ScalarAggregate] = default_field([], func=pc.any)
-    approximate_median: list[ScalarAggregate] = default_field([], func=pc.approximate_median)
-    count: list[CountAggregate] = default_field([], func=pc.count)
-    count_distinct: list[CountAggregate] = default_field([], func=pc.count_distinct)
-    first: list[ScalarAggregate] = default_field([], func=pc.first)
-    first_last: list[ScalarAggregate] = default_field([], func=pc.first_last)
-    last: list[ScalarAggregate] = default_field([], func=pc.last)
-    max: list[ScalarAggregate] = default_field([], func=pc.max)
-    mean: list[ScalarAggregate] = default_field([], func=pc.mean)
-    min: list[ScalarAggregate] = default_field([], func=pc.min)
-    min_max: list[ScalarAggregate] = default_field([], func=pc.min_max)
-    product: list[ScalarAggregate] = default_field([], func=pc.product)
-    stddev: list[VarianceAggregate] = default_field([], func=pc.stddev)
-    sum: list[ScalarAggregate] = default_field([], func=pc.sum)
-    tdigest: list[TDigestAggregate] = default_field([], func=pc.tdigest)
-    variance: list[VarianceAggregate] = default_field([], func=pc.variance)
+@strawberry.input(description="Aggregation functions.")
+class Aggregates:
+    all: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.all)
+    any: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.any)
+    collect: list[CollectAggregate] = default_field([], func=ibis.expr.types.Column.collect)
+    first: list[Aggregate] = default_field([], func=ibis.expr.types.Column.first)
+    last: list[Aggregate] = default_field([], func=ibis.expr.types.Column.last)
+    max: list[Aggregate] = default_field([], func=ibis.expr.types.Column.max)
+    mean: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.mean)
+    median: list[Aggregate] = default_field([], func=ibis.expr.types.Column.median)
+    min: list[Aggregate] = default_field([], func=ibis.expr.types.Column.min)
+    std: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.std)
+    sum: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.sum)
+    var: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.var)
 
-    def keys(self):
-        return (key.rstrip('_') for key in super().keys() if self[key])
-
-    def __getitem__(self, name):
-        return super().__getitem__('list_' if name == 'list' else name)
-
-
-@strawberry.input
-class HashAggregates(ScalarAggregates):
-    distinct: list[CountAggregate] = default_field(
-        [], description="distinct values within each scalar"
-    )
-    list_: list[Field] = default_field([], name='list', description="all values within each scalar")
-    one: list[Field] = default_field([], description="arbitrary value within each scalar")
+    def __iter__(self) -> Iterable[tuple]:
+        for field in self.__strawberry_definition__.fields:  # type: ignore
+            for agg in getattr(self, field.name):
+                yield agg.to_ibis(field.name)
 
 
 @use_doc(strawberry.input)

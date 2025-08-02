@@ -258,9 +258,6 @@ def test_struct(executor):
 def test_dictionary(executor):
     data = executor('{ column(name: "string") { length } }')
     assert data == {'column': {'length': 2}}
-    data = executor("""{ group(by: ["camelId"], aggregate: {countDistinct: {name: "string"}}) {
-        column(name: "string") { ... on LongColumn { values } } } }""")
-    assert data == {'group': {'column': {'values': [1, 0]}}}
     data = executor(
         """{ scan(columns: {alias: "string", coalesce: [{name: "string"}, {value: ""}]}) {
         columns { string { values } } } }"""
