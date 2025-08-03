@@ -69,14 +69,7 @@ class Table(pa.Table):
         parts = [ds.get_partition_keys(frag.partition_expression) for frag in fragments]
         table = pa.Table.from_pylist(parts)
         keys = [name for name in names if name in table.schema.names]
-        table = table.group_by(keys, use_threads=False).aggregate([])
-        if not counts:
-            return table
-        if not table.schema:
-            return table.append_column(counts, pa.array([self.count_rows()]))
-        exprs = [bit_all(pc.field(key) == row[key] for key in row) for row in table.to_pylist()]
-        column = [self.filter(expr).count_rows() for expr in exprs]
-        return table.append_column(counts, pa.array(column))
+        return table.group_by(keys, use_threads=False).aggregate([])
 
     def rank_keys(self, k: int, *names: str, dense: bool = True) -> tuple:
         """Return expression and unmatched fields for partitioned dataset which filters by rank.
@@ -91,13 +84,7 @@ class Table(pa.Table):
         keys = {name: keys[name] for name in table.schema.names if name in keys}
         if not keys:
             return None, names
-        if dense:
-            table = table.take(pc.select_k_unstable(table, k, keys.items()))
-        else:
-            table = table.sort_by(keys.items())
-            totals = itertools.accumulate(table['_'].to_pylist())
-            counts = (count for count, total in enumerate(totals, 1) if total >= k)
-            table = table[: next(counts, None)].remove_column(len(table.schema) - 1)
+        table = table.take(pc.select_k_unstable(table, k, keys.items()))
         exprs = [bit_all(pc.field(key) == row[key] for key in row) for row in table.to_pylist()]
         remaining = names[len(keys) :]
         if remaining or not dense:  # fields with a single value are no longer needed
@@ -219,3 +206,13 @@ class Parquet(ds.Dataset):
         paths = [frag.path for frag in self._get_fragments(self._scan_options.get('filter'))]
         hive = isinstance(self.partitioning, ds.HivePartitioning)
         return ibis.read_parquet(paths, hive_partitioning=hive)
+
+    def topk(self, k: int, *names: str) -> ibis.Table:
+        """Return topk partitions as a table."""
+        table = Parquet.fragments(self, counts='_')
+        table = table.order_by(*map(order_key, names))
+        totals = itertools.accumulate(table['_'].to_list())
+        stops = (stop for stop, total in enumerate(totals, 1) if total >= k)
+        table = table[: next(stops, None)]
+        hive = isinstance(self.partitioning, ds.HivePartitioning)
+        return ibis.read_parquet(table['__path__'].to_list(), hive_partitioning=hive)

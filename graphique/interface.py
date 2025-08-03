@@ -232,17 +232,12 @@ class Dataset:
     )
     def order(self, info: Info, by: list[str], limit: Long | None = None) -> Self:
         """Return table sorted by specified columns."""
-        source = self.source
-        if isinstance(source, ds.Dataset) and limit is not None:
-            expr, by = T.rank_keys(self.source, limit, *by, dense=False)
-            if expr is not None:
-                self = type(self)(self.source.filter(expr))
-            source = self.select(info)
-            if not by:
-                return type(self)(source.head(limit))
-        if not isinstance(source, ibis.Table):  # pragma: no branch
-            source = ibis.memtable(self.to_table(info))
-        return type(self)(source.order_by(*map(order_key, by))[:limit])
+        table = self.to_ibis(info)
+        keys = Parquet.keys(self.source, *by)
+        if keys and limit is not None:
+            table = Parquet.topk(self.source, limit, *by)
+        table = table.order_by(*map(order_key, by))
+        return type(self)(table[:limit])
 
     @doc_field(
         by="column names; prefix with `-` for descending order",
