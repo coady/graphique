@@ -179,11 +179,32 @@ class Nodes(ac.Declaration):
 
 
 class Parquet(ds.Dataset):
-    """Parquet dataset converters."""
+    """Partitioned parquet dataset."""
 
-    def partition_keys(self) -> pa.Schema:
+    def schema(self) -> pa.Schema:
         """partition schema"""
         return self.partitioning.schema if hasattr(self, 'partitioning') else pa.schema([])
+
+    def keys(self, *names) -> list:
+        """Return prefix of matching partition keys."""
+        keys = set(Parquet.schema(self).names)
+        return list(itertools.takewhile(lambda name: name.lstrip('-') in keys, names))
+
+    def fragments(self, counts: str = '') -> ibis.Table:
+        """Return partition fragments as a table."""
+        parts = []
+        for frag in self._get_fragments(self._scan_options.get('filter')):
+            parts.append(ds.get_partition_keys(frag.partition_expression))
+            parts[-1]['__path__'] = frag.path
+            if counts:
+                parts[-1][counts] = frag.count_rows()
+        return ibis.memtable(pa.Table.from_pylist(parts))
+
+    def group(self, *names, counts: str = '') -> ibis.Table:
+        """Return grouped partitions as a table."""
+        table = Parquet.fragments(self, counts)
+        agg = {counts: table[counts].sum()} if counts else {}
+        return table.aggregate(agg, by=names).order_by(*names)
 
     def filter(self, expr: ds.Expression) -> ds.Dataset | None:
         """Attempt to apply filter to partition keys."""

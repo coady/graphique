@@ -30,7 +30,7 @@ if FILTERS is not None:
         COLUMNS = {alias: ds.field(name) for alias, name in COLUMNS.items()}
     expr = Expression.from_query(**FILTERS).to_arrow()
     root = ibis.memtable(root.to_table(columns=COLUMNS, filter=expr))
-elif COLUMNS or not Parquet.partition_keys(root):
+elif COLUMNS or not Parquet.schema(root):
     root = Parquet.to_table(root)
     if isinstance(COLUMNS, dict):
         root = root.select(**{alias: ibis._[name] for alias, name in COLUMNS.items()})

@@ -216,10 +216,8 @@ class Dataset:
         See `column` for accessing any column which has changed type.
         """
         aggs = dict(aggregate)  # type: ignore
-        if not aggs:
-            fragments = T.fragments(self.source, *by, counts=counts)
-            if set(fragments.schema.names) >= set(by):
-                return type(self)(fragments)
+        if not aggs and by == Parquet.keys(self.source, *by):
+            return type(self)(Parquet.group(self.source, *by, counts=counts))
         if counts:
             aggs[counts] = ibis._.count()
         table = self.to_ibis(info)
