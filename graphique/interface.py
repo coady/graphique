@@ -163,13 +163,13 @@ class Dataset:
         return len(self.source) if isinstance(self.source, Sized) else self.source.count_rows()
 
     @doc_field
-    def any(self, info: Info, length: Long = 1) -> bool:
-        """Return whether there are at least `length` rows.
+    def any(self, info: Info, limit: Long = 1) -> bool:
+        """Return whether there are at least `limit` rows.
 
-        May be significantly faster than `length` for out-of-core data.
+        May be significantly faster than `count` for out-of-core data.
         """
-        table = self.to_table(info, length)
-        return len(table) >= length
+        table = self.to_ibis(info)
+        return table[:limit].count().to_pyarrow().as_py() >= limit
 
     @doc_field(
         name="column name(s); multiple names access nested struct fields",
