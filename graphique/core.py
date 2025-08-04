@@ -7,9 +7,7 @@ Their methods are called as functions.
 
 import functools
 import itertools
-import operator
 from collections.abc import Iterable, Mapping
-from typing import TypeAlias
 import ibis.backends.duckdb
 import pyarrow as pa
 import pyarrow.acero as ac
@@ -18,79 +16,9 @@ import pyarrow.dataset as ds
 from typing_extensions import Self
 
 
-Array: TypeAlias = pa.Array | pa.ChunkedArray
-Batch: TypeAlias = pa.RecordBatch | pa.Table
-bit_any = functools.partial(functools.reduce, operator.or_)
-bit_all = functools.partial(functools.reduce, operator.and_)
-
-
-def sort_key(name: str) -> tuple:
-    """Parse sort order."""
-    return name.lstrip('-'), ('descending' if name.startswith('-') else 'ascending')
-
-
 def order_key(name: str) -> ibis.Deferred:
     """Parse sort order."""
     return (ibis.desc if name.startswith('-') else ibis.asc)(ibis._[name.lstrip('-')])
-
-
-class Table(pa.Table):
-    """Table interface as a namespace of functions."""
-
-    def min_max(self, *names: str) -> Self:
-        """Return table filtered by minimum or maximum values."""
-        for key, order in map(sort_key, names):
-            field, asc = pc.field(key), (order == 'ascending')
-            ((value,),) = Nodes.group(self, _=(key, ('min' if asc else 'max'), None)).to_table()
-            self = self.filter(field <= value if asc else field >= value)
-        return self
-
-    def rank(self, k: int, *names: str) -> Self:
-        """Return table filtered by values within dense rank, similar to `select_k_unstable`."""
-        if k == 1:
-            return Table.min_max(self, *names)
-        keys = dict(map(sort_key, names))
-        table = Nodes.group(self, *keys).to_table()
-        table = table.take(pc.select_k_unstable(table, k, keys.items()))
-        exprs = []
-        for key, order in keys.items():
-            field, asc = pc.field(key), (order == 'ascending')
-            exprs.append(field <= pc.max(table[key]) if asc else field >= pc.min(table[key]))
-        return self.filter(bit_all(exprs))
-
-    def fragments(self, *names, counts: str = '') -> pa.Table:
-        """Return selected fragment keys in a table."""
-        try:
-            expr = self._scan_options.get('filter')
-            ds.dataset([], schema=self.partitioning.schema).scanner(filter=expr)
-        except (AttributeError, ValueError):
-            return pa.table({})
-        fragments = self._get_fragments(expr)
-        parts = [ds.get_partition_keys(frag.partition_expression) for frag in fragments]
-        table = pa.Table.from_pylist(parts)
-        keys = [name for name in names if name in table.schema.names]
-        return table.group_by(keys, use_threads=False).aggregate([])
-
-    def rank_keys(self, k: int, *names: str, dense: bool = True) -> tuple:
-        """Return expression and unmatched fields for partitioned dataset which filters by rank.
-
-        Args:
-            k: max dense rank or length
-            *names: columns to rank by
-            dense: use dense rank; false indicates sorting
-        """
-        keys = dict(map(sort_key, names))
-        table = Table.fragments(self, *keys, counts='' if dense else '_')
-        keys = {name: keys[name] for name in table.schema.names if name in keys}
-        if not keys:
-            return None, names
-        table = table.take(pc.select_k_unstable(table, k, keys.items()))
-        exprs = [bit_all(pc.field(key) == row[key] for key in row) for row in table.to_pylist()]
-        remaining = names[len(keys) :]
-        if remaining or not dense:  # fields with a single value are no longer needed
-            selectors = [len(table[key].unique()) > 1 for key in keys]
-            remaining = tuple(itertools.compress(names, selectors)) + remaining
-        return bit_any(exprs[: len(table)]), remaining
 
 
 class Nodes(ac.Declaration):
@@ -153,17 +81,6 @@ class Nodes(ac.Declaration):
 
     filter = functools.partialmethod(apply, 'filter')
 
-    def group(self, *names, **aggs: tuple) -> Self:
-        """Add `aggregate` node with dictionary support.
-
-        Also supports datasets because aggregation determines the projection.
-        """
-        aggregates, targets = [], set(names)
-        for name, (target, _, _) in aggs.items():
-            aggregates.append(aggs[name] + (name,))
-            targets.update([target] if isinstance(target, str) else target)
-        return Nodes.scan(self, list(targets)).apply('aggregate', aggregates, names)
-
 
 class Parquet(ds.Dataset):
     """Partitioned parquet dataset."""
@@ -207,12 +124,15 @@ class Parquet(ds.Dataset):
         hive = isinstance(self.partitioning, ds.HivePartitioning)
         return ibis.read_parquet(paths, hive_partitioning=hive)
 
-    def topk(self, k: int, *names: str) -> ibis.Table:
-        """Return topk partitions as a table."""
-        table = Parquet.fragments(self, counts='_')
-        table = table.order_by(*map(order_key, names))
-        totals = itertools.accumulate(table['_'].to_list())
-        stops = (stop for stop, total in enumerate(totals, 1) if total >= k)
-        table = table[: next(stops, None)]
+    def rank(self, limit: int, *names: str, dense: bool = False) -> ibis.Table:
+        """Return ordered limited partitions as a table."""
+        keys = {name.strip('-'): order_key(name) for name in names}
+        table = Parquet.fragments(self, counts='_').order_by(*keys.values()).cache()
+        groups = table.aggregate(count=ibis._.count(), total=table['_'].sum(), by=list(keys))
+        groups = groups.order_by(*keys.values()).cache()
+        if not dense:
+            totals = itertools.accumulate(groups['total'].to_list())
+            limit = next((index for index, total in enumerate(totals, 1) if total >= limit), None)  # type: ignore
+        limit = groups[:limit]['count'].sum().to_pyarrow().as_py()
         hive = isinstance(self.partitioning, ds.HivePartitioning)
-        return ibis.read_parquet(table['__path__'].to_list(), hive_partitioning=hive)
+        return ibis.read_parquet(table[:limit]['__path__'].to_list(), hive_partitioning=hive)

@@ -15,7 +15,7 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
-from .core import Nodes, Parquet, Table as T, order_key
+from .core import Nodes, Parquet, order_key
 from .inputs import Expression, Filter, Aggregates, IProjection, Projection, links
 from .models import Column, doc_field
 from .scalars import Long
@@ -84,7 +84,7 @@ class Dataset:
         """Return table with only the rows and columns necessary to proceed."""
         if isinstance(self.source, ibis.Table):
             return self.source
-        if isinstance(self.source, ds.Dataset):  # pragma: no cover
+        if isinstance(self.source, ds.Dataset):
             return Parquet.to_table(self.source)
         return ibis.memtable(self.to_table(info))
 
@@ -217,7 +217,7 @@ class Dataset:
         """
         aggs = dict(aggregate)  # type: ignore
         if not aggs and by == Parquet.keys(self.source, *by):
-            return type(self)(Parquet.group(self.source, *by, counts=counts))
+            return type(self)(Parquet.group(self.source, *by, counts=counts).cache())
         if counts:
             aggs[counts] = ibis._.count()
         table = self.to_ibis(info)
@@ -229,27 +229,21 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         limit="maximum number of rows to return; optimized for partitioned dataset keys",
+        dense="use dense rank with `limit`",
     )
-    def order(self, info: Info, by: list[str], limit: Long | None = None) -> Self:
+    def order(
+        self, info: Info, by: list[str], limit: Long | None = None, dense: bool = False
+    ) -> Self:
         """Return table sorted by specified columns."""
         table = self.to_ibis(info)
         keys = Parquet.keys(self.source, *by)
         if keys and limit is not None:
-            table = Parquet.topk(self.source, limit, *by)
+            table = Parquet.rank(self.source, limit, *keys, dense=dense)
         table = table.order_by(*map(order_key, by))
+        if dense:
+            groups = table.aggregate(_=ibis._.count(), by=[name.lstrip('-') for name in by])
+            limit = groups.order_by(*map(order_key, by))[:limit]['_'].sum().to_pyarrow().as_py()
         return type(self)(table[:limit])
-
-    @doc_field(
-        by="column names; prefix with `-` for descending order",
-        max="maximum dense rank to select; optimized for == 1 (min or max)",
-    )
-    def rank(self, info: Info, by: list[str], max: int = 1) -> Self:
-        """Return table selected by maximum dense rank."""
-        source = self.to_table(info) if isinstance(self.source, ibis.Table) else self.source
-        expr, by = T.rank_keys(source, max, *by)
-        if expr is not None:
-            source = source.filter(expr)
-        return type(self)(T.rank(source, max, *by) if by else source)
 
     @doc_field
     def unnest(

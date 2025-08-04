@@ -81,7 +81,7 @@ Configuration options exist to provide a convenient no-code solution, but are su
 
 #### ordering
 * `order`: sort table by given columns
-* `rank`: select rows with smallest or largest values
+* options `limit` and `dense`: select rows with smallest or largest values
 
 ### Performance
 Graphique relies on `pyarrow`, `ibis`, and custom optimizations.

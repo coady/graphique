@@ -2,7 +2,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import pytest
-from graphique.core import Nodes, Table as T
+from graphique.core import Nodes
 from graphique.scalars import parse_duration, duration_isoformat
 
 
@@ -28,26 +28,11 @@ def test_nodes(table):
     dataset = ds.dataset(table).filter(pc.field('state') == 'CA')
     (column,) = Nodes.scan(dataset, columns={'_': pc.field('state')}).to_table()
     assert column.unique().to_pylist() == ['CA']
-    table = Nodes.group(dataset, 'county', 'city', counts=([], 'hash_count_all', None)).to_table()
-    assert len(table) == 1241
-    assert pc.sum(table['counts']).as_py() == 2647
     scanner = Nodes.scan(dataset, columns=['state'])
     assert scanner.schema.names == ['state']
-    assert scanner.group('state').to_table() == pa.table({'state': ['CA']})
     assert scanner.count_rows() == 2647
     assert scanner.head(3) == pa.table({'state': ['CA'] * 3})
     assert scanner.take([0, 2]) == pa.table({'state': ['CA'] * 2})
-
-
-def test_sort(table):
-    counts = T.rank(table, 1, 'state')['state'].value_counts().to_pylist()
-    assert counts == [{'values': 'AK', 'counts': 273}]
-    counts = T.rank(table, 1, 'state', '-county')['county'].value_counts().to_pylist()
-    assert counts == [{'values': 'Yukon Koyukuk', 'counts': 30}]
-    counts = T.rank(table, 2, 'state')['state'].value_counts().to_pylist()
-    assert counts == [{'values': 'AL', 'counts': 838}, {'values': 'AK', 'counts': 273}]
-    counts = T.rank(table, 2, 'state', '-county')['county'].value_counts().to_pylist()
-    assert counts == [{'counts': 30, 'values': 'Yukon Koyukuk'}, {'counts': 1, 'values': 'Yakutat'}]
 
 
 def test_not_implemented():

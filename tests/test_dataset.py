@@ -77,10 +77,11 @@ def test_fragments(partclient):
         '{ group(by: ["north", "west"], counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
     )
     assert data == {'group': {'column': {'values': [9301, 11549, 11549, 9301]}}}
-    data = partclient.execute('{ rank(by: "north") { row { north } } }')
-    assert data == {'rank': {'row': {'north': 0}}}
-    data = partclient.execute('{ rank(by: ["-north", "-zipcode"]) { row { zipcode } } }')
-    assert data == {'rank': {'row': {'zipcode': 99950}}}
+    data = partclient.execute('{ order(by: "north", limit: 1, dense: true) { row { north } } }')
+    assert data == {'order': {'row': {'north': 0}}}
+    data = partclient.execute("""{ order(by: ["-north", "-zipcode"], limit: 1, dense: true) {
+        row { zipcode } } }""")
+    assert data == {'order': {'row': {'zipcode': 99950}}}
     data = partclient.execute('{ order(by: "north", limit: 1) { row { north } } }')
     assert data == {'order': {'row': {'north': 0}}}
     data = partclient.execute(
@@ -147,27 +148,29 @@ def test_scan(dsclient):
     assert data == {'scan': {'count': 2647}}
 
 
-def test_rank(partclient):
-    data = partclient.execute('{ rank(by: ["state"]) { count row { state } } }')
-    assert data == {'rank': {'count': 273, 'row': {'state': 'AK'}}}
-    data = partclient.execute('{ rank(by: ["-state", "-county"]) { count row { state county } } }')
-    assert data == {'rank': {'count': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
+def test_order(partclient):
+    data = partclient.execute("""{ order(by: "state", limit: 1, dense: true) {
+        count row { state } } }""")
+    assert data == {'order': {'count': 273, 'row': {'state': 'AK'}}}
+    data = partclient.execute("""{ order(by: ["-state", "-county"], limit: 1, dense: true) {
+        count row { state county } } }""")
+    assert data == {'order': {'count': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
     data = partclient.execute('{ order(by: "state", limit: 3) { columns { state { values } } } }')
     assert data == {'order': {'columns': {'state': {'values': ['AK'] * 3}}}}
-    data = partclient.execute('{ rank(by: "north") { count } }')
-    assert data == {'rank': {'count': 20850}}
-    data = partclient.execute('{ rank(by: "north", max: 2) { count } }')
-    assert data == {'rank': {'count': 41700}}
-    data = partclient.execute('{ rank(by: ["north", "west"]) { count } }')
-    assert data == {'rank': {'count': 9301}}
-    data = partclient.execute('{ rank(by: ["north", "west"], max: 2) { count } }')
-    assert data == {'rank': {'count': 20850}}
-    data = partclient.execute('{ rank(by: ["north", "west"], max: 3) { count } }')
-    assert data == {'rank': {'count': 32399}}
+    data = partclient.execute('{ order(by: "north", limit: 1, dense: true) { count } }')
+    assert data == {'order': {'count': 20850}}
+    data = partclient.execute('{ order(by: "north", limit: 2, dense: true) { count } }')
+    assert data == {'order': {'count': 41700}}
+    data = partclient.execute('{ order(by: ["north", "west"], limit: 1, dense: true) { count } }')
+    assert data == {'order': {'count': 9301}}
+    data = partclient.execute('{ order(by: ["north", "west"], limit: 2, dense: true) { count } }')
+    assert data == {'order': {'count': 20850}}
+    data = partclient.execute('{ order(by: ["north", "west"], limit: 3, dense: true) { count } }')
+    assert data == {'order': {'count': 32399}}
     data = partclient.execute(
-        '{ rank(by: ["north", "state"], max: 2) { columns { state { unique { values } } } } }'
+        '{ order(by: ["north", "state"], limit: 2, dense: true) { columns { state { unique { values } } } } }'
     )
-    assert data == {'rank': {'columns': {'state': {'unique': {'values': ['AL', 'AR']}}}}}
+    assert data == {'order': {'columns': {'state': {'unique': {'values': ['AL', 'AR']}}}}}
     data = partclient.execute('{ order(by: "north", limit: 3) { count } }')
     assert data == {'order': {'count': 3}}
     data = partclient.execute('{ order(by: "north", limit: 50000) { count } }')

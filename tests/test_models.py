@@ -12,8 +12,6 @@ def test_camel(aliasclient):
     assert data == {'filter': {'count': 1}}
     data = aliasclient.execute('{ group(by: "camelId") { count } }')
     assert data == {'group': {'count': 2}}
-    data = aliasclient.execute('{ rank(by: "camelId") { count } }')
-    assert data == {'rank': {'count': 1}}
 
 
 def test_snake(executor):
@@ -102,10 +100,6 @@ def test_decimal(executor):
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
     assert execute('{ decimal { min max } }')
     assert execute('{ decimal { indicesNonzero } }') == {'decimal': {'indicesNonzero': []}}
-    data = executor('{ rank(by: "decimal") { columns { decimal { values } } } }')
-    assert data == {'rank': {'columns': {'decimal': {'values': ['0']}}}}
-    data = executor('{ rank(by: "-decimal") { columns { decimal { values } } } }')
-    assert data == {'rank': {'columns': {'decimal': {'values': ['0']}}}}
 
 
 def test_numeric(executor):

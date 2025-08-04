@@ -43,14 +43,13 @@ Note list inputs allow passing a single value, [coercing the input](https://spec
 Datasets and scanners are processed in batches when possible, instead of loading the table into memory.
 
 * `group`, `scan`, and `filter` - native parallel batch processing
-* `order` with `length`
-* `rank`
+* `order` with `limit` and `dense`
 
 ## Partitions
 Partitioned datasets use fragment keys when possible.
 
 * `group` on fragment keys with counts
-* `rank` and `order` with length on fragment keys
+* `order` with limit on fragment keys
 
 ## Column selection
 Each field resolver transforms a table or array as needed. When working with an embedded library like [pandas](https://pandas.pydata.org), it's common to select a working set of columns for efficiency. Whereas GraphQL has the advantage of knowing the entire query up front, so there is no `select` field because it's done automatically at every level of resolvers.
