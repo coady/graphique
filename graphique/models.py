@@ -66,16 +66,6 @@ class Column:
     def type(self) -> str:
         return str(self.array.type)
 
-    @doc_field
-    def length(self) -> Long:
-        """array length"""
-        return len(self.array)
-
-    @doc_field
-    def size(self) -> Long:
-        """buffer size in bytes"""
-        return self.array.nbytes
-
     @classmethod
     def cast(cls, array: pa.ChunkedArray) -> Column:
         """Return typed column based on array type."""
@@ -98,7 +88,6 @@ class Column:
 
 @strawberry.type(description="unique values and counts")
 class Set(Generic[T]):
-    length = doc_field(Column.length)
     counts: list[Long] = strawberry.field(description="list of counts")
 
     def __init__(self, array, counts=pa.array([])):
@@ -175,16 +164,8 @@ class IntervalColumn(OrdinalColumn[T]):
         return pc.sum(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
 
     @compute_field
-    def product(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
-        return pc.product(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
-
-    @compute_field
     def mean(self, skip_nulls: bool = True, min_count: int = 0) -> float | None:
         return pc.mean(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
-
-    @compute_field
-    def indices_nonzero(self) -> list[Long]:
-        return pc.indices_nonzero(self.array).to_pylist()
 
 
 @Column.register(float, Decimal)
@@ -209,18 +190,6 @@ class RatioColumn(IntervalColumn[T]):
     ) -> list[float | None]:
         options = {'skip_nulls': skip_nulls, 'min_count': min_count}
         return pc.quantile(self.array, q=q, interpolation=interpolation, **options).to_pylist()
-
-    @compute_field
-    def tdigest(
-        self,
-        q: list[float] = [0.5],
-        delta: int = 100,
-        buffer_size: int = 500,
-        skip_nulls: bool = True,
-        min_count: int = 0,
-    ) -> list[float | None]:
-        options = {'buffer_size': buffer_size, 'skip_nulls': skip_nulls, 'min_count': min_count}
-        return pc.tdigest(self.array, q=q, delta=delta, **options).to_pylist()
 
 
 @Column.register(bool)

@@ -80,9 +80,7 @@ def test_boolean(executor):
 
     assert execute('{ bool { values } }') == {'bool': {'values': [False, None]}}
     assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
-    assert execute('{ bool { unique { length } } }') == {'bool': {'unique': {'length': 2}}}
     assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
-    assert execute('{ bool { indicesNonzero } }') == {'bool': {'indicesNonzero': []}}
 
     data = executor('{ scan(filter: {xor: [{name: "bool"}, {inv: {name: "bool"}}]}) { count } }')
     assert data == {'scan': {'count': 1}}
@@ -99,7 +97,6 @@ def test_decimal(executor):
 
     assert execute('{ decimal { values } }') == {'decimal': {'values': ['0', None]}}
     assert execute('{ decimal { min max } }')
-    assert execute('{ decimal { indicesNonzero } }') == {'decimal': {'indicesNonzero': []}}
 
 
 def test_numeric(executor):
@@ -112,12 +109,6 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'mode': {'counts': [1]}}}}
         data = executor(f'{{ columns {{ {name} {{ quantile }} }} }}')
         assert data == {'columns': {name: {'quantile': [0.0]}}}
-        data = executor(f'{{ columns {{ {name} {{ tdigest }} }} }}')
-        assert data == {'columns': {name: {'tdigest': [0.0]}}}
-        data = executor(f'{{ columns {{ {name} {{ product }} }} }}')
-        assert data == {'columns': {name: {'product': 0.0}}}
-        data = executor(f'{{ columns {{ {name} {{ indicesNonzero }} }} }}')
-        assert data == {'columns': {name: {'indicesNonzero': []}}}
 
     data = executor("""{ scan(columns: {alias: "int32", elementWise: {min: {name: "int32"}}}) {
         columns { int32 { values } } } }""")
@@ -208,12 +199,10 @@ def test_duration(executor):
 
 
 def test_list(executor):
-    data = executor('{ columns { list { length type } } }')
-    assert data == {'columns': {'list': {'length': 2, 'type': 'list<l: int32>'}}}
-    data = executor('{ columns { list { values { length } } } }')
-    assert data == {'columns': {'list': {'values': [{'length': 3}, None]}}}
-    data = executor('{ columns { list { dropNull { length } } } }')
-    assert data == {'columns': {'list': {'dropNull': [{'length': 3}]}}}
+    data = executor('{ columns { list { count type } } }')
+    assert data == {'columns': {'list': {'count': 1, 'type': 'list<l: int32>'}}}
+    data = executor('{ columns { list { dropNull { count } } } }')
+    assert data == {'columns': {'list': {'dropNull': [{'count': 3}]}}}
     data = executor('{ row { list { ... on IntColumn { values } } } }')
     assert data == {'row': {'list': {'values': [0, 1, 2]}}}
     data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
@@ -223,8 +212,8 @@ def test_list(executor):
         column(name: "list") { ... on LongColumn { values } } } }""")
     assert data == {'project': {'column': {'values': [1, None]}}}
     data = executor("""{ project(columns: {array: {unique: {name: "list"}}, alias: "list"})
-        { columns { list { flatten { length } } } } }""")
-    assert data['project']['columns']['list'] == {'flatten': {'length': 3}}
+        { columns { list { flatten { count } } } } }""")
+    assert data['project']['columns']['list'] == {'flatten': {'count': 3}}
     data = executor(
         '{ project(columns: {array: {modes: {name: "list"}}, alias: "list"}) { column(name: "list") { type } } }'
     )
@@ -234,8 +223,8 @@ def test_list(executor):
 
 
 def test_struct(executor):
-    data = executor('{ columns { struct { names column(name: "x") { length } } } }')
-    assert data == {'columns': {'struct': {'names': ['x', 'y'], 'column': {'length': 2}}}}
+    data = executor('{ columns { struct { names column(name: "x") { count } } } }')
+    assert data == {'columns': {'struct': {'names': ['x', 'y'], 'column': {'count': 1}}}}
     data = executor("""{ scan(columns: {alias: "leaf", name: ["struct", "x"]}) {
         column(name: "leaf") { ... on IntColumn { values } } } }""")
     assert data == {'scan': {'column': {'values': [0, None]}}}
@@ -247,16 +236,6 @@ def test_struct(executor):
         executor(
             '{ scan(filter: {caseWhen: [{name: "struct"}, {name: "int32"}, {name: "float"}]}) {type } }'
         )
-
-
-def test_dictionary(executor):
-    data = executor('{ column(name: "string") { length } }')
-    assert data == {'column': {'length': 2}}
-    data = executor(
-        """{ scan(columns: {alias: "string", coalesce: [{name: "string"}, {value: ""}]}) {
-        columns { string { values } } } }"""
-    )
-    assert data == {'scan': {'columns': {'string': {'values': ['', '']}}}}
 
 
 def test_selections(executor):

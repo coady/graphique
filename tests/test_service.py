@@ -27,8 +27,6 @@ def test_ints(client):
     assert zipcodes['max'] == 99950
     assert len(zipcodes['unique']['values']) == 41700
     assert set(zipcodes['unique']['counts']) == {1}
-    data = client.execute('{ columns { zipcode { size } } }')
-    assert data['columns']['zipcode']['size'] > 0
 
 
 def test_floats(client):
@@ -79,15 +77,13 @@ def test_floats(client):
 def test_strings(client):
     data = client.execute("""{ columns {
         state { values unique { values counts } countDistinct }
-        county { unique { length values } }
+        county { unique { values } }
         city { min max }
     } }""")
     states = data['columns']['state']
     assert len(states['values']) == 41700
     assert len(states['unique']['values']) == states['countDistinct'] == 52
     assert sum(states['unique']['counts']) == 41700
-    counties = data['columns']['county']
-    assert len(counties['unique']['values']) == counties['unique']['length'] == 1920
     assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
     data = client.execute("""{ filter(state: {eq: "CA"}) {
         scan(filter: {gt: [{utf8: {length: {name: "city"}}}, {value: 23}]}) { count } } }""")
@@ -320,9 +316,9 @@ def test_group(client):
     assert data == {'group': {'c': {'values': [41700]}, 'z': {'values': [99950]}}}
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "county", distinct: true}}) {
         columns { state { values } }
-        c: column(name: "county") { ... on ListColumn { values { length } } } } }""")
+        c: column(name: "county") { ... on ListColumn { values { count } } } } }""")
     index = data['group']['columns']['state']['values'].index('NY')
-    assert data['group']['c']['values'][index] == {'length': 62}
+    assert data['group']['c']['values'][index] == {'count': 62}
 
 
 def test_unnest(client):
