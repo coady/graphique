@@ -55,11 +55,9 @@ class Dataset:
     def resolve(self, info: Info, source: ibis.Table) -> Self:
         """Cache the table if it will be reused."""
         count = sum(len(field.selections) for field in info.selected_fields)
-        names = list(self.references(info, level=1))
-        if names and count > 1:
-            source = source.select(names)
-            if isinstance(source, ibis.Table):
-                source = source.cache()
+        if count > 1 and isinstance(source, ibis.Table):
+            if names := self.references(info, level=1):
+                source = source.select(names).cache()
         return type(self)(source)
 
     @classmethod
@@ -148,12 +146,12 @@ class Dataset:
         )  # type: ignore
 
     @doc_field
-    def optional(self) -> Self | None:
+    def optional(self, info: Info) -> Self | None:
         """Nullable field to stop error propagation, enabling partial query results.
 
         Will be replaced by client controlled nullability.
         """
-        return self
+        return self.resolve(info, self.source)
 
     @doc_field
     def count(self) -> Long:
@@ -197,9 +195,7 @@ class Dataset:
     )
     def slice(self, info: Info, offset: Long = 0, limit: Long | None = None) -> Self:
         """Return zero-copy slice of table."""
-        table = self.source
-        if not isinstance(self.source, (ibis.Table, pa.Table)):
-            table = self.to_table(info, limit and (offset + limit if offset >= 0 else None))
+        table = self.to_ibis(info)
         return self.resolve(info, table[offset:][:limit])
 
     @doc_field(
