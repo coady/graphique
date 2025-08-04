@@ -12,8 +12,6 @@ def test_slice(client):
     assert data['columns']['zipcode']['count'] == 41700
     data = client.execute('{ columns { zipcode { count(mode: "only_null") } } }')
     assert data['columns']['zipcode']['count'] == 0
-    data = client.execute('{ cache { count } }')
-    assert data == {'cache': {'count': 41700}}
 
 
 def test_ints(client):

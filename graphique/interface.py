@@ -52,6 +52,24 @@ class Dataset:
     def __init__(self, source: Source):
         self.source = source
 
+    def resolve(self, info: Info, source: ibis.Table) -> Self:
+        """Cache the table if it will be reused."""
+        count = sum(len(field.selections) for field in info.selected_fields)
+        names = list(self.references(info, level=1))
+        if names and count > 1:
+            source = source.select(names)
+            if isinstance(source, ibis.Table):
+                source = source.cache()
+        return type(self)(source)
+
+    @classmethod
+    @no_type_check
+    def resolve_reference(cls, info: Info, **keys) -> Self:
+        """Return table filtered by federated keys."""
+        self = getattr(info.root_value, cls.field)
+        queries = {name: Filter(eq=[keys[name]]) for name in keys}
+        return self.filter(info, **queries)
+
     def references(self, info: Info, level: int = 0) -> set:
         """Return set of every possible future column reference."""
         fields = info.selected_fields
@@ -88,14 +106,6 @@ class Dataset:
             return Parquet.to_table(self.source)
         return ibis.memtable(self.to_table(info))
 
-    @classmethod
-    @no_type_check
-    def resolve_reference(cls, info: Info, **keys) -> Self:
-        """Return table from federated keys."""
-        self = getattr(info.root_value, cls.field)
-        queries = {name: Filter(eq=[keys[name]]) for name in keys}
-        return self.filter(info, **queries)
-
     def columns(self, info: Info) -> dict:
         """fields for each column"""
         table = self.to_table(info)
@@ -118,7 +128,7 @@ class Dataset:
         """
         expr = Expression.from_query(**queries)
         source = Parquet.filter(self.source, expr.to_arrow())
-        return self.scan(info, filter=expr) if source is None else type(self)(source)
+        return self.scan(info, filter=expr) if source is None else self.resolve(info, source)
 
     @doc_field
     def type(self) -> str:
@@ -181,11 +191,6 @@ class Dataset:
         source = self.scan(info, Expression(), [column]).source
         return Column.cast(*(source if isinstance(source, pa.Table) else source.to_table()))
 
-    @doc_field
-    def cache(self, info: Info) -> Self:
-        """Evaluate and cache the table."""
-        return type(self)(self.to_table(info))
-
     @doc_field(
         offset="number of rows to skip; negative value skips from the end",
         limit="maximum number of rows to return",
@@ -195,7 +200,7 @@ class Dataset:
         table = self.source
         if not isinstance(self.source, (ibis.Table, pa.Table)):
             table = self.to_table(info, limit and (offset + limit if offset >= 0 else None))
-        return type(self)(table[offset:][:limit])
+        return self.resolve(info, table[offset:][:limit])
 
     @doc_field(
         by="column names; empty will aggregate into a single row table",
@@ -217,14 +222,14 @@ class Dataset:
         """
         aggs = dict(aggregate)  # type: ignore
         if not aggs and by == Parquet.keys(self.source, *by):
-            return type(self)(Parquet.group(self.source, *by, counts=counts).cache())
+            return self.resolve(info, Parquet.group(self.source, *by, counts=counts))
         if counts:
             aggs[counts] = ibis._.count()
         table = self.to_ibis(info)
         if row_number:
             table = table.mutate({row_number: ibis.row_number()})
             aggs[row_number] = ibis._[row_number].first()
-        return type(self)(table.aggregate(aggs, by=by).cache())
+        return self.resolve(info, table.aggregate(aggs, by=by))
 
     @doc_field(
         by="column names; prefix with `-` for descending order",
@@ -243,7 +248,7 @@ class Dataset:
         if dense:
             groups = table.aggregate(_=ibis._.count(), by=[name.lstrip('-') for name in by])
             limit = groups.order_by(*map(order_key, by))[:limit]['_'].sum().to_pyarrow().as_py()
-        return type(self)(table[:limit])
+        return self.resolve(info, table[:limit])
 
     @doc_field
     def unnest(
@@ -258,7 +263,7 @@ class Dataset:
         table = self.to_ibis(info)
         if row_number:
             table = table.mutate({row_number: ibis.row_number()})
-        return type(self)(table.unnest(name, offset=offset or None, keep_empty=keep_empty))
+        return self.resolve(info, table.unnest(name, offset=offset or None, keep_empty=keep_empty))
 
     @doc_field(filter="selected rows", columns="projected columns")
     def scan(self, info: Info, filter: Expression = {}, columns: list[Projection] = []) -> Self:  # type: ignore
@@ -273,7 +278,7 @@ class Dataset:
             source = source.filter(expr)
         if columns or isinstance(source, ds.Dataset):
             source = Nodes.scan(source, projection)
-        return type(self)(source)
+        return self.resolve(info, source)
 
     @doc_field(
         right="name of right table; must be on root Query type",
@@ -298,7 +303,9 @@ class Dataset:
         right = getattr(info.root_value, right).to_ibis(info)
         if rkeys:
             keys = [getattr(left, key) == getattr(right, rkey) for key, rkey in zip(keys, rkeys)]
-        return type(self)(left.join(right, predicates=keys, how=how, lname=lname, rname=rname))
+        return self.resolve(
+            info, left.join(right, predicates=keys, how=how, lname=lname, rname=rname)
+        )
 
     @doc_field
     def take(self, info: Info, indices: list[Long]) -> Self:
@@ -306,13 +313,13 @@ class Dataset:
         source = self.select(info)
         if isinstance(source, ibis.Table):  # pragma: no branch
             source = ds.Scanner.from_batches(source.to_pyarrow_batches())
-        return type(self)(source.take(indices))
+        return self.resolve(info, source.take(indices))
 
     @doc_field
     def drop_null(self, info: Info) -> Self:
         """Remove missing values from referenced columns in the table."""
         table = self.to_ibis(info)
-        return type(self)(table.drop_null())
+        return self.resolve(info, table.drop_null())
 
     @doc_field
     def project(self, info: Info, columns: list[IProjection]) -> Self:
@@ -323,4 +330,4 @@ class Dataset:
         """
         table = self.to_ibis(info)
         projection = {column.alias or column.name: column.to_ibis() for column in columns}
-        return type(self)(table.mutate(projection))
+        return self.resolve(info, table.mutate(projection))
