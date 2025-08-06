@@ -16,7 +16,7 @@ import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
 from .core import Nodes, Parquet, order_key
-from .inputs import Expression, Filter, Aggregates, IProjection, Projection, links
+from .inputs import Aggregates, Expression, Filter, IExpression, IProjection, Projection, links
 from .models import Column, doc_field
 from .scalars import Long
 
@@ -124,9 +124,12 @@ class Dataset:
 
         See `scan(filter: ...)` for more advanced queries.
         """
-        expr = Expression.from_query(**queries)
-        source = Parquet.filter(self.source, expr.to_arrow())
-        return self.scan(info, filter=expr) if source is None else self.resolve(info, source)
+        source = Parquet.filter(self.source, Expression.from_query(**queries))
+        if source is None:
+            source = self.to_ibis(info)
+            if exprs := list(IExpression.from_query(**queries)):
+                source = source.filter(*exprs)
+        return self.resolve(info, source)
 
     @doc_field
     def type(self) -> str:
@@ -138,12 +141,8 @@ class Dataset:
         """dataset schema"""
         source = self.source
         schema = source.schema() if isinstance(source, ibis.Table) else source.schema
-        partitioning = getattr(source, 'partitioning', None)
-        return Schema(
-            names=schema.names,
-            types=schema.types,
-            partitioning=partitioning.schema.names if partitioning else [],
-        )  # type: ignore
+        partitioning = Parquet.schema(source).names
+        return Schema(names=schema.names, types=schema.types, partitioning=partitioning)  # type: ignore
 
     @doc_field
     def optional(self, info: Info) -> Self | None:

@@ -32,11 +32,7 @@ class Nodes(ac.Declaration):
         'scan': ac.ScanNodeOptions,
         'filter': ac.FilterNodeOptions,
         'project': ac.ProjectNodeOptions,
-        'aggregate': ac.AggregateNodeOptions,
-        'order_by': ac.OrderByNodeOptions,
-        'hashjoin': ac.HashJoinNodeOptions,
     }
-    to_batches = ac.Declaration.to_reader  # source compatibility
 
     def __init__(self, name, *args, inputs=None, **options):
         super().__init__(name, self.option_map[name](*args, **options), inputs)

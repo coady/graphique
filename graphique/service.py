@@ -28,8 +28,7 @@ root = ds.dataset(PARQUET_PATH, partitioning='hive' if PARQUET_PATH.is_dir() els
 if FILTERS is not None:
     if isinstance(COLUMNS, dict):  # pragma: no cover
         COLUMNS = {alias: ds.field(name) for alias, name in COLUMNS.items()}
-    expr = Expression.from_query(**FILTERS).to_arrow()
-    root = ibis.memtable(root.to_table(columns=COLUMNS, filter=expr))
+    root = ibis.memtable(root.to_table(columns=COLUMNS, filter=Expression.from_query(**FILTERS)))
 elif COLUMNS or not Parquet.schema(root):
     root = Parquet.to_table(root)
     if isinstance(COLUMNS, dict):

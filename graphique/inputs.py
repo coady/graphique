@@ -21,7 +21,6 @@ from strawberry.types.arguments import StrawberryArgument
 from strawberry.schema_directive import Location
 from strawberry.types.field import StrawberryField
 from strawberry.scalars import JSON
-from typing_extensions import Self
 
 T = TypeVar('T')
 
@@ -282,13 +281,13 @@ class Expression:
 
     @classmethod
     @no_type_check
-    def from_query(cls, **queries: Filter) -> Self:
+    def from_query(cls, **queries: Filter) -> ds.Expression | None:
         """Transform query syntax into an Expression input."""
         exprs = []
         for name, query in queries.items():
             field = cls(name=[name])
             exprs += (cls(**{op: [field, cls(value=value)]}) for op, value in dict(query).items())
-        return cls(and_=exprs)
+        return cls(and_=exprs).to_arrow()
 
 
 @strawberry.input(description="an `Expression` with an optional alias")
@@ -583,6 +582,15 @@ class IExpression:
         if len(fields) == 1:
             return fields[0]
         raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
+
+    @classmethod
+    def from_query(cls, **queries: Filter) -> Iterable[ibis.Deferred]:
+        """Transform query syntax into an `IExpression` input."""
+        for name, query in queries.items():
+            field = ibis._[name]
+            for op, value in dict(query).items():
+                isin = op == 'eq' and isinstance(value, list)
+                yield field.isin(value) if isin else getattr(operator, op)(field, value)
 
 
 @strawberry.input(description="an `IExpression` with an optional alias")

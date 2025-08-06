@@ -72,6 +72,8 @@ def test_group(dsclient):
 
 
 def test_fragments(partclient):
+    data = partclient.execute('{ filter(north: {eq: 1}) { count } }')
+    assert data == {'filter': {'count': 20850}}
     data = partclient.execute('{ group(by: ["north", "west"]) { columns { north { values } } } }')
     data = partclient.execute(
         '{ group(by: ["north", "west"], counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
@@ -210,7 +212,7 @@ def test_federation(fedclient):
         """{ _entities(representations: {__typename: "ZipcodesTable", zipcode: 90001}) {
         ... on ZipcodesTable { count type row { state } } } }"""
     )
-    assert data == {'_entities': [{'count': 1, 'type': 'Nodes', 'row': {'state': 'CA'}}]}
+    assert data == {'_entities': [{'count': 1, 'type': 'Table', 'row': {'state': 'CA'}}]}
     data = fedclient.execute("""{ states { filter(state: {eq: "CA"}) { columns { indices {
         takeFrom(field: "zipcodes") { __typename column(name: "state") { count } } } } } } }""")
     table = data['states']['filter']['columns']['indices']['takeFrom']
