@@ -1,4 +1,5 @@
 import asyncio
+import json
 import pytest
 from graphique import middleware
 from .conftest import load
@@ -11,93 +12,51 @@ def test_extensions():
     assert set(ext.get_results()['metrics']) == {'duration', 'execution'}
 
 
-def test_filter(dsclient):
-    data = dsclient.execute('{ column(name: "state") { count } }')
-    assert data == {'column': {'count': 41700}}
-    data = dsclient.execute('{ count row { state } }')
-    assert data == {'count': 41700, 'row': {'state': 'NY'}}
-    data = dsclient.execute('{ filter(state: {eq: ["CA", "NY"]}) { count } }')
-    assert data == {'filter': {'count': 4852}}
-    data = dsclient.execute('{ filter(state: {ne: "CA"}) { count } }')
-    assert data == {'filter': {'count': 39053}}
-    data = dsclient.execute('{ filter { count } }')
-    assert data == {'filter': {'count': 41700}}
-    data = dsclient.execute('{ filter(state: {ne: null}) { count } }')
-    assert data == {'filter': {'count': 41700}}
-    data = dsclient.execute('{ dropNull { count } }')
-    assert data == {'dropNull': {'count': 41700}}
-
-
-def test_search(partclient):
-    data = partclient.execute('{ filter(zipcode: {lt: 10000}) { count } }')
+def test_search(dsclient):
+    data = dsclient.execute('{ filter(zipcode: {lt: 10000}) { count } }')
     assert data == {'filter': {'count': 3224}}
-    data = partclient.execute('{ filter(zipcode: {}) { count } }')
+    data = dsclient.execute('{ filter(zipcode: {}) { count } }')
     assert data == {'filter': {'count': 41700}}
-    data = partclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
+    data = dsclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
         count } } }""")
     assert data == {'filter': {'filter': {'count': 2647}}}
-    data = partclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
+    data = dsclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
         count row { zipcode } } } }""")
     assert data == {'filter': {'filter': {'count': 2647, 'row': {'zipcode': 90001}}}}
-    data = partclient.execute("""{ filter(where: {lt: [{name: "zipcode"}, {value: 90000}],
+    data = dsclient.execute("""{ filter(where: {lt: [{name: "zipcode"}, {value: 90000}],
         eq: [{name: "state"}, {value: "CA"}]}) { count } }""")
     assert data == {'filter': {'count': 0}}
 
 
-def test_slice(dsclient):
-    data = dsclient.execute('{ slice(limit: 3) { count } }')
-    assert data == {'slice': {'count': 3}}
-    data = dsclient.execute('{ slice(offset: -3) { count } }')
-    assert data == {'slice': {'count': 3}}
-    data = dsclient.execute('{ slice { count } }')
-    assert data == {'slice': {'count': 41700}}
-    data = dsclient.execute('{ take(indices: [0]) { row { zipcode } } }')
-    assert data == {'take': {'row': {'zipcode': 501}}}
-    data = dsclient.execute('{ any many: any(limit: 50000)}')
-    assert data == {'any': True, 'many': False}
-
-
-def test_group(dsclient):
-    data = dsclient.execute("""{ group(by: ["state"], rowNumber: "idx", aggregate: {min: {name: "county"}}) { 
-        order(by: "idx") { row { state county } } } }""")
-    assert data == {'group': {'order': {'row': {'state': 'NY', 'county': 'Albany'}}}}
-    data = dsclient.execute("""{ group(by: ["state"], counts: "c") {
-        column(name: "c") { ... on LongColumn { values } } } }""")
-    assert 2205 in data['group']['column']['values']
-    data = dsclient.execute("""{ group(by: ["state"], aggregate: {first: {name: "county"}}) {
-        columns { county { values } } } }""")
-    assert 'Suffolk' in data['group']['columns']['county']['values']
-
-
-def test_fragments(partclient):
-    data = partclient.execute('{ filter(north: {eq: 1}) { count } }')
+def test_fragments(dsclient):
+    data = dsclient.execute('{ filter(north: {eq: 1}) { count } }')
     assert data == {'filter': {'count': 20850}}
-    data = partclient.execute('{ group(by: ["north", "west"]) { columns { north { values } } } }')
-    data = partclient.execute(
+    data = dsclient.execute('{ group(by: ["north", "west"]) { columns { north { values } } } }')
+    data = dsclient.execute(
         '{ group(by: ["north", "west"], counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
     )
     assert data == {'group': {'column': {'values': [9301, 11549, 11549, 9301]}}}
-    data = partclient.execute('{ order(by: "north", limit: 1, dense: true) { row { north } } }')
+    data = dsclient.execute('{ order(by: "north", limit: 1, dense: true) { row { north } } }')
     assert data == {'order': {'row': {'north': 0}}}
-    data = partclient.execute("""{ order(by: ["-north", "-zipcode"], limit: 1, dense: true) {
+    data = dsclient.execute("""{ order(by: ["-north", "-zipcode"], limit: 1, dense: true) {
         row { zipcode } } }""")
     assert data == {'order': {'row': {'zipcode': 99950}}}
-    data = partclient.execute('{ order(by: "north", limit: 1) { row { north } } }')
+    data = dsclient.execute('{ order(by: "north", limit: 1) { row { north } } }')
     assert data == {'order': {'row': {'north': 0}}}
-    data = partclient.execute(
+    data = dsclient.execute(
         '{ group(by: ["north"], aggregate: {max: {name: "zipcode"}}) { row { north zipcode } } }'
     )
     assert data['group']['row']['zipcode'] >= 96898
-    data = partclient.execute(
+    data = dsclient.execute(
         '{ group(by: [], aggregate: {min: {name: "state"}}) { count row { state } } }'
     )
     assert data == {'group': {'count': 1, 'row': {'state': 'AK'}}}
-    data = partclient.execute(
+    data = dsclient.execute(
         """{ group(by: ["north", "west"], aggregate: {collect: {name: "city", distinct: true}, mean: {name: "zipcode"}}) {
         count column(name: "city") { type } } }"""
     )
     assert data == {'group': {'count': 4, 'column': {'type': 'list<l: string>'}}}
-    data = partclient.execute(
+    data = dsclient.execute(
         '{ group(by: "north", counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
     )
     assert data == {'group': {'column': {'values': [20850, 20850]}}}
@@ -105,75 +64,41 @@ def test_fragments(partclient):
 
 def test_schema(dsclient):
     schema = dsclient.execute('{ schema { names types partitioning } }')['schema']
-    assert set(schema['names']) >= {'zipcode', 'state', 'county'}
-    assert set(schema['types']) >= {'int32', 'string'}
-    assert len(schema['partitioning']) in (0, 6)
-    data = dsclient.execute('{ scan(filter: {}) { type } }')
-    assert data == {'scan': {'type': 'Table'}}
+    assert len(schema['names']) == 8
+    assert set(schema['types']) == {'double', 'int32', 'string'}
+    assert schema['partitioning'] == ['north', 'west']
+    data = dsclient.execute('{ type }')
+    assert data['type'].endswith('Dataset')
     data = dsclient.execute('{ scan(columns: {name: "zipcode"}) { type } }')
     assert data == {'scan': {'type': 'Nodes'}}
 
 
-def test_scan(dsclient):
-    data = dsclient.execute(
-        '{ scan(columns: {name: "zipcode", alias: "zip"}) { column(name: "zip") { type } } }'
-    )
-    assert data == {'scan': {'column': {'type': 'int32'}}}
-    data = dsclient.execute('{ scan(filter: {eq: [{name: "county"}, {name: "state"}]}) { count } }')
-    assert data == {'scan': {'count': 0}}
-    data = dsclient.execute('{ scan(filter: {eq: [{name: "zipcode"}, {value: null}]}) { count } }')
-    assert data == {'scan': {'count': 0}}
-    data = dsclient.execute(
-        '{ scan(filter: {inv: {ne: [{name: "zipcode"}, {value: null}]}}) { count } }'
-    )
-    assert data == {'scan': {'count': 0}}
-    data = dsclient.execute(
-        '{ scan(filter: {eq: [{name: "state"} {value: "CA", cast: "string"}]}) { count } }'
-    )
-    assert data == {'scan': {'count': 2647}}
-    data = dsclient.execute(
-        '{ scan(filter: {eq: [{name: "state"} {value: ["CA", "OR"]}]}) { count } }'
-    )
-    assert data == {'scan': {'count': 3131}}
-    with pytest.raises(ValueError, match="conflicting inputs"):
-        dsclient.execute('{ scan(filter: {name: "state", value: "CA"}) { count } }')
-    with pytest.raises(ValueError, match="name or alias"):
-        dsclient.execute('{ scan(columns: {}) { count } }')
-    data = dsclient.execute("""{ scan(filter: {eq: [{name: "state"}, {value: "CA"}]})
-        { scan(filter: {eq: [{name: "county"}, {value: "Santa Clara"}]})
-        { count row { county } } } }""")
-    assert data == {'scan': {'scan': {'count': 108, 'row': {'county': 'Santa Clara'}}}}
-    data = dsclient.execute("""{ scan(filter: {or: [{eq: [{name: "state"}, {value: "CA"}]},
-        {eq: [{name: "county"}, {value: "Santa Clara"}]}]}) { count } }""")
-    assert data == {'scan': {'count': 2647}}
-
-
-def test_order(partclient):
-    data = partclient.execute("""{ order(by: "state", limit: 1, dense: true) {
+def test_order(dsclient):
+    data = dsclient.execute("""{ order(by: "state", limit: 1, dense: true) {
         count row { state } } }""")
     assert data == {'order': {'count': 273, 'row': {'state': 'AK'}}}
-    data = partclient.execute("""{ order(by: ["-state", "-county"], limit: 1, dense: true) {
+    data = dsclient.execute("""{ order(by: ["-state", "-county"], limit: 1, dense: true) {
         count row { state county } } }""")
     assert data == {'order': {'count': 4, 'row': {'state': 'WY', 'county': 'Weston'}}}
-    data = partclient.execute('{ order(by: "state", limit: 3) { columns { state { values } } } }')
+    data = dsclient.execute('{ order(by: "state", limit: 3) { columns { state { values } } } }')
     assert data == {'order': {'columns': {'state': {'values': ['AK'] * 3}}}}
-    data = partclient.execute('{ order(by: "north", limit: 1, dense: true) { count } }')
+    data = dsclient.execute('{ order(by: "north", limit: 1, dense: true) { count } }')
     assert data == {'order': {'count': 20850}}
-    data = partclient.execute('{ order(by: "north", limit: 2, dense: true) { count } }')
+    data = dsclient.execute('{ order(by: "north", limit: 2, dense: true) { count } }')
     assert data == {'order': {'count': 41700}}
-    data = partclient.execute('{ order(by: ["north", "west"], limit: 1, dense: true) { count } }')
+    data = dsclient.execute('{ order(by: ["north", "west"], limit: 1, dense: true) { count } }')
     assert data == {'order': {'count': 9301}}
-    data = partclient.execute('{ order(by: ["north", "west"], limit: 2, dense: true) { count } }')
+    data = dsclient.execute('{ order(by: ["north", "west"], limit: 2, dense: true) { count } }')
     assert data == {'order': {'count': 20850}}
-    data = partclient.execute('{ order(by: ["north", "west"], limit: 3, dense: true) { count } }')
+    data = dsclient.execute('{ order(by: ["north", "west"], limit: 3, dense: true) { count } }')
     assert data == {'order': {'count': 32399}}
-    data = partclient.execute(
+    data = dsclient.execute(
         '{ order(by: ["north", "state"], limit: 2, dense: true) { columns { state { unique { values } } } } }'
     )
     assert data == {'order': {'columns': {'state': {'unique': {'values': ['AL', 'AR']}}}}}
-    data = partclient.execute('{ order(by: "north", limit: 3) { count } }')
+    data = dsclient.execute('{ order(by: "north", limit: 3) { count } }')
     assert data == {'order': {'count': 3}}
-    data = partclient.execute('{ order(by: "north", limit: 50000) { count } }')
+    data = dsclient.execute('{ order(by: "north", limit: 50000) { count } }')
     assert data == {'order': {'count': 41700}}
 
 
@@ -183,6 +108,14 @@ def test_root():
     assert app.root_value.test
     with pytest.warns(UserWarning):
         assert load('nofields.parquet', FEDERATED='test')
+    app = load('zipcodes.parquet', COLUMNS=json.dumps(['state']))
+    assert app.root_value.schema().names == ('state',)
+    app = load('zipcodes.parquet', COLUMNS=json.dumps({'zipCode': 'zipcode'}))
+    assert app.root_value.schema().names == ('zipCode',)
+    app = load('zipcodes.parquet', FILTERS=json.dumps({'state': {'eq': 'CA'}}))
+    assert app.root_value.count() == 2647
+    app = load('zipcodes.parquet', FILTERS=json.dumps({}), COLUMNS=json.dumps({'state': 'state'}))
+    assert app.root_value.schema().names == ('state',)
 
 
 def test_federation(fedclient):

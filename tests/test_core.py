@@ -1,6 +1,5 @@
 import pyarrow as pa
 import pyarrow.compute as pc
-import pyarrow.dataset as ds
 import pytest
 from graphique.core import Nodes
 from graphique.scalars import parse_duration, duration_isoformat
@@ -24,8 +23,8 @@ def test_duration():
         duration_isoformat(parse_duration('P1H'))
 
 
-def test_nodes(table):
-    dataset = ds.dataset(table).filter(pc.field('state') == 'CA')
+def test_nodes(dataset):
+    dataset = dataset.filter(pc.field('state') == 'CA')
     (column,) = Nodes.scan(dataset, columns={'_': pc.field('state')}).to_table()
     assert column.unique().to_pylist() == ['CA']
     scanner = Nodes.scan(dataset, columns=['state'])

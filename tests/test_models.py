@@ -1,30 +1,6 @@
 import pytest
 
 
-def test_camel(aliasclient):
-    data = aliasclient.execute('{ schema { names } }')
-    assert data == {'schema': {'names': ['snakeId', 'camelId']}}
-    data = aliasclient.execute('{ row { snakeId } columns { snakeId { type } } }')
-    assert data == {'row': {'snakeId': 1}, 'columns': {'snakeId': {'type': 'int64'}}}
-    data = aliasclient.execute('{ filter(snakeId: {eq: 1}) { count } }')
-    assert data == {'filter': {'count': 1}}
-    data = aliasclient.execute('{ filter(camelId: {eq: 1}) { count } }')
-    assert data == {'filter': {'count': 1}}
-    data = aliasclient.execute('{ group(by: "camelId") { count } }')
-    assert data == {'group': {'count': 2}}
-
-
-def test_snake(executor):
-    data = executor('{ schema { names } }')
-    assert 'snake_id' in data['schema']['names']
-    data = executor('{ row { snake_id } columns { snake_id { type } } }')
-    assert data == {'row': {'snake_id': 1}, 'columns': {'snake_id': {'type': 'int64'}}}
-    data = executor('{ filter(snake_id: {eq: 1}) { count } }')
-    assert data == {'filter': {'count': 1}}
-    data = executor('{ filter(camelId: {eq: 1}) { count } }')
-    assert data == {'filter': {'count': 1}}
-
-
 def test_columns(executor):
     def execute(query):
         return executor(f'{{ columns {query} }}')['columns']

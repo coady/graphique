@@ -26,7 +26,7 @@ FILTERS = config('FILTERS', cast=json.loads, default=None)
 root = ds.dataset(PARQUET_PATH, partitioning='hive' if PARQUET_PATH.is_dir() else None)
 
 if FILTERS is not None:
-    if isinstance(COLUMNS, dict):  # pragma: no cover
+    if isinstance(COLUMNS, dict):
         COLUMNS = {alias: ds.field(name) for alias, name in COLUMNS.items()}
     root = ibis.memtable(root.to_table(columns=COLUMNS, filter=Expression.from_query(**FILTERS)))
 elif COLUMNS or not Parquet.schema(root):

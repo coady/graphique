@@ -12,6 +12,10 @@ def test_slice(client):
     assert data['columns']['zipcode']['count'] == 41700
     data = client.execute('{ columns { zipcode { count(mode: "only_null") } } }')
     assert data['columns']['zipcode']['count'] == 0
+    data = client.execute('{ take(indices: [0]) { row { zipcode } } }')
+    assert data == {'take': {'row': {'zipcode': 501}}}
+    data = client.execute('{ any many: any(limit: 50000)}')
+    assert data == {'any': True, 'many': False}
 
 
 def test_ints(client):
@@ -206,6 +210,8 @@ def test_filter(client):
     assert data['filter']['count'] == 30
     with pytest.raises(ValueError, match="optional, not nullable"):
         client.execute('{ filter(city: {le: null}) { count } }')
+    data = client.execute('{ dropNull { count } }')
+    assert data == {'dropNull': {'count': 41700}}
 
 
 def test_scan(client):
@@ -256,6 +262,14 @@ def test_scan(client):
         { columns { state { values } } } }"""
     )
     assert data['scan']['columns']['state']['values'][0] == 'NY'
+    with pytest.raises(ValueError, match="conflicting inputs"):
+        client.execute('{ scan(filter: {name: "state", value: "CA"}) { count } }')
+    with pytest.raises(ValueError, match="name or alias"):
+        client.execute('{ scan(columns: {}) { count } }')
+    data = client.execute("""{ scan(filter: {eq: [{name: "state"}, {value: "CA"}]})
+        { scan(filter: {eq: [{name: "county"}, {value: "Santa Clara"}]})
+        { count row { county } } } }""")
+    assert data == {'scan': {'scan': {'count': 108, 'row': {'county': 'Santa Clara'}}}}
 
 
 def test_project(client):
@@ -319,6 +333,9 @@ def test_group(client):
         c: column(name: "county") { ... on ListColumn { values { count } } } } }""")
     index = data['group']['columns']['state']['values'].index('NY')
     assert data['group']['c']['values'][index] == {'count': 62}
+    data = client.execute("""{ group(by: ["state"], rowNumber: "idx", aggregate: {min: {name: "county"}}) { 
+        order(by: "idx") { row { state county } } } }""")
+    assert data == {'group': {'order': {'row': {'state': 'NY', 'county': 'Albany'}}}}
 
 
 def test_unnest(client):
