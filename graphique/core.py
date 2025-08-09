@@ -112,7 +112,7 @@ class Parquet(ds.Dataset):
             ds.dataset([], schema=self.partitioning.schema).scanner(filter=expr)
         except (AttributeError, ValueError):
             return None
-        return self.filter(expr)  # pragma: no cover
+        return self if expr is None else self.filter(expr)
 
     def to_table(self) -> ibis.Table:
         """Return ibis `Table` from filtered dataset."""

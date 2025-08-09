@@ -119,17 +119,19 @@ class Dataset:
             row[name] = Column.fromscalar(scalar) if columnar else scalar.as_py()
         return row
 
-    def filter(self, info: Info, **queries: Filter) -> Self:
+    def filter(self, info: Info, where: IExpression | None = None, **queries: Filter) -> Self:
         """Return table with rows which match all queries.
 
         See `scan(filter: ...)` for more advanced queries.
         """
+        exprs: list = [] if where is None else list(where)  # type: ignore
         source = Parquet.filter(self.source, Expression.from_query(**queries))
         if source is None:
+            exprs += IExpression.from_query(**queries)
             source = self.to_ibis(info)
-            if exprs := list(IExpression.from_query(**queries)):
-                source = source.filter(*exprs)
-        return self.resolve(info, source)
+        elif exprs:
+            source = Parquet.to_table(source)
+        return self.resolve(info, source.filter(*exprs) if exprs else source)
 
     @doc_field
     def type(self) -> str:

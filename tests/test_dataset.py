@@ -28,22 +28,20 @@ def test_filter(dsclient):
     assert data == {'dropNull': {'count': 41700}}
 
 
-def test_search(dsclient):
-    data = dsclient.execute('{ filter(zipcode: {lt: 10000}) { count } }')
+def test_search(partclient):
+    data = partclient.execute('{ filter(zipcode: {lt: 10000}) { count } }')
     assert data == {'filter': {'count': 3224}}
-    data = dsclient.execute('{ filter(zipcode: {}) { count } }')
+    data = partclient.execute('{ filter(zipcode: {}) { count } }')
     assert data == {'filter': {'count': 41700}}
-    data = dsclient.execute('{ filter(zipcode: {}) { row { zipcode } } }')
-    assert data == {'filter': {'row': {'zipcode': 501}}}
-    data = dsclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
+    data = partclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
         count } } }""")
     assert data == {'filter': {'filter': {'count': 2647}}}
-    data = dsclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
+    data = partclient.execute("""{ filter(zipcode: {gt: 90000}) { filter(state: {eq: "CA"}) {
         count row { zipcode } } } }""")
     assert data == {'filter': {'filter': {'count': 2647, 'row': {'zipcode': 90001}}}}
-    data = dsclient.execute("""{ filter(zipcode: {lt: 90000}) { filter(state: {eq: "CA"}) {
-        group(by: "county") { count } } } }""")
-    assert data == {'filter': {'filter': {'group': {'count': 0}}}}
+    data = partclient.execute("""{ filter(where: {lt: [{name: "zipcode"}, {value: 90000}],
+        eq: [{name: "state"}, {value: "CA"}]}) { count } }""")
+    assert data == {'filter': {'count': 0}}
 
 
 def test_slice(dsclient):

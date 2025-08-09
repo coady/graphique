@@ -201,9 +201,9 @@ def test_filter(client):
     data = client.execute('{ filter(state: {eq: null}) { columns { state { values } } } }')
     assert data['filter']['columns']['state']['values'] == []
     data = client.execute(
-        '{ scan(filter: {le: [{abs: {name: "longitude"}}, {value: 66}]}) { count } }'
+        '{ filter(where: {le: [{numeric: {abs: {name: "longitude"}}}, {value: 66}]}) { count } }'
     )
-    assert data['scan']['count'] == 30
+    assert data['filter']['count'] == 30
     with pytest.raises(ValueError, match="optional, not nullable"):
         client.execute('{ filter(city: {le: null}) { count } }')
 
@@ -226,9 +226,9 @@ def test_scan(client):
     assert data['scan']['columns']['zipcode']['unique']['values'] == [0]
     data = client.execute(
         """{ scan(columns: {alias: "product", multiply: [{name: "latitude"}, {name: "longitude"}]})
-        { scan(filter: {gt: [{name: "product"}, {value: 0}]}) { count } } }"""
+        { filter(where: {gt: [{name: "product"}, {value: 0}]}) { count } } }"""
     )
-    assert data['scan']['scan']['count'] == 0
+    assert data['scan']['filter']['count'] == 0
     data = client.execute(
         '{ scan(columns: {name: "zipcode", cast: "float"}) { column(name: "zipcode") { type } } }'
     )

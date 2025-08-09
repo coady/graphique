@@ -102,6 +102,8 @@ class Filter(Generic[T], Input):
             annotation = StrawberryAnnotation(cls[types[name]])  # type: ignore
             if types[name] not in (list, dict):
                 yield StrawberryArgument(name, name, annotation, default={})
+        annotation = StrawberryAnnotation(IExpression | None)
+        yield StrawberryArgument('where', None, annotation, default=None)
 
 
 @strawberry.input(description=f"name and optional alias for [compute functions]({links.compute})")
@@ -178,7 +180,6 @@ class Expression:
     ge: list[Expression] = default_field([], description=r"\>=")
     inv: Expression | None = default_field(description="~")
 
-    abs: Expression | None = default_field(func=pc.abs)
     add: list[Expression] = default_field([], func=pc.add)
     divide: list[Expression] = default_field([], func=pc.divide)
     multiply: list[Expression] = default_field([], func=pc.multiply)
@@ -218,7 +219,7 @@ class Expression:
 
     replace_with_mask: list[Expression] = default_field([], func=pc.replace_with_mask)
 
-    unaries = ('inv', 'abs', 'negate', 'sign', 'string_is_ascii', 'is_finite', 'is_inf', 'is_nan')
+    unaries = ('inv', 'negate', 'sign', 'string_is_ascii', 'is_finite', 'is_inf', 'is_nan')
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
     variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract', 'and_not')
     variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
@@ -544,14 +545,20 @@ class IExpression:
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
     row_number: None = default_field(func=ibis.row_number)
 
+    eq: list[IExpression] = default_field([], description="==")
+    ne: list[IExpression] = default_field([], description="!=")
+    lt: list[IExpression] = default_field([], description="<")
+    le: list[IExpression] = default_field([], description="<=")
+    gt: list[IExpression] = default_field([], description=r"\>")
+    ge: list[IExpression] = default_field([], description=r"\>=")
+    isin: list[IExpression] = default_field([], func=ibis.expr.types.Column.isin)
+
     cume_dist: IExpression | None = default_field(func=ibis.expr.types.Column.cume_dist)
     cummax: IExpression | None = default_field(func=ibis.expr.types.Column.cummax)
     cummin: IExpression | None = default_field(func=ibis.expr.types.Column.cummin)
     dense_rank: IExpression | None = default_field(func=ibis.expr.types.Column.dense_rank)
     percent_rank: IExpression | None = default_field(func=ibis.expr.types.Column.percent_rank)
     rank: IExpression | None = default_field(func=ibis.expr.types.Column.rank)
-
-    isin: list[IExpression] = default_field([], func=ibis.expr.types.Column.isin)
 
     numeric: Numeric | None = default_field(description="numeric functions")
     array: Array | None = default_field(description="array value functions")
@@ -572,7 +579,11 @@ class IExpression:
         if self.row_number is not UNSET:
             yield ibis.row_number()
         for name, (expr, *args) in self.items():
-            yield getattr(expr, name)(*args)
+            match name:
+                case 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge':
+                    yield getattr(operator, name)(expr, *args)
+                case _:
+                    yield getattr(expr, name)(*args)
         for field in (self.numeric, self.array):
             if field:
                 yield from field  # type: ignore
@@ -631,6 +642,7 @@ class Array:
 
 @strawberry.input(description="Numeric functions.")
 class Numeric:
+    abs: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.abs)
     bucket: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.bucket)
     cummean: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cummean)
     cumsum: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cumsum)
