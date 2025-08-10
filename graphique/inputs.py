@@ -162,8 +162,6 @@ class Expression:
     value: JSON | None = default_field(
         description="JSON scalar; also see typed scalars", nullable=True
     )
-    kleene: bool = strawberry.field(default=False, description="use kleene logic for booleans")
-    checked: bool = strawberry.field(default=False, description="check for overflow errors")
 
     base64: list[bytes] = default_field([])
     date_: list[date] = default_field([], name='date')
@@ -188,11 +186,9 @@ class Expression:
     sign: Expression | None = default_field(func=pc.sign)
     subtract: list[Expression] = default_field([], func=pc.subtract)
 
-    bit_wise: BitWise | None = default_field(description="bit-wise functions")
     rounding: Rounding | None = default_field(description="rounding functions")
     log: Log | None = default_field(description="logarithmic functions")
     trig: Trig | None = default_field(description="trigonometry functions")
-    element_wise: ElementWise | None = default_field(description="element-wise aggregate functions")
 
     and_: list[Expression] = default_field([], name='and', description="&")
     and_not: list[Expression] = default_field([], func=pc.and_not)
@@ -200,7 +196,6 @@ class Expression:
     xor: list[Expression] = default_field([], func=pc.xor)
 
     utf8: Utf8 | None = default_field(description="utf8 string functions")
-    string_is_ascii: Expression | None = default_field(func=pc.string_is_ascii)
     substring: MatchSubstring | None = default_field(description="match substring functions")
 
     binary: Binary | None = default_field(description="binary functions")
@@ -217,15 +212,12 @@ class Expression:
 
     temporal: Temporal | None = default_field(description="temporal functions")
 
-    replace_with_mask: list[Expression] = default_field([], func=pc.replace_with_mask)
-
-    unaries = ('inv', 'negate', 'sign', 'string_is_ascii', 'is_finite', 'is_inf', 'is_nan')
+    unaries = ('inv', 'negate', 'sign', 'is_finite', 'is_inf', 'is_nan')
     associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
     variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract', 'and_not')
-    variadics += ('case_when', 'choose', 'coalesce', 'if_else', 'replace_with_mask')  # type: ignore
+    variadics += ('case_when', 'choose', 'coalesce', 'if_else')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
-    groups = ('bit_wise', 'rounding', 'log', 'trig', 'element_wise', 'utf8', 'substring', 'binary')
-    groups += ('temporal',)  # type: ignore
+    groups = ('rounding', 'log', 'trig', 'utf8', 'substring', 'binary', 'temporal')
 
     def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
@@ -272,10 +264,6 @@ class Expression:
         return pa.scalar(value, self.cast) if self.cast else value
 
     def getfunc(self, name):
-        if self.kleene:
-            name = name.rstrip('_') + '_kleene'
-        if self.checked:
-            name += '_checked'
         if name.endswith('_'):  # `and_` and `or_` functions differ from operators
             return getattr(operator, name)
         return getattr(pc if hasattr(pc, name) else operator, name)
@@ -320,19 +308,6 @@ class Fields:
         return getattr(pc, self.prefix + name)
 
 
-@strawberry.input(description="Bit-wise functions.")
-class BitWise(Fields):
-    and_: list[Expression] = default_field([], name='and', func=pc.bit_wise_and)
-    not_: list[Expression] = default_field([], name='not', func=pc.bit_wise_not)
-    or_: list[Expression] = default_field([], name='or', func=pc.bit_wise_or)
-    xor: list[Expression] = default_field([], func=pc.bit_wise_xor)
-    shift_left: list[Expression] = default_field([], func=pc.shift_left)
-    shift_right: list[Expression] = default_field([], func=pc.shift_right)
-
-    def getfunc(self, name):
-        return getattr(pc, name if name.startswith('shift') else 'bit_wise_' + name.rstrip('_'))
-
-
 @strawberry.input(description="Rounding functions.")
 class Rounding(Fields):
     ceil: Expression | None = default_field(func=pc.ceil)
@@ -359,8 +334,6 @@ class Log(Fields):
 
 @strawberry.input(description="Trigonometry functions.")
 class Trig(Fields):
-    checked: bool = strawberry.field(default=False, description="check for overflow errors")
-
     acos: Expression | None = default_field(func=pc.acos)
     asin: Expression | None = default_field(func=pc.asin)
     atan: Expression | None = default_field(func=pc.atan)
@@ -368,16 +341,6 @@ class Trig(Fields):
     cos: Expression | None = default_field(func=pc.cos)
     sin: Expression | None = default_field(func=pc.sin)
     tan: Expression | None = default_field(func=pc.tan)
-
-    def getfunc(self, name):
-        return getattr(pc, name + ('_checked' * self.checked))
-
-
-@strawberry.input(description="Element-wise aggregate functions.")
-class ElementWise(Fields):
-    min_element_wise: list[Expression] = default_field([], name='min', func=pc.min_element_wise)
-    max_element_wise: list[Expression] = default_field([], name='max', func=pc.max_element_wise)
-    skip_nulls: bool = True
 
 
 @strawberry.input(description="Utf8 string functions.")

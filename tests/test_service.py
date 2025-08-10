@@ -47,11 +47,6 @@ def test_floats(client):
     (quantile,) = data['columns']['latitude']['quantile']
     assert quantile == pytest.approx(39.12054)
     data = client.execute(
-        """{ scan(columns: {alias: "latitude", elementWise: {min: [{name: "latitude"}, {name: "longitude"}]}}) {
-        columns { latitude { min } } } }"""
-    )
-    assert data == {'scan': {'columns': {'latitude': {'min': pytest.approx(-174.213333)}}}}
-    data = client.execute(
         """{project(columns: {alias: "l", numeric: {bucket: {name: "latitude"}, buckets: [40, 50]}}) {
         column(name: "l") { ... on IntColumn { unique { values } } } } }"""
     )
@@ -247,21 +242,6 @@ def test_scan(client):
         '{ scan(columns: {name: "latitude", cast: "int32", safe: false}) { column(name: "latitude") { type } } }'
     )
     assert data == {'scan': {'column': {'type': 'int32'}}}
-    data = client.execute(
-        """{ scan(columns: {alias: "longitude", elementWise: {max: [{name: "longitude"}, {name: "latitude"}]}})
-        { columns { longitude { min } } } }"""
-    )
-    assert data['scan']['columns']['longitude']['min'] == pytest.approx(17.963333)
-    data = client.execute(
-        """{ scan(columns: {alias: "latitude", elementWise: {min: [{name: "longitude"}, {name: "latitude"}]}})
-        { columns { latitude { max } } } }"""
-    )
-    assert data['scan']['columns']['latitude']['max'] == pytest.approx(-65.301389)
-    data = client.execute(
-        """{ scan(columns: {alias: "state", elementWise: {min: [{name: "state"}, {name: "county"}], skipNulls: false}})
-        { columns { state { values } } } }"""
-    )
-    assert data['scan']['columns']['state']['values'][0] == 'NY'
     with pytest.raises(ValueError, match="conflicting inputs"):
         client.execute('{ scan(filter: {name: "state", value: "CA"}) { count } }')
     with pytest.raises(ValueError, match="name or alias"):

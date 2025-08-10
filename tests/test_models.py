@@ -60,11 +60,6 @@ def test_boolean(executor):
 
     data = executor('{ scan(filter: {xor: [{name: "bool"}, {inv: {name: "bool"}}]}) { count } }')
     assert data == {'scan': {'count': 1}}
-    data = executor(
-        """{ scan(columns: {alias: "bool", andNot: [{inv: {name: "bool"}}, {name: "bool"}], kleene: true})
-        { columns { bool { values } } } }"""
-    )
-    assert data == {'scan': {'columns': {'bool': {'values': [True, None]}}}}
 
 
 def test_decimal(executor):
@@ -86,27 +81,13 @@ def test_numeric(executor):
         data = executor(f'{{ columns {{ {name} {{ quantile }} }} }}')
         assert data == {'columns': {name: {'quantile': [0.0]}}}
 
-    data = executor("""{ scan(columns: {alias: "int32", elementWise: {min: {name: "int32"}}}) {
-        columns { int32 { values } } } }""")
-    assert data == {'scan': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor('{ column(name: "float", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
-    data = executor("""{ scan(columns: {alias: "int32", negate: {checked: true, name: "int32"}}) {
-        columns { int32 { values } } } }""")
-    assert data == {'scan': {'columns': {'int32': {'values': [0, None]}}}}
     data = executor(
         """{ scan(columns: {alias: "float", coalesce: [{name: "float"}, {name: "int32"}]}) {
         columns { float { values } } } }"""
     )
     assert data == {'scan': {'columns': {'float': {'values': [0.0, None]}}}}
-    data = executor("""{ scan(columns: {bitWise: {not: {name: "int32"}}, alias: "int32"}) {
-        columns { int32 { values } } } }""")
-    assert data == {'scan': {'columns': {'int32': {'values': [-1, None]}}}}
-    data = executor(
-        """{ scan(columns: {bitWise: {or: [{name: "int32"}, {name: "int64"}]}, alias: "int64"}) {
-        columns { int64 { values } } } }"""
-    )
-    assert data == {'scan': {'columns': {'int64': {'values': [0, None]}}}}
 
 
 def test_datetime(executor):
@@ -162,7 +143,7 @@ def test_datetime(executor):
 
 def test_duration(executor):
     data = executor(
-        """{ scan(columns: {alias: "diff", checked: true, subtract: [{name: "timestamp"}, {name: "timestamp"}]})
+        """{ scan(columns: {alias: "diff", subtract: [{name: "timestamp"}, {name: "timestamp"}]})
         { column(name: "diff") { ... on DurationColumn { unique { values } } } } }"""
     )
     assert data == {'scan': {'column': {'unique': {'values': ['P0D', None]}}}}
