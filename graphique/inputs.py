@@ -186,13 +186,6 @@ class Expression:
         description="JSON scalar; also see typed scalars", nullable=True
     )
 
-    base64: list[bytes] = default_field([])
-    date_: list[date] = default_field([], name='date')
-    datetime_: list[datetime] = default_field([], name='datetime')
-    decimal: list[Decimal] = default_field([])
-    duration: list[timedelta] = default_field([])
-    time_: list[time] = default_field([], name='time')
-
     eq: list[Expression] = default_field([], description="==")
     ne: list[Expression] = default_field([], description="!=")
     lt: list[Expression] = default_field([], description="<")
@@ -203,31 +196,22 @@ class Expression:
     utf8: Utf8 | None = default_field(description="utf8 string functions")
     substring: MatchSubstring | None = default_field(description="match substring functions")
 
-    binary: Binary | None = default_field(description="binary functions")
-
     true_unless_null: Expression | None = default_field(func=pc.true_unless_null)
 
     case_when: list[Expression] = default_field([], func=pc.case_when)
     choose: list[Expression] = default_field([], func=pc.choose)
-    coalesce: list[Expression] = default_field([], func=pc.coalesce)
     if_else: list[Expression] = default_field([], func=pc.if_else)
 
     temporal: Temporal | None = default_field(description="temporal functions")
 
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge')
-    variadics += ('case_when', 'choose', 'coalesce', 'if_else')  # type: ignore
-    scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
-    groups = ('utf8', 'substring', 'binary', 'temporal')
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'case_when', 'choose', 'if_else')
+    groups = ('utf8', 'substring', 'temporal')
 
     def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
         fields = []
         if self.name:
             fields.append(pc.field(*self.name))
-        for name in self.scalars:
-            scalars = list(map(self.getscalar, getattr(self, name)))
-            if scalars:
-                fields.append(scalars[0] if len(scalars) == 1 else scalars)
         if self.value is not UNSET:
             fields.append(self.getscalar(self.value))
         for op in self.variadics:
@@ -324,25 +308,6 @@ class Utf8(Fields):
         if name.endswith('trim') and not self.characters:
             name += '_whitespace'
         return getattr(pc, 'utf8_' + name)
-
-
-@strawberry.input(description="Binary functions.")
-class Binary(Fields):
-    length: Expression | None = default_field(func=pc.binary_length)
-    repeat: list[Expression] = default_field([], func=pc.binary_repeat)
-    reverse: Expression | None = default_field(func=pc.binary_reverse)
-
-    join: list[Expression] = default_field([], func=pc.binary_join)
-    join_element_wise: list[Expression] = default_field([], func=pc.binary_join_element_wise)
-    null_handling: str = 'emit_null'
-    null_replacement: str = ''
-
-    replace_slice: Expression | None = default_field(func=pc.binary_replace_slice)
-    start: int = 0
-    stop: int = 0
-    replacement: bytes = b''
-
-    prefix = 'binary_'
 
 
 @strawberry.input(description="Match substring functions.")
@@ -446,6 +411,13 @@ class IExpression:
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
     row_number: None = default_field(func=ibis.row_number)
 
+    base64: bytes | None = default_field(description="binary scalar")
+    date_: date | None = default_field(description="date scalar", name='date')
+    datetime_: datetime | None = default_field(description="datetime scalar", name='datetime')
+    decimal: Decimal | None = default_field(description="decimal scalar")
+    duration: timedelta | None = default_field(description="duration scalar")
+    time_: time | None = default_field(description="time scalar", name='time')
+
     eq: list[IExpression] = default_field([], description="==")
     ne: list[IExpression] = default_field([], description="!=")
     lt: list[IExpression] = default_field([], description="<")
@@ -464,6 +436,7 @@ class IExpression:
     mul: list[IExpression] = default_field([], description="*")
     truediv: list[IExpression] = default_field([], name='div', description="/")
 
+    coalesce: list[IExpression] = default_field([], func=ibis.expr.types.Column.coalesce)
     cume_dist: IExpression | None = default_field(func=ibis.expr.types.Column.cume_dist)
     cummax: IExpression | None = default_field(func=ibis.expr.types.Column.cummax)
     cummin: IExpression | None = default_field(func=ibis.expr.types.Column.cummin)
@@ -485,8 +458,10 @@ class IExpression:
     def __iter__(self) -> Iterable[ibis.Deferred]:
         if self.name:
             yield ibis._[self.name]
-        if self.value is not UNSET:
-            yield self.value
+        scalars = self.base64, self.date_, self.datetime_, self.decimal, self.duration, self.time_
+        for scalar in (self.value,) + scalars:
+            if scalar is not UNSET:
+                yield scalar
         if self.row_number is not UNSET:
             yield ibis.row_number()
         for name, (expr, *args) in self.items():

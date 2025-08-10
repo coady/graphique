@@ -83,11 +83,9 @@ def test_numeric(executor):
 
     data = executor('{ column(name: "float", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
-    data = executor(
-        """{ scan(columns: {alias: "float", coalesce: [{name: "float"}, {name: "int32"}]}) {
-        columns { float { values } } } }"""
-    )
-    assert data == {'scan': {'columns': {'float': {'values': [0.0, None]}}}}
+    data = executor("""{ project(columns: {alias: "float", coalesce: [{name: "float"}, {name: "int32"}]})
+        { columns { float { values } } } }""")
+    assert data == {'project': {'columns': {'float': {'values': [0.0, None]}}}}
 
 
 def test_datetime(executor):
@@ -219,25 +217,8 @@ def test_long(executor):
 
 
 def test_base64(executor):
-    data = executor("""{ scan(columns: {alias: "binary", binary: {length: {name: "binary"}}}) {
-        column(name: "binary") { ...on IntColumn { values } } } }""")
-    assert data == {'scan': {'column': {'values': [0, None]}}}
-    data = executor(
-        """{ scan(columns: {alias: "binary", binary: {repeat: [{name: "binary"}, {value: 2}]}}) {
-        columns { binary { values } } } }"""
-    )
-    assert data == {'scan': {'columns': {'binary': {'values': ['', None]}}}}
-    data = executor(
-        """{ scan(columns: {alias: "binary", coalesce: [{name: "binary"}, {base64: "Xw=="}]}) {
-        columns { binary { values } } } }"""
-    )
-    assert data == {'scan': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
-    data = executor("""{ scan(columns: {alias: "binary", binary: {joinElementWise: [
-        {name: "binary"}, {name: "binary"}, {base64: "Xw=="}], nullHandling: "replace"}}) {
-        columns { binary { values } } } }""")
-    assert data == {'scan': {'columns': {'binary': {'values': ['Xw==', 'Xw==']}}}}
-    data = executor("""{ scan(columns: {alias: "binary", binary: {replaceSlice: {name: "binary"}
-        start: 0, stop: 1, replacement: "Xw=="}}) { columns { binary { values } } } }""")
-    assert data == {'scan': {'columns': {'binary': {'values': ['Xw==', None]}}}}
-    data = executor('{ scan(filter: {eq: [{name: "binary"}, {base64: "Xw=="}]}) { count } }')
-    assert data == {'scan': {'count': 0}}
+    data = executor("""{ project(columns: {alias: "binary", coalesce: [{name: "binary"}, {base64: "Xw=="}]})
+        { columns { binary { values } } } }""")
+    assert data == {'project': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
+    data = executor('{ filter(where: {eq: [{name: "binary"}, {base64: "Xw=="}]}) { count } }')
+    assert data == {'filter': {'count': 0}}
