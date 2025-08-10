@@ -212,9 +212,9 @@ def test_filter(client):
 def test_scan(client):
     data = client.execute('{ scan(filter: {eq: [{name: "county"}, {name: "city"}]}) { count } }')
     assert data['scan']['count'] == 2805
-    data = client.execute("""{ scan(filter: {or: [{eq: [{name: "state"}, {name: "county"}]},
+    data = client.execute("""{ filter(where: {or: [{eq: [{name: "state"}, {name: "county"}]},
         {eq: [{name: "county"}, {name: "city"}]}]}) { count } }""")
-    assert data['scan']['count'] == 2805
+    assert data['filter']['count'] == 2805
     data = client.execute(
         """{ scan(columns: {alias: "zipcode", add: [{name: "zipcode"}, {name: "zipcode"}]})
         { columns { zipcode { min } } } }"""
@@ -235,9 +235,9 @@ def test_scan(client):
     )
     assert data['scan']['column']['type'] == 'float'
     data = client.execute(
-        '{ scan(filter: {inv: {eq: [{name: "state"}, {value: "CA"}]}}) { count } }'
+        '{ filter(where: {inv: {eq: [{name: "state"}, {value: "CA"}]}}) { count } }'
     )
-    assert data == {'scan': {'count': 39053}}
+    assert data == {'filter': {'count': 39053}}
     data = client.execute(
         '{ scan(columns: {name: "latitude", cast: "int32", safe: false}) { column(name: "latitude") { type } } }'
     )

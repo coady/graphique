@@ -13,7 +13,7 @@ import ibis
 import pyarrow.dataset as ds
 from starlette.config import Config
 from graphique.core import Parquet
-from graphique.inputs import Expression
+from graphique.inputs import Filter
 from graphique import GraphQL
 
 config = Config('.env' if Path('.env').is_file() else None)
@@ -28,7 +28,7 @@ root = ds.dataset(PARQUET_PATH, partitioning='hive' if PARQUET_PATH.is_dir() els
 if FILTERS is not None:
     if isinstance(COLUMNS, dict):
         COLUMNS = {alias: ds.field(name) for alias, name in COLUMNS.items()}
-    root = ibis.memtable(root.to_table(columns=COLUMNS, filter=Expression.from_query(**FILTERS)))
+    root = ibis.memtable(root.to_table(columns=COLUMNS, filter=Filter.to_arrow(**FILTERS)))
 elif COLUMNS or not Parquet.schema(root):
     root = Parquet.to_table(root)
     if isinstance(COLUMNS, dict):

@@ -58,8 +58,8 @@ def test_boolean(executor):
     assert execute('{ bool { type } }') == {'bool': {'type': 'bool'}}
     assert execute('{ bool { any all } }') == {'bool': {'any': False, 'all': False}}
 
-    data = executor('{ scan(filter: {xor: [{name: "bool"}, {inv: {name: "bool"}}]}) { count } }')
-    assert data == {'scan': {'count': 1}}
+    data = executor('{ filter(where: {xor: [{name: "bool"}, {inv: {name: "bool"}}]}) { count } }')
+    assert data == {'filter': {'count': 1}}
 
 
 def test_decimal(executor):

@@ -9,7 +9,7 @@ import operator
 from collections.abc import Callable, Iterable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Generic, TypeVar, no_type_check
+from typing import Generic, TypeVar
 import ibis
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -105,6 +105,28 @@ class Filter(Generic[T], Input):
         annotation = StrawberryAnnotation(IExpression | None)
         yield StrawberryArgument('where', None, annotation, default=None)
 
+    @staticmethod
+    def to_exprs(**queries: Filter) -> Iterable[ibis.Deferred]:
+        """Transform query syntax into ibis expressions."""
+        for name, query in queries.items():
+            field = ibis._[name]
+            for op, value in dict(query).items():
+                isin = op == 'eq' and isinstance(value, list)
+                yield field.isin(value) if isin else getattr(operator, op)(field, value)
+
+    @staticmethod
+    def to_arrow(**queries: Filter) -> ds.Expression | None:
+        """Transform query syntax into an arrow expression."""
+        exprs = []
+        for name, query in queries.items():
+            field = pc.field(name)
+            for op, value in dict(query).items():
+                if op == 'eq' and isinstance(value, list):
+                    exprs.append(pc.is_in(field, pa.array(value)))
+                else:
+                    exprs.append(getattr(operator, op)(field, value))
+        return functools.reduce(operator.and_, exprs or [None])
+
 
 @strawberry.input(description=f"name and optional alias for [compute functions]({links.compute})")
 class Aggregate:
@@ -176,7 +198,6 @@ class Expression:
     le: list[Expression] = default_field([], description="<=")
     gt: list[Expression] = default_field([], description=r"\>")
     ge: list[Expression] = default_field([], description=r"\>=")
-    inv: Expression | None = default_field(description="~")
 
     add: list[Expression] = default_field([], func=pc.add)
     divide: list[Expression] = default_field([], func=pc.divide)
@@ -189,11 +210,6 @@ class Expression:
     rounding: Rounding | None = default_field(description="rounding functions")
     log: Log | None = default_field(description="logarithmic functions")
     trig: Trig | None = default_field(description="trigonometry functions")
-
-    and_: list[Expression] = default_field([], name='and', description="&")
-    and_not: list[Expression] = default_field([], func=pc.and_not)
-    or_: list[Expression] = default_field([], name='or', description="|")
-    xor: list[Expression] = default_field([], func=pc.xor)
 
     utf8: Utf8 | None = default_field(description="utf8 string functions")
     substring: MatchSubstring | None = default_field(description="match substring functions")
@@ -212,9 +228,9 @@ class Expression:
 
     temporal: Temporal | None = default_field(description="temporal functions")
 
-    unaries = ('inv', 'negate', 'sign', 'is_finite', 'is_inf', 'is_nan')
-    associatives = ('add', 'multiply', 'and_', 'or_', 'xor')
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract', 'and_not')
+    unaries = ('negate', 'sign', 'is_finite', 'is_inf', 'is_nan')
+    associatives = ('add', 'multiply')
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract')
     variadics += ('case_when', 'choose', 'coalesce', 'if_else')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
     groups = ('rounding', 'log', 'trig', 'utf8', 'substring', 'binary', 'temporal')
@@ -237,14 +253,7 @@ class Expression:
         for op in self.variadics:
             exprs = [expr.to_arrow() for expr in getattr(self, op)]
             if exprs:
-                if op == 'eq' and isinstance(exprs[-1], list):
-                    field = ds.Expression.isin(*exprs)
-                elif exprs[-1] is None and op in ('eq', 'ne'):
-                    field, _ = exprs
-                    field = field.is_null() if op == 'eq' else field.is_valid()
-                else:
-                    field = self.getfunc(op)(*exprs)
-                fields.append(field)
+                fields.append(self.getfunc(op)(*exprs))
         for group in operator.attrgetter(*self.groups)(self):
             if group is not UNSET:
                 fields += group.to_fields()
@@ -264,19 +273,7 @@ class Expression:
         return pa.scalar(value, self.cast) if self.cast else value
 
     def getfunc(self, name):
-        if name.endswith('_'):  # `and_` and `or_` functions differ from operators
-            return getattr(operator, name)
         return getattr(pc if hasattr(pc, name) else operator, name)
-
-    @classmethod
-    @no_type_check
-    def from_query(cls, **queries: Filter) -> ds.Expression | None:
-        """Transform query syntax into an Expression input."""
-        exprs = []
-        for name, query in queries.items():
-            field = cls(name=[name])
-            exprs += (cls(**{op: [field, cls(value=value)]}) for op, value in dict(query).items())
-        return cls(and_=exprs).to_arrow()
 
 
 @strawberry.input(description="an `Expression` with an optional alias")
@@ -516,6 +513,11 @@ class IExpression:
     ge: list[IExpression] = default_field([], description=r"\>=")
     isin: list[IExpression] = default_field([], func=ibis.expr.types.Column.isin)
 
+    inv: IExpression | None = default_field(description="~")
+    and_: list[IExpression] = default_field([], name='and', description="&")
+    or_: list[IExpression] = default_field([], name='or', description="|")
+    xor: list[IExpression] = default_field([], description="^")
+
     cume_dist: IExpression | None = default_field(func=ibis.expr.types.Column.cume_dist)
     cummax: IExpression | None = default_field(func=ibis.expr.types.Column.cummax)
     cummin: IExpression | None = default_field(func=ibis.expr.types.Column.cummin)
@@ -543,7 +545,7 @@ class IExpression:
             yield ibis.row_number()
         for name, (expr, *args) in self.items():
             match name:
-                case 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge':
+                case 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge' | 'inv' | 'and_' | 'or_' | 'xor':
                     yield getattr(operator, name)(expr, *args)
                 case _:
                     yield getattr(expr, name)(*args)
@@ -556,15 +558,6 @@ class IExpression:
         if len(fields) == 1:
             return fields[0]
         raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
-
-    @classmethod
-    def from_query(cls, **queries: Filter) -> Iterable[ibis.Deferred]:
-        """Transform query syntax into an `IExpression` input."""
-        for name, query in queries.items():
-            field = ibis._[name]
-            for op, value in dict(query).items():
-                isin = op == 'eq' and isinstance(value, list)
-                yield field.isin(value) if isin else getattr(operator, op)(field, value)
 
 
 @strawberry.input(description="an `IExpression` with an optional alias")

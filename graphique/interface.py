@@ -122,12 +122,12 @@ class Dataset:
     def filter(self, info: Info, where: IExpression | None = None, **queries: Filter) -> Self:
         """Return table with rows which match all queries.
 
-        See `scan(filter: ...)` for more advanced queries.
+        Schema derived fields provide syntax for simple queries; `where` supports complex queries.
         """
         exprs: list = [] if where is None else list(where)  # type: ignore
-        source = Parquet.filter(self.source, Expression.from_query(**queries))
+        source = Parquet.filter(self.source, Filter.to_arrow(**queries))
         if source is None:
-            exprs += IExpression.from_query(**queries)
+            exprs += Filter.to_exprs(**queries)
             source = self.to_ibis(info)
         elif exprs:
             source = Parquet.to_table(source)
