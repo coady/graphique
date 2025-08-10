@@ -51,24 +51,20 @@ def test_floats(client):
         column(name: "l") { ... on IntColumn { unique { values } } } } }"""
     )
     assert data == {"project": {"column": {"unique": {"values": [0, None]}}}}
-    data = client.execute(
-        '{ scan(columns: {alias: "latitude", log: {logb: [{name: "latitude"}, {value: 3}]}}) { row { latitude } } }'
-    )
-    assert data == {'scan': {'row': {'latitude': pytest.approx(3.376188)}}}
-    data = client.execute(
-        '{ scan(columns: {alias: "latitude", rounding: {round: {name: "latitude"}}}) {row { latitude } } }'
-    )
-    assert data == {'scan': {'row': {'latitude': 41.0}}}
-    data = client.execute(
-        '{ scan(columns: {alias: "latitude", rounding: {round: {name: "latitude"}, multiple: 2.0}}) {row { latitude } } }'
-    )
-    assert data == {'scan': {'row': {'latitude': 40.0}}}
-    data = client.execute(
-        '{ scan(columns: {alias: "latitude", trig: {sin: {name: "latitude"}}}) {row { latitude } } }'
-    )
-    assert data == {'scan': {'row': {'latitude': pytest.approx(0.02273553)}}}
-    data = client.execute('{ scan(filter: {isFinite: {name: "longitude"}}) { count } }')
-    assert data == {'scan': {'count': 41700}}
+    data = client.execute("""{ project(columns: {alias: "latitude", numeric: {log: {name: "latitude"}, base: 3}}) {
+        row { latitude } } }""")
+    assert data == {'project': {'row': {'latitude': pytest.approx(3.376188)}}}
+    data = client.execute("""{ project(columns: {alias: "latitude", numeric: {round: {name: "latitude"}}}) {
+        row { latitude } } }""")
+    assert data == {'project': {'row': {'latitude': 41.0}}}
+    data = client.execute("""{ project(columns: {alias: "latitude", numeric: {round: {name: "latitude"}, digits: 1}}) {
+        row { latitude } } }""")
+    assert data == {'project': {'row': {'latitude': 40.8}}}
+    data = client.execute("""{ project(columns: {alias: "latitude", numeric: {sin: {name: "latitude"}}}) {
+        row { latitude } } }""")
+    assert data == {'project': {'row': {'latitude': pytest.approx(0.02273553)}}}
+    data = client.execute('{ filter(where: {numeric: {isinf: {name: "longitude"}}}) { count } }')
+    assert data == {'filter': {'count': 0}}
     data = client.execute('{ column(name: "latitude", cast: "int32", safe: false) { type } }')
     assert data == {'column': {'type': 'int32'}}
 

@@ -5,6 +5,7 @@ GraphQL input types.
 from __future__ import annotations
 import functools
 import inspect
+import math
 import operator
 from collections.abc import Callable, Iterable
 from datetime import date, datetime, time, timedelta
@@ -202,23 +203,13 @@ class Expression:
     add: list[Expression] = default_field([], func=pc.add)
     divide: list[Expression] = default_field([], func=pc.divide)
     multiply: list[Expression] = default_field([], func=pc.multiply)
-    negate: Expression | None = default_field(func=pc.negate)
-    power: list[Expression] = default_field([], func=pc.power)
-    sign: Expression | None = default_field(func=pc.sign)
     subtract: list[Expression] = default_field([], func=pc.subtract)
-
-    rounding: Rounding | None = default_field(description="rounding functions")
-    log: Log | None = default_field(description="logarithmic functions")
-    trig: Trig | None = default_field(description="trigonometry functions")
 
     utf8: Utf8 | None = default_field(description="utf8 string functions")
     substring: MatchSubstring | None = default_field(description="match substring functions")
 
     binary: Binary | None = default_field(description="binary functions")
 
-    is_finite: Expression | None = default_field(func=pc.is_finite)
-    is_inf: Expression | None = default_field(func=pc.is_inf)
-    is_nan: Expression | None = default_field(func=pc.is_nan)
     true_unless_null: Expression | None = default_field(func=pc.true_unless_null)
 
     case_when: list[Expression] = default_field([], func=pc.case_when)
@@ -228,12 +219,11 @@ class Expression:
 
     temporal: Temporal | None = default_field(description="temporal functions")
 
-    unaries = ('negate', 'sign', 'is_finite', 'is_inf', 'is_nan')
     associatives = ('add', 'multiply')
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'power', 'subtract')
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'subtract')
     variadics += ('case_when', 'choose', 'coalesce', 'if_else')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
-    groups = ('rounding', 'log', 'trig', 'utf8', 'substring', 'binary', 'temporal')
+    groups = ('utf8', 'substring', 'binary', 'temporal')
 
     def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
@@ -257,10 +247,6 @@ class Expression:
         for group in operator.attrgetter(*self.groups)(self):
             if group is not UNSET:
                 fields += group.to_fields()
-        for op in self.unaries:
-            expr = getattr(self, op)
-            if expr is not UNSET:
-                fields.append(self.getfunc(op)(expr.to_arrow()))
         if not fields:
             return None
         if len(fields) > 1:
@@ -303,41 +289,6 @@ class Fields:
 
     def getfunc(self, name):
         return getattr(pc, self.prefix + name)
-
-
-@strawberry.input(description="Rounding functions.")
-class Rounding(Fields):
-    ceil: Expression | None = default_field(func=pc.ceil)
-    floor: Expression | None = default_field(func=pc.floor)
-    trunc: Expression | None = default_field(func=pc.trunc)
-
-    round: Expression | None = default_field(func=pc.round)
-    ndigits: int = 0
-    round_mode: str = 'half_to_even'
-    multiple: float = 1.0
-
-    def getfunc(self, name):
-        if name == 'round' and self.multiple != 1.0:
-            name = 'round_to_multiple'
-        return getattr(pc, name)
-
-
-@strawberry.input(description="Logarithmic functions.")
-class Log(Fields):
-    ln: Expression | None = default_field(func=pc.ln)
-    log1p: Expression | None = default_field(func=pc.log1p)
-    logb: list[Expression] = default_field([], func=pc.logb)
-
-
-@strawberry.input(description="Trigonometry functions.")
-class Trig(Fields):
-    acos: Expression | None = default_field(func=pc.acos)
-    asin: Expression | None = default_field(func=pc.asin)
-    atan: Expression | None = default_field(func=pc.atan)
-    atan2: list[Expression] = default_field([], func=pc.atan2)
-    cos: Expression | None = default_field(func=pc.cos)
-    sin: Expression | None = default_field(func=pc.sin)
-    tan: Expression | None = default_field(func=pc.tan)
 
 
 @strawberry.input(description="Utf8 string functions.")
@@ -599,19 +550,43 @@ class Array:
 @strawberry.input(description="Numeric functions.")
 class Numeric:
     abs: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.abs)
+    acos: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.acos)
+    asin: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.asin)
+    atan: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.atan)
+    atan2: list[IExpression] = default_field([], func=ibis.expr.types.NumericColumn.atan2)
+    ceil: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.ceil)
+    cos: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cos)
+    exp: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.exp)
+    floor: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.floor)
+    isinf: IExpression | None = default_field(func=ibis.expr.types.FloatingColumn.isinf)
+    isnan: IExpression | None = default_field(func=ibis.expr.types.FloatingColumn.isnan)
+    log: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.log)
+    negate: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.negate)
+    round: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.round)
+    sign: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.sign)
+    sin: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.sin)
+    sqrt: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.sqrt)
+    tan: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.tan)
+
     bucket: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.bucket)
     cummean: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cummean)
     cumsum: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cumsum)
 
+    base: float = math.e
     buckets: list[JSON] = default_field([])
     closed: str = 'left'
     close_extreme: bool = True
+    digits: int = 0
     include_under: bool = False
     include_over: bool = False
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
         for name, (expr, *args) in IExpression.items(self):  # type: ignore
             match name:
+                case 'log':
+                    yield expr.log(self.base)
+                case 'round':
+                    yield expr.round(self.digits)
                 case 'bucket':
                     yield expr.bucket(
                         self.buckets,
