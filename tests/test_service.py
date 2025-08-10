@@ -211,21 +211,15 @@ def test_scan(client):
     data = client.execute("""{ filter(where: {or: [{eq: [{name: "state"}, {name: "county"}]},
         {eq: [{name: "county"}, {name: "city"}]}]}) { count } }""")
     assert data['filter']['count'] == 2805
-    data = client.execute(
-        """{ scan(columns: {alias: "zipcode", add: [{name: "zipcode"}, {name: "zipcode"}]})
-        { columns { zipcode { min } } } }"""
-    )
-    assert data['scan']['columns']['zipcode']['min'] == 1002
-    data = client.execute(
-        """{ scan(columns: {alias: "zipcode", subtract: [{name: "zipcode"}, {name: "zipcode"}]})
-        { columns { zipcode { unique { values } } } } }"""
-    )
-    assert data['scan']['columns']['zipcode']['unique']['values'] == [0]
-    data = client.execute(
-        """{ scan(columns: {alias: "product", multiply: [{name: "latitude"}, {name: "longitude"}]})
-        { filter(where: {gt: [{name: "product"}, {value: 0}]}) { count } } }"""
-    )
-    assert data['scan']['filter']['count'] == 0
+    data = client.execute("""{ project(columns: {alias: "zipcode", add: [{name: "zipcode"}, {name: "zipcode"}]})
+        { columns { zipcode { min } } } }""")
+    assert data['project']['columns']['zipcode']['min'] == 1002
+    data = client.execute("""{ project(columns: {alias: "zipcode", sub: [{name: "zipcode"}, {name: "zipcode"}]})
+        { columns { zipcode { unique { values } } } } }""")
+    assert data['project']['columns']['zipcode']['unique']['values'] == [0]
+    data = client.execute("""{ project(columns: {alias: "product", mul: [{name: "latitude"}, {name: "longitude"}]})
+        { filter(where: {gt: [{name: "product"}, {value: 0}]}) { count } } }""")
+    assert data['project']['filter']['count'] == 0
     data = client.execute(
         '{ scan(columns: {name: "zipcode", cast: "float"}) { column(name: "zipcode") { type } } }'
     )

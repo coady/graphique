@@ -200,11 +200,6 @@ class Expression:
     gt: list[Expression] = default_field([], description=r"\>")
     ge: list[Expression] = default_field([], description=r"\>=")
 
-    add: list[Expression] = default_field([], func=pc.add)
-    divide: list[Expression] = default_field([], func=pc.divide)
-    multiply: list[Expression] = default_field([], func=pc.multiply)
-    subtract: list[Expression] = default_field([], func=pc.subtract)
-
     utf8: Utf8 | None = default_field(description="utf8 string functions")
     substring: MatchSubstring | None = default_field(description="match substring functions")
 
@@ -219,8 +214,7 @@ class Expression:
 
     temporal: Temporal | None = default_field(description="temporal functions")
 
-    associatives = ('add', 'multiply')
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'divide', 'subtract')
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge')
     variadics += ('case_when', 'choose', 'coalesce', 'if_else')  # type: ignore
     scalars = ('base64', 'date_', 'datetime_', 'decimal', 'duration', 'time_')
     groups = ('utf8', 'substring', 'binary', 'temporal')
@@ -236,10 +230,6 @@ class Expression:
                 fields.append(scalars[0] if len(scalars) == 1 else scalars)
         if self.value is not UNSET:
             fields.append(self.getscalar(self.value))
-        for op in self.associatives:
-            exprs = [expr.to_arrow() for expr in getattr(self, op)]
-            if exprs:
-                fields.append(functools.reduce(self.getfunc(op), exprs))
         for op in self.variadics:
             exprs = [expr.to_arrow() for expr in getattr(self, op)]
             if exprs:
@@ -469,6 +459,11 @@ class IExpression:
     or_: list[IExpression] = default_field([], name='or', description="|")
     xor: list[IExpression] = default_field([], description="^")
 
+    add: list[IExpression] = default_field([], description="+")
+    sub: list[IExpression] = default_field([], description="-")
+    mul: list[IExpression] = default_field([], description="*")
+    truediv: list[IExpression] = default_field([], name='div', description="/")
+
     cume_dist: IExpression | None = default_field(func=ibis.expr.types.Column.cume_dist)
     cummax: IExpression | None = default_field(func=ibis.expr.types.Column.cummax)
     cummin: IExpression | None = default_field(func=ibis.expr.types.Column.cummin)
@@ -497,6 +492,8 @@ class IExpression:
         for name, (expr, *args) in self.items():
             match name:
                 case 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge' | 'inv' | 'and_' | 'or_' | 'xor':
+                    yield getattr(operator, name)(expr, *args)
+                case 'add' | 'sub' | 'mul' | 'truediv':
                     yield getattr(operator, name)(expr, *args)
                 case _:
                     yield getattr(expr, name)(*args)

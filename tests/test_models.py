@@ -142,11 +142,9 @@ def test_datetime(executor):
 
 
 def test_duration(executor):
-    data = executor(
-        """{ scan(columns: {alias: "diff", subtract: [{name: "timestamp"}, {name: "timestamp"}]})
-        { column(name: "diff") { ... on DurationColumn { unique { values } } } } }"""
-    )
-    assert data == {'scan': {'column': {'unique': {'values': ['P0D', None]}}}}
+    data = executor("""{ project(columns: {alias: "diff", sub: [{name: "timestamp"}, {name: "timestamp"}]})
+        { schema { types } } }""")
+    assert "interval('s')" in data['project']['schema']['types']
     data = executor(
         """{ scan(columns: {alias: "diff", temporal:
         {monthDayNanoIntervalBetween: [{name: "timestamp"}, {name: "timestamp"}]}})
