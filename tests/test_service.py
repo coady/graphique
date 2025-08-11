@@ -95,21 +95,12 @@ def test_strings(client):
     assert data == {'scan': {'count': 0}}
     data = client.execute('{ scan(filter: {utf8: {isTitle: {name: "city"}}}) { count } }')
     assert data == {'scan': {'count': 41700}}
-    data = client.execute(
-        """{ scan(columns: {alias: "city", substring: {match: {name: "city"}, pattern: "Mountain"}})
-        { scan(filter: {name: "city"}) { count } } }"""
-    )
-    assert data == {'scan': {'scan': {'count': 88}}}
-    data = client.execute(
-        """{ scan(filter: {substring: {match: {name: "city"}, pattern: "mountain", ignoreCase: true}})
-        { count } }"""
-    )
-    assert data == {'scan': {'count': 88}}
-    data = client.execute(
-        """{ scan(filter: {substring: {match: {name: "city"}, pattern: "^Mountain", regex: true}})
-        { count } }"""
-    )
-    assert data == {'scan': {'count': 42}}
+    data = client.execute("""{ project(columns: {alias: "city", string: {contains: [{name: "city"}, {value: "Mountain"}]}})
+        { filter(where: {name: "city"}) { count } } }""")
+    assert data == {'project': {'filter': {'count': 88}}}
+    data = client.execute("""{ filter(where: {string: {reSearch: [{name: "city"}, {value: "^Mountain"}]}})
+        { count } }""")
+    assert data == {'filter': {'count': 42}}
     data = client.execute(
         """{ project(columns: {alias: "has", isin: [{name: "state"}, {value: ["CA", "OR"]}]})
         { column(name: "has") { ... on BooleanColumn { unique { values } } } } }"""
@@ -118,14 +109,12 @@ def test_strings(client):
 
 
 def test_string_methods(client):
-    data = client.execute(
-        """{ scan(columns: {alias: "split", substring: {split: {name: "city"}, pattern: "-", maxSplits: 1}}) {
-        column(name: "split") { type } } }"""
-    )
-    assert data == {'scan': {'column': {'type': 'list<item: string>'}}}
-    data = client.execute("""{ scan(columns: {alias: "split", substring: {split: {name: "city"}}}) {
-        column(name: "split") { type } } }""")
-    assert data == {'scan': {'column': {'type': 'list<item: string>'}}}
+    data = client.execute("""{ project(columns: {alias: "split", string: {reSplit: [{name: "city"}, {value: "-"}]}})
+        { column(name: "split") { type } } }""")
+    assert data == {'project': {'column': {'type': 'list<l: string>'}}}
+    data = client.execute("""{ project(columns: {alias: "split", string: {split: [{name: "city"}, {value: " "}]}})
+        { column(name: "split") { type } } }""")
+    assert data == {'project': {'column': {'type': 'list<l: string>'}}}
     data = client.execute(
         """{ scan(columns: {alias: "state", utf8: {trim: {name: "state"}, characters: "C"}}) {
         columns { state { values } } } }"""
@@ -150,11 +139,9 @@ def test_string_methods(client):
         '{ scan(columns: {alias: "state", utf8: {sliceCodeunits: {name: "state"}, start: 0, stop: 1}}) { row { state } } }'
     )
     assert data == {'scan': {'row': {'state': 'N'}}}
-    data = client.execute(
-        """{ scan(columns: {alias: "state", substring: {replace: {name: "state"}, pattern: "C", replacement: "A"}})
-        { columns { state { values } } } }"""
-    )
-    assert 'AA' in data['scan']['columns']['state']['values']
+    data = client.execute("""{ project(columns: {alias: "state", string: {replace: [{name: "state"}, {value: "C"}, {value: "A"}]}})
+        { columns { state { values } } } }""")
+    assert 'AA' in data['project']['columns']['state']['values']
 
 
 def test_search(client):

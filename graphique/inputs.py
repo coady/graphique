@@ -194,18 +194,11 @@ class Expression:
     ge: list[Expression] = default_field([], description=r"\>=")
 
     utf8: Utf8 | None = default_field(description="utf8 string functions")
-    substring: MatchSubstring | None = default_field(description="match substring functions")
-
-    true_unless_null: Expression | None = default_field(func=pc.true_unless_null)
-
-    case_when: list[Expression] = default_field([], func=pc.case_when)
-    choose: list[Expression] = default_field([], func=pc.choose)
-    if_else: list[Expression] = default_field([], func=pc.if_else)
 
     temporal: Temporal | None = default_field(description="temporal functions")
 
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge', 'case_when', 'choose', 'if_else')
-    groups = ('utf8', 'substring', 'temporal')
+    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge')
+    groups = ('utf8', 'temporal')
 
     def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
@@ -308,30 +301,6 @@ class Utf8(Fields):
         if name.endswith('trim') and not self.characters:
             name += '_whitespace'
         return getattr(pc, 'utf8_' + name)
-
-
-@strawberry.input(description="Match substring functions.")
-class MatchSubstring(Fields):
-    count_substring: Expression | None = default_field(name='count', func=pc.count_substring)
-    ends_with: Expression | None = default_field(func=pc.ends_with)
-    find_substring: Expression | None = default_field(name='find', func=pc.find_substring)
-    match_substring: Expression | None = default_field(name='match', func=pc.match_substring)
-    starts_with: Expression | None = default_field(func=pc.starts_with)
-    replace_substring: Expression | None = default_field(name='replace', func=pc.replace_substring)
-    split_pattern: Expression | None = default_field(name='split', func=pc.split_pattern)
-    extract: Expression | None = default_field(func=pc.extract_regex)
-    pattern: str = ''
-    ignore_case: bool = False
-    regex: bool = False
-    replacement: str = ''
-    max_replacements: int | None = None
-    max_splits: int | None = None
-    reverse: bool = False
-
-    def getfunc(self, name):
-        if name == 'split_pattern' and not self.pattern:
-            name = 'utf8_split_whitespace'
-        return getattr(pc, name + ('_regex' * self.regex))
 
 
 @strawberry.input(description="Temporal functions.")
@@ -441,11 +410,13 @@ class IExpression:
     cummax: IExpression | None = default_field(func=ibis.expr.types.Column.cummax)
     cummin: IExpression | None = default_field(func=ibis.expr.types.Column.cummin)
     dense_rank: IExpression | None = default_field(func=ibis.expr.types.Column.dense_rank)
+    ifelse: list[IExpression] = default_field([], func=ibis.expr.types.BooleanColumn.ifelse)
     percent_rank: IExpression | None = default_field(func=ibis.expr.types.Column.percent_rank)
     rank: IExpression | None = default_field(func=ibis.expr.types.Column.rank)
 
+    array: Arrays | None = default_field(description="array value functions")
     numeric: Numeric | None = default_field(description="numeric functions")
-    array: Array | None = default_field(description="array value functions")
+    string: Strings | None = default_field(description="string functions")
 
     def items(self) -> Iterable[tuple]:
         for field in self.__strawberry_definition__.fields:  # type: ignore
@@ -472,7 +443,7 @@ class IExpression:
                     yield getattr(operator, name)(expr, *args)
                 case _:
                     yield getattr(expr, name)(*args)
-        for field in (self.numeric, self.array):
+        for field in (self.array, self.numeric, self.string):
             if field:
                 yield from field  # type: ignore
 
@@ -489,7 +460,7 @@ class IProjection(IExpression):
 
 
 @strawberry.input(description="Array value functions.")
-class Array:
+class Arrays:
     alls: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.alls)
     anys: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.anys)
     length: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.length)
@@ -569,3 +540,20 @@ class Numeric:
                     )
                 case _:
                     yield getattr(expr, name)(*args)
+
+
+@strawberry.input(description="String functions.")
+class Strings:
+    contains: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.contains)
+    endswith: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.endswith)
+    find: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.find)
+    re_extract: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.re_extract)
+    re_search: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.re_search)
+    re_split: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.re_split)
+    replace: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.replace)
+    split: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.split)
+    startswith: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.startswith)
+
+    def __iter__(self) -> Iterable[ibis.Deferred]:
+        for name, (expr, *args) in IExpression.items(self):  # type: ignore
+            yield getattr(expr, name)(*args)

@@ -185,10 +185,6 @@ def test_struct(executor):
     assert data == {'column': {'type': 'int32'}}
     data = executor('{ row { struct } columns { struct { value } } }')
     assert data['row']['struct'] == data['columns']['struct']['value'] == {'x': 0, 'y': None}
-    with pytest.raises(ValueError, match="must be BOOL"):
-        executor(
-            '{ scan(filter: {caseWhen: [{name: "struct"}, {name: "int32"}, {name: "float"}]}) {type } }'
-        )
 
 
 def test_selections(executor):
@@ -201,14 +197,9 @@ def test_selections(executor):
 
 
 def test_conditions(executor):
-    data = executor(
-        """{ scan(columns: {alias: "bool", ifElse: [{name: "bool"}, {name: "int32"}, {name: "float"}]}) {
-        column(name: "bool") { type } } }"""
-    )
-    assert data == {'scan': {'column': {'type': 'float'}}}
-    with pytest.raises(ValueError, match="no kernel"):
-        executor("""{ scan(columns: {alias: "bool",
-            ifElse: [{name: "struct"}, {name: "int32"}, {name: "float"}]}) { slice { type } } }""")
+    data = executor("""{ project(columns: {alias: "bool", ifelse: [{name: "bool"}, {name: "int32"}, {name: "float"}]})
+        { column(name: "bool") { type } } }""")
+    assert data == {'project': {'column': {'type': 'float'}}}
 
 
 def test_long(executor):
