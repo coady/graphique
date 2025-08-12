@@ -5,7 +5,6 @@ GraphQL input types.
 from __future__ import annotations
 import functools
 import inspect
-import math
 import operator
 from collections.abc import Callable, Iterable
 from datetime import date, datetime, time, timedelta
@@ -29,23 +28,6 @@ T = TypeVar('T')
 class links:
     compute = 'https://arrow.apache.org/docs/python/api/compute.html'
     type = '[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)'
-
-
-class Input:
-    """Common utilities for input types."""
-
-    nullables: set = set()
-
-    def keys(self):
-        for name, value in self.__dict__.items():
-            if value is None and name not in self.nullables:
-                raise TypeError(f"`{self.__class__.__name__}.{name}` is optional, not nullable")
-            if value is not UNSET:
-                yield name
-
-    def __getitem__(self, name):
-        value = getattr(self, name)
-        return dict(value) if hasattr(value, 'keys') else value
 
 
 def use_doc(decorator: Callable, **kwargs):
@@ -82,19 +64,18 @@ def default_field(
 
 
 @strawberry.input(description="predicates for scalars")
-class Filter(Generic[T], Input):
-    eq: list[T | None] | None = default_field(
-        description="== or `isin`; `null` is equivalent to arrow `is_null`.", nullable=True
-    )
-    ne: T | None = default_field(
-        description="!=; `null` is equivalent to arrow `is_valid`.", nullable=True
-    )
+class Filter(Generic[T]):
+    eq: list[T | None] | None = default_field(description="== or `isin`", nullable=True)
+    ne: T | None = default_field(description="!=", nullable=True)
     lt: T | None = default_field(description="<")
     le: T | None = default_field(description="<=")
     gt: T | None = default_field(description=r"\>")
     ge: T | None = default_field(description=r"\>=")
 
-    nullables = {'eq', 'ne'}
+    def __iter__(self) -> Iterable[tuple]:
+        for name, value in self.__dict__.items():
+            if value is not UNSET:
+                yield name, value
 
     @classmethod
     def resolve_args(cls, types: dict) -> Iterable[StrawberryArgument]:
@@ -111,17 +92,17 @@ class Filter(Generic[T], Input):
         """Transform query syntax into ibis expressions."""
         for name, query in queries.items():
             field = ibis._[name]
-            for op, value in dict(query).items():
+            for op, value in query:  # type: ignore
                 isin = op == 'eq' and isinstance(value, list)
                 yield field.isin(value) if isin else getattr(operator, op)(field, value)
 
     @staticmethod
-    def to_arrow(**queries: Filter) -> ds.Expression | None:
+    def to_arrow(**queries: Filter | dict) -> ds.Expression | None:
         """Transform query syntax into an arrow expression."""
         exprs = []
         for name, query in queries.items():
             field = pc.field(name)
-            for op, value in dict(query).items():
+            for op, value in dict(query).items():  # type: ignore
                 if op == 'eq' and isinstance(value, list):
                     exprs.append(pc.is_in(field, pa.array(value)))
                 else:
@@ -162,9 +143,9 @@ class Aggregates:
     var: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.var)
 
     def __iter__(self) -> Iterable[tuple]:
-        for field in self.__strawberry_definition__.fields:  # type: ignore
-            for agg in getattr(self, field.name):
-                yield agg.to_ibis(field.name)
+        for name, aggs in self.__dict__.items():
+            for agg in aggs:
+                yield agg.to_ibis(name)
 
 
 @use_doc(strawberry.input)
@@ -193,12 +174,9 @@ class Expression:
     gt: list[Expression] = default_field([], description=r"\>")
     ge: list[Expression] = default_field([], description=r"\>=")
 
-    utf8: Utf8 | None = default_field(description="utf8 string functions")
-
     temporal: Temporal | None = default_field(description="temporal functions")
 
     variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge')
-    groups = ('utf8', 'temporal')
 
     def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
@@ -211,9 +189,8 @@ class Expression:
             exprs = [expr.to_arrow() for expr in getattr(self, op)]
             if exprs:
                 fields.append(self.getfunc(op)(*exprs))
-        for group in operator.attrgetter(*self.groups)(self):
-            if group is not UNSET:
-                fields += group.to_fields()
+        if self.temporal is not UNSET:
+            fields += self.temporal.to_fields()  # type: ignore
         if not fields:
             return None
         if len(fields) > 1:
@@ -256,51 +233,6 @@ class Fields:
 
     def getfunc(self, name):
         return getattr(pc, self.prefix + name)
-
-
-@strawberry.input(description="Utf8 string functions.")
-class Utf8(Fields):
-    is_alnum: Expression | None = default_field(func=pc.utf8_is_alnum)
-    is_alpha: Expression | None = default_field(func=pc.utf8_is_alpha)
-    is_decimal: Expression | None = default_field(func=pc.utf8_is_decimal)
-    is_digit: Expression | None = default_field(func=pc.utf8_is_digit)
-    is_lower: Expression | None = default_field(func=pc.utf8_is_lower)
-    is_numeric: Expression | None = default_field(func=pc.utf8_is_numeric)
-    is_printable: Expression | None = default_field(func=pc.utf8_is_printable)
-    is_space: Expression | None = default_field(func=pc.utf8_is_space)
-    is_title: Expression | None = default_field(func=pc.utf8_is_title)
-    is_upper: Expression | None = default_field(func=pc.utf8_is_upper)
-
-    capitalize: Expression | None = default_field(func=pc.utf8_capitalize)
-    length: Expression | None = default_field(func=pc.utf8_length)
-    lower: Expression | None = default_field(func=pc.utf8_lower)
-    reverse: Expression | None = default_field(func=pc.utf8_reverse)
-    swapcase: Expression | None = default_field(func=pc.utf8_swapcase)
-    title: Expression | None = default_field(func=pc.utf8_title)
-    upper: Expression | None = default_field(func=pc.utf8_upper)
-
-    ltrim: Expression | None = default_field(func=pc.utf8_ltrim)
-    rtrim: Expression | None = default_field(func=pc.utf8_rtrim)
-    trim: Expression | None = default_field(func=pc.utf8_trim)
-    characters: str = default_field('', description="trim options; by default trims whitespace")
-
-    replace_slice: Expression | None = default_field(func=pc.utf8_replace_slice)
-    slice_codeunits: Expression | None = default_field(func=pc.utf8_slice_codeunits)
-    start: int = 0
-    stop: int | None = UNSET
-    step: int = 1
-    replacement: str = ''
-
-    center: Expression | None = default_field(func=pc.utf8_center)
-    lpad: Expression | None = default_field(func=pc.utf8_lpad)
-    rpad: Expression | None = default_field(func=pc.utf8_rpad)
-    width: int = 0
-    padding: str = ''
-
-    def getfunc(self, name):
-        if name.endswith('trim') and not self.characters:
-            name += '_whitespace'
-        return getattr(pc, 'utf8_' + name)
 
 
 @strawberry.input(description="Temporal functions.")
@@ -419,12 +351,11 @@ class IExpression:
     string: Strings | None = default_field(description="string functions")
 
     def items(self) -> Iterable[tuple]:
-        for field in self.__strawberry_definition__.fields:  # type: ignore
-            value = getattr(self, field.name)
+        for name, value in self.__dict__.items():
             if isinstance(value, IExpression):
-                yield field.name, [value.to_ibis()]
+                yield name, [value.to_ibis()]
             elif isinstance(value, list) and value and isinstance(value[0], IExpression):
-                yield field.name, map(IExpression.to_ibis, value)
+                yield name, map(IExpression.to_ibis, value)
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
         if self.name:
@@ -503,9 +434,9 @@ class Numeric:
     floor: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.floor)
     isinf: IExpression | None = default_field(func=ibis.expr.types.FloatingColumn.isinf)
     isnan: IExpression | None = default_field(func=ibis.expr.types.FloatingColumn.isnan)
-    log: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.log)
+    log: list[IExpression] = default_field([], func=ibis.expr.types.NumericColumn.log)
     negate: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.negate)
-    round: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.round)
+    round: list[IExpression] = default_field([], func=ibis.expr.types.NumericColumn.round)
     sign: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.sign)
     sin: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.sin)
     sqrt: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.sqrt)
@@ -515,21 +446,15 @@ class Numeric:
     cummean: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cummean)
     cumsum: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cumsum)
 
-    base: float = math.e
     buckets: list[JSON] = default_field([])
     closed: str = 'left'
     close_extreme: bool = True
-    digits: int = 0
     include_under: bool = False
     include_over: bool = False
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
         for name, (expr, *args) in IExpression.items(self):  # type: ignore
             match name:
-                case 'log':
-                    yield expr.log(self.base)
-                case 'round':
-                    yield expr.round(self.digits)
                 case 'bucket':
                     yield expr.bucket(
                         self.buckets,
@@ -544,15 +469,25 @@ class Numeric:
 
 @strawberry.input(description="String functions.")
 class Strings:
+    capitalize: IExpression | None = default_field(func=ibis.expr.types.StringColumn.capitalize)
     contains: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.contains)
     endswith: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.endswith)
     find: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.find)
+    length: IExpression | None = default_field(func=ibis.expr.types.StringColumn.length)
+    lower: IExpression | None = default_field(func=ibis.expr.types.StringColumn.lower)
+    lpad: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.lpad)
+    lstrip: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.lstrip)
     re_extract: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.re_extract)
     re_search: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.re_search)
     re_split: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.re_split)
     replace: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.replace)
+    reverse: IExpression | None = default_field(func=ibis.expr.types.StringColumn.reverse)
+    rpad: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.rpad)
+    rstrip: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.rstrip)
     split: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.split)
     startswith: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.startswith)
+    strip: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.strip)
+    upper: IExpression | None = default_field(func=ibis.expr.types.StringColumn.upper)
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
         for name, (expr, *args) in IExpression.items(self):  # type: ignore

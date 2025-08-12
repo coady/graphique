@@ -51,13 +51,13 @@ def test_floats(client):
         column(name: "l") { ... on IntColumn { unique { values } } } } }"""
     )
     assert data == {"project": {"column": {"unique": {"values": [0, None]}}}}
-    data = client.execute("""{ project(columns: {alias: "latitude", numeric: {log: {name: "latitude"}, base: 3}}) {
+    data = client.execute("""{ project(columns: {alias: "latitude", numeric: {log: [{name: "latitude"}, {value: 3}]}}) {
         row { latitude } } }""")
     assert data == {'project': {'row': {'latitude': pytest.approx(3.376188)}}}
     data = client.execute("""{ project(columns: {alias: "latitude", numeric: {round: {name: "latitude"}}}) {
         row { latitude } } }""")
     assert data == {'project': {'row': {'latitude': 41.0}}}
-    data = client.execute("""{ project(columns: {alias: "latitude", numeric: {round: {name: "latitude"}, digits: 1}}) {
+    data = client.execute("""{ project(columns: {alias: "latitude", numeric: {round: [{name: "latitude"}, {value: 1}]}}) {
         row { latitude } } }""")
     assert data == {'project': {'row': {'latitude': 40.8}}}
     data = client.execute("""{ project(columns: {alias: "latitude", numeric: {sin: {name: "latitude"}}}) {
@@ -80,21 +80,12 @@ def test_strings(client):
     assert len(states['unique']['values']) == states['countDistinct'] == 52
     assert sum(states['unique']['counts']) == 41700
     assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
-    data = client.execute("""{ filter(state: {eq: "CA"}) {
-        scan(filter: {gt: [{utf8: {length: {name: "city"}}}, {value: 23}]}) { count } } }""")
-    assert data == {'filter': {'scan': {'count': 1}}}
-    data = client.execute(
-        '{ scan(columns: {utf8: {swapcase: {name: "city"}}, alias: "city"}) { row { city } } }'
-    )
-    assert data == {'scan': {'row': {'city': 'hOLTSVILLE'}}}
-    data = client.execute(
-        '{ scan(columns: {utf8: {capitalize: {name: "state"}}, alias: "state"}) { row { state } } }'
-    )
-    assert data == {'scan': {'row': {'state': 'Ny'}}}
-    data = client.execute('{ scan(filter: {utf8: {isLower: {name: "city"}}}) { count } }')
-    assert data == {'scan': {'count': 0}}
-    data = client.execute('{ scan(filter: {utf8: {isTitle: {name: "city"}}}) { count } }')
-    assert data == {'scan': {'count': 41700}}
+    data = client.execute("""{ filter(state: {eq: "CA"}, where: {gt: [{string: {length: {name: "city"}}}, {value: 23}]})
+        { count } }""")
+    assert data == {'filter': {'count': 1}}
+    data = client.execute("""{ project(columns: {string: {capitalize: {name: "state"}}, alias: "state"})
+        { row { state } } }""")
+    assert data == {'project': {'row': {'state': 'Ny'}}}
     data = client.execute("""{ project(columns: {alias: "city", string: {contains: [{name: "city"}, {value: "Mountain"}]}})
         { filter(where: {name: "city"}) { count } } }""")
     assert data == {'project': {'filter': {'count': 88}}}
@@ -115,30 +106,9 @@ def test_string_methods(client):
     data = client.execute("""{ project(columns: {alias: "split", string: {split: [{name: "city"}, {value: " "}]}})
         { column(name: "split") { type } } }""")
     assert data == {'project': {'column': {'type': 'list<l: string>'}}}
-    data = client.execute(
-        """{ scan(columns: {alias: "state", utf8: {trim: {name: "state"}, characters: "C"}}) {
-        columns { state { values } } } }"""
-    )
-    states = data['scan']['columns']['state']['values']
-    assert 'CA' not in states and 'A' in states
-    data = client.execute(
-        '{ scan(columns: {alias: "state", utf8: {ltrim: {name: "state"}}}) { count } }'
-    )
-    assert data == {'scan': {'count': 41700}}
-    data = client.execute(
-        """{ scan(columns: {alias: "state", utf8: {center: {name: "state"}, width: 4, padding: "_"}})
-        { row { state } } }"""
-    )
-    assert data == {'scan': {'row': {'state': '_NY_'}}}
-    data = client.execute(
-        """{ scan(columns: {alias: "state", utf8: {replaceSlice: {name: "state"}, start: 0, stop: 2, replacement: ""}})
-        { columns { state { unique { values } } } } }"""
-    )
-    assert data == {'scan': {'columns': {'state': {'unique': {'values': ['']}}}}}
-    data = client.execute(
-        '{ scan(columns: {alias: "state", utf8: {sliceCodeunits: {name: "state"}, start: 0, stop: 1}}) { row { state } } }'
-    )
-    assert data == {'scan': {'row': {'state': 'N'}}}
+    data = client.execute("""{ project(columns: {alias: "state", string: {lstrip: {name: "state"}}})
+        { count } }""")
+    assert data == {'project': {'count': 41700}}
     data = client.execute("""{ project(columns: {alias: "state", string: {replace: [{name: "state"}, {value: "C"}, {value: "A"}]}})
         { columns { state { values } } } }""")
     assert 'AA' in data['project']['columns']['state']['values']
@@ -186,8 +156,6 @@ def test_filter(client):
         '{ filter(where: {le: [{numeric: {abs: {name: "longitude"}}}, {value: 66}]}) { count } }'
     )
     assert data['filter']['count'] == 30
-    with pytest.raises(ValueError, match="optional, not nullable"):
-        client.execute('{ filter(city: {le: null}) { count } }')
     data = client.execute('{ dropNull { count } }')
     assert data == {'dropNull': {'count': 41700}}
 
