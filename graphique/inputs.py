@@ -174,8 +174,6 @@ class Expression:
     gt: list[Expression] = default_field([], description=r"\>")
     ge: list[Expression] = default_field([], description=r"\>=")
 
-    temporal: Temporal | None = default_field(description="temporal functions")
-
     variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge')
 
     def to_arrow(self) -> ds.Expression | None:
@@ -189,8 +187,6 @@ class Expression:
             exprs = [expr.to_arrow() for expr in getattr(self, op)]
             if exprs:
                 fields.append(self.getfunc(op)(*exprs))
-        if self.temporal is not UNSET:
-            fields += self.temporal.to_fields()  # type: ignore
         if not fields:
             return None
         if len(fields) > 1:
@@ -209,99 +205,6 @@ class Expression:
 @strawberry.input(description="an `Expression` with an optional alias")
 class Projection(Expression):
     alias: str = strawberry.field(default='', description="name of projected column")
-
-
-class Fields:
-    """Fields grouped by naming conventions or common options."""
-
-    prefix: str = ''
-
-    def to_fields(self) -> Iterable[ds.Expression]:
-        funcs, arguments, options = [], [], {}
-        for field in self.__strawberry_definition__.fields:  # type: ignore
-            value = getattr(self, field.name)
-            if isinstance(value, Expression):
-                value = [value]
-            if not isinstance(value, (list, type(UNSET))):
-                options[field.name] = value
-            elif value:
-                funcs.append(self.getfunc(field.name))
-                arguments.append([expr.to_arrow() for expr in value])
-        for func, args in zip(funcs, arguments):
-            keys = set(options) & set(inspect.signature(func).parameters)
-            yield func(*args, **{key: options[key] for key in keys})
-
-    def getfunc(self, name):
-        return getattr(pc, self.prefix + name)
-
-
-@strawberry.input(description="Temporal functions.")
-class Temporal(Fields):
-    day: Expression | None = default_field(func=pc.day)
-    day_of_year: Expression | None = default_field(func=pc.day_of_year)
-    hour: Expression | None = default_field(func=pc.hour)
-    iso_week: Expression | None = default_field(func=pc.iso_week)
-    iso_year: Expression | None = default_field(func=pc.iso_year)
-    iso_calendar: Expression | None = default_field(func=pc.iso_calendar)
-    is_leap_year: Expression | None = default_field(func=pc.is_leap_year)
-
-    microsecond: Expression | None = default_field(func=pc.microsecond)
-    millisecond: Expression | None = default_field(func=pc.millisecond)
-    minute: Expression | None = default_field(func=pc.minute)
-    month: Expression | None = default_field(func=pc.month)
-    nanosecond: Expression | None = default_field(func=pc.nanosecond)
-    quarter: Expression | None = default_field(func=pc.quarter)
-    second: Expression | None = default_field(func=pc.second)
-    subsecond: Expression | None = default_field(func=pc.subsecond)
-    us_week: Expression | None = default_field(func=pc.us_week)
-    us_year: Expression | None = default_field(func=pc.us_year)
-    year: Expression | None = default_field(func=pc.year)
-    year_month_day: Expression | None = default_field(func=pc.year_month_day)
-
-    day_time_interval_between: list[Expression] = default_field(
-        [], func=pc.day_time_interval_between
-    )
-    days_between: list[Expression] = default_field([], func=pc.days_between)
-    hours_between: list[Expression] = default_field([], func=pc.hours_between)
-    microseconds_between: list[Expression] = default_field([], func=pc.microseconds_between)
-    milliseconds_between: list[Expression] = default_field([], func=pc.milliseconds_between)
-    minutes_between: list[Expression] = default_field([], func=pc.minutes_between)
-    month_day_nano_interval_between: list[Expression] = default_field(
-        [], func=pc.month_day_nano_interval_between
-    )
-    month_interval_between: list[Expression] = default_field([], func=pc.month_interval_between)
-    nanoseconds_between: list[Expression] = default_field([], func=pc.nanoseconds_between)
-    quarters_between: list[Expression] = default_field([], func=pc.quarters_between)
-    seconds_between: list[Expression] = default_field([], func=pc.seconds_between)
-    weeks_between: list[Expression] = default_field([], func=pc.weeks_between)
-    years_between: list[Expression] = default_field([], func=pc.years_between)
-
-    ceil_temporal: Expression | None = default_field(name='ceil', func=pc.ceil_temporal)
-    floor_temporal: Expression | None = default_field(name='floor', func=pc.floor_temporal)
-    round_temporal: Expression | None = default_field(name='round', func=pc.round_temporal)
-    multiple: int = 1
-    unit: str = 'day'
-    week_starts_monday: bool = True
-    ceil_is_strictly_greater: bool = False
-    calendar_based_origin: bool = False
-
-    week: Expression | None = default_field(func=pc.week)
-    count_from_zero: bool | None = UNSET
-    first_week_is_fully_in_year: bool = False
-
-    day_of_week: Expression | None = default_field(func=pc.day_of_week)
-    week_start: int = 1
-
-    strftime: Expression | None = default_field(func=pc.strftime)
-    strptime: Expression | None = default_field(func=pc.strptime)
-    format: str = '%Y-%m-%dT%H:%M:%S'
-    locale: str = 'C'
-    error_is_null: bool = False
-
-    assume_timezone: Expression | None = default_field(func=pc.assume_timezone)
-    timezone: str = ''
-    ambiguous: str = 'raise'
-    nonexistent: str = 'raise'
 
 
 @use_doc(strawberry.input)
@@ -349,6 +252,7 @@ class IExpression:
     array: Arrays | None = default_field(description="array value functions")
     numeric: Numeric | None = default_field(description="numeric functions")
     string: Strings | None = default_field(description="string functions")
+    temporal: Temporal | None = default_field(description="temporal functions")
 
     def items(self) -> Iterable[tuple]:
         for name, value in self.__dict__.items():
@@ -374,7 +278,7 @@ class IExpression:
                     yield getattr(operator, name)(expr, *args)
                 case _:
                     yield getattr(expr, name)(*args)
-        for field in (self.array, self.numeric, self.string):
+        for field in (self.array, self.numeric, self.string, self.temporal):
             if field:
                 yield from field  # type: ignore
 
@@ -492,3 +396,49 @@ class Strings:
     def __iter__(self) -> Iterable[ibis.Deferred]:
         for name, (expr, *args) in IExpression.items(self):  # type: ignore
             yield getattr(expr, name)(*args)
+
+
+@strawberry.input(description="Temporal functions.")
+class Temporal:
+    date: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.date)
+    day: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.day)
+    day_of_year: IExpression | None = default_field(
+        func=ibis.expr.types.TimestampColumn.day_of_year
+    )
+    delta: list[IExpression] = default_field([], func=ibis.expr.types.TimestampColumn.delta)
+    epoch_seconds: IExpression | None = default_field(
+        func=ibis.expr.types.TimestampColumn.epoch_seconds
+    )
+    hour: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.hour)
+    microsecond: IExpression | None = default_field(
+        func=ibis.expr.types.TimestampColumn.microsecond
+    )
+    millisecond: IExpression | None = default_field(
+        func=ibis.expr.types.TimestampColumn.millisecond
+    )
+    minute: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.minute)
+    month: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.month)
+    quarter: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.quarter)
+    second: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.second)
+    strftime: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.strftime)
+    time: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.time)
+    truncate: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.truncate)
+    week_of_year: IExpression | None = default_field(
+        func=ibis.expr.types.TimestampColumn.week_of_year
+    )
+    year: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.year)
+
+    format_str: str = ''
+    unit: str = ''
+
+    def __iter__(self) -> Iterable[ibis.Deferred]:
+        for name, (expr, *args) in IExpression.items(self):  # type: ignore
+            match name:
+                case 'delta':
+                    yield expr.delta(*args, unit=self.unit)
+                case 'truncate':
+                    yield expr.truncate(self.unit)
+                case 'strftime':
+                    yield expr.strftime(self.format_str)
+                case _:
+                    yield getattr(expr, name)(*args)

@@ -91,64 +91,38 @@ def test_numeric(executor):
 def test_datetime(executor):
     for name in ('timestamp', 'date32'):
         data = executor(
-            f"""{{ scan(columns: {{alias: "year", temporal: {{year: {{name: "{name}"}}}}}})
-            {{ column(name: "year") {{ ... on LongColumn {{ values }} }} }} }}"""
+            f"""{{ project(columns: {{alias: "year", temporal: {{year: {{name: "{name}"}}}}}})
+            {{ column(name: "year") {{ ... on IntColumn {{ values }} }} }} }}"""
         )
-        assert data == {'scan': {'column': {'values': [1970, None]}}}
+        assert data == {'project': {'column': {'values': [1970, None]}}}
         data = executor(
-            f"""{{ scan(columns: {{alias: "quarter", temporal: {{quarter: {{name: "{name}"}}}}}})
-            {{ column(name: "quarter") {{ ... on LongColumn {{ values }} }} }} }}"""
+            f"""{{ project(columns: {{alias: "quarter", temporal: {{quarter: {{name: "{name}"}}}}}})
+            {{ column(name: "quarter") {{ ... on IntColumn {{ values }} }} }} }}"""
         )
-        assert data == {'scan': {'column': {'values': [1, None]}}}
-        data = executor(f"""{{ scan(columns: {{alias: "{name}",
-            temporal: {{yearsBetween: [{{name: "{name}"}}, {{name: "{name}"}}]}}}})
-            {{ column(name: "{name}") {{ ... on LongColumn {{ values }} }} }} }}""")
-        assert data == {'scan': {'column': {'values': [0, None]}}}
-    data = executor(
-        """{ scan(columns: {alias: "timestamp", temporal: {strftime: {name: "timestamp"}}}) {
-        column(name: "timestamp") { type } } }"""
-    )
-    assert data == {'scan': {'column': {'type': 'string'}}}
+        assert data == {'project': {'column': {'values': [1, None]}}}
+        data = executor(f"""{{ project(columns: {{alias: "{name}",
+            temporal: {{truncate: {{name: "{name}"}}, unit: "D"}}}})
+            {{ column(name: "{name}") {{ type }} }} }}""")
+        assert data['project']['column']['type'] in ('timestamp[us]', 'date32[day]')
+    data = executor("""{ project(columns: {alias: "timestamp", temporal: {strftime: {name: "timestamp"}, formatStr: "%Y"}})
+        { column(name: "timestamp") { type } } }""")
+    assert data == {'project': {'column': {'type': 'string'}}}
     for name in ('timestamp', 'time32'):
         data = executor(
-            f"""{{ scan(columns: {{alias: "hour", temporal: {{hour: {{name: "{name}"}}}}}})
-            {{ column(name: "hour") {{ ... on LongColumn {{ values }} }} }} }}"""
+            f"""{{ project(columns: {{alias: "hour", temporal: {{hour: {{name: "{name}"}}}}}})
+            {{ column(name: "hour") {{ ... on IntColumn {{ values }} }} }} }}"""
         )
-        assert data == {'scan': {'column': {'values': [0, None]}}}
-        data = executor(
-            f"""{{ scan(columns: {{alias: "subsecond", temporal: {{subsecond: {{name: "{name}"}}}}}})
-            {{ column(name: "subsecond") {{ ... on FloatColumn {{ values }} }} }} }}"""
-        )
-        assert data == {'scan': {'column': {'values': [0.0, None]}}}
-        data = executor(f"""{{ scan(columns: {{alias: "hours",
-            temporal: {{hoursBetween: [{{name: "{name}"}}, {{name: "{name}"}}]}}}})
-            {{ column(name: "hours") {{ ... on LongColumn {{ values }} }} }} }}""")
-        assert data == {'scan': {'column': {'values': [0, None]}}}
-    with pytest.raises(ValueError):
-        executor('{ columns { time64 { between(unit: "hours") { values } } } }')
-    data = executor(
-        """{ scan(columns: {alias: "timestamp", temporal: {assumeTimezone: {name: "timestamp"}, timezone: "UTC"}}) {
-        columns { timestamp { values } } } }"""
-    )
-    dates = data['scan']['columns']['timestamp']['values']
-    assert dates == ['1970-01-01T00:00:00+00:00', None]
-    data = executor(
-        """{ scan(columns: {alias: "time32", temporal: {round: {name: "time32"}, unit: "hour"}}) {
-        columns { time32 { values } } } }"""
-    )
-    assert data == {'scan': {'columns': {'time32': {'values': ['00:00:00', None]}}}}
+        assert data == {'project': {'column': {'values': [0, None]}}}
 
 
 def test_duration(executor):
     data = executor("""{ project(columns: {alias: "diff", sub: [{name: "timestamp"}, {name: "timestamp"}]})
         { schema { types } } }""")
     assert "interval('s')" in data['project']['schema']['types']
-    data = executor(
-        """{ scan(columns: {alias: "diff", temporal:
-        {monthDayNanoIntervalBetween: [{name: "timestamp"}, {name: "timestamp"}]}})
-        { column(name: "diff") { ... on DurationColumn { values } } } }"""
-    )
-    assert data == {'scan': {'column': {'values': ['P0M0D', None]}}}
+    data = executor("""{ project(columns: {alias: "diff", temporal:
+        {delta: [{name: "timestamp"}, {name: "timestamp"}], unit: "day"}})
+        { column(name: "diff") { ... on LongColumn { values } } } }""")
+    assert data == {'project': {'column': {'values': [0, None]}}}
 
 
 def test_list(executor):
