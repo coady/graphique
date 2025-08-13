@@ -169,12 +169,7 @@ class Expression:
 
     def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
-        fields = []
-        if self.name:
-            fields.append(pc.field(*self.name))
-        if not fields:
-            return None
-        (field,) = fields
+        field = pc.field(*self.name)
         cast = self.cast and isinstance(field, ds.Expression)
         return field.cast(self.cast, self.safe) if cast else field
 
@@ -231,6 +226,10 @@ class IExpression:
     string: Strings | None = default_field(description="string functions")
     temporal: Temporal | None = default_field(description="temporal functions")
 
+    cast: IExpression | None = default_field(func=ibis.expr.types.Column.cast)
+    try_cast: IExpression | None = default_field(func=ibis.expr.types.Column.try_cast)
+    target_type: str = ''
+
     def items(self) -> Iterable[tuple]:
         for name, value in self.__dict__.items():
             if isinstance(value, IExpression):
@@ -253,6 +252,8 @@ class IExpression:
                     yield getattr(operator, name)(expr, *args)
                 case 'add' | 'sub' | 'mul' | 'truediv':
                     yield getattr(operator, name)(expr, *args)
+                case 'cast' | 'try_cast':
+                    yield getattr(expr, name)(ibis.dtype(self.target_type))
                 case _:
                     yield getattr(expr, name)(*args)
         for field in (self.array, self.numeric, self.string, self.temporal):

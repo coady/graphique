@@ -90,17 +90,13 @@ class Dataset:
         source = self.select(info)
         if isinstance(source, pa.Table):
             return source
-        if isinstance(source, ibis.Table):
-            return source.head(length).to_pyarrow()
-        return source.to_table() if length is None else source.head(length)
+        return source.head(length).to_pyarrow()  # type: ignore
 
     def to_ibis(self, info: Info) -> ibis.Table:
         """Return table with only the rows and columns necessary to proceed."""
         if isinstance(self.source, ibis.Table):
             return self.source
-        if isinstance(self.source, ds.Dataset):
-            return Parquet.to_table(self.source)
-        return ibis.memtable(self.to_table(info))
+        return Parquet.to_table(self.source)
 
     def columns(self, info: Info) -> dict:
         """fields for each column"""
@@ -265,8 +261,6 @@ class Dataset:
         """Select rows and project columns without memory usage."""
         projection = {name: pc.field(name) for name in self.references(info, level=1)}
         projection |= {col.alias or '.'.join(col.name): col.to_arrow() for col in columns}
-        if '' in projection:
-            raise ValueError(f"projected columns need a name or alias: {projection['']}")
         source = self.source.to_pyarrow() if isinstance(self.source, ibis.Table) else self.source
         return self.resolve(info, Nodes.scan(source, projection))
 
@@ -320,4 +314,6 @@ class Dataset:
         """
         table = self.to_ibis(info)
         projection = {column.alias or column.name: column.to_ibis() for column in columns}
+        if '' in projection:
+            raise ValueError(f"projected fields require a name or alias: {projection['']}")
         return self.resolve(info, table.mutate(projection))

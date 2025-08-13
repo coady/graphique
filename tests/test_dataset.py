@@ -126,16 +126,14 @@ def test_federation(fedclient):
     assert data['zipcodes'] == {'__typename': 'ZipcodesTable', 'count': 41700}
     assert data['zipDb'] == {'__typename': 'ZipDbTable', 'count': 42724}
 
-    data = fedclient.execute("""{ zipcodes { scan(columns: {name: "zipcode", cast: "int64"}) {
-        join(right: "zip_db", keys: "zipcode", rkeys: "zip") { count schema { names } } } } }""")
-    table = data['zipcodes']['scan']['join']
+    data = fedclient.execute("""{ zipcodes { project(columns: {alias: "zipcode", cast: {name: "zipcode"}, targetType: "int64"})
+        { join(right: "zip_db", keys: "zipcode", rkeys: "zip") { count schema { names } } } } }""")
+    table = data['zipcodes']['project']['join']
     assert table['count'] == 41684
     assert set(table['schema']['names']) > {'zipcode', 'timezone', 'latitude'}
-    data = fedclient.execute(
-        """{ zipcodes { scan(columns: {alias: "zip", name: "zipcode", cast: "int64"}) {
-        join(right: "zip_db", keys: "zip", how: "right") { count schema { names } } } } }"""
-    )
-    table = data['zipcodes']['scan']['join']
+    data = fedclient.execute("""{ zipcodes { project(columns: {alias: "zip", cast: {name: "zipcode"}, targetType: "int64"})
+        { join(right: "zip_db", keys: "zip", how: "right") { count schema { names } } } } }""")
+    table = data['zipcodes']['project']['join']
     assert table['count'] == 42724
     assert set(table['schema']['names']) > {'zip', 'timezone', 'latitude'}
 

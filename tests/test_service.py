@@ -175,22 +175,19 @@ def test_where(client):
     data = client.execute("""{ project(columns: {alias: "product", mul: [{name: "latitude"}, {name: "longitude"}]})
         { filter(where: {gt: [{name: "product"}, {value: 0}]}) { count } } }""")
     assert data['project']['filter']['count'] == 0
-    data = client.execute(
-        '{ scan(columns: {name: "zipcode", cast: "float"}) { column(name: "zipcode") { type } } }'
-    )
-    assert data['scan']['column']['type'] == 'float'
-    data = client.execute(
-        '{ filter(where: {inv: {eq: [{name: "state"}, {value: "CA"}]}}) { count } }'
-    )
+    data = client.execute("""{ project(columns: {alias: "zipcode", cast: {name: "zipcode"}, targetType: "float"})
+        { column(name: "zipcode") { type } } }""")
+    assert data['project']['column']['type'] == 'double'
+    data = client.execute("""{ filter(where: {inv: {eq: [{name: "state"}, {value: "CA"}]}})
+        { count } }""")
     assert data == {'filter': {'count': 39053}}
-    data = client.execute(
-        '{ scan(columns: {name: "latitude", cast: "int32", safe: false}) { column(name: "latitude") { type } } }'
-    )
-    assert data == {'scan': {'column': {'type': 'int32'}}}
+    data = client.execute("""{ project(columns: {alias: "latitude", tryCast: {name: "latitude"}, targetType: "int32"})
+        { column(name: "latitude") { type } } }""")
+    assert data == {'project': {'column': {'type': 'int32'}}}
     with pytest.raises(ValueError):
         client.execute('{ filter(where: {name: "state", value: "CA"}) { count } }')
     with pytest.raises(ValueError, match="name or alias"):
-        client.execute('{ scan(columns: {}) { count } }')
+        client.execute('{ project(columns: {}) { count } }')
     data = client.execute("""{ filter(where: {eq: [{name: "state"}, {value: "CA"}]})
         { filter(where: {eq: [{name: "county"}, {value: "Santa Clara"}]})
         { count row { county } } } }""")
@@ -198,10 +195,11 @@ def test_where(client):
 
 
 def test_project(client):
-    assert client.execute('{ project(columns: []) { type } }')
-    assert client.execute('{ project(columns: [{}]) { optional { type } } }')
+    assert client.execute('{ project(columns: []) { optional { type } } }')
     with pytest.raises(ValueError, match="conflict"):
         client.execute('{ project(columns: [{name: "state", value: ""}]) { type } }')
+    with pytest.raises(ValueError, match="alias"):
+        client.execute('{ project(columns: {inv: {name: "state"}}) { type } }')
     data = client.execute("""{ project(columns: {alias: "zipcode", numeric: {cumsum: {name: "zipcode"}}}) {
         columns { zipcode { value(index: -1) } } } }""")
     assert data == {'project': {'columns': {'zipcode': {'value': 2066562337}}}}
