@@ -160,9 +160,9 @@ def test_filter(client):
     assert data == {'dropNull': {'count': 41700}}
 
 
-def test_scan(client):
-    data = client.execute('{ scan(filter: {eq: [{name: "county"}, {name: "city"}]}) { count } }')
-    assert data['scan']['count'] == 2805
+def test_where(client):
+    data = client.execute('{ filter(where: {eq: [{name: "county"}, {name: "city"}]}) { count } }')
+    assert data['filter']['count'] == 2805
     data = client.execute("""{ filter(where: {or: [{eq: [{name: "state"}, {name: "county"}]},
         {eq: [{name: "county"}, {name: "city"}]}]}) { count } }""")
     assert data['filter']['count'] == 2805
@@ -187,14 +187,14 @@ def test_scan(client):
         '{ scan(columns: {name: "latitude", cast: "int32", safe: false}) { column(name: "latitude") { type } } }'
     )
     assert data == {'scan': {'column': {'type': 'int32'}}}
-    with pytest.raises(ValueError, match="conflicting inputs"):
-        client.execute('{ scan(filter: {name: "state", value: "CA"}) { count } }')
+    with pytest.raises(ValueError):
+        client.execute('{ filter(where: {name: "state", value: "CA"}) { count } }')
     with pytest.raises(ValueError, match="name or alias"):
         client.execute('{ scan(columns: {}) { count } }')
-    data = client.execute("""{ scan(filter: {eq: [{name: "state"}, {value: "CA"}]})
-        { scan(filter: {eq: [{name: "county"}, {value: "Santa Clara"}]})
+    data = client.execute("""{ filter(where: {eq: [{name: "state"}, {value: "CA"}]})
+        { filter(where: {eq: [{name: "county"}, {value: "Santa Clara"}]})
         { count row { county } } } }""")
-    assert data == {'scan': {'scan': {'count': 108, 'row': {'county': 'Santa Clara'}}}}
+    assert data == {'filter': {'filter': {'count': 108, 'row': {'county': 'Santa Clara'}}}}
 
 
 def test_project(client):

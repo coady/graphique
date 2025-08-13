@@ -167,39 +167,16 @@ class Expression:
         description="JSON scalar; also see typed scalars", nullable=True
     )
 
-    eq: list[Expression] = default_field([], description="==")
-    ne: list[Expression] = default_field([], description="!=")
-    lt: list[Expression] = default_field([], description="<")
-    le: list[Expression] = default_field([], description="<=")
-    gt: list[Expression] = default_field([], description=r"\>")
-    ge: list[Expression] = default_field([], description=r"\>=")
-
-    variadics = ('eq', 'ne', 'lt', 'le', 'gt', 'ge')
-
     def to_arrow(self) -> ds.Expression | None:
         """Transform GraphQL expression into a dataset expression."""
         fields = []
         if self.name:
             fields.append(pc.field(*self.name))
-        if self.value is not UNSET:
-            fields.append(self.getscalar(self.value))
-        for op in self.variadics:
-            exprs = [expr.to_arrow() for expr in getattr(self, op)]
-            if exprs:
-                fields.append(self.getfunc(op)(*exprs))
         if not fields:
             return None
-        if len(fields) > 1:
-            raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
         (field,) = fields
         cast = self.cast and isinstance(field, ds.Expression)
         return field.cast(self.cast, self.safe) if cast else field
-
-    def getscalar(self, value):
-        return pa.scalar(value, self.cast) if self.cast else value
-
-    def getfunc(self, name):
-        return getattr(pc if hasattr(pc, name) else operator, name)
 
 
 @strawberry.input(description="an `Expression` with an optional alias")

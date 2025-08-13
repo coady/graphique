@@ -16,7 +16,7 @@ import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
 from .core import Nodes, Parquet, order_key
-from .inputs import Aggregates, Expression, Filter, IExpression, IProjection, Projection, links
+from .inputs import Aggregates, Filter, IExpression, IProjection, Projection, links
 from .models import Column, doc_field
 from .scalars import Long
 
@@ -80,8 +80,6 @@ class Dataset:
         names = list(self.references(info))
         if len(names) >= len(self.schema().names):
             return self.source
-        if isinstance(self.source, pa.Table):
-            return self.source.select(names)
         if isinstance(self.source, ibis.Table):
             projection = {} if names else {'_': ibis.row_number()}
             return self.source.select(names, **projection)
@@ -187,7 +185,7 @@ class Dataset:
             column = self.source.column(*name)
             return Column.cast(column.cast(cast, safe) if cast else column)
         column = Projection(alias='_', name=name, cast=cast, safe=safe)  # type: ignore
-        source = self.scan(info, Expression(), [column]).source
+        source = self.scan(info, [column]).source
         return Column.cast(*(source if isinstance(source, pa.Table) else source.to_table()))
 
     @doc_field(
@@ -262,20 +260,15 @@ class Dataset:
             table = table.mutate({row_number: ibis.row_number()})
         return self.resolve(info, table.unnest(name, offset=offset or None, keep_empty=keep_empty))
 
-    @doc_field(filter="selected rows", columns="projected columns")
-    def scan(self, info: Info, filter: Expression = {}, columns: list[Projection] = []) -> Self:  # type: ignore
+    @doc_field
+    def scan(self, info: Info, columns: list[Projection] = []) -> Self:  # type: ignore
         """Select rows and project columns without memory usage."""
-        expr = filter.to_arrow()
         projection = {name: pc.field(name) for name in self.references(info, level=1)}
         projection |= {col.alias or '.'.join(col.name): col.to_arrow() for col in columns}
         if '' in projection:
             raise ValueError(f"projected columns need a name or alias: {projection['']}")
         source = self.source.to_pyarrow() if isinstance(self.source, ibis.Table) else self.source
-        if expr is not None:
-            source = source.filter(expr)
-        if columns or isinstance(source, ds.Dataset):
-            source = Nodes.scan(source, projection)
-        return self.resolve(info, source)
+        return self.resolve(info, Nodes.scan(source, projection))
 
     @doc_field(
         right="name of right table; must be on root Query type",
