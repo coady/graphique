@@ -44,7 +44,7 @@ class Nodes(ac.Declaration):
             self = Nodes('scan', self, columns=columns)
             if expr is not None:
                 self = self.apply('filter', expr)
-        elif isinstance(self, pa.Table):
+        else:
             self = Nodes('table_source', self)
         if isinstance(columns, Mapping):
             return self.apply('project', columns.values(), columns)

@@ -69,8 +69,6 @@ def test_schema(dsclient):
     assert schema['partitioning'] == ['north', 'west']
     data = dsclient.execute('{ type }')
     assert data['type'].endswith('Dataset')
-    data = dsclient.execute('{ scan(columns: {name: "zipcode"}) { type } }')
-    assert data == {'scan': {'type': 'Nodes'}}
 
 
 def test_order(dsclient):

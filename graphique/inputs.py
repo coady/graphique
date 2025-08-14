@@ -183,7 +183,7 @@ class Projection(Expression):
 class IExpression:
     """[Ibis expression](https://ibis-project.org/reference/#expression-api)."""
 
-    name: str = strawberry.field(default='', description="field name")
+    name: list[str] = default_field([], description="field name(s)")
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
     row_number: None = default_field(func=ibis.row_number)
 
@@ -239,7 +239,10 @@ class IExpression:
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
         if self.name:
-            yield ibis._[self.name]
+            column = ibis._
+            for key in self.name:
+                column = column[key]
+            yield column
         scalars = self.base64, self.date_, self.datetime_, self.decimal, self.duration, self.time_
         for scalar in (self.value,) + scalars:
             if scalar is not UNSET:

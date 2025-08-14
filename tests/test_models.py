@@ -152,9 +152,9 @@ def test_list(executor):
 def test_struct(executor):
     data = executor('{ columns { struct { names column(name: "x") { count } } } }')
     assert data == {'columns': {'struct': {'names': ['x', 'y'], 'column': {'count': 1}}}}
-    data = executor("""{ scan(columns: {alias: "leaf", name: ["struct", "x"]}) {
-        column(name: "leaf") { ... on IntColumn { values } } } }""")
-    assert data == {'scan': {'column': {'values': [0, None]}}}
+    data = executor("""{ project(columns: {alias: "leaf", name: ["struct", "x"]})
+        { column(name: "leaf") { ... on IntColumn { values } } } }""")
+    assert data == {'project': {'column': {'values': [0, None]}}}
     data = executor('{ column(name: ["struct", "x"]) { type } }')
     assert data == {'column': {'type': 'int32'}}
     data = executor('{ row { struct } columns { struct { value } } }')

@@ -313,7 +313,7 @@ class Dataset:
         renamed to not be confused with a mutation.
         """
         table = self.to_ibis(info)
-        projection = {column.alias or column.name: column.to_ibis() for column in columns}
+        projection = {column.alias or ''.join(column.name): column.to_ibis() for column in columns}
         if '' in projection:
             raise ValueError(f"projected fields require a name or alias: {projection['']}")
         return self.resolve(info, table.mutate(projection))
