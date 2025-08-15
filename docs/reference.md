@@ -1,4 +1,4 @@
-::: graphique.core.Nodes
+::: graphique.core.Parquet
 
 ::: graphique.interface.Dataset
 

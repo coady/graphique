@@ -1,7 +1,6 @@
-import pyarrow as pa
 import pyarrow.compute as pc
 import pytest
-from graphique.core import Nodes
+from graphique.core import Parquet
 from graphique.scalars import parse_duration, duration_isoformat
 
 
@@ -23,12 +22,15 @@ def test_duration():
         duration_isoformat(parse_duration('P1H'))
 
 
-def test_nodes(dataset):
-    dataset = dataset.filter(pc.field('state') == 'CA')
-    (column,) = Nodes.scan(dataset, columns={'_': pc.field('state')}).to_table()
-    assert column.unique().to_pylist() == ['CA']
-    scanner = Nodes.scan(dataset, columns=['state'])
-    assert scanner.schema.names == ['state']
-    assert scanner.count_rows() == 2647
-    assert scanner.head(3) == pa.table({'state': ['CA'] * 3})
-    assert scanner.take([0, 2]) == pa.table({'state': ['CA'] * 2})
+def test_parquet(dataset):
+    assert not Parquet.schema(dataset)
+    assert not Parquet.keys(dataset, 'key')
+    table = Parquet.fragments(dataset, 'count')
+    (path,) = table['__path__'].to_list()
+    assert path.endswith('.parquet')
+    assert table['count'].to_list() == [41700]
+    table = Parquet.group(dataset, '__path__', counts='count')
+    assert table['count'].to_list() == [41700]
+    assert Parquet.filter(dataset, None) is dataset
+    assert Parquet.filter(dataset, pc.field('key')) is None
+    assert Parquet.to_table(dataset).count().to_pyarrow().as_py() == 41700

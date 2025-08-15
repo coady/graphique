@@ -14,7 +14,7 @@ import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
-from .core import Nodes, Parquet, order_key
+from .core import Parquet, order_key
 from .inputs import Aggregates, Filter, IExpression, IProjection, links
 from .models import Column, doc_field
 from .scalars import Long
@@ -79,10 +79,8 @@ class Dataset:
         names = list(self.references(info))
         if len(names) >= len(self.schema().names):
             return self.source
-        if isinstance(self.source, ibis.Table):
-            projection = {} if names else {'_': ibis.row_number()}
-            return self.source.select(names, **projection)
-        return Nodes.scan(self.source, names)
+        projection = {} if names else {'_': ibis.row_number()}
+        return self.source.select(names, **projection)
 
     def to_table(self, info: Info, length: int | None = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
@@ -283,10 +281,13 @@ class Dataset:
     @doc_field
     def take(self, info: Info, indices: list[Long]) -> Self:
         """Select rows from indices."""
-        source = self.select(info)
-        if isinstance(source, ibis.Table):  # pragma: no branch
-            source = ds.Scanner.from_batches(source.to_pyarrow_batches())
-        return type(self)(ibis.memtable(source.take(indices)))
+        names = self.references(info)
+        if isinstance(self.source, ds.Dataset):
+            table = self.source.take(indices, columns=list(names))
+        else:
+            batches = self.source.select(*names).to_pyarrow_batches()
+            table = ds.Scanner.from_batches(batches).take(indices)
+        return type(self)(ibis.memtable(table))
 
     @doc_field
     def drop_null(self, info: Info) -> Self:

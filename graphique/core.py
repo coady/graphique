@@ -6,69 +6,14 @@ Their methods are called as functions.
 """
 
 import itertools
-from collections.abc import Iterable, Mapping
 import ibis.backends.duckdb
 import pyarrow as pa
-import pyarrow.acero as ac
-import pyarrow.compute as pc
 import pyarrow.dataset as ds
-from typing_extensions import Self
 
 
 def order_key(name: str) -> ibis.Deferred:
     """Parse sort order."""
     return (ibis.desc if name.startswith('-') else ibis.asc)(ibis._[name.lstrip('-')])
-
-
-class Nodes(ac.Declaration):
-    """[Acero](https://arrow.apache.org/docs/python/api/acero.html) engine declaration.
-
-    Provides a `Scanner` interface with no "oneshot" limitation.
-    """
-
-    option_map = {
-        'scan': ac.ScanNodeOptions,
-        'filter': ac.FilterNodeOptions,
-        'project': ac.ProjectNodeOptions,
-    }
-
-    def __init__(self, name, *args, inputs=None, **options):
-        super().__init__(name, self.option_map[name](*args, **options), inputs)
-
-    def scan(self, columns: Iterable[str]) -> Self:
-        """Return projected source node, supporting datasets and tables."""
-        expr = self._scan_options.get('filter')
-        self = Nodes('scan', self, columns=columns)
-        if expr is not None:
-            self = self.apply('filter', expr)
-        if isinstance(columns, Mapping):
-            return self.apply('project', columns.values(), columns)
-        return self.apply('project', map(pc.field, columns))
-
-    @property
-    def schema(self) -> pa.Schema:
-        """projected schema"""
-        with self.to_reader() as reader:
-            return reader.schema
-
-    def scanner(self, **options) -> ds.Scanner:
-        return ds.Scanner.from_batches(self.to_reader(**options))
-
-    def count_rows(self) -> int:
-        """Count matching rows."""
-        return self.scanner().count_rows()
-
-    def head(self, num_rows: int, **options) -> pa.Table:
-        """Load the first N rows."""
-        return self.scanner(**options).head(num_rows)
-
-    def take(self, indices: Iterable[int], **options) -> pa.Table:
-        """Select rows by index."""
-        return self.scanner(**options).take(indices)
-
-    def apply(self, name: str, *args, **options) -> Self:
-        """Add a node by name."""
-        return type(self)(name, *args, inputs=[self], **options)
 
 
 class Parquet(ds.Dataset):
