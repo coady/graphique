@@ -5,7 +5,6 @@ Arrow forbids subclassing, so the classes are for logical grouping.
 Their methods are called as functions.
 """
 
-import functools
 import itertools
 from collections.abc import Iterable, Mapping
 import ibis.backends.duckdb
@@ -28,7 +27,6 @@ class Nodes(ac.Declaration):
     """
 
     option_map = {
-        'table_source': ac.TableSourceNodeOptions,
         'scan': ac.ScanNodeOptions,
         'filter': ac.FilterNodeOptions,
         'project': ac.ProjectNodeOptions,
@@ -39,13 +37,10 @@ class Nodes(ac.Declaration):
 
     def scan(self, columns: Iterable[str]) -> Self:
         """Return projected source node, supporting datasets and tables."""
-        if isinstance(self, ds.Dataset):
-            expr = self._scan_options.get('filter')
-            self = Nodes('scan', self, columns=columns)
-            if expr is not None:
-                self = self.apply('filter', expr)
-        else:
-            self = Nodes('table_source', self)
+        expr = self._scan_options.get('filter')
+        self = Nodes('scan', self, columns=columns)
+        if expr is not None:
+            self = self.apply('filter', expr)
         if isinstance(columns, Mapping):
             return self.apply('project', columns.values(), columns)
         return self.apply('project', map(pc.field, columns))
@@ -74,8 +69,6 @@ class Nodes(ac.Declaration):
     def apply(self, name: str, *args, **options) -> Self:
         """Add a node by name."""
         return type(self)(name, *args, inputs=[self], **options)
-
-    filter = functools.partialmethod(apply, 'filter')
 
 
 class Parquet(ds.Dataset):

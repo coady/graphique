@@ -213,7 +213,7 @@ class IntColumn(RatioColumn[T]):
     ) -> Annotated['Dataset', strawberry.lazy('.interface')] | None:
         """Select indices from a table on the root Query type."""
         root = getattr(info.root_value, field)
-        return type(root)(root.select(info).take(self.array.combine_chunks()))
+        return root.take(info, self.array.combine_chunks())
 
 
 @Column.register(list)

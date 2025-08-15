@@ -10,17 +10,16 @@ from collections.abc import Iterable, Iterator, Mapping, Sized
 from typing import TypeAlias, no_type_check
 import ibis
 import pyarrow as pa
-import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
 from .core import Nodes, Parquet, order_key
-from .inputs import Aggregates, Filter, IExpression, IProjection, Projection, links
+from .inputs import Aggregates, Filter, IExpression, IProjection, links
 from .models import Column, doc_field
 from .scalars import Long
 
-Source: TypeAlias = ds.Dataset | Nodes | ibis.Table | pa.Table
+Source: TypeAlias = ds.Dataset | ibis.Table
 
 
 def references(field) -> Iterator:
@@ -88,8 +87,6 @@ class Dataset:
     def to_table(self, info: Info, length: int | None = None) -> pa.Table:
         """Return table with only the rows and columns necessary to proceed."""
         source = self.select(info)
-        if isinstance(source, pa.Table):
-            return source
         return source.head(length).to_pyarrow()  # type: ignore
 
     def to_ibis(self, info: Info) -> ibis.Table:
@@ -177,12 +174,12 @@ class Dataset:
         This is typically only needed for aliased or casted columns.
         If the column is in the schema, `columns` can be used instead.
         """
-        if isinstance(self.source, pa.Table) and len(name) == 1:
-            column = self.source.column(*name)
-            return Column.cast(column.cast(cast, safe) if cast else column)
-        column = Projection(alias='_', name=name, cast=cast, safe=safe)  # type: ignore
-        source = self.scan(info, [column]).source
-        return Column.cast(*(source if isinstance(source, pa.Table) else source.to_table()))
+        column = self.to_ibis(info)
+        for key in name:
+            column = column[key]
+        if cast:
+            column = (column.cast if safe else column.try_cast)(cast)
+        return Column.cast(column.to_pyarrow())
 
     @doc_field(
         offset="number of rows to skip; negative value skips from the end",
@@ -256,14 +253,6 @@ class Dataset:
             table = table.mutate({row_number: ibis.row_number()})
         return self.resolve(info, table.unnest(name, offset=offset or None, keep_empty=keep_empty))
 
-    @doc_field
-    def scan(self, info: Info, columns: list[Projection] = []) -> Self:  # type: ignore
-        """Select rows and project columns without memory usage."""
-        projection = {name: pc.field(name) for name in self.references(info, level=1)}
-        projection |= {col.alias or '.'.join(col.name): col.to_arrow() for col in columns}
-        source = self.source.to_pyarrow() if isinstance(self.source, ibis.Table) else self.source
-        return self.resolve(info, Nodes.scan(source, projection))
-
     @doc_field(
         right="name of right table; must be on root Query type",
         keys="column names used as keys on the left side",
@@ -297,7 +286,7 @@ class Dataset:
         source = self.select(info)
         if isinstance(source, ibis.Table):  # pragma: no branch
             source = ds.Scanner.from_batches(source.to_pyarrow_batches())
-        return self.resolve(info, source.take(indices))
+        return type(self)(ibis.memtable(source.take(indices)))
 
     @doc_field
     def drop_null(self, info: Info) -> Self:

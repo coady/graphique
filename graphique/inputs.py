@@ -167,12 +167,6 @@ class Expression:
         description="JSON scalar; also see typed scalars", nullable=True
     )
 
-    def to_arrow(self) -> ds.Expression | None:
-        """Transform GraphQL expression into a dataset expression."""
-        field = pc.field(*self.name)
-        cast = self.cast and isinstance(field, ds.Expression)
-        return field.cast(self.cast, self.safe) if cast else field
-
 
 @strawberry.input(description="an `Expression` with an optional alias")
 class Projection(Expression):
