@@ -6,17 +6,16 @@ Doesn't require knowledge of the schema.
 
 # mypy: disable-error-code=valid-type
 import itertools
-from collections.abc import Iterable, Iterator, Mapping, Sized
+from collections.abc import Iterable, Iterator, Mapping
 from typing import TypeAlias, no_type_check
 import ibis
-import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
 from .core import Parquet, order_key
 from .inputs import Aggregates, Filter, IExpression, IProjection, links
-from .models import Column, doc_field
+from .models import Column, doc_field, selections
 from .scalars import Long
 
 Source: TypeAlias = ds.Dataset | ibis.Table
@@ -51,12 +50,17 @@ class Dataset:
     def __init__(self, source: Source):
         self.source = source
 
+    @property
+    def table(self) -> ibis.Table:
+        """source as ibis table"""
+        return self.source if isinstance(self.source, ibis.Table) else Parquet.to_table(self.source)
+
     def resolve(self, info: Info, source: ibis.Table) -> Self:
         """Cache the table if it will be reused."""
         count = sum(len(field.selections) for field in info.selected_fields)
         if count > 1 and isinstance(source, ibis.Table):
             if names := self.references(info, level=1):
-                source = source.select(names).cache()
+                source = source.select(*names).cache()
         return type(self)(source)
 
     @classmethod
@@ -74,38 +78,23 @@ class Dataset:
             fields = itertools.chain(*[field.selections for field in fields])
         return set(itertools.chain(*map(references, fields))) & set(self.schema().names)
 
-    def select(self, info: Info) -> Source:
-        """Return source with only the columns necessary to proceed."""
-        names = list(self.references(info))
-        if len(names) >= len(self.schema().names):
-            return self.source
-        projection = {} if names else {'_': ibis.row_number()}
-        return self.source.select(names, **projection)
-
-    def to_table(self, info: Info, length: int | None = None) -> pa.Table:
-        """Return table with only the rows and columns necessary to proceed."""
-        source = self.select(info)
-        return source.head(length).to_pyarrow()  # type: ignore
-
-    def to_ibis(self, info: Info) -> ibis.Table:
-        """Return table with only the rows and columns necessary to proceed."""
-        if isinstance(self.source, ibis.Table):
-            return self.source
-        return Parquet.to_table(self.source)
-
     def columns(self, info: Info) -> dict:
         """fields for each column"""
-        table = self.to_table(info)
+        names = selections(*info.selected_fields)
+        projection = {} if names else {'_': ibis.row_number()}
+        table = self.source.select(*names, **projection).to_pyarrow()
         return {name: Column.cast(table[name]) for name in table.schema.names}
 
     def row(self, info: Info, index: int = 0) -> dict:
         """Return scalar values at index."""
-        table = self.to_table(info, index + 1 if index >= 0 else None)
+        names = selections(*info.selected_fields)
+        table = self.table.select(*names)[index:][:1].cache()
         row = {}
-        for name in table.schema.names:
-            scalar = table[name][index]
-            columnar = isinstance(scalar, pa.ListScalar)
-            row[name] = Column.fromscalar(scalar) if columnar else scalar.as_py()
+        for name in table.columns:
+            if isinstance(table[name], ibis.expr.types.ArrayColumn):
+                row[name] = Column.fromscalar(*table[name].to_pyarrow())
+            else:
+                (row[name],) = table[name].to_list()
         return row
 
     def filter(self, info: Info, where: IExpression | None = None, **queries: Filter) -> Self:
@@ -117,7 +106,7 @@ class Dataset:
         source = Parquet.filter(self.source, Filter.to_arrow(**queries))
         if source is None:
             exprs += Filter.to_exprs(**queries)
-            source = self.to_ibis(info)
+            source = self.table
         elif exprs:
             source = Parquet.to_table(source)
         return self.resolve(info, source.filter(*exprs) if exprs else source)
@@ -148,7 +137,7 @@ class Dataset:
         """number of rows"""
         if isinstance(self.source, ibis.Table):
             return self.source.count().to_pyarrow().as_py()
-        return len(self.source) if isinstance(self.source, Sized) else self.source.count_rows()
+        return self.source.count_rows()
 
     @doc_field
     def any(self, info: Info, limit: Long = 1) -> bool:
@@ -156,27 +145,26 @@ class Dataset:
 
         May be significantly faster than `count` for out-of-core data.
         """
-        table = self.to_ibis(info)
-        return table[:limit].count().to_pyarrow().as_py() >= limit
+        return self.table[:limit].count().to_pyarrow().as_py() >= limit
 
     @doc_field(
         name="column name(s); multiple names access nested struct fields",
-        cast=f"cast array to {links.type}",
-        safe="check for conversion errors on cast",
+        cast=f"cast expression to indicated {links.type}",
+        try_="return null if cast fails",
     )
     def column(
-        self, info: Info, name: list[str], cast: str = '', safe: bool = True
+        self, info: Info, name: list[str], cast: str = '', try_: bool = False
     ) -> Column | None:
         """Return column of any type by name.
 
         This is typically only needed for aliased or casted columns.
         If the column is in the schema, `columns` can be used instead.
         """
-        column = self.to_ibis(info)
+        column = self.table
         for key in name:
             column = column[key]
         if cast:
-            column = (column.cast if safe else column.try_cast)(cast)
+            column = (column.try_cast if try_ else column.cast)(cast)
         return Column.cast(column.to_pyarrow())
 
     @doc_field(
@@ -185,8 +173,7 @@ class Dataset:
     )
     def slice(self, info: Info, offset: Long = 0, limit: Long | None = None) -> Self:
         """Return zero-copy slice of table."""
-        table = self.to_ibis(info)
-        return self.resolve(info, table[offset:][:limit])
+        return self.resolve(info, self.table[offset:][:limit])
 
     @doc_field(
         by="column names; empty will aggregate into a single row table",
@@ -211,7 +198,7 @@ class Dataset:
             return self.resolve(info, Parquet.group(self.source, *by, counts=counts))
         if counts:
             aggs[counts] = ibis._.count()
-        table = self.to_ibis(info)
+        table = self.table
         if row_number:
             table = table.mutate({row_number: ibis.row_number()})
             aggs[row_number] = ibis._[row_number].first()
@@ -226,10 +213,11 @@ class Dataset:
         self, info: Info, by: list[str], limit: Long | None = None, dense: bool = False
     ) -> Self:
         """Return table sorted by specified columns."""
-        table = self.to_ibis(info)
         keys = Parquet.keys(self.source, *by)
         if keys and limit is not None:
             table = Parquet.rank(self.source, limit, *keys, dense=dense)
+        else:
+            table = self.table
         table = table.order_by(*map(order_key, by))
         if dense:
             groups = table.aggregate(_=ibis._.count(), by=[name.lstrip('-') for name in by])
@@ -246,7 +234,7 @@ class Dataset:
         row_number: str = '',
     ) -> Self:
         """[Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table."""
-        table = self.to_ibis(info)
+        table = self.table
         if row_number:
             table = table.mutate({row_number: ibis.row_number()})
         return self.resolve(info, table.unnest(name, offset=offset or None, keep_empty=keep_empty))
@@ -270,8 +258,8 @@ class Dataset:
         rname: str = '{name}_right',
     ) -> Self:
         """Perform a [join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.join) between two tables."""
-        left = self.to_ibis(info)
-        right = getattr(info.root_value, right).to_ibis(info)
+        left = self.table
+        right = getattr(info.root_value, right).table
         if rkeys:
             keys = [getattr(left, key) == getattr(right, rkey) for key, rkey in zip(keys, rkeys)]
         return self.resolve(
@@ -292,8 +280,7 @@ class Dataset:
     @doc_field
     def drop_null(self, info: Info) -> Self:
         """Remove missing values from referenced columns in the table."""
-        table = self.to_ibis(info)
-        return self.resolve(info, table.drop_null())
+        return self.resolve(info, self.table.drop_null())
 
     @doc_field
     def project(self, info: Info, columns: list[IProjection]) -> Self:
@@ -302,8 +289,7 @@ class Dataset:
         Equivalent to [mutate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.mutate);
         renamed to not be confused with a mutation.
         """
-        table = self.to_ibis(info)
         projection = {column.alias or ''.join(column.name): column.to_ibis() for column in columns}
         if '' in projection:
             raise ValueError(f"projected fields require a name or alias: {projection['']}")
-        return self.resolve(info, table.mutate(projection))
+        return self.resolve(info, self.table.mutate(projection))

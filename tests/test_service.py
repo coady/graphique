@@ -65,7 +65,7 @@ def test_floats(client):
     assert data == {'project': {'row': {'latitude': pytest.approx(0.02273553)}}}
     data = client.execute('{ filter(where: {numeric: {isinf: {name: "longitude"}}}) { count } }')
     assert data == {'filter': {'count': 0}}
-    data = client.execute('{ column(name: "latitude", cast: "int32", safe: false) { type } }')
+    data = client.execute('{ column(name: "latitude", cast: "int32", try: true) { type } }')
     assert data == {'column': {'type': 'int32'}}
 
 
@@ -275,7 +275,7 @@ def test_unnest(client):
 
 
 def test_rows(client):
-    with pytest.raises(ValueError, match="out of bounds"):
+    with pytest.raises(ValueError, match="not enough values"):
         client.execute('{ row(index: 100000) { zipcode } }')
     data = client.execute('{ row { state } }')
     assert data == {'row': {'state': 'NY'}}

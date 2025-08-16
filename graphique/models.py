@@ -32,7 +32,8 @@ def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
     if func is None:
         return functools.partial(doc_field, **kwargs)  # type: ignore
     for name in kwargs:
-        argument = strawberry.argument(description=kwargs[name])
+        alias = name.strip('_') if name.endswith('_') else None
+        argument = strawberry.argument(name=alias, description=kwargs[name])
         func.__annotations__[name] = Annotated[func.__annotations__[name], argument]
     return strawberry.field(func, description=inspect.getdoc(func))
 
