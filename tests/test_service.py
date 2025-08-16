@@ -253,9 +253,9 @@ def test_group(client):
     assert data == {'group': {'c': {'values': [41700]}, 'z': {'values': [99950]}}}
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "county", distinct: true}}) {
         columns { state { values } }
-        c: column(name: "county") { ... on ListColumn { values { count } } } } }""")
-    index = data['group']['columns']['state']['values'].index('NY')
-    assert data['group']['c']['values'][index] == {'count': 62}
+        c: column(name: "county") { ... on ListColumn { length { min } } } } }""")
+    assert len(data['group']['columns']['state']['values']) == 52
+    assert data['group']['c'] == {'length': {'min': 1}}
     data = client.execute("""{ group(by: ["state"], rowNumber: "idx", aggregate: {min: {name: "county"}}) { 
         order(by: "idx") { row { state county } } } }""")
     assert data == {'group': {'order': {'row': {'state': 'NY', 'county': 'Albany'}}}}

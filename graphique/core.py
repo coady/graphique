@@ -11,6 +11,13 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 
 
+def getitems(obj, *keys):
+    """Nested `getitem`."""
+    for key in keys:
+        obj = obj[key]
+    return obj
+
+
 def order_key(name: str) -> ibis.Deferred:
     """Parse sort order."""
     return (ibis.desc if name.startswith('-') else ibis.asc)(ibis._[name.lstrip('-')])

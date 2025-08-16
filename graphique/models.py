@@ -9,11 +9,13 @@ from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Annotated, Generic, TypeVar, TYPE_CHECKING, get_args
+import ibis
 import pyarrow as pa
 import pyarrow.compute as pc
 import strawberry
 from strawberry import Info
 from strawberry.types.field import StrawberryField
+from .core import getitems
 from .scalars import Long, py_type, scalar_map
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -51,8 +53,12 @@ def compute_field(func: Callable):
 class Column:
     registry = {}  # type: ignore
 
-    def __init__(self, array):
-        self.array = array
+    def __init__(self, column: ibis.Column):
+        self.column = column
+
+    @property
+    def array(self):
+        return self.column.to_pyarrow()
 
     def __init_subclass__(cls):
         cls.__init__ = cls.__init__
@@ -71,13 +77,9 @@ class Column:
         return str(self.array.type)
 
     @classmethod
-    def cast(cls, array: pa.ChunkedArray) -> Column:
+    def cast(cls, column: ibis.Column) -> Column:
         """Return typed column based on array type."""
-        return cls.registry[py_type(array.type)](array)
-
-    @classmethod
-    def fromscalar(cls, scalar: pa.ListScalar) -> Column | None:
-        return None if scalar.values is None else cls.cast(pa.chunked_array([scalar.values]))
+        return cls.registry[py_type(column.type().to_pyarrow())](column)
 
     @compute_field
     def count(self, mode: str = 'only_valid') -> Long:
@@ -224,23 +226,19 @@ class IntColumn(RatioColumn[T]):
 @strawberry.type(description="column of lists")
 class ListColumn(Column):
     @doc_field
-    def value(self, index: Long = 0) -> Column | None:
-        """scalar column at index"""
-        return self.fromscalar(self.array[index])
+    def length(self, index: Long = 0) -> IntColumn[int]:
+        """the lengths of the arrays"""
+        return self.cast(self.column.length())  # type: ignore
 
     @doc_field
-    def values(self) -> list[Column | None]:
-        """list of columns"""
-        return list(map(self.fromscalar, self.array))
-
-    @compute_field
-    def drop_null(self) -> list[Column]:
-        return map(self.fromscalar, self.array.drop_null())  # type: ignore
+    def values(self, index: Long = 0) -> Column:
+        """values at index"""
+        return self.cast(self.column[index])
 
     @doc_field
-    def flatten(self) -> Column:
+    def unnest(self) -> Column:
         """concatenation of all sub-lists"""
-        return self.cast(pc.list_flatten(self.array))
+        return self.cast(self.column.unnest())
 
 
 @Column.register(dict)
@@ -259,4 +257,4 @@ class StructColumn(Column):
     @doc_field(name="field name(s); multiple names access nested fields")
     def column(self, name: list[str]) -> Column | None:
         """Return struct field as a column."""
-        return self.cast(pc.struct_field(self.array, name))
+        return self.cast(getitems(self.column, *name))

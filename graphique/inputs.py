@@ -21,6 +21,7 @@ from strawberry.types.arguments import StrawberryArgument
 from strawberry.schema_directive import Location
 from strawberry.types.field import StrawberryField
 from strawberry.scalars import JSON
+from .core import getitems
 
 T = TypeVar('T')
 
@@ -203,10 +204,7 @@ class Expression:
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
         if self.name:
-            column = ibis._
-            for key in self.name:
-                column = column[key]
-            yield column
+            yield getitems(ibis._, *self.name)
         scalars = self.base64, self.date_, self.datetime_, self.decimal, self.duration, self.time_
         for scalar in (self.value,) + scalars:
             if scalar is not UNSET:

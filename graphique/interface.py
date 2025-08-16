@@ -16,6 +16,7 @@ from typing_extensions import Self
 from .core import Parquet, order_key
 from .inputs import Aggregates, Filter, Expression, Projection
 from .models import Column, doc_field, links, selections
+from .core import getitems
 from .scalars import Long
 
 Source: TypeAlias = ds.Dataset | ibis.Table
@@ -80,8 +81,10 @@ class Dataset:
         """fields for each column"""
         names = selections(*info.selected_fields)
         projection = {} if names else {'_': ibis.row_number()}
-        table = self.source.select(*names, **projection).to_pyarrow()
-        return {name: Column.cast(table[name]) for name in table.schema.names}
+        table = self.source.select(*names, **projection)
+        if len(names) > 1:
+            table = table.cache()
+        return {name: Column.cast(table[name]) for name in table.columns}
 
     def row(self, info: Info, index: int = 0) -> dict:
         """Return scalar values at index."""
@@ -90,7 +93,7 @@ class Dataset:
         row = {}
         for name in table.columns:
             if isinstance(table[name], ibis.expr.types.ArrayColumn):
-                row[name] = Column.fromscalar(*table[name].to_pyarrow())
+                row[name] = Column.cast(table[name].first().unnest())
             else:
                 (row[name],) = table[name].to_list()
         return row
@@ -158,12 +161,10 @@ class Dataset:
         This is typically only needed for aliased or casted columns.
         If the column is in the schema, `columns` can be used instead.
         """
-        column = self.table
-        for key in name:
-            column = column[key]
+        column = getitems(self.table, *name)
         if cast:
             column = (column.try_cast if try_ else column.cast)(cast)
-        return Column.cast(column.to_pyarrow())
+        return Column.cast(column)
 
     @doc_field(
         offset="number of rows to skip; negative value skips from the end",

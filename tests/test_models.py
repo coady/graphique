@@ -128,25 +128,24 @@ def test_duration(executor):
 def test_list(executor):
     data = executor('{ columns { list { count type } } }')
     assert data == {'columns': {'list': {'count': 1, 'type': 'list<l: int32>'}}}
-    data = executor('{ columns { list { dropNull { count } } } }')
-    assert data == {'columns': {'list': {'dropNull': [{'count': 3}]}}}
     data = executor('{ row { list { ... on IntColumn { values } } } }')
     assert data == {'row': {'list': {'values': [0, 1, 2]}}}
     data = executor('{ row(index: -1) { list { ... on IntColumn { values } } } }')
-    assert data == {'row': {'list': None}}
+    assert data == {'row': {'list': {'values': []}}}
 
     data = executor("""{ project(columns: {array: {index: [{name: "list"}, {value: 1}]}, alias: "list"}) {
         column(name: "list") { ... on LongColumn { values } } } }""")
     assert data == {'project': {'column': {'values': [1, None]}}}
     data = executor("""{ project(columns: {array: {unique: {name: "list"}}, alias: "list"})
-        { columns { list { flatten { count } } } } }""")
-    assert data['project']['columns']['list'] == {'flatten': {'count': 3}}
-    data = executor(
-        '{ project(columns: {array: {modes: {name: "list"}}, alias: "list"}) { column(name: "list") { type } } }'
-    )
-    assert data['project']['column']['type'] == 'int32'
-    data = executor('{ columns { list { value { type } } } }')
-    assert data == {'columns': {'list': {'value': {'type': 'int32'}}}}
+        { columns { list { unnest { count } } } } }""")
+    assert data == {'project': {'columns': {'list': {'unnest': {'count': 3}}}}}
+    data = executor("""{ project(columns: {array: {modes: {name: "list"}}, alias: "list"})
+        { column(name: "list") { type } } }""")
+    assert data == {'project': {'column': {'type': 'int32'}}}
+    data = executor('{ columns { list { values { ... on IntColumn { values } } } } }')
+    assert data == {'columns': {'list': {'values': {'values': [0, None]}}}}
+    data = executor('{ columns { list { values(index: -1) { ... on IntColumn { values } } } } }')
+    assert data == {'columns': {'list': {'values': {'values': [2, None]}}}}
 
 
 def test_struct(executor):
