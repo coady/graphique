@@ -14,12 +14,15 @@ import pyarrow.compute as pc
 import strawberry
 from strawberry import Info
 from strawberry.types.field import StrawberryField
-from .inputs import links
 from .scalars import Long, py_type, scalar_map
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
 T = TypeVar('T')
+
+
+class links:
+    type = '[data type](https://ibis-project.org/reference/datatypes)'
 
 
 def selections(*fields) -> set:

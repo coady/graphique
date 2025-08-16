@@ -14,8 +14,8 @@ import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
 from .core import Parquet, order_key
-from .inputs import Aggregates, Filter, IExpression, IProjection, links
-from .models import Column, doc_field, selections
+from .inputs import Aggregates, Filter, Expression, Projection
+from .models import Column, doc_field, links, selections
 from .scalars import Long
 
 Source: TypeAlias = ds.Dataset | ibis.Table
@@ -39,9 +39,7 @@ def references(field) -> Iterator:
 @strawberry.type(description="dataset schema")
 class Schema:
     names: list[str] = strawberry.field(description="field names")
-    types: list[str] = strawberry.field(
-        description="[arrow types](https://arrow.apache.org/docs/python/api/datatypes.html), corresponding to `names`"
-    )
+    types: list[str] = strawberry.field(description=f"{links.type}, corresponding to `names`")
     partitioning: list[str] = strawberry.field(description="partition keys")
 
 
@@ -97,7 +95,7 @@ class Dataset:
                 (row[name],) = table[name].to_list()
         return row
 
-    def filter(self, info: Info, where: IExpression | None = None, **queries: Filter) -> Self:
+    def filter(self, info: Info, where: Expression | None = None, **queries: Filter) -> Self:
         """Return table with rows which match all queries.
 
         Schema derived fields provide syntax for simple queries; `where` supports complex queries.
@@ -113,7 +111,7 @@ class Dataset:
 
     @doc_field
     def type(self) -> str:
-        """[arrow type](https://arrow.apache.org/docs/python/api/dataset.html#classes)"""
+        """arrow `Dataset` or ibis `Table`"""
         return type(self.source).__name__
 
     @doc_field
@@ -283,7 +281,7 @@ class Dataset:
         return self.resolve(info, self.table.drop_null())
 
     @doc_field
-    def project(self, info: Info, columns: list[IProjection]) -> Self:
+    def project(self, info: Info, columns: list[Projection]) -> Self:
         """Apply functions to columns.
 
         Equivalent to [mutate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.mutate);

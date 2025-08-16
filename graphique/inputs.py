@@ -25,11 +25,6 @@ from strawberry.scalars import JSON
 T = TypeVar('T')
 
 
-class links:
-    compute = 'https://arrow.apache.org/docs/python/api/compute.html'
-    type = '[arrow type](https://arrow.apache.org/docs/python/api/datatypes.html)'
-
-
 def use_doc(decorator: Callable, **kwargs):
     return lambda func: decorator(description=inspect.getdoc(func), **kwargs)(func)
 
@@ -84,7 +79,7 @@ class Filter(Generic[T]):
             annotation = StrawberryAnnotation(cls[types[name]])  # type: ignore
             if types[name] not in (list, dict):
                 yield StrawberryArgument(name, name, annotation, default={})
-        annotation = StrawberryAnnotation(IExpression | None)
+        annotation = StrawberryAnnotation(Expression | None)
         yield StrawberryArgument('where', None, annotation, default=None)
 
     @staticmethod
@@ -110,7 +105,7 @@ class Filter(Generic[T]):
         return functools.reduce(operator.and_, exprs or [None])
 
 
-@strawberry.input(description=f"name and optional alias for [compute functions]({links.compute})")
+@strawberry.input(description="name and optional alias for aggregation")
 class Aggregate:
     name: str = strawberry.field(description="column name")
     alias: str = strawberry.field(default='', description="output column name")
@@ -119,7 +114,7 @@ class Aggregate:
         return (self.alias or self.name), getattr(ibis._[self.name], func)(**options)
 
 
-@strawberry.input(description=f"options for tdigest [aggregation]({links.compute}#aggregations)")
+@strawberry.input(description="options for `collect` aggregation")
 class CollectAggregate(Aggregate):
     distinct: bool = False
 
@@ -131,13 +126,13 @@ class CollectAggregate(Aggregate):
 class Aggregates:
     all: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.all)
     any: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.any)
-    collect: list[CollectAggregate] = default_field([], func=ibis.expr.types.Column.collect)
-    first: list[Aggregate] = default_field([], func=ibis.expr.types.Column.first)
-    last: list[Aggregate] = default_field([], func=ibis.expr.types.Column.last)
-    max: list[Aggregate] = default_field([], func=ibis.expr.types.Column.max)
+    collect: list[CollectAggregate] = default_field([], func=ibis.Column.collect)
+    first: list[Aggregate] = default_field([], func=ibis.Column.first)
+    last: list[Aggregate] = default_field([], func=ibis.Column.last)
+    max: list[Aggregate] = default_field([], func=ibis.Column.max)
     mean: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.mean)
-    median: list[Aggregate] = default_field([], func=ibis.expr.types.Column.median)
-    min: list[Aggregate] = default_field([], func=ibis.expr.types.Column.min)
+    median: list[Aggregate] = default_field([], func=ibis.Column.median)
+    min: list[Aggregate] = default_field([], func=ibis.Column.min)
     std: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.std)
     sum: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.sum)
     var: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.var)
@@ -150,31 +145,6 @@ class Aggregates:
 
 @use_doc(strawberry.input)
 class Expression:
-    """[Dataset expression](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Expression.html)
-    used for scanning.
-
-    Expects one of: a field `name`, a scalar, or an operator with expressions. Single values can be passed for an
-    [input `List`](https://spec.graphql.org/October2021/#sec-List.Input-Coercion).
-    * `eq` with a list scalar is equivalent to `isin`
-    * `eq` with a `null` scalar is equivalent `is_null`
-    * `ne` with a `null` scalar is equivalent to `is_valid`
-    """
-
-    name: list[str] = default_field([], description="field name(s)")
-    cast: str = strawberry.field(default='', description=f"cast as {links.type}")
-    safe: bool = strawberry.field(default=True, description="check for conversion errors on cast")
-    value: JSON | None = default_field(
-        description="JSON scalar; also see typed scalars", nullable=True
-    )
-
-
-@strawberry.input(description="an `Expression` with an optional alias")
-class Projection(Expression):
-    alias: str = strawberry.field(default='', description="name of projected column")
-
-
-@use_doc(strawberry.input)
-class IExpression:
     """[Ibis expression](https://ibis-project.org/reference/#expression-api)."""
 
     name: list[str] = default_field([], description="field name(s)")
@@ -188,48 +158,48 @@ class IExpression:
     duration: timedelta | None = default_field(description="duration scalar")
     time_: time | None = default_field(description="time scalar", name='time')
 
-    eq: list[IExpression] = default_field([], description="==")
-    ne: list[IExpression] = default_field([], description="!=")
-    lt: list[IExpression] = default_field([], description="<")
-    le: list[IExpression] = default_field([], description="<=")
-    gt: list[IExpression] = default_field([], description=r"\>")
-    ge: list[IExpression] = default_field([], description=r"\>=")
-    isin: list[IExpression] = default_field([], func=ibis.expr.types.Column.isin)
+    eq: list[Expression] = default_field([], description="==")
+    ne: list[Expression] = default_field([], description="!=")
+    lt: list[Expression] = default_field([], description="<")
+    le: list[Expression] = default_field([], description="<=")
+    gt: list[Expression] = default_field([], description=r"\>")
+    ge: list[Expression] = default_field([], description=r"\>=")
+    isin: list[Expression] = default_field([], func=ibis.Column.isin)
 
-    inv: IExpression | None = default_field(description="~")
-    and_: list[IExpression] = default_field([], name='and', description="&")
-    or_: list[IExpression] = default_field([], name='or', description="|")
-    xor: list[IExpression] = default_field([], description="^")
+    inv: Expression | None = default_field(description="~")
+    and_: list[Expression] = default_field([], name='and', description="&")
+    or_: list[Expression] = default_field([], name='or', description="|")
+    xor: list[Expression] = default_field([], description="^")
 
-    add: list[IExpression] = default_field([], description="+")
-    sub: list[IExpression] = default_field([], description="-")
-    mul: list[IExpression] = default_field([], description="*")
-    truediv: list[IExpression] = default_field([], name='div', description="/")
+    add: list[Expression] = default_field([], description="+")
+    sub: list[Expression] = default_field([], description="-")
+    mul: list[Expression] = default_field([], description="*")
+    truediv: list[Expression] = default_field([], name='div', description="/")
 
-    coalesce: list[IExpression] = default_field([], func=ibis.expr.types.Column.coalesce)
-    cume_dist: IExpression | None = default_field(func=ibis.expr.types.Column.cume_dist)
-    cummax: IExpression | None = default_field(func=ibis.expr.types.Column.cummax)
-    cummin: IExpression | None = default_field(func=ibis.expr.types.Column.cummin)
-    dense_rank: IExpression | None = default_field(func=ibis.expr.types.Column.dense_rank)
-    ifelse: list[IExpression] = default_field([], func=ibis.expr.types.BooleanColumn.ifelse)
-    percent_rank: IExpression | None = default_field(func=ibis.expr.types.Column.percent_rank)
-    rank: IExpression | None = default_field(func=ibis.expr.types.Column.rank)
+    coalesce: list[Expression] = default_field([], func=ibis.Column.coalesce)
+    cume_dist: Expression | None = default_field(func=ibis.Column.cume_dist)
+    cummax: Expression | None = default_field(func=ibis.Column.cummax)
+    cummin: Expression | None = default_field(func=ibis.Column.cummin)
+    dense_rank: Expression | None = default_field(func=ibis.Column.dense_rank)
+    ifelse: list[Expression] = default_field([], func=ibis.expr.types.BooleanColumn.ifelse)
+    percent_rank: Expression | None = default_field(func=ibis.Column.percent_rank)
+    rank: Expression | None = default_field(func=ibis.Column.rank)
 
     array: Arrays | None = default_field(description="array value functions")
     numeric: Numeric | None = default_field(description="numeric functions")
     string: Strings | None = default_field(description="string functions")
     temporal: Temporal | None = default_field(description="temporal functions")
 
-    cast: IExpression | None = default_field(func=ibis.expr.types.Column.cast)
-    try_cast: IExpression | None = default_field(func=ibis.expr.types.Column.try_cast)
+    cast: Expression | None = default_field(func=ibis.Column.cast)
+    try_cast: Expression | None = default_field(func=ibis.Column.try_cast)
     target_type: str = ''
 
     def items(self) -> Iterable[tuple]:
         for name, value in self.__dict__.items():
-            if isinstance(value, IExpression):
+            if isinstance(value, Expression):
                 yield name, [value.to_ibis()]
-            elif isinstance(value, list) and value and isinstance(value[0], IExpression):
-                yield name, map(IExpression.to_ibis, value)
+            elif isinstance(value, list) and value and isinstance(value[0], Expression):
+                yield name, map(Expression.to_ibis, value)
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
         if self.name:
@@ -264,33 +234,33 @@ class IExpression:
         raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
 
 
-@strawberry.input(description="an `IExpression` with an optional alias")
-class IProjection(IExpression):
+@strawberry.input(description="an `Expression` with an optional alias")
+class Projection(Expression):
     alias: str = strawberry.field(default='', description="name of projected column")
 
 
 @strawberry.input(description="Array value functions.")
 class Arrays:
-    alls: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.alls)
-    anys: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.anys)
-    length: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.length)
-    maxs: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.maxs)
-    means: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.means)
-    modes: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.modes)
-    mins: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.mins)
-    sort: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.sort)
-    sums: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.sums)
-    unique: IExpression | None = default_field(func=ibis.expr.types.ArrayValue.unique)
+    alls: Expression | None = default_field(func=ibis.expr.types.ArrayValue.alls)
+    anys: Expression | None = default_field(func=ibis.expr.types.ArrayValue.anys)
+    length: Expression | None = default_field(func=ibis.expr.types.ArrayValue.length)
+    maxs: Expression | None = default_field(func=ibis.expr.types.ArrayValue.maxs)
+    means: Expression | None = default_field(func=ibis.expr.types.ArrayValue.means)
+    modes: Expression | None = default_field(func=ibis.expr.types.ArrayValue.modes)
+    mins: Expression | None = default_field(func=ibis.expr.types.ArrayValue.mins)
+    sort: Expression | None = default_field(func=ibis.expr.types.ArrayValue.sort)
+    sums: Expression | None = default_field(func=ibis.expr.types.ArrayValue.sums)
+    unique: Expression | None = default_field(func=ibis.expr.types.ArrayValue.unique)
 
-    index: list[IExpression] = default_field([], func=ibis.expr.types.ArrayValue.index)
+    index: list[Expression] = default_field([], func=ibis.expr.types.ArrayValue.index)
 
-    slice: IExpression | None = default_field(description="array slice")
-    value: IExpression | None = default_field(description="value at offset")
+    slice: Expression | None = default_field(description="array slice")
+    value: Expression | None = default_field(description="value at offset")
     offset: int = 0
     limit: int | None = None
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
-        for name, (expr, *args) in IExpression.items(self):  # type: ignore
+        for name, (expr, *args) in Expression.items(self):  # type: ignore
             match name:
                 case 'slice':
                     yield expr[self.offset :][: self.limit]
@@ -302,28 +272,28 @@ class Arrays:
 
 @strawberry.input(description="Numeric functions.")
 class Numeric:
-    abs: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.abs)
-    acos: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.acos)
-    asin: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.asin)
-    atan: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.atan)
-    atan2: list[IExpression] = default_field([], func=ibis.expr.types.NumericColumn.atan2)
-    ceil: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.ceil)
-    cos: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cos)
-    exp: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.exp)
-    floor: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.floor)
-    isinf: IExpression | None = default_field(func=ibis.expr.types.FloatingColumn.isinf)
-    isnan: IExpression | None = default_field(func=ibis.expr.types.FloatingColumn.isnan)
-    log: list[IExpression] = default_field([], func=ibis.expr.types.NumericColumn.log)
-    negate: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.negate)
-    round: list[IExpression] = default_field([], func=ibis.expr.types.NumericColumn.round)
-    sign: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.sign)
-    sin: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.sin)
-    sqrt: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.sqrt)
-    tan: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.tan)
+    abs: Expression | None = default_field(func=ibis.expr.types.NumericColumn.abs)
+    acos: Expression | None = default_field(func=ibis.expr.types.NumericColumn.acos)
+    asin: Expression | None = default_field(func=ibis.expr.types.NumericColumn.asin)
+    atan: Expression | None = default_field(func=ibis.expr.types.NumericColumn.atan)
+    atan2: list[Expression] = default_field([], func=ibis.expr.types.NumericColumn.atan2)
+    ceil: Expression | None = default_field(func=ibis.expr.types.NumericColumn.ceil)
+    cos: Expression | None = default_field(func=ibis.expr.types.NumericColumn.cos)
+    exp: Expression | None = default_field(func=ibis.expr.types.NumericColumn.exp)
+    floor: Expression | None = default_field(func=ibis.expr.types.NumericColumn.floor)
+    isinf: Expression | None = default_field(func=ibis.expr.types.FloatingColumn.isinf)
+    isnan: Expression | None = default_field(func=ibis.expr.types.FloatingColumn.isnan)
+    log: list[Expression] = default_field([], func=ibis.expr.types.NumericColumn.log)
+    negate: Expression | None = default_field(func=ibis.expr.types.NumericColumn.negate)
+    round: list[Expression] = default_field([], func=ibis.expr.types.NumericColumn.round)
+    sign: Expression | None = default_field(func=ibis.expr.types.NumericColumn.sign)
+    sin: Expression | None = default_field(func=ibis.expr.types.NumericColumn.sin)
+    sqrt: Expression | None = default_field(func=ibis.expr.types.NumericColumn.sqrt)
+    tan: Expression | None = default_field(func=ibis.expr.types.NumericColumn.tan)
 
-    bucket: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.bucket)
-    cummean: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cummean)
-    cumsum: IExpression | None = default_field(func=ibis.expr.types.NumericColumn.cumsum)
+    bucket: Expression | None = default_field(func=ibis.expr.types.NumericColumn.bucket)
+    cummean: Expression | None = default_field(func=ibis.expr.types.NumericColumn.cummean)
+    cumsum: Expression | None = default_field(func=ibis.expr.types.NumericColumn.cumsum)
 
     buckets: list[JSON] = default_field([])
     closed: str = 'left'
@@ -332,7 +302,7 @@ class Numeric:
     include_over: bool = False
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
-        for name, (expr, *args) in IExpression.items(self):  # type: ignore
+        for name, (expr, *args) in Expression.items(self):  # type: ignore
             match name:
                 case 'bucket':
                     yield expr.bucket(
@@ -348,66 +318,60 @@ class Numeric:
 
 @strawberry.input(description="String functions.")
 class Strings:
-    capitalize: IExpression | None = default_field(func=ibis.expr.types.StringColumn.capitalize)
-    contains: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.contains)
-    endswith: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.endswith)
-    find: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.find)
-    length: IExpression | None = default_field(func=ibis.expr.types.StringColumn.length)
-    lower: IExpression | None = default_field(func=ibis.expr.types.StringColumn.lower)
-    lpad: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.lpad)
-    lstrip: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.lstrip)
-    re_extract: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.re_extract)
-    re_search: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.re_search)
-    re_split: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.re_split)
-    replace: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.replace)
-    reverse: IExpression | None = default_field(func=ibis.expr.types.StringColumn.reverse)
-    rpad: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.rpad)
-    rstrip: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.rstrip)
-    split: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.split)
-    startswith: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.startswith)
-    strip: list[IExpression] = default_field([], func=ibis.expr.types.StringColumn.strip)
-    upper: IExpression | None = default_field(func=ibis.expr.types.StringColumn.upper)
+    capitalize: Expression | None = default_field(func=ibis.expr.types.StringColumn.capitalize)
+    contains: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.contains)
+    endswith: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.endswith)
+    find: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.find)
+    length: Expression | None = default_field(func=ibis.expr.types.StringColumn.length)
+    lower: Expression | None = default_field(func=ibis.expr.types.StringColumn.lower)
+    lpad: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.lpad)
+    lstrip: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.lstrip)
+    re_extract: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.re_extract)
+    re_search: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.re_search)
+    re_split: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.re_split)
+    replace: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.replace)
+    reverse: Expression | None = default_field(func=ibis.expr.types.StringColumn.reverse)
+    rpad: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.rpad)
+    rstrip: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.rstrip)
+    split: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.split)
+    startswith: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.startswith)
+    strip: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.strip)
+    upper: Expression | None = default_field(func=ibis.expr.types.StringColumn.upper)
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
-        for name, (expr, *args) in IExpression.items(self):  # type: ignore
+        for name, (expr, *args) in Expression.items(self):  # type: ignore
             yield getattr(expr, name)(*args)
 
 
 @strawberry.input(description="Temporal functions.")
 class Temporal:
-    date: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.date)
-    day: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.day)
-    day_of_year: IExpression | None = default_field(
-        func=ibis.expr.types.TimestampColumn.day_of_year
-    )
-    delta: list[IExpression] = default_field([], func=ibis.expr.types.TimestampColumn.delta)
-    epoch_seconds: IExpression | None = default_field(
+    date: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.date)
+    day: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.day)
+    day_of_year: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.day_of_year)
+    delta: list[Expression] = default_field([], func=ibis.expr.types.TimestampColumn.delta)
+    epoch_seconds: Expression | None = default_field(
         func=ibis.expr.types.TimestampColumn.epoch_seconds
     )
-    hour: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.hour)
-    microsecond: IExpression | None = default_field(
-        func=ibis.expr.types.TimestampColumn.microsecond
-    )
-    millisecond: IExpression | None = default_field(
-        func=ibis.expr.types.TimestampColumn.millisecond
-    )
-    minute: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.minute)
-    month: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.month)
-    quarter: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.quarter)
-    second: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.second)
-    strftime: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.strftime)
-    time: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.time)
-    truncate: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.truncate)
-    week_of_year: IExpression | None = default_field(
+    hour: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.hour)
+    microsecond: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.microsecond)
+    millisecond: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.millisecond)
+    minute: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.minute)
+    month: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.month)
+    quarter: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.quarter)
+    second: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.second)
+    strftime: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.strftime)
+    time: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.time)
+    truncate: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.truncate)
+    week_of_year: Expression | None = default_field(
         func=ibis.expr.types.TimestampColumn.week_of_year
     )
-    year: IExpression | None = default_field(func=ibis.expr.types.TimestampColumn.year)
+    year: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.year)
 
     format_str: str = ''
     unit: str = ''
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
-        for name, (expr, *args) in IExpression.items(self):  # type: ignore
+        for name, (expr, *args) in Expression.items(self):  # type: ignore
             match name:
                 case 'delta':
                     yield expr.delta(*args, unit=self.unit)
