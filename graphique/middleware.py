@@ -6,13 +6,12 @@ import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
 from keyword import iskeyword
-import ibis
 import strawberry.asgi
 from strawberry import Info, UNSET
 from strawberry.extensions import tracing
 from strawberry.utils.str_converters import to_camel_case
 from .inputs import Filter
-from .interface import Dataset, Source
+from .interface import Dataset, Source, ibis_schema
 from .models import Column, doc_field
 from .scalars import Long, py_type, scalar_map
 
@@ -76,15 +75,14 @@ class GraphQL(strawberry.asgi.GraphQL):
         return cls(strawberry.type(Query)(**root_values), **kwargs)
 
 
+def valid_name(name: str) -> bool:
+    return name.isidentifier() and not iskeyword(name)
+
+
 def implemented(root: Source, name: str = '', keys: Iterable = ()):
     """Return type which extends the Dataset interface with knowledge of the schema."""
-    if isinstance(root, ibis.Table):
-        schema = root.schema()
-        types = {name: py_type(value.to_pyarrow()) for name, value in schema.items()}
-    else:
-        schema = root.schema
-        types = {field.name: py_type(field.type) for field in schema}
-    types = {name: types[name] for name in types if name.isidentifier() and not iskeyword(name)}
+    schema = ibis_schema(root)
+    types = {name: py_type(schema[name]) for name in schema if valid_name(name)}
     if invalid := set(schema.names) - set(types):
         warnings.warn(f'invalid field names: {invalid}')
     prefix = to_camel_case(name.title())

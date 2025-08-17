@@ -1,7 +1,8 @@
+import ibis
 import pyarrow.compute as pc
 import pytest
 from graphique.core import Parquet
-from graphique.scalars import parse_duration, duration_isoformat
+from graphique.scalars import Duration, Long, parse_duration, duration_isoformat, py_type
 
 
 def test_duration():
@@ -20,6 +21,12 @@ def test_duration():
         duration_isoformat(parse_duration('T1H'))
     with pytest.raises(ValueError):
         duration_isoformat(parse_duration('P1H'))
+
+
+def test_types():
+    assert py_type(ibis.expr.datatypes.Int64()) is Long
+    assert py_type(ibis.expr.datatypes.Int32()) is int
+    assert py_type(ibis.expr.datatypes.Interval('s')) is Duration
 
 
 def test_parquet(dataset):

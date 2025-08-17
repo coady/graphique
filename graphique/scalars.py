@@ -5,6 +5,7 @@ GraphQL scalars.
 import functools
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+import ibis
 import isodate
 import pyarrow as pa
 import strawberry
@@ -52,41 +53,34 @@ scalar_map = {
     pa.MonthDayNano: Duration,
 }
 
-type_map = {
-    pa.lib.Type_BOOL: bool,
-    pa.lib.Type_UINT8: int,
-    pa.lib.Type_INT8: int,
-    pa.lib.Type_UINT16: int,
-    pa.lib.Type_INT16: int,
-    pa.lib.Type_UINT32: Long,
-    pa.lib.Type_INT32: int,
-    pa.lib.Type_UINT64: Long,
-    pa.lib.Type_INT64: Long,
-    pa.lib.Type_HALF_FLOAT: float,
-    pa.lib.Type_FLOAT: float,
-    pa.lib.Type_DOUBLE: float,
-    pa.lib.Type_DECIMAL32: Decimal,
-    pa.lib.Type_DECIMAL64: Decimal,
-    pa.lib.Type_DECIMAL128: Decimal,
-    pa.lib.Type_DECIMAL256: Decimal,
-    pa.lib.Type_DATE32: date,
-    pa.lib.Type_DATE64: date,
-    pa.lib.Type_TIMESTAMP: datetime,
-    pa.lib.Type_TIME32: time,
-    pa.lib.Type_TIME64: time,
-    pa.lib.Type_DURATION: timedelta,
-    pa.lib.Type_INTERVAL_MONTH_DAY_NANO: pa.MonthDayNano,
-    pa.lib.Type_BINARY: bytes,
-    pa.lib.Type_FIXED_SIZE_BINARY: bytes,
-    pa.lib.Type_LARGE_BINARY: bytes,
-    pa.lib.Type_STRING: str,
-    pa.lib.Type_LARGE_STRING: str,
-    pa.lib.Type_LIST: list,
-    pa.lib.Type_FIXED_SIZE_LIST: list,
-    pa.lib.Type_LARGE_LIST: list,
-    pa.lib.Type_STRUCT: dict,
-}
 
-
-def py_type(dt: pa.DataType) -> type:
-    return type_map[(dt.value_type if pa.types.is_dictionary(dt) else dt).id]
+def py_type(dt: ibis.DataType) -> type:
+    """Return python scalar type from data type."""
+    match dt:
+        case ibis.expr.datatypes.Boolean():
+            return bool
+        case ibis.expr.datatypes.Int64():
+            return Long
+        case ibis.expr.datatypes.Integer():
+            return int
+        case ibis.expr.datatypes.Floating():
+            return float
+        case ibis.expr.datatypes.Decimal():
+            return Decimal
+        case ibis.expr.datatypes.Date():
+            return date
+        case ibis.expr.datatypes.Timestamp():
+            return datetime
+        case ibis.expr.datatypes.Time():
+            return time
+        case ibis.expr.datatypes.Interval():
+            return Duration
+        case ibis.expr.datatypes.Binary():
+            return bytes
+        case ibis.expr.datatypes.String():
+            return str
+        case ibis.expr.datatypes.Array():
+            return list
+        case ibis.expr.datatypes.Struct():
+            return dict
+    raise TypeError("unknown data type")  # pragma: no cover

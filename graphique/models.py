@@ -74,7 +74,7 @@ class Column:
     @classmethod
     def cast(cls, column: ibis.Column) -> Column:
         """Return typed column based on array type."""
-        return cls.registry[py_type(column.type().to_pyarrow())](column)
+        return cls.registry[py_type(column.type())](column)
 
     @col_field
     def count(self) -> Long:

@@ -44,6 +44,10 @@ class Schema:
     partitioning: list[str] = strawberry.field(description="partition keys")
 
 
+def ibis_schema(root: Source) -> ibis.Schema:
+    return root.schema() if isinstance(root, ibis.Table) else ibis.Schema.from_pyarrow(root.schema)
+
+
 @strawberry.interface(description="an arrow dataset or ibis table")
 class Dataset:
     def __init__(self, source: Source):
@@ -120,9 +124,8 @@ class Dataset:
     @doc_field
     def schema(self) -> Schema:
         """dataset schema"""
-        source = self.source
-        schema = source.schema() if isinstance(source, ibis.Table) else source.schema
-        partitioning = Parquet.schema(source).names
+        schema = ibis_schema(self.source)
+        partitioning = Parquet.schema(self.source).names
         return Schema(names=schema.names, types=schema.types, partitioning=partitioning)  # type: ignore
 
     @doc_field

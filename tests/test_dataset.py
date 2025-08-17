@@ -65,7 +65,7 @@ def test_fragments(dsclient):
 def test_schema(dsclient):
     schema = dsclient.execute('{ schema { names types partitioning } }')['schema']
     assert len(schema['names']) == 8
-    assert set(schema['types']) == {'double', 'int32', 'string'}
+    assert set(schema['types']) == {'float64', 'int32', 'string'}
     assert schema['partitioning'] == ['north', 'west']
     data = dsclient.execute('{ type }')
     assert data['type'].endswith('Dataset')
