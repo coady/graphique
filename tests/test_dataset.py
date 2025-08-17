@@ -55,7 +55,7 @@ def test_fragments(dsclient):
         """{ group(by: ["north", "west"], aggregate: {collect: {name: "city", distinct: true}, mean: {name: "zipcode"}}) {
         count column(name: "city") { type } } }"""
     )
-    assert data == {'group': {'count': 4, 'column': {'type': 'list<l: string>'}}}
+    assert data == {'group': {'count': 4, 'column': {'type': 'array<string>'}}}
     data = dsclient.execute(
         '{ group(by: "north", counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
     )

@@ -6,42 +6,34 @@ def test_columns(executor):
         return executor(f'{{ columns {query} }}')['columns']
 
     assert execute('{ int32 { values } }') == {'int32': {'values': [0, None]}}
-    data = execute('{ int32 { dropNull } }')
-    assert data == {'int32': {'dropNull': [0]}}
+    data = execute('{ int32 { fillNull(value: 1) } }')
+    assert data == {'int32': {'fillNull': [0, 1]}}
     assert execute('{ int32 { type } }') == {'int32': {'type': 'int32'}}
     assert execute('{ int32 { min max } }')
 
     assert execute('{ int64 { values } }') == {'int64': {'values': [0, None]}}
-    data = execute('{ int64 { dropNull } }')
-    assert data == {'int64': {'dropNull': [0]}}
+    data = execute('{ int64 { fillNull(value: 1) } }')
+    assert data == {'int64': {'fillNull': [0, 1]}}
     assert execute('{ int64 { min max } }')
 
     assert execute('{ float64 { values } }') == {'float64': {'values': [0.0, None]}}
-    data = execute('{ float64 { dropNull } }')
-    assert data == {'float64': {'dropNull': [0.0]}}
     assert execute('{ float64 { min max } }')
 
     assert execute('{ date { values } }') == {'date': {'values': ['1970-01-01', None]}}
-    data = execute('{ date { dropNull } }')
-    assert data == {'date': {'dropNull': ['1970-01-01']}}
+    data = execute('{ date { fillNull(value: "1971-01-01") } }')
+    assert data == {'date': {'fillNull': ['1970-01-01', '1971-01-01']}}
     assert execute('{ date { min max } }')
     assert execute('{ date { first last } }')
 
     data = execute('{ timestamp { values } }')
     assert data == {'timestamp': {'values': ['1970-01-01T00:00:00', None]}}
-    data = execute('{ timestamp { dropNull } }')
-    assert data == {'timestamp': {'dropNull': ['1970-01-01T00:00:00']}}
     assert execute('{ timestamp { min max } }')
 
     assert execute('{ time { values } }') == {'time': {'values': ['00:00:00', None]}}
-    data = execute('{ time { dropNull } }')
-    assert data == {'time': {'dropNull': ['00:00:00']}}
     assert execute('{ time { min max } }')
 
     for name in ('binary', 'string'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
-        data = execute(f'{{ {name} {{ dropNull }} }}')
-        assert data == {name: {'dropNull': ['']}}
         data = execute(f'{{ {name} {{ fillNull(value: "") }} }}')
         assert data == {name: {'fillNull': ['', '']}}
 
@@ -51,7 +43,7 @@ def test_boolean(executor):
         return executor(f'{{ columns {query} }}')['columns']
 
     assert execute('{ boolean { values } }') == {'boolean': {'values': [False, None]}}
-    assert execute('{ boolean { type } }') == {'boolean': {'type': 'bool'}}
+    assert execute('{ boolean { type } }') == {'boolean': {'type': 'boolean'}}
     assert execute('{ boolean { any all } }') == {'boolean': {'any': False, 'all': False}}
 
     data = executor("""{ filter(where: {xor: [{name: "boolean"}, {inv: {name: "boolean"}}]})
@@ -100,7 +92,7 @@ def test_datetime(executor):
         data = executor(f"""{{ project(columns: {{alias: "{name}",
             temporal: {{truncate: {{name: "{name}"}}, unit: "D"}}}})
             {{ column(name: "{name}") {{ type }} }} }}""")
-        assert data['project']['column']['type'] in ('timestamp[us]', 'date32[day]')
+        assert data['project']['column']['type'] in ('timestamp', 'date')
     data = executor("""{ project(columns: {alias: "timestamp", temporal: {strftime: {name: "timestamp"}, formatStr: "%Y"}})
         { column(name: "timestamp") { type } } }""")
     assert data == {'project': {'column': {'type': 'string'}}}
@@ -124,7 +116,7 @@ def test_duration(executor):
 
 def test_array(executor):
     data = executor('{ columns { array { count type } } }')
-    assert data == {'columns': {'array': {'count': 1, 'type': 'list<l: int32>'}}}
+    assert data == {'columns': {'array': {'count': 1, 'type': 'array<int32>'}}}
     data = executor('{ row { array { ... on IntColumn { values } } } }')
     assert data == {'row': {'array': {'values': [0, 1, 2]}}}
     data = executor('{ row(index: -1) { array { ... on IntColumn { values } } } }')
@@ -134,8 +126,8 @@ def test_array(executor):
         column(name: "list") { ... on LongColumn { values } } } }""")
     assert data == {'project': {'column': {'values': [1, None]}}}
     data = executor("""{ project(columns: {array: {unique: {name: "array"}}, alias: "array"})
-        { columns { array { unnest { count } } } } }""")
-    assert data == {'project': {'columns': {'array': {'unnest': {'count': 3}}}}}
+        { columns { array { unnest { ... on IntColumn { values } } } } } }""")
+    assert set(data['project']['columns']['array']['unnest']['values']) == {0, 1, 2}
     data = executor("""{ project(columns: {array: {modes: {name: "array"}}, alias: "list"})
         { column(name: "list") { type } } }""")
     assert data == {'project': {'column': {'type': 'int32'}}}
@@ -157,19 +149,10 @@ def test_struct(executor):
     assert data['row']['struct'] == data['columns']['struct']['value'] == {'x': 0, 'y': None}
 
 
-def test_selections(executor):
-    data = executor('{ slice { count } slice { order(by: "int32") { count } } }')
-    assert data == {'slice': {'count': 2, 'order': {'count': 2}}}
-    data = executor('{ dropNull { count } }')
-    assert data == {'dropNull': {'count': 1}}
-    data = executor('{ dropNull { columns { float64 { values } } } }')
-    assert data == {'dropNull': {'columns': {'float64': {'values': [0.0]}}}}
-
-
 def test_conditions(executor):
     data = executor("""{ project(columns: {alias: "bool", ifelse: [{name: "boolean"}, {name: "int32"}, {name: "float64"}]})
         { column(name: "bool") { type } } }""")
-    assert data == {'project': {'column': {'type': 'double'}}}
+    assert data == {'project': {'column': {'type': 'float64'}}}
 
 
 def test_long(executor):

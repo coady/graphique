@@ -10,8 +10,6 @@ def test_slice(client):
     assert len(zipcodes) == 41699
     data = client.execute('{ columns { zipcode { count } } }')
     assert data['columns']['zipcode']['count'] == 41700
-    data = client.execute('{ columns { zipcode { count(mode: "only_null") } } }')
-    assert data['columns']['zipcode']['count'] == 0
     data = client.execute('{ take(indices: [0]) { row { zipcode } } }')
     assert data == {'take': {'row': {'zipcode': 501}}}
     data = client.execute('{ any many: any(limit: 50000)}')
@@ -102,10 +100,10 @@ def test_strings(client):
 def test_string_methods(client):
     data = client.execute("""{ project(columns: {alias: "split", string: {reSplit: [{name: "city"}, {value: "-"}]}})
         { column(name: "split") { type } } }""")
-    assert data == {'project': {'column': {'type': 'list<l: string>'}}}
+    assert data == {'project': {'column': {'type': 'array<string>'}}}
     data = client.execute("""{ project(columns: {alias: "split", string: {split: [{name: "city"}, {value: " "}]}})
         { column(name: "split") { type } } }""")
-    assert data == {'project': {'column': {'type': 'list<l: string>'}}}
+    assert data == {'project': {'column': {'type': 'array<string>'}}}
     data = client.execute("""{ project(columns: {alias: "state", string: {lstrip: {name: "state"}}})
         { count } }""")
     assert data == {'project': {'count': 41700}}
@@ -177,7 +175,7 @@ def test_where(client):
     assert data['project']['filter']['count'] == 0
     data = client.execute("""{ project(columns: {alias: "zipcode", cast: {name: "zipcode"}, targetType: "float"})
         { column(name: "zipcode") { type } } }""")
-    assert data['project']['column']['type'] == 'double'
+    assert data['project']['column']['type'] == 'float64'
     data = client.execute("""{ filter(where: {inv: {eq: [{name: "state"}, {value: "CA"}]}})
         { count } }""")
     assert data == {'filter': {'count': 39053}}

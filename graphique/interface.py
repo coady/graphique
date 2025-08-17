@@ -277,9 +277,9 @@ class Dataset:
         return type(self)(ibis.memtable(table))
 
     @doc_field
-    def drop_null(self, info: Info) -> Self:
-        """Remove missing values from referenced columns in the table."""
-        return self.resolve(info, self.table.drop_null())
+    def drop_null(self, info: Info, subset: list[str] | None = None, how: str = 'any') -> Self:
+        """Remove rows with null values from the table."""
+        return self.resolve(info, self.table.drop_null(subset, how=how))
 
     @doc_field
     def project(self, info: Info, columns: list[Projection]) -> Self:

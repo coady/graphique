@@ -49,6 +49,12 @@ def compute_field(func: Callable):
     return strawberry.field(func, description=doc.splitlines()[0])  # type: ignore
 
 
+def col_field(func: Callable):
+    """Wrap `Column` method with its description."""
+    doc = inspect.getdoc(getattr(ibis.Column, func.__name__))
+    return strawberry.field(func, description=doc.splitlines()[0])  # type: ignore
+
+
 @strawberry.interface(description="an arrow array")
 class Column:
     registry = {}  # type: ignore
@@ -74,16 +80,16 @@ class Column:
 
     @strawberry.field(description=links.type)
     def type(self) -> str:
-        return str(self.array.type)
+        return str(self.column.type())
 
     @classmethod
     def cast(cls, column: ibis.Column) -> Column:
         """Return typed column based on array type."""
         return cls.registry[py_type(column.type().to_pyarrow())](column)
 
-    @compute_field
-    def count(self, mode: str = 'only_valid') -> Long:
-        return pc.count(self.array, mode=mode).as_py()
+    @col_field
+    def count(self) -> Long:
+        return self.column.count().to_pyarrow().as_py()
 
     @classmethod
     def resolve_type(cls, obj, info, *_) -> str:
@@ -125,9 +131,9 @@ class NominalColumn(Generic[T], Column):
         """scalar value at index"""
         return self.array[index].as_py()
 
-    @compute_field
-    def drop_null(self) -> list[T]:
-        return self.array.drop_null().to_pylist()
+    @col_field
+    def fill_null(self, value: T) -> list[T]:
+        return self.column.fill_null(value).to_list()
 
 
 @Column.register(date, datetime, time, bytes)
@@ -148,10 +154,6 @@ class OrdinalColumn(NominalColumn[T]):
     @compute_field
     def max(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.max(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
-
-    @compute_field
-    def fill_null(self, value: T) -> list[T]:
-        return self.array.fill_null(value).to_pylist()
 
 
 @Column.register(str)
