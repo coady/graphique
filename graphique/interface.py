@@ -17,7 +17,7 @@ from .core import Parquet, order_key
 from .inputs import Aggregates, Filter, Expression, Projection
 from .models import Column, doc_field, links, selections
 from .core import getitems
-from .scalars import Long
+from .scalars import BigInt
 
 Source: TypeAlias = ds.Dataset | ibis.Table
 
@@ -137,14 +137,14 @@ class Dataset:
         return self.resolve(info, self.source)
 
     @doc_field
-    def count(self) -> Long:
+    def count(self) -> BigInt:
         """number of rows"""
         if isinstance(self.source, ibis.Table):
             return self.source.count().to_pyarrow().as_py()
         return self.source.count_rows()
 
     @doc_field
-    def any(self, info: Info, limit: Long = 1) -> bool:
+    def any(self, info: Info, limit: BigInt = 1) -> bool:
         """Return whether there are at least `limit` rows.
 
         May be significantly faster than `count` for out-of-core data.
@@ -173,7 +173,7 @@ class Dataset:
         offset="number of rows to skip; negative value skips from the end",
         limit="maximum number of rows to return",
     )
-    def slice(self, info: Info, offset: Long = 0, limit: Long | None = None) -> Self:
+    def slice(self, info: Info, offset: BigInt = 0, limit: BigInt | None = None) -> Self:
         """Return zero-copy slice of table."""
         return self.resolve(info, self.table[offset:][:limit])
 
@@ -212,7 +212,7 @@ class Dataset:
         dense="use dense rank with `limit`",
     )
     def order(
-        self, info: Info, by: list[str], limit: Long | None = None, dense: bool = False
+        self, info: Info, by: list[str], limit: BigInt | None = None, dense: bool = False
     ) -> Self:
         """Return table sorted by specified columns."""
         keys = Parquet.keys(self.source, *by)
@@ -269,7 +269,7 @@ class Dataset:
         )
 
     @doc_field
-    def take(self, info: Info, indices: list[Long]) -> Self:
+    def take(self, info: Info, indices: list[BigInt]) -> Self:
         """Select rows from indices."""
         names = self.references(info)
         if isinstance(self.source, ds.Dataset):

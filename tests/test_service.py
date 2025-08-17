@@ -204,7 +204,7 @@ def test_project(client):
         columns { state { last } } } }""")
     assert data == {'project': {'columns': {'state': {'last': "AK"}}}}
     data = client.execute("""{ project(columns: {alias: "idx", denseRank: {name: "state"}}) {
-        column(name: "idx") { ... on LongColumn { min max } } } }""")
+        column(name: "idx") { ... on BigIntColumn { min max } } } }""")
     assert data == {'project': {'column': {'min': 0, 'max': 51}}}
 
 
@@ -245,7 +245,7 @@ def test_group(client):
         client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
             row { city } } }""")
     data = client.execute("""{ group(by: [], counts: "c", aggregate: {max: {alias: "z", name: "zipcode"}}) {
-        c: column(name: "c") { ... on LongColumn { values } }
+        c: column(name: "c") { ... on BigIntColumn { values } }
         z: column(name: "z") { ... on IntColumn { values } } } }""")
     assert data == {'group': {'c': {'values': [41700]}, 'z': {'values': [99950]}}}
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "county", distinct: true}}) {
@@ -267,7 +267,7 @@ def test_unnest(client):
     assert data == {'group': {'unnest': {'column': {'type': 'int64'}}}}
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
          unnest(name: "city", rowNumber: "idx") { column(name: "idx") { 
-        ... on LongColumn { values } } } } }""")
+        ... on BigIntColumn { values } } } } }""")
     assert set(data['group']['unnest']['column']['values']) == set(range(52))
 
 

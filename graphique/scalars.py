@@ -11,10 +11,10 @@ import pyarrow as pa
 import strawberry
 
 
-def parse_long(value) -> int:
+def parse_bigint(value) -> int:
     if isinstance(value, int):
         return value
-    raise TypeError(f"Long cannot represent value: {value}")
+    raise TypeError(f"BigInt cannot represent value: {value}")
 
 
 def parse_duration(value):
@@ -37,7 +37,7 @@ def _(mdn: pa.MonthDayNano) -> str:
     return value if mdn.months else value.replace('P', 'P0M')
 
 
-Long = strawberry.scalar(int, name='Long', description="64-bit int", parse_value=parse_long)
+BigInt = strawberry.scalar(int, name='BigInt', description="64-bit int", parse_value=parse_bigint)
 Duration = strawberry.scalar(
     timedelta | pa.MonthDayNano,
     name='Duration',
@@ -60,7 +60,7 @@ def py_type(dt: ibis.DataType) -> type:
         case ibis.expr.datatypes.Boolean():
             return bool
         case ibis.expr.datatypes.Int64():
-            return Long
+            return BigInt
         case ibis.expr.datatypes.Integer():
             return int
         case ibis.expr.datatypes.Floating():

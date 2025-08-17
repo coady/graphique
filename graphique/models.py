@@ -15,7 +15,7 @@ import strawberry
 from strawberry import Info
 from strawberry.types.field import StrawberryField
 from .core import getitems
-from .scalars import Long, py_type, scalar_map
+from .scalars import BigInt, py_type, scalar_map
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
@@ -77,7 +77,7 @@ class Column:
         return cls.registry[py_type(column.type())](column)
 
     @col_field
-    def count(self) -> Long:
+    def count(self) -> BigInt:
         return self.column.count().to_pyarrow().as_py()
 
     @classmethod
@@ -96,7 +96,7 @@ class Set(Generic[T]):
             self.nunique = self.table[0].count()
 
     @doc_field
-    def count(self) -> Long:
+    def count(self) -> BigInt:
         """number of unique values"""
         return self.nunique.to_pyarrow().as_py()
 
@@ -106,7 +106,7 @@ class Set(Generic[T]):
         return self.table[0].to_list()
 
     @doc_field
-    def counts(self) -> list[Long]:
+    def counts(self) -> list[BigInt]:
         """corresponding counts"""
         return self.table[1].to_list()
 
@@ -190,7 +190,7 @@ class BooleanColumn(NumericColumn[T]):
         return self.column.all().to_pyarrow().as_py()
 
 
-@Column.register(int, Long)
+@Column.register(int, BigInt)
 @strawberry.type(name='Column')
 class IntColumn(NumericColumn[T]):
     @doc_field
@@ -206,12 +206,12 @@ class IntColumn(NumericColumn[T]):
 @strawberry.type
 class ArrayColumn(Column):
     @doc_field
-    def length(self, index: Long = 0) -> IntColumn[int]:
+    def length(self, index: BigInt = 0) -> IntColumn[int]:
         """the lengths of the arrays"""
         return self.cast(self.column.length())  # type: ignore
 
     @doc_field
-    def values(self, index: Long = 0) -> Column:
+    def values(self, index: BigInt = 0) -> Column:
         """values at index"""
         return self.cast(self.column[index])
 

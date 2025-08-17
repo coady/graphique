@@ -108,7 +108,7 @@ def test_duration(executor):
     assert "interval('s')" in data['project']['schema']['types']
     data = executor("""{ project(columns: {alias: "diff", temporal:
         {delta: [{name: "timestamp"}, {name: "timestamp"}], unit: "day"}})
-        { column(name: "diff") { ... on LongColumn { values } } } }""")
+        { column(name: "diff") { ... on BigIntColumn { values } } } }""")
     assert data == {'project': {'column': {'values': [0, None]}}}
 
 
@@ -121,7 +121,7 @@ def test_array(executor):
     assert data == {'row': {'array': {'values': []}}}
 
     data = executor("""{ project(columns: {array: {index: [{name: "array"}, {value: 1}]}, alias: "list"}) {
-        column(name: "list") { ... on LongColumn { values } } } }""")
+        column(name: "list") { ... on BigIntColumn { values } } } }""")
     assert data == {'project': {'column': {'values': [1, None]}}}
     data = executor("""{ project(columns: {array: {unique: {name: "array"}}, alias: "array"})
         { columns { array { unnest { ... on IntColumn { values } } } } } }""")
@@ -153,8 +153,8 @@ def test_conditions(executor):
     assert data == {'project': {'column': {'type': 'float64'}}}
 
 
-def test_long(executor):
-    with pytest.raises(ValueError, match="Long cannot represent value"):
+def test_bigint(executor):
+    with pytest.raises(ValueError, match="BigInt cannot represent value"):
         executor('{ filter(int64: {eq: 0.0}) { length } }')
 
 

@@ -33,7 +33,7 @@ def test_fragments(dsclient):
     assert data == {'filter': {'count': 20850}}
     data = dsclient.execute('{ group(by: ["north", "west"]) { columns { north { values } } } }')
     data = dsclient.execute(
-        '{ group(by: ["north", "west"], counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
+        '{ group(by: ["north", "west"], counts: "c") { column(name: "c") { ... on BigIntColumn { values } } } }'
     )
     assert data == {'group': {'column': {'values': [9301, 11549, 11549, 9301]}}}
     data = dsclient.execute('{ order(by: "north", limit: 1, dense: true) { row { north } } }')
@@ -57,7 +57,7 @@ def test_fragments(dsclient):
     )
     assert data == {'group': {'count': 4, 'column': {'type': 'array<string>'}}}
     data = dsclient.execute(
-        '{ group(by: "north", counts: "c") { column(name: "c") { ... on LongColumn { values } } } }'
+        '{ group(by: "north", counts: "c") { column(name: "c") { ... on BigIntColumn { values } } } }'
     )
     assert data == {'group': {'column': {'values': [20850, 20850]}}}
 

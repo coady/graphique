@@ -13,7 +13,7 @@ from strawberry.utils.str_converters import to_camel_case
 from .inputs import Filter
 from .interface import Dataset, Source, ibis_schema
 from .models import Column, doc_field
-from .scalars import Long, py_type, scalar_map
+from .scalars import BigInt, py_type, scalar_map
 
 
 class MetricsExtension(tracing.ApolloTracingExtension):
@@ -105,7 +105,7 @@ def implemented(root: Source, name: str = '', keys: Iterable = ()):
             """fields for each column"""
             return Columns(**super().columns(info))
 
-        def row(self, info: Info, index: Long = 0) -> Row | None:  # type: ignore
+        def row(self, info: Info, index: BigInt = 0) -> Row | None:  # type: ignore
             """Return scalar values at index."""
             row = super().row(info, index)
             for name, value in row.items():
