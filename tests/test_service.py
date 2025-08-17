@@ -41,9 +41,8 @@ def test_floats(client):
     longitudes = data['columns']['longitude']
     assert longitudes['min'] == pytest.approx(-174.21333)
     assert longitudes['max'] == pytest.approx(-65.301389)
-    data = client.execute('{ columns { latitude { quantile(q: [0.5]) } } }')
-    (quantile,) = data['columns']['latitude']['quantile']
-    assert quantile == pytest.approx(39.12054)
+    data = client.execute('{ columns { latitude { quantile(q: 0.5) } } }')
+    assert data == {'columns': {'latitude': {'quantile': pytest.approx(39.12054)}}}
     data = client.execute(
         """{project(columns: {alias: "l", numeric: {bucket: {name: "latitude"}, buckets: [40, 50]}}) {
         column(name: "l") { ... on IntColumn { unique { values } } } } }"""

@@ -11,7 +11,6 @@ from decimal import Decimal
 from typing import Annotated, Generic, TypeVar, TYPE_CHECKING, get_args
 import ibis
 import pyarrow as pa
-import pyarrow.compute as pc
 import strawberry
 from strawberry import Info
 from strawberry.types.field import StrawberryField
@@ -43,28 +42,18 @@ def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
     return strawberry.field(func, description=inspect.getdoc(func))
 
 
-def compute_field(func: Callable):
-    """Wrap compute function with its description."""
-    doc = inspect.getdoc(getattr(pc, func.__name__))
-    return strawberry.field(func, description=doc.splitlines()[0])  # type: ignore
-
-
 def col_field(func: Callable):
     """Wrap `Column` method with its description."""
-    doc = inspect.getdoc(getattr(ibis.Column, func.__name__))
+    doc = inspect.getdoc(getattr(ibis.expr.types.BooleanColumn, func.__name__))
     return strawberry.field(func, description=doc.splitlines()[0])  # type: ignore
 
 
-@strawberry.interface(description="an arrow array")
+@strawberry.interface(description="ibis column interface")
 class Column:
     registry = {}  # type: ignore
 
     def __init__(self, column: ibis.Column):
         self.column = column
-
-    @property
-    def array(self):
-        return self.column.to_pyarrow()
 
     def __init_subclass__(cls):
         cls.__init__ = cls.__init__
@@ -122,9 +111,9 @@ class Set(Generic[T]):
         return self.table[1].to_list()
 
 
-@Column.register(timedelta, pa.MonthDayNano)
-@strawberry.type(name='Column', description="column of elapsed times")
-class NominalColumn(Generic[T], Column):
+@Column.register(timedelta, pa.MonthDayNano, date, datetime, time, bytes)
+@strawberry.type(name='Column')
+class GenericColumn(Generic[T], Column):
     @doc_field
     def values(self) -> list[T | None]:
         """list of values"""
@@ -151,85 +140,70 @@ class NominalColumn(Generic[T], Column):
     def mode(self) -> T | None:
         return self.column.mode().to_pyarrow().as_py()
 
+    @col_field
+    def min(self) -> T | None:
+        return self.column.min().to_pyarrow().as_py()
 
-@Column.register(date, datetime, time, bytes)
-@strawberry.type(name='Column', description="column of ordinal values")
-class OrdinalColumn(NominalColumn[T]):
-    @compute_field
-    def min(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
-        return pc.min(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
-
-    @compute_field
-    def max(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
-        return pc.max(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
+    @col_field
+    def max(self) -> T | None:
+        return self.column.max().to_pyarrow().as_py()
 
 
 @Column.register(str)
-@strawberry.type(name='ingColumn', description="column of strings")
-class StringColumn(OrdinalColumn[T]): ...
-
-
-@strawberry.type
-class IntervalColumn(OrdinalColumn[T]):
-    @compute_field
-    def sum(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
-        return pc.sum(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
-
-    @compute_field
-    def mean(self, skip_nulls: bool = True, min_count: int = 0) -> float | None:
-        return pc.mean(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
+@strawberry.type(name='ingColumn')
+class StringColumn(GenericColumn[T]): ...
 
 
 @Column.register(float, Decimal)
-@strawberry.type(name='Column', description="column of floats or decimals")
-class RatioColumn(IntervalColumn[T]):
-    @compute_field
-    def stddev(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> float | None:
-        return pc.stddev(self.array, ddof=ddof, skip_nulls=skip_nulls, min_count=min_count).as_py()
+@strawberry.type
+class NumericColumn(GenericColumn[T]):
+    @col_field
+    def sum(self) -> T | None:
+        return self.column.sum().to_pyarrow().as_py()
 
-    @compute_field
-    def variance(self, ddof: int = 0, skip_nulls: bool = True, min_count: int = 0) -> float | None:
-        options = {'skip_nulls': skip_nulls, 'min_count': min_count}
-        return pc.variance(self.array, ddof=ddof, **options).as_py()
+    @col_field
+    def mean(self) -> float | None:
+        return self.column.mean().to_pyarrow().as_py()
 
-    @compute_field
-    def quantile(
-        self,
-        q: list[float] = [0.5],
-        interpolation: str = 'linear',
-        skip_nulls: bool = True,
-        min_count: int = 0,
-    ) -> list[float | None]:
-        options = {'skip_nulls': skip_nulls, 'min_count': min_count}
-        return pc.quantile(self.array, q=q, interpolation=interpolation, **options).to_pylist()
+    @col_field
+    def std(self, how: str = 'sample') -> float | None:
+        return self.column.std(how=how).to_pyarrow().as_py()
+
+    @col_field
+    def var(self, how: str = 'sample') -> float | None:
+        return self.column.var(how=how).to_pyarrow().as_py()
+
+    @col_field
+    def quantile(self, q: float = 0.5) -> float | None:
+        return self.column.quantile(q).to_pyarrow().as_py()
 
 
 @Column.register(bool)
-@strawberry.type(name='eanColumn', description="column of booleans")
-class BooleanColumn(IntervalColumn[T]):
-    @compute_field
-    def any(self, skip_nulls: bool = True, min_count: int = 1) -> bool | None:
-        return pc.any(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
+@strawberry.type(name='eanColumn')
+class BooleanColumn(NumericColumn[T]):
+    @col_field
+    def any(self) -> bool | None:
+        return self.column.any().to_pyarrow().as_py()
 
-    @compute_field
-    def all(self, skip_nulls: bool = True, min_count: int = 1) -> bool | None:
-        return pc.all(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
+    @col_field
+    def all(self) -> bool | None:
+        return self.column.all().to_pyarrow().as_py()
 
 
 @Column.register(int, Long)
-@strawberry.type(name='Column', description="column of integers")
-class IntColumn(RatioColumn[T]):
+@strawberry.type(name='Column')
+class IntColumn(NumericColumn[T]):
     @doc_field
     def take_from(
         self, info: Info, field: str
     ) -> Annotated['Dataset', strawberry.lazy('.interface')] | None:
         """Select indices from a table on the root Query type."""
         root = getattr(info.root_value, field)
-        return root.take(info, self.array.combine_chunks())
+        return root.take(info, self.column.to_list())
 
 
 @Column.register(list)
-@strawberry.type(description="column of lists")
+@strawberry.type
 class ListColumn(Column):
     @doc_field
     def length(self, index: Long = 0) -> IntColumn[int]:
@@ -248,17 +222,12 @@ class ListColumn(Column):
 
 
 @Column.register(dict)
-@strawberry.type(description="column of structs")
-class StructColumn(Column):
-    @doc_field
-    def value(self, index: Long = 0) -> dict | None:
-        """scalar json object at index"""
-        return self.array[index].as_py()
-
+@strawberry.type(name='Column')
+class StructColumn(GenericColumn[T]):
     @doc_field
     def names(self) -> list[str]:
         """field names"""
-        return [field.name for field in self.array.type]
+        return self.column.names
 
     @doc_field(name="field name(s); multiple names access nested fields")
     def column(self, name: list[str]) -> Column | None:

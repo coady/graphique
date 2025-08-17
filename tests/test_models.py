@@ -61,12 +61,12 @@ def test_decimal(executor):
 
 def test_numeric(executor):
     for name in ('int32', 'int64', 'float64'):
-        data = executor(f'{{ columns {{ {name} {{ mean stddev variance }} }} }}')
-        assert data == {'columns': {name: {'mean': 0.0, 'stddev': 0.0, 'variance': 0.0}}}
+        data = executor(f'{{ columns {{ {name} {{ mean std var }} }} }}')
+        assert data == {'columns': {name: {'mean': 0.0, 'std': None, 'var': None}}}
         data = executor(f'{{ columns {{ {name} {{ mode }} }} }}')
         assert data == {'columns': {name: {'mode': 0}}}
         data = executor(f'{{ columns {{ {name} {{ quantile }} }} }}')
-        assert data == {'columns': {name: {'quantile': [0.0]}}}
+        assert data == {'columns': {name: {'quantile': 0.0}}}
 
     data = executor('{ column(name: "float64", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
@@ -143,8 +143,8 @@ def test_struct(executor):
     assert data == {'project': {'column': {'values': [0, None]}}}
     data = executor('{ column(name: ["struct", "x"]) { type } }')
     assert data == {'column': {'type': 'int32'}}
-    data = executor('{ row { struct } columns { struct { value } } }')
-    assert data['row']['struct'] == data['columns']['struct']['value'] == {'x': 0, 'y': None}
+    data = executor('{ row { struct } columns { struct { first } } }')
+    assert data['row']['struct'] == data['columns']['struct']['first'] == {'x': 0, 'y': None}
 
 
 def test_conditions(executor):
