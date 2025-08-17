@@ -250,7 +250,7 @@ def test_group(client):
     assert data == {'group': {'c': {'values': [41700]}, 'z': {'values': [99950]}}}
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "county", distinct: true}}) {
         columns { state { values } }
-        c: column(name: "county") { ... on ListColumn { length { min } } } } }""")
+        c: column(name: "county") { ... on ArrayColumn { length { min } } } } }""")
     assert len(data['group']['columns']['state']['values']) == 52
     assert data['group']['c'] == {'length': {'min': 1}}
     data = client.execute("""{ group(by: ["state"], rowNumber: "idx", aggregate: {min: {name: "county"}}) { 

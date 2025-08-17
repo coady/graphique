@@ -204,7 +204,7 @@ class IntColumn(NumericColumn[T]):
 
 @Column.register(list)
 @strawberry.type
-class ListColumn(Column):
+class ArrayColumn(Column):
     @doc_field
     def length(self, index: Long = 0) -> IntColumn[int]:
         """the lengths of the arrays"""

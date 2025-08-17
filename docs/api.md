@@ -54,8 +54,8 @@ Partitioned datasets use fragment keys when possible.
 ## Column selection
 Each field resolver transforms a table or array as needed. When working with an embedded library like [pandas](https://pandas.pydata.org), it's common to select a working set of columns for efficiency. Whereas GraphQL has the advantage of knowing the entire query up front, so there is no `select` field because it's done automatically at every level of resolvers.
 
-## List Arrays
-Arrow ListArrays are supported as ListColumns. `group: {aggregate: {list: ...}}` leverages that feature to transform columns into ListColumns, which can be accessed via inline fragments and further aggregated. Though `group` hash aggregate functions are more efficient than creating lists.
+## Arrays
+Ibis [Array columns](https://ibis-project.org/reference/expression-collections#ibis.expr.types.arrays.ArrayValue) are supported. `unnest` flattens arrays back to scalars, and `group: {aggregate: {collect: ...}}` also creates arrays.
 
 ## Nulls
 GraphQL continues the long tradition of confusing ["optional" with "nullable"](https://github.com/graphql/graphql-spec/issues/872). Graphique strives to be explicit regarding what may be omitted versus what may be null.
