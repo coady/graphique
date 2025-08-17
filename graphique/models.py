@@ -100,53 +100,61 @@ class Column:
 
 @strawberry.type(description="unique values and counts")
 class Set(Generic[T]):
-    counts: list[Long] = strawberry.field(description="list of counts")
+    def __init__(self, column, cache=False):
+        self.table, self.nunique = column.value_counts(), column.nunique()
+        if cache:
+            self.table = self.table.cache()
+            self.nunique = self.table[0].count()
 
-    def __init__(self, array, counts=pa.array([])):
-        self.array, self.counts = array, counts.to_pylist()
+    @doc_field
+    def count(self) -> Long:
+        """number of unique values"""
+        return self.nunique.to_pyarrow().as_py()
 
     @doc_field
     def values(self) -> list[T | None]:
-        """list of values"""
-        return self.array.to_pylist()
+        """unique values"""
+        return self.table[0].to_list()
+
+    @doc_field
+    def counts(self) -> list[Long]:
+        """corresponding counts"""
+        return self.table[1].to_list()
 
 
 @Column.register(timedelta, pa.MonthDayNano)
 @strawberry.type(name='Column', description="column of elapsed times")
 class NominalColumn(Generic[T], Column):
-    values = doc_field(Set.values)
-
-    @compute_field
-    def count_distinct(self, mode: str = 'only_valid') -> Long:
-        return pc.count_distinct(self.array, mode=mode).as_py()
-
-    @strawberry.field(description=Set.__strawberry_definition__.description)  # type: ignore
-    def unique(self, info: Info) -> Set[T]:
-        if 'counts' in selections(*info.selected_fields):
-            return Set(*self.array.value_counts().flatten())
-        return Set(self.array.unique())
+    @doc_field
+    def values(self) -> list[T | None]:
+        """list of values"""
+        return self.column.to_list()
 
     @doc_field
-    def value(self, index: Long = 0) -> T | None:
-        """scalar value at index"""
-        return self.array[index].as_py()
+    def unique(self, info: Info) -> Set[T]:
+        "unique values and counts"
+        return Set(self.column, cache=selections(*info.selected_fields) != {'count'})
+
+    @col_field
+    def first(self) -> T | None:
+        return self.column.first().to_pyarrow().as_py()
+
+    @col_field
+    def last(self) -> T | None:
+        return self.column.last().to_pyarrow().as_py()
 
     @col_field
     def fill_null(self, value: T) -> list[T]:
         return self.column.fill_null(value).to_list()
 
+    @col_field
+    def mode(self) -> T | None:
+        return self.column.mode().to_pyarrow().as_py()
+
 
 @Column.register(date, datetime, time, bytes)
 @strawberry.type(name='Column', description="column of ordinal values")
 class OrdinalColumn(NominalColumn[T]):
-    @compute_field
-    def first(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
-        return pc.first(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
-
-    @compute_field
-    def last(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
-        return pc.last(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
-
     @compute_field
     def min(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.min(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()
@@ -163,10 +171,6 @@ class StringColumn(OrdinalColumn[T]): ...
 
 @strawberry.type
 class IntervalColumn(OrdinalColumn[T]):
-    @compute_field
-    def mode(self, n: int = 1, skip_nulls: bool = True, min_count: int = 0) -> Set[T]:
-        return Set(*pc.mode(self.array, n, skip_nulls=skip_nulls, min_count=min_count).flatten())
-
     @compute_field
     def sum(self, skip_nulls: bool = True, min_count: int = 0) -> T | None:
         return pc.sum(self.array, skip_nulls=skip_nulls, min_count=min_count).as_py()

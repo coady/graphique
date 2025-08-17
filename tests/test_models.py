@@ -63,10 +63,8 @@ def test_numeric(executor):
     for name in ('int32', 'int64', 'float64'):
         data = executor(f'{{ columns {{ {name} {{ mean stddev variance }} }} }}')
         assert data == {'columns': {name: {'mean': 0.0, 'stddev': 0.0, 'variance': 0.0}}}
-        data = executor(f'{{ columns {{ {name} {{ mode {{ values }} }} }} }}')
-        assert data == {'columns': {name: {'mode': {'values': [0]}}}}
-        data = executor(f'{{ columns {{ {name} {{ mode(n: 2) {{ counts }} }} }} }}')
-        assert data == {'columns': {name: {'mode': {'counts': [1]}}}}
+        data = executor(f'{{ columns {{ {name} {{ mode }} }} }}')
+        assert data == {'columns': {name: {'mode': 0}}}
         data = executor(f'{{ columns {{ {name} {{ quantile }} }} }}')
         assert data == {'columns': {name: {'quantile': [0.0]}}}
 

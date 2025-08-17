@@ -48,7 +48,7 @@ def test_floats(client):
         """{project(columns: {alias: "l", numeric: {bucket: {name: "latitude"}, buckets: [40, 50]}}) {
         column(name: "l") { ... on IntColumn { unique { values } } } } }"""
     )
-    assert data == {"project": {"column": {"unique": {"values": [0, None]}}}}
+    assert set(data['project']['column']['unique']['values']) == {0, None}
     data = client.execute("""{ project(columns: {alias: "latitude", numeric: {log: [{name: "latitude"}, {value: 3}]}}) {
         row { latitude } } }""")
     assert data == {'project': {'row': {'latitude': pytest.approx(3.376188)}}}
@@ -69,13 +69,13 @@ def test_floats(client):
 
 def test_strings(client):
     data = client.execute("""{ columns {
-        state { values unique { values counts } countDistinct }
+        state { values unique { count values counts } }
         county { unique { values } }
         city { min max }
     } }""")
     states = data['columns']['state']
     assert len(states['values']) == 41700
-    assert len(states['unique']['values']) == states['countDistinct'] == 52
+    assert len(states['unique']['values']) == states['unique']['count'] == 52
     assert sum(states['unique']['counts']) == 41700
     assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
     data = client.execute("""{ filter(state: {eq: "CA"}, where: {gt: [{string: {length: {name: "city"}}}, {value: 23}]})
@@ -94,7 +94,7 @@ def test_strings(client):
         """{ project(columns: {alias: "has", isin: [{name: "state"}, {value: ["CA", "OR"]}]})
         { column(name: "has") { ... on BooleanColumn { unique { values } } } } }"""
     )
-    assert data == {'project': {'column': {'unique': {'values': [False, True]}}}}
+    assert set(data['project']['column']['unique']['values']) == {False, True}
 
 
 def test_string_methods(client):
@@ -199,11 +199,11 @@ def test_project(client):
     with pytest.raises(ValueError, match="alias"):
         client.execute('{ project(columns: {inv: {name: "state"}}) { type } }')
     data = client.execute("""{ project(columns: {alias: "zipcode", numeric: {cumsum: {name: "zipcode"}}}) {
-        columns { zipcode { value(index: -1) } } } }""")
-    assert data == {'project': {'columns': {'zipcode': {'value': 2066562337}}}}
+        columns { zipcode { first last } } } }""")
+    assert data == {'project': {'columns': {'zipcode': {'first': 501, 'last': 2066562337}}}}
     data = client.execute("""{ project(columns: {alias: "state", cummin: {name: "state"}}) {
-        columns { state { value(index: -1) } } } }""")
-    assert data == {'project': {'columns': {'state': {'value': "AK"}}}}
+        columns { state { last } } } }""")
+    assert data == {'project': {'columns': {'state': {'last': "AK"}}}}
     data = client.execute("""{ project(columns: {alias: "idx", denseRank: {name: "state"}}) {
         column(name: "idx") { ... on LongColumn { min max } } } }""")
     assert data == {'project': {'column': {'min': 0, 'max': 51}}}

@@ -90,10 +90,9 @@ def test_order(dsclient):
     assert data == {'order': {'count': 20850}}
     data = dsclient.execute('{ order(by: ["north", "west"], limit: 3, dense: true) { count } }')
     assert data == {'order': {'count': 32399}}
-    data = dsclient.execute(
-        '{ order(by: ["north", "state"], limit: 2, dense: true) { columns { state { unique { values } } } } }'
-    )
-    assert data == {'order': {'columns': {'state': {'unique': {'values': ['AL', 'AR']}}}}}
+    data = dsclient.execute("""{ order(by: ["north", "state"], limit: 2, dense: true)
+        { columns { state { unique { count } } } } }""")
+    assert data == {'order': {'columns': {'state': {'unique': {'count': 2}}}}}
     data = dsclient.execute('{ order(by: "north", limit: 3) { count } }')
     assert data == {'order': {'count': 3}}
     data = dsclient.execute('{ order(by: "north", limit: 50000) { count } }')
