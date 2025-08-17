@@ -4,7 +4,6 @@ Primary Dataset interface.
 Doesn't require knowledge of the schema.
 """
 
-# mypy: disable-error-code=valid-type
 import itertools
 from collections.abc import Iterable, Iterator, Mapping
 from typing import TypeAlias, no_type_check
@@ -37,10 +36,10 @@ def references(field) -> Iterator:
             yield from references(getattr(field, name, []))
 
 
-@strawberry.type(description="dataset schema")
+@strawberry.type(description=links.schema)
 class Schema:
     names: list[str] = strawberry.field(description="field names")
-    types: list[str] = strawberry.field(description=f"{links.type}, corresponding to `names`")
+    types: list[str] = strawberry.field(description=f"{links.types}, corresponding to `names`")
     partitioning: list[str] = strawberry.field(description="partition keys")
 
 
@@ -48,7 +47,7 @@ def ibis_schema(root: Source) -> ibis.Schema:
     return root.schema() if isinstance(root, ibis.Table) else ibis.Schema.from_pyarrow(root.schema)
 
 
-@strawberry.interface(description="an arrow dataset or ibis table")
+@strawberry.interface(description="arrow `Dataset` or ibis `Table`")
 class Dataset:
     def __init__(self, source: Source):
         self.source = source
@@ -85,7 +84,7 @@ class Dataset:
         """fields for each column"""
         names = selections(*info.selected_fields)
         projection = {} if names else {'_': ibis.row_number()}
-        table = self.source.select(*names, **projection)
+        table = self.table.select(*names, **projection)
         if len(names) > 1:
             table = table.cache()
         return {name: Column.cast(table[name]) for name in table.columns}
@@ -103,7 +102,7 @@ class Dataset:
         return row
 
     def filter(self, info: Info, where: Expression | None = None, **queries: Filter) -> Self:
-        """Return table with rows which match all queries.
+        """[Filter](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.filter) rows by predicates.
 
         Schema derived fields provide syntax for simple queries; `where` supports complex queries.
         """
@@ -116,14 +115,14 @@ class Dataset:
             source = Parquet.to_table(source)
         return self.resolve(info, source.filter(*exprs) if exprs else source)
 
-    @doc_field
+    @strawberry.field(
+        description=f"[arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html) or [ibis table]({links.ref}/expression-table)"
+    )
     def type(self) -> str:
-        """arrow `Dataset` or ibis `Table`"""
         return type(self.source).__name__
 
-    @doc_field
+    @strawberry.field(description=links.schema)
     def schema(self) -> Schema:
-        """dataset schema"""
         schema = ibis_schema(self.source)
         partitioning = Parquet.schema(self.source).names
         return Schema(names=schema.names, types=schema.types, partitioning=partitioning)  # type: ignore
@@ -153,7 +152,7 @@ class Dataset:
 
     @doc_field(
         name="column name(s); multiple names access nested struct fields",
-        cast=f"cast expression to indicated {links.type}",
+        cast=f"cast expression to indicated {links.types}",
         try_="return null if cast fails",
     )
     def column(
@@ -174,7 +173,7 @@ class Dataset:
         limit="maximum number of rows to return",
     )
     def slice(self, info: Info, offset: BigInt = 0, limit: BigInt | None = None) -> Self:
-        """Return zero-copy slice of table."""
+        """[Limit](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.limit) row selection."""
         return self.resolve(info, self.table[offset:][:limit])
 
     @doc_field(
@@ -191,7 +190,7 @@ class Dataset:
         row_number: str = '',
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
-        """Return table grouped by columns.
+        """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns.
 
         See `column` for accessing any column which has changed type.
         """
@@ -214,7 +213,7 @@ class Dataset:
     def order(
         self, info: Info, by: list[str], limit: BigInt | None = None, dense: bool = False
     ) -> Self:
-        """Return table sorted by specified columns."""
+        """[Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns."""
         keys = Parquet.keys(self.source, *by)
         if keys and limit is not None:
             table = Parquet.rank(self.source, limit, *keys, dense=dense)
@@ -259,7 +258,7 @@ class Dataset:
         lname: str = '',
         rname: str = '{name}_right',
     ) -> Self:
-        """Perform a [join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.join) between two tables."""
+        """[Join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.join) two tables."""
         left = self.table
         right = getattr(info.root_value, right).table
         if rkeys:
@@ -270,7 +269,7 @@ class Dataset:
 
     @doc_field
     def take(self, info: Info, indices: list[BigInt]) -> Self:
-        """Select rows from indices."""
+        """[Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index."""
         names = self.references(info)
         if isinstance(self.source, ds.Dataset):
             table = self.source.take(indices, columns=list(names))
@@ -281,15 +280,14 @@ class Dataset:
 
     @doc_field
     def drop_null(self, info: Info, subset: list[str] | None = None, how: str = 'any') -> Self:
-        """Remove rows with null values from the table."""
+        """[Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values."""
         return self.resolve(info, self.table.drop_null(subset, how=how))
 
     @doc_field
     def project(self, info: Info, columns: list[Projection]) -> Self:
-        """Apply functions to columns.
+        """[Mutate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.mutate) columns by expressions.
 
-        Equivalent to [mutate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.mutate);
-        renamed to not be confused with a mutation.
+        Renamed to not be confused with a mutation.
         """
         projection = {column.alias or ''.join(column.name): column.to_ibis() for column in columns}
         if '' in projection:

@@ -1,5 +1,5 @@
 ## Types
-A typed schema is automatically generated from the arrow table and its columns. However, advanced usage of tables often creates new columns - or changes the type of existing ones - and therefore falls outside the schema. Fields which create columns also allow aliasing, otherwise the column is replaced.
+A typed schema is automatically generated from the table and its columns. However, advanced usage of tables often creates new columns - or changes the type of existing ones - and therefore falls outside the schema. Fields which create columns also allow aliasing, otherwise the column is replaced.
 
 ### Output
 A column within the schema can be accessed by `Table.columns`.
@@ -23,36 +23,31 @@ Any column can be accessed by name using `Dataset.column` and [inline fragments]
 ### Input
 Input types don't have the equivalent of inline fragments, but GraphQL is converging on the [OneOf input pattern](https://github.com/graphql/graphql-spec/pull/825). Effectively the type of the field becomes the name of the field.
 
-`Dataset.scan` has flexible selection and projection.
+
+`Table.filter` provides simple queries for columns within the schema, and a `where` arguments for complex expressions.
 ```
 {
-    scan(filter: { ... }, columns: [{ ... }, ...])  { ... }
+    filter(<name>: { ... }, ..., where: { ... })  { ... }
 }
 ```
 
-`Table.filter` provides a friendlier interface for simple queries on columns within the schema.
+`Table.project` also supports complex expressions with aliased column names.
 ```
 {
-    filter(<name>: { ... }, ...)  { ... }
+    project(columns: [{ ... }])  { ... }
 }
 ```
 
 Note list inputs allow passing a single value, [coercing the input](https://spec.graphql.org/October2021/#sec-List.Input-Coercion) to a list of 1.
 
-## Batches
-Datasets and scanners are processed in batches when possible, instead of loading the table into memory.
-
-* `group`, `scan`, and `filter` - native parallel batch processing
-* `order` with `limit` and `dense`
-
 ## Partitions
-Partitioned datasets use fragment keys when possible.
+Partitioned parquet datasets have custom optimization for fragment keys.
 
 * `group` on fragment keys with counts
 * `order` with limit on fragment keys
 
 ## Column selection
-Each field resolver transforms a table or array as needed. When working with an embedded library like [pandas](https://pandas.pydata.org), it's common to select a working set of columns for efficiency. Whereas GraphQL has the advantage of knowing the entire query up front, so there is no `select` field because it's done automatically at every level of resolvers.
+Each field resolver transforms a table or column as needed. Ibis is a [lazily executed](https://ibis-project.org/tutorials/basics), so there is no `select` field because it's handled automatically. Conversely if multiple table fields are requested, the [table is cached](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cache) for performance and consistency.
 
 ## Arrays
 Ibis [Array columns](https://ibis-project.org/reference/expression-collections#ibis.expr.types.arrays.ArrayValue) are supported. `unnest` flattens arrays back to scalars, and `group: {aggregate: {collect: ...}}` also creates arrays.
@@ -61,7 +56,7 @@ Ibis [Array columns](https://ibis-project.org/reference/expression-collections#i
 GraphQL continues the long tradition of confusing ["optional" with "nullable"](https://github.com/graphql/graphql-spec/issues/872). Graphique strives to be explicit regarding what may be omitted versus what may be null.
 
 ### Output
-Arrow has first-class support for nulls, so array scalars are nullable. Non-null scalars are used where relevant.
+Ibis has first-class support for nulls, so array scalars are nullable. Non-null scalars are used where relevant.
 
 Columns and rows are nullable to allow partial query results. `Dataset.optional` enables [client controlled nullability](https://github.com/graphql/graphql-spec/issues/867).
 

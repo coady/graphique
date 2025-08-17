@@ -14,16 +14,12 @@ import pyarrow as pa
 import strawberry
 from strawberry import Info
 from strawberry.types.field import StrawberryField
-from .core import getitems
+from .core import getitems, links
 from .scalars import BigInt, py_type, scalar_map
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
 T = TypeVar('T')
-
-
-class links:
-    type = '[data type](https://ibis-project.org/reference/datatypes)'
 
 
 def selections(*fields) -> set:
@@ -67,7 +63,7 @@ class Column:
         for scalar in scalars:
             cls.registry[scalar] = cls[scalar_map.get(scalar, scalar)] if generic else cls
 
-    @strawberry.field(description=links.type)
+    @strawberry.field(description=links.types)
     def type(self) -> str:
         return str(self.column.type())
 
@@ -112,7 +108,7 @@ class Set(Generic[T]):
 
 
 @Column.register(timedelta, pa.MonthDayNano, date, datetime, time, bytes)
-@strawberry.type(name='Column')
+@strawberry.type(name='Column', description=f"[generic column]({links.ref}/expression-generic)")
 class GenericColumn(Generic[T], Column):
     @doc_field
     def values(self) -> list[T | None]:
@@ -121,7 +117,7 @@ class GenericColumn(Generic[T], Column):
 
     @doc_field
     def unique(self, info: Info) -> Set[T]:
-        "unique values and counts"
+        """unique values and counts"""
         return Set(self.column, cache=selections(*info.selected_fields) != {'count'})
 
     @col_field
@@ -150,12 +146,12 @@ class GenericColumn(Generic[T], Column):
 
 
 @Column.register(str)
-@strawberry.type(name='ingColumn')
+@strawberry.type(name='ingColumn', description=f"[string column]({links.ref}/expression-strings)")
 class StringColumn(GenericColumn[T]): ...
 
 
 @Column.register(float, Decimal)
-@strawberry.type
+@strawberry.type(name='Column', description=f"[numeric column]({links.ref}/expression-numeric)")
 class NumericColumn(GenericColumn[T]):
     @col_field
     def sum(self) -> T | None:
@@ -179,7 +175,10 @@ class NumericColumn(GenericColumn[T]):
 
 
 @Column.register(bool)
-@strawberry.type(name='eanColumn')
+@strawberry.type(
+    name='eanColumn',
+    description=f"[boolean column]({links.ref}/expression-numeric#ibis.expr.types.logical.BooleanColumn)",
+)
 class BooleanColumn(NumericColumn[T]):
     @col_field
     def any(self) -> bool | None:
@@ -191,7 +190,10 @@ class BooleanColumn(NumericColumn[T]):
 
 
 @Column.register(int, BigInt)
-@strawberry.type(name='Column')
+@strawberry.type(
+    name='Column',
+    description=f"[integer column]({links.ref}/expression-numeric#ibis.expr.types.numeric.IntegerColumn)",
+)
 class IntColumn(NumericColumn[T]):
     @doc_field
     def take_from(
@@ -203,7 +205,7 @@ class IntColumn(NumericColumn[T]):
 
 
 @Column.register(list)
-@strawberry.type
+@strawberry.type(description=f"[array column]({links.ref}/expression-collections)")
 class ArrayColumn(Column):
     @doc_field
     def length(self, index: BigInt = 0) -> IntColumn[int]:
@@ -222,7 +224,10 @@ class ArrayColumn(Column):
 
 
 @Column.register(dict)
-@strawberry.type(name='Column')
+@strawberry.type(
+    name='Column',
+    description=f"[struct column]({links.ref}/expression-collections#ibis.expr.types.structs.StructValue)",
+)
 class StructColumn(GenericColumn[T]):
     @doc_field
     def names(self) -> list[str]:

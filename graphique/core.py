@@ -1,14 +1,17 @@
 """
-Core utilities that add pandas-esque features to arrow arrays and tables.
-
-Arrow forbids subclassing, so the classes are for logical grouping.
-Their methods are called as functions.
+Core arrow utilities.
 """
 
 import itertools
 import ibis.backends.duckdb
 import pyarrow as pa
 import pyarrow.dataset as ds
+
+
+class links:
+    ref = "https://ibis-project.org/reference"
+    types = f"[data type]({ref}/datatypes)"
+    schema = f"[table schema]({ref}/schemas#ibis.expr.schema.Schema)"
 
 
 def getitems(obj, *keys):

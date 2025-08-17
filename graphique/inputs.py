@@ -21,7 +21,7 @@ from strawberry.types.arguments import StrawberryArgument
 from strawberry.schema_directive import Location
 from strawberry.types.field import StrawberryField
 from strawberry.scalars import JSON
-from .core import getitems
+from .core import getitems, links
 
 T = TypeVar('T')
 
@@ -115,7 +115,9 @@ class Aggregate:
         return (self.alias or self.name), getattr(ibis._[self.name], func)(**options)
 
 
-@strawberry.input(description="options for `collect` aggregation")
+@strawberry.input(
+    description=f"options for [collect]({links.ref}/expression-generic#ibis.expr.types.generic.Value.collect)"
+)
 class CollectAggregate(Aggregate):
     distinct: bool = False
 
@@ -123,7 +125,7 @@ class CollectAggregate(Aggregate):
         return super().to_ibis(func, distinct=self.distinct)
 
 
-@strawberry.input(description="Aggregation functions.")
+@strawberry.input(description=f"aggregation [expressions]({links.ref}/expression-generic)")
 class Aggregates:
     all: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.all)
     any: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.any)
@@ -144,10 +146,8 @@ class Aggregates:
                 yield agg.to_ibis(name)
 
 
-@use_doc(strawberry.input)
+@strawberry.input(description=f"[expression API]({links.ref}/#expression-api)")
 class Expression:
-    """[Ibis expression](https://ibis-project.org/reference/#expression-api)."""
-
     name: list[str] = default_field([], description="field name(s)")
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
     row_number: None = default_field(func=ibis.row_number)
@@ -237,7 +237,7 @@ class Projection(Expression):
     alias: str = strawberry.field(default='', description="name of projected column")
 
 
-@strawberry.input(description="Array value functions.")
+@strawberry.input(description=f"array [expressions]({links.ref}/expression-collections)")
 class Arrays:
     alls: Expression | None = default_field(func=ibis.expr.types.ArrayValue.alls)
     anys: Expression | None = default_field(func=ibis.expr.types.ArrayValue.anys)
@@ -268,7 +268,7 @@ class Arrays:
                     yield getattr(expr, name)(*args)
 
 
-@strawberry.input(description="Numeric functions.")
+@strawberry.input(description=f"numeric [expressions]({links.ref}/expression-numeric)")
 class Numeric:
     abs: Expression | None = default_field(func=ibis.expr.types.NumericColumn.abs)
     acos: Expression | None = default_field(func=ibis.expr.types.NumericColumn.acos)
@@ -314,7 +314,7 @@ class Numeric:
                     yield getattr(expr, name)(*args)
 
 
-@strawberry.input(description="String functions.")
+@strawberry.input(description=f"string [expressions]({links.ref}/expression-strings)")
 class Strings:
     capitalize: Expression | None = default_field(func=ibis.expr.types.StringColumn.capitalize)
     contains: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.contains)
@@ -341,7 +341,7 @@ class Strings:
             yield getattr(expr, name)(*args)
 
 
-@strawberry.input(description="Temporal functions.")
+@strawberry.input(description=f"temporal [expressions]({links.ref}/expression-temporal)")
 class Temporal:
     date: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.date)
     day: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.day)

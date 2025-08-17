@@ -3,7 +3,7 @@ Default GraphQL service.
 
 Copy and customize as needed. Demonstrates:
 * federation versus root type
-* datasets, scanners, and tables
+* datasets  and tables
 * filtering and projection
 """
 

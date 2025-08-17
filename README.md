@@ -8,10 +8,10 @@
 [![image](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![image](https://mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
 
-[GraphQL](https://graphql.org) service for [arrow](https://arrow.apache.org) tables and [parquet](https://parquet.apache.org) data sets. The schema for a query API is derived automatically.
+[GraphQL](https://graphql.org) service for [ibis](https://ibis-project.org) dataframes, [arrow](https://arrow.apache.org) tables, and [parquet](https://parquet.apache.org) data sets. The schema for a query API is derived automatically.
 
 ## Roadmap
-When this project started, there was no out-of-core execution engine with performance comparable to [PyArrow](https://arrow.apache.org/docs/python/index.html). So it effectively includes one, based on datasets and [Acero](https://arrow.apache.org/docs/python/api/acero.html).
+When this project started, there was no out-of-core execution engine with performance comparable to [PyArrow](https://arrow.apache.org/docs/python/index.html). So it effectively included one, based on datasets and [Acero](https://arrow.apache.org/docs/python/api/acero.html).
 
 Since then the ecosystem has grown considerably: [DuckDB](https://duckdb.org), [DataFusion](https://datafusion.apache.org), and [Ibis](https://ibis-project.org). The next major version plans to reuse `ibis`, because it provides a common expression API for multiple backends. Graphique can similarly offer a default but configurable backend.
 
@@ -28,7 +28,7 @@ Open http://localhost:8000/ to try out the API in [GraphiQL](https://github.com/
 outputs the graphql schema for a parquet data set.
 
 ### Configuration
-Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to a [parquet dataset](https://arrow.apache.org/docs/python/dataset.html).
+Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to an [parquet dataset](https://arrow.apache.org/docs/python/dataset.html).
 
 * PARQUET_PATH: path to the parquet directory or file
 * FEDERATED = '': field name to extend type `Query` with a federated `Table` 
@@ -36,15 +36,16 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
 * FILTERS = None: json `filter` query for which rows to read at startup
 
-For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html) or [Table](https://arrow.apache.org/docs/python/generated/pyarrow.Table.html). The GraphQL `Table` type will be the root Query type.
+For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an ibis [Table](https://ibis-project.org/reference/expression-tables) or arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html). The GraphQL `Table` type will be the root Query type.
 
 Supply a mapping of names to datasets for multiple roots, and to enable federation.
 
 ```python
+import ibis
 import pyarrow.dataset as ds
 from graphique import GraphQL
 
-source = ds.dataset(...)
+source = ibis.read_parquet(...)  # or ds.dataset(...)
 app = GraphQL(source)  # Table is root query type
 app = GraphQL.federated({<name>: source, ...}, keys={<name>: [], ...})  # Tables on federated fields
 ```
@@ -59,36 +60,37 @@ Configuration options exist to provide a convenient no-code solution, but are su
 
 ### API
 #### types
-* `Dataset`: interface for an arrow dataset or table.
+* `Dataset`: interface for an ibis table or arrow dataset.
 * `Table`: implements the `Dataset` interface. Adds typed `row`, `columns`, and `filter` fields from introspecting the schema.
-* `Column`: interface for an arrow column (a.k.a. ChunkedArray). Each arrow data type has a corresponding column implementation: Boolean, Int, BigInt, Float, Decimal, Date, Datetime, Time, Duration, Base64, String, List, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
-* `Row`: scalar fields. Arrow tables are column-oriented, and graphique encourages that usage for performance. A single `row` field is provided for convenience, but a field for a list of rows is not. Requesting parallel columns is far more efficient.
+* `Column`: interface for an ibis column. Each data type has a corresponding column implementation: Boolean, Int, BigInt, Float, Decimal, Date, Datetime, Time, Duration, Base64, String, List, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
+* `Row`: scalar fields. Tables are column-oriented, and graphique encourages that usage for performance. A single `row` field is provided for convenience, but a field for a list of rows is not. Requesting parallel columns is far more efficient.
 
 #### selection
 * `slice`: contiguous selection of rows
-* `filter`: select rows with simple predicates
-* `scan`: select rows and project columns with expressions
+* `filter`: select rows by predicates
+* `join`: join tables by key columns
+* `take`: rows by index
+* `dropNull`: remove rows with nulls
 
 #### projection
+* `project`: project columns with expressions
 * `columns`: provides a field for every `Column` in the schema
 * `column`: access a column of any type by name
 * `row`: provides a field for each scalar of a single row
-* `join`: join tables by key columns
 
 #### aggregation
 * `group`: group by given columns, and aggregate the others
 * `unnest`: unnest an array column
+* `count`: number of rows
 
 #### ordering
 * `order`: sort table by given columns
 * options `limit` and `dense`: select rows with smallest or largest values
 
 ### Performance
-Graphique relies on `pyarrow`, `ibis`, and custom optimizations.
+Performance is dependent on the [ibis backend](https://ibis-project.org/backends/duckdb), which defaults to [duckdb](https://duckdb.org/). There are no internal Python loops. Scalars do not become Python types until serialized.
 
-By default, datasets are read on-demand, with only the necessary rows and columns scanned. Although graphique is a running service, parquet is performant at reading a subset of data. Optionally specify `FILTERS` in the json `filter` format to read a subset of rows at startup, trading-off memory for latency. An empty filter (`{}`) will read the whole table.
-
-Specifying `COLUMNS` will limit memory usage when reading at startup (`FILTERS`). There is little speed difference as unused columns are inherently ignored. Optional aliasing can also be used for camel casing.
+[PyArrow](https://arrow.apache.org/docs/python/) is also used for partitioned dataset optimizations, and for any feature which ibis does not support. Tables field are lazily evaluated up until scalars are reached, and automatically cached as needed for multiple fields.
 
 ## Installation
 ```console
@@ -96,9 +98,9 @@ Specifying `COLUMNS` will limit memory usage when reading at startup (`FILTERS`)
 ```
 
 ## Dependencies
-* pyarrow
-* strawberry-graphql[asgi,cli]
 * ibis-framework[duckdb]
+* strawberry-graphql[asgi,cli]
+* pyarrow
 * isodate
 * uvicorn (or other [ASGI server](https://asgi.readthedocs.io/en/latest/implementations.html))
 
