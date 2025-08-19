@@ -170,15 +170,9 @@ def test_where(client):
     data = client.execute("""{ project(columns: {alias: "product", mul: [{name: "latitude"}, {name: "longitude"}]})
         { filter(where: {gt: [{name: "product"}, {value: 0}]}) { count } } }""")
     assert data['project']['filter']['count'] == 0
-    data = client.execute("""{ project(columns: {alias: "zipcode", cast: {name: "zipcode"}, targetType: "float"})
-        { column(name: "zipcode") { type } } }""")
-    assert data['project']['column']['type'] == 'float64'
     data = client.execute("""{ filter(where: {inv: {eq: [{name: "state"}, {value: "CA"}]}})
         { count } }""")
     assert data == {'filter': {'count': 39053}}
-    data = client.execute("""{ project(columns: {alias: "latitude", tryCast: {name: "latitude"}, targetType: "int32"})
-        { column(name: "latitude") { type } } }""")
-    assert data == {'project': {'column': {'type': 'int32'}}}
     with pytest.raises(ValueError):
         client.execute('{ filter(where: {name: "state", value: "CA"}) { count } }')
     with pytest.raises(ValueError, match="name or alias"):
@@ -187,6 +181,15 @@ def test_where(client):
         { filter(where: {eq: [{name: "county"}, {value: "Santa Clara"}]})
         { count row { county } } } }""")
     assert data == {'filter': {'filter': {'count': 108, 'row': {'county': 'Santa Clara'}}}}
+
+
+def test_cast(client):
+    data = client.execute("""{ cast(schema: {name: "zipcode", type: "float"})
+        { column(name: "zipcode") { type } } }""")
+    assert data['cast']['column']['type'] == 'float64'
+    data = client.execute("""{ cast(schema: {name: "latitude",, type: "int32"}, try: true)
+        { column(name: "latitude") { type } } }""")
+    assert data == {'cast': {'column': {'type': 'int32'}}}
 
 
 def test_project(client):

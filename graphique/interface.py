@@ -13,7 +13,7 @@ import strawberry.asgi
 from strawberry import Info
 from typing_extensions import Self
 from .core import Parquet, order_key
-from .inputs import Aggregates, Filter, Expression, Projection
+from .inputs import Aggregates, Field, Filter, Expression, Projection
 from .models import Column, doc_field, links, selections
 from .core import getitems
 from .scalars import BigInt
@@ -126,6 +126,15 @@ class Dataset:
         schema = ibis_schema(self.source)
         partitioning = Parquet.schema(self.source).names
         return Schema(names=schema.names, types=schema.types, partitioning=partitioning)  # type: ignore
+
+    @doc_field(
+        schema="field names and types",
+        try_="return null if cast fails",
+    )
+    def cast(self, info: Info, schema: list[Field], try_: bool = False) -> Self:
+        """[Cast](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cast) the columns of a table."""
+        cast = self.table.try_cast if try_ else self.table.cast
+        return self.resolve(info, cast({field.name: field.type for field in schema}))
 
     @doc_field
     def optional(self, info: Info) -> Self | None:

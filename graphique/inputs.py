@@ -59,6 +59,12 @@ def default_field(
     return strawberry.field(default_factory=type(default), **kwargs)
 
 
+@strawberry.input(description="a schema field")
+class Field:
+    name: str
+    type: str
+
+
 @strawberry.input(description="predicates for scalars")
 class Filter(Generic[T]):
     eq: list[T | None] | None = default_field(description="== or `isin`", nullable=True)
@@ -191,10 +197,6 @@ class Expression:
     string: Strings | None = default_field(description="string functions")
     temporal: Temporal | None = default_field(description="temporal functions")
 
-    cast: Expression | None = default_field(func=ibis.Column.cast)
-    try_cast: Expression | None = default_field(func=ibis.Column.try_cast)
-    target_type: str = ''
-
     def items(self) -> Iterable[tuple]:
         for name, value in self.__dict__.items():
             if isinstance(value, Expression):
@@ -217,8 +219,6 @@ class Expression:
                     yield getattr(operator, name)(expr, *args)
                 case 'add' | 'sub' | 'mul' | 'truediv':
                     yield getattr(operator, name)(expr, *args)
-                case 'cast' | 'try_cast':
-                    yield getattr(expr, name)(ibis.dtype(self.target_type))
                 case _:
                     yield getattr(expr, name)(*args)
         for field in (self.array, self.numeric, self.string, self.temporal):
