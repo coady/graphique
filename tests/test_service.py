@@ -22,13 +22,13 @@ def test_ints(client):
     assert len(zipcodes['values']) == 41700
     assert zipcodes['sum'] == 2066562337
     assert zipcodes['mean'] == pytest.approx(49557.849808)
-    data = client.execute('{ columns { zipcode { values min max unique { values counts } } } }')
+    data = client.execute('{ columns { zipcode { values min max distinct { values counts } } } }')
     zipcodes = data['columns']['zipcode']
     assert len(zipcodes['values']) == 41700
     assert zipcodes['min'] == 501
     assert zipcodes['max'] == 99950
-    assert len(zipcodes['unique']['values']) == 41700
-    assert set(zipcodes['unique']['counts']) == {1}
+    assert len(zipcodes['distinct']['values']) == 41700
+    assert set(zipcodes['distinct']['counts']) == {1}
 
 
 def test_floats(client):
@@ -43,11 +43,9 @@ def test_floats(client):
     assert longitudes['max'] == pytest.approx(-65.301389)
     data = client.execute('{ columns { latitude { quantile(q: 0.5) } } }')
     assert data == {'columns': {'latitude': {'quantile': pytest.approx(39.12054)}}}
-    data = client.execute(
-        """{project(columns: {alias: "l", numeric: {bucket: {name: "latitude"}, buckets: [40, 50]}}) {
-        column(name: "l") { ... on IntColumn { unique { values } } } } }"""
-    )
-    assert set(data['project']['column']['unique']['values']) == {0, None}
+    data = client.execute("""{project(columns: {alias: "l", numeric: {bucket: {name: "latitude"}, buckets: [40, 50]}})
+        { column(name: "l") { ... on IntColumn { distinct { values } } } } }""")
+    assert set(data['project']['column']['distinct']['values']) == {0, None}
     data = client.execute("""{ project(columns: {alias: "latitude", numeric: {log: [{name: "latitude"}, {value: 3}]}}) {
         row { latitude } } }""")
     assert data == {'project': {'row': {'latitude': pytest.approx(3.376188)}}}
@@ -68,14 +66,14 @@ def test_floats(client):
 
 def test_strings(client):
     data = client.execute("""{ columns {
-        state { values unique { count values counts } }
-        county { unique { values } }
+        state { values distinct { count values counts } }
+        county { distinct { values } }
         city { min max }
     } }""")
     states = data['columns']['state']
     assert len(states['values']) == 41700
-    assert len(states['unique']['values']) == states['unique']['count'] == 52
-    assert sum(states['unique']['counts']) == 41700
+    assert len(states['distinct']['values']) == states['distinct']['count'] == 52
+    assert sum(states['distinct']['counts']) == 41700
     assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
     data = client.execute("""{ filter(state: {eq: "CA"}, where: {gt: [{string: {length: {name: "city"}}}, {value: 23}]})
         { count } }""")
@@ -91,9 +89,9 @@ def test_strings(client):
     assert data == {'filter': {'count': 42}}
     data = client.execute(
         """{ project(columns: {alias: "has", isin: [{name: "state"}, {value: ["CA", "OR"]}]})
-        { column(name: "has") { ... on BooleanColumn { unique { values } } } } }"""
+        { column(name: "has") { ... on BooleanColumn { distinct { values } } } } }"""
     )
-    assert set(data['project']['column']['unique']['values']) == {False, True}
+    assert set(data['project']['column']['distinct']['values']) == {False, True}
 
 
 def test_string_methods(client):
@@ -167,8 +165,8 @@ def test_where(client):
         { columns { zipcode { min } } } }""")
     assert data['project']['columns']['zipcode']['min'] == 1002
     data = client.execute("""{ project(columns: {alias: "zipcode", sub: [{name: "zipcode"}, {name: "zipcode"}]})
-        { columns { zipcode { unique { values } } } } }""")
-    assert data['project']['columns']['zipcode']['unique']['values'] == [0]
+        { columns { zipcode { distinct { values } } } } }""")
+    assert data['project']['columns']['zipcode']['distinct']['values'] == [0]
     data = client.execute("""{ project(columns: {alias: "product", mul: [{name: "latitude"}, {name: "longitude"}]})
         { filter(where: {gt: [{name: "product"}, {value: 0}]}) { count } } }""")
     assert data['project']['filter']['count'] == 0
@@ -250,9 +248,9 @@ def test_group(client):
     assert data == {'group': {'c': {'values': [41700]}, 'z': {'values': [99950]}}}
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "county", distinct: true}}) {
         columns { state { values } }
-        c: column(name: "county") { ... on ArrayColumn { length { min } } } } }""")
+        project(columns: {array: {length: {name: "county"}}, alias: "c"}) { column(name: "c") { ... on BigIntColumn { min } } } } }""")
     assert len(data['group']['columns']['state']['values']) == 52
-    assert data['group']['c'] == {'length': {'min': 1}}
+    assert data['group']['project'] == {'column': {'min': 1}}
     data = client.execute("""{ group(by: ["state"], rowNumber: "idx", aggregate: {min: {name: "county"}}) { 
         order(by: "idx") { row { state county } } } }""")
     assert data == {'group': {'order': {'row': {'state': 'NY', 'county': 'Albany'}}}}

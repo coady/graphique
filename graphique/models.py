@@ -14,7 +14,7 @@ import pyarrow as pa
 import strawberry
 from strawberry import Info
 from strawberry.types.field import StrawberryField
-from .core import getitems, links
+from .core import links
 from .scalars import BigInt, py_type, scalar_map
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -107,7 +107,7 @@ class Set(Generic[T]):
         return self.table[1].to_list()
 
 
-@Column.register(timedelta, pa.MonthDayNano, date, datetime, time, bytes)
+@Column.register(bytes)
 @strawberry.type(name='Column', description=f"[generic column]({links.ref}/expression-generic)")
 class GenericColumn(Generic[T], Column):
     @doc_field
@@ -116,8 +116,8 @@ class GenericColumn(Generic[T], Column):
         return self.column.to_list()
 
     @doc_field
-    def unique(self, info: Info) -> Set[T]:
-        """unique values and counts"""
+    def distinct(self, info: Info) -> Set[T]:
+        """distinct values and counts"""
         return Set(self.column, cache=selections(*info.selected_fields) != {'count'})
 
     @col_field
@@ -144,6 +144,25 @@ class GenericColumn(Generic[T], Column):
     def max(self) -> T | None:
         return self.column.max().to_pyarrow().as_py()
 
+    @col_field
+    def quantile(self, q: float = 0.5) -> float | None:
+        return self.column.quantile(q).to_pyarrow().as_py()
+
+
+@Column.register(date, datetime, time)
+@strawberry.type(name='Column', description=f"[temporal column]({links.ref}/expression-temporal)")
+class TemporalColumn(GenericColumn[T]): ...
+
+
+@Column.register(timedelta, pa.MonthDayNano)
+@strawberry.type(
+    name='Column',
+    description=f"""provisional [interval column]({links.ref}/expression-temporal#ibis.expr.types.temporal.IntervalValue)
+
+Interval support varies by backend; durations may still be useful for computation and as scalar inputs.""",
+)
+class DurationColumn(GenericColumn[T]): ...
+
 
 @Column.register(str)
 @strawberry.type(name='ingColumn', description=f"[string column]({links.ref}/expression-strings)")
@@ -168,10 +187,6 @@ class NumericColumn(GenericColumn[T]):
     @col_field
     def var(self, how: str = 'sample') -> float | None:
         return self.column.var(how=how).to_pyarrow().as_py()
-
-    @col_field
-    def quantile(self, q: float = 0.5) -> float | None:
-        return self.column.quantile(q).to_pyarrow().as_py()
 
 
 @Column.register(bool)
@@ -206,21 +221,7 @@ class IntColumn(NumericColumn[T]):
 
 @Column.register(list)
 @strawberry.type(description=f"[array column]({links.ref}/expression-collections)")
-class ArrayColumn(Column):
-    @doc_field
-    def length(self, index: BigInt = 0) -> IntColumn[int]:
-        """the lengths of the arrays"""
-        return self.cast(self.column.length())  # type: ignore
-
-    @doc_field
-    def values(self, index: BigInt = 0) -> Column:
-        """values at index"""
-        return self.cast(self.column[index])
-
-    @doc_field
-    def unnest(self) -> Column:
-        """concatenation of all sub-lists"""
-        return self.cast(self.column.unnest())
+class ArrayColumn(Column): ...
 
 
 @Column.register(dict)
@@ -233,8 +234,3 @@ class StructColumn(GenericColumn[T]):
     def names(self) -> list[str]:
         """field names"""
         return self.column.names
-
-    @doc_field(name="field name(s); multiple names access nested fields")
-    def column(self, name: list[str]) -> Column | None:
-        """Return struct field as a column."""
-        return self.cast(getitems(self.column, *name))

@@ -123,21 +123,20 @@ def test_array(executor):
     data = executor("""{ project(columns: {array: {index: [{name: "array"}, {value: 1}]}, alias: "list"}) {
         column(name: "list") { ... on BigIntColumn { values } } } }""")
     assert data == {'project': {'column': {'values': [1, None]}}}
-    data = executor("""{ project(columns: {array: {unique: {name: "array"}}, alias: "array"})
-        { columns { array { unnest { ... on IntColumn { values } } } } } }""")
-    assert set(data['project']['columns']['array']['unnest']['values']) == {0, 1, 2}
+    data = executor("""{ project(columns: {array: {unique: {name: "array"}}, alias: "a"})
+        { unnest(name: "a") { column(name: "a") { ... on IntColumn { values } } } } }""")
+    assert set(data['project']['unnest']['column']['values']) == {0, 1, 2}
     data = executor("""{ project(columns: {array: {modes: {name: "array"}}, alias: "list"})
         { column(name: "list") { type } } }""")
     assert data == {'project': {'column': {'type': 'int32'}}}
-    data = executor('{ columns { array { values { ... on IntColumn { values } } } } }')
-    assert data == {'columns': {'array': {'values': {'values': [0, None]}}}}
-    data = executor('{ columns { array { values(index: -1) { ... on IntColumn { values } } } } }')
-    assert data == {'columns': {'array': {'values': {'values': [2, None]}}}}
+    data = executor("""{ project(columns: {array: {value: {name: "array"}, offset: -1}, alias: "a"})
+        { column(name: "a") { ... on IntColumn { values } } } }""")
+    assert data == {'project': {'column': {'values': [2, None]}}}
 
 
 def test_struct(executor):
-    data = executor('{ columns { struct { names column(name: "x") { count } } } }')
-    assert data == {'columns': {'struct': {'names': ['x', 'y'], 'column': {'count': 1}}}}
+    data = executor('{ columns { struct { names } } }')
+    assert data == {'columns': {'struct': {'names': ['x', 'y']}}}
     data = executor("""{ project(columns: {alias: "leaf", name: ["struct", "x"]})
         { column(name: "leaf") { ... on IntColumn { values } } } }""")
     assert data == {'project': {'column': {'values': [0, None]}}}
@@ -155,7 +154,7 @@ def test_conditions(executor):
 
 def test_bigint(executor):
     with pytest.raises(ValueError, match="BigInt cannot represent value"):
-        executor('{ filter(int64: {eq: 0.0}) { length } }')
+        executor('{ filter(int64: {eq: 0.0}) { type } }')
 
 
 def test_base64(executor):
