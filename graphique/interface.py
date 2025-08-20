@@ -5,6 +5,7 @@ Doesn't require knowledge of the schema.
 """
 
 import itertools
+import operator
 from collections.abc import Iterable, Iterator, Mapping
 from typing import TypeAlias, no_type_check
 import ibis
@@ -184,6 +185,29 @@ class Dataset:
     def slice(self, info: Info, offset: BigInt = 0, limit: BigInt | None = None) -> Self:
         """[Limit](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.limit) row selection."""
         return self.resolve(info, self.table[offset:][:limit])
+
+    @doc_field(
+        on="column names to deduplicate on; defaults to all",
+        keep="which duplicates to keep",
+        counts="[value counts](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`",
+    )
+    def distinct(
+        self,
+        info: Info,
+        on: list[str] | None = None,
+        keep: str | None = 'first',
+        counts: str = '',
+    ) -> Self:
+        """[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table."""
+        table = self.table
+        if not counts or keep is None:
+            return self.resolve(info, table.distinct(on=on, keep=keep))
+        if on is None:
+            return self.resolve(info, table.value_counts(name=counts))
+        keys, func = set(on), operator.methodcaller(keep)
+        aggs = {name: func(table[name]) for name in table.schema() if name not in keys}
+        aggs[counts] = ibis._.count()
+        return self.resolve(info, table.aggregate(aggs, by=on))
 
     @doc_field(
         by="column names; empty will aggregate into a single row table",

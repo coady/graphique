@@ -241,6 +241,23 @@ def test_order(client):
     assert data['project']['group']['order']['project']['row'] == {'state': 'NY'}
 
 
+def test_distinct(client):
+    data = client.execute('{ distinct { count } }')
+    assert data == {'distinct': {'count': 41700}}
+    data = client.execute('{ distinct(on: "state") { count } }')
+    assert data == {'distinct': {'count': 52}}
+    data = client.execute('{ distinct(on: ["state", "county"], keep: null) { count } }')
+    assert data == {'distinct': {'count': 132}}
+    data = client.execute("""{ distinct(counts: "c") { column(name: "c")
+        { ... on BigIntColumn { distinct { values counts } } } } }""")
+    assert data == {'distinct': {'column': {'distinct': {'values': [1], 'counts': [41700]}}}}
+    data = client.execute('{ distinct(on: "state", counts: "c") { schema { names types } } }')
+    assert data['distinct']['schema'] == {
+        'names': ['state', 'latitude', 'longitude', 'city', 'county', 'zipcode', 'c'],
+        'types': ['string', 'float64', 'float64', 'string', 'string', 'int32', 'int64'],
+    }
+
+
 def test_group(client):
     with pytest.raises(ValueError, match="cannot represent"):
         client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
