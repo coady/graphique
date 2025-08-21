@@ -34,6 +34,7 @@ def test_columns(executor):
 
     for name in ('binary', 'string'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
+        assert execute(f'{{ {name} {{ dropNull }} }}') == {name: {'dropNull': ['']}}
         data = execute(f'{{ {name} {{ fillNull(value: "") }} }}')
         assert data == {name: {'fillNull': ['', '']}}
 
@@ -49,6 +50,8 @@ def test_boolean(executor):
     data = executor("""{ filter(where: {xor: [{name: "boolean"}, {inv: {name: "boolean"}}]})
         { count } }""")
     assert data == {'filter': {'count': 1}}
+    data = executor('{ fillNull(name: "boolean", value: true) { columns { boolean { values } } } }')
+    assert data == {'fillNull': {'columns': {'boolean': {'values': [False, True]}}}}
 
 
 def test_decimal(executor):
@@ -73,6 +76,11 @@ def test_numeric(executor):
     data = executor("""{ project(columns: {alias: "float64", coalesce: [{name: "float64"}, {name: "int32"}]})
         { columns { float64 { values } } } }""")
     assert data == {'project': {'columns': {'float64': {'values': [0.0, None]}}}}
+    data = executor("""{ fillNull(name: ["int32", "float64"], value: 1)
+        { columns { int32 { values } float64 { values } } } }""")
+    assert data == {
+        'fillNull': {'columns': {'int32': {'values': [0, 1]}, 'float64': {'values': [0, 1]}}}
+    }
 
 
 def test_datetime(executor):
@@ -173,3 +181,6 @@ def test_base64(executor):
     data = executor("""{ filter(where: {eq: [{name: "binary"}, {scalar: {base64: "Xw=="}}]})
         { count } }""")
     assert data == {'filter': {'count': 0}}
+    data = executor("""{ fillNull(name: "binary", scalar: {base64: ""})
+        { columns { binary { values } } } }""")
+    assert data == {'fillNull': {'columns': {'binary': {'values': ['', '']}}}}

@@ -12,9 +12,10 @@ from typing import Annotated, Generic, TypeVar, TYPE_CHECKING, get_args
 import ibis
 import pyarrow as pa
 import strawberry
-from strawberry import Info
+from strawberry import Info, UNSET
 from strawberry.types.field import StrawberryField
 from .core import links
+from .inputs import optional
 from .scalars import BigInt, py_type, scalar_map
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -31,9 +32,11 @@ def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
     """Return strawberry field with argument and docstring descriptions."""
     if func is None:
         return functools.partial(doc_field, **kwargs)  # type: ignore
+    parameters = inspect.signature(func).parameters
     for name in kwargs:
         alias = name.strip('_') if name.endswith('_') else None
-        argument = strawberry.argument(name=alias, description=kwargs[name])
+        directives = [optional()] if parameters[name].default is UNSET else []
+        argument = strawberry.argument(name=alias, description=kwargs[name], directives=directives)
         func.__annotations__[name] = Annotated[func.__annotations__[name], argument]
     return strawberry.field(func, description=inspect.getdoc(func))
 
@@ -127,6 +130,11 @@ class GenericColumn(Generic[T], Column):
     @col_field
     def last(self) -> T | None:
         return self.column.last().to_pyarrow().as_py()
+
+    @doc_field
+    def drop_null(self) -> list[T]:
+        """non-null values"""
+        return self.column.as_table().drop_null()[0].to_list()
 
     @col_field
     def fill_null(self, value: T) -> list[T]:

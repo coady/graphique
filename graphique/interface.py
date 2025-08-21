@@ -11,10 +11,11 @@ from typing import TypeAlias, no_type_check
 import ibis
 import pyarrow.dataset as ds
 import strawberry.asgi
-from strawberry import Info
+from strawberry import Info, UNSET
+from strawberry.scalars import JSON
 from typing_extensions import Self
 from .core import Parquet, order_key
-from .inputs import Aggregates, Field, Filter, Expression, Projection
+from .inputs import Aggregates, Field, Filter, Expression, Projection, Scalars
 from .models import Column, doc_field, links, selections
 from .core import getitems
 from .scalars import BigInt
@@ -79,7 +80,7 @@ class Dataset:
         fields = info.selected_fields
         for _ in range(level):
             fields = itertools.chain(*[field.selections for field in fields])
-        return set(itertools.chain(*map(references, fields))) & set(self.schema().names)
+        return set(itertools.chain(*map(references, fields))) & set(ibis_schema(self.source))
 
     def columns(self, info: Info) -> dict:
         """fields for each column"""
@@ -205,7 +206,7 @@ class Dataset:
         if on is None:
             return self.resolve(info, table.value_counts(name=counts))
         keys, func = set(on), operator.methodcaller(keep)
-        aggs = {name: func(table[name]) for name in table.schema() if name not in keys}
+        aggs = {name: func(table[name]) for name in table.columns if name not in keys}
         aggs[counts] = ibis._.count()
         return self.resolve(info, table.aggregate(aggs, by=on))
 
@@ -315,6 +316,19 @@ class Dataset:
     def drop_null(self, info: Info, subset: list[str] | None = None, how: str = 'any') -> Self:
         """[Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values."""
         return self.resolve(info, self.table.drop_null(subset, how=how))
+
+    @doc_field(name="column name(s); defaults to all", value="JSON scalar", scalar="typed scalar")
+    def fill_null(
+        self,
+        info: Info,
+        name: list[str] | None = None,
+        value: JSON | None = UNSET,
+        scalar: Scalars = {},  # type: ignore
+    ) -> Self:
+        """[Fill null](https://ibis-project.org/reference/expression-tables.html#ibis.expr.types.relations.Table.fill_null) values."""
+        (value,) = itertools.chain(scalar, [] if value is UNSET else [value])  # type: ignore
+        replacements = dict.fromkeys(ibis_schema(self.source) if name is None else name, value)
+        return self.resolve(info, self.table.fill_null(replacements))
 
     @doc_field
     def project(self, info: Info, columns: list[Projection]) -> Self:
