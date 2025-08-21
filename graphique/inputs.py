@@ -152,18 +152,27 @@ class Aggregates:
                 yield agg.to_ibis(name)
 
 
-@strawberry.input(description=f"[expression API]({links.ref}/#expression-api)")
-class Expression:
-    name: list[str] = default_field([], description="field name(s)")
-    value: JSON | None = default_field(description="JSON scalar", nullable=True)
-    row_number: None = default_field(func=ibis.row_number)
-
+@strawberry.input(description="typed scalars")
+class Scalars:
     base64: bytes | None = default_field(description="binary scalar")
-    date_: date | None = default_field(description="date scalar", name='date')
-    datetime_: datetime | None = default_field(description="datetime scalar", name='datetime')
+    date: date | None = default_field(description="date scalar")
+    datetime: datetime | None = default_field(description="datetime scalar")
     decimal: Decimal | None = default_field(description="decimal scalar")
     duration: timedelta | None = default_field(description="duration scalar")
-    time_: time | None = default_field(description="time scalar", name='time')
+    time: time | None = default_field(description="time scalar")
+
+    def __iter__(self):
+        for value in self.__dict__.values():
+            if value is not UNSET:
+                yield value
+
+
+@strawberry.input(description=f"[expression API]({links.ref}/#expression-api)")
+class Expression:
+    name: list[str] = default_field([], description="column name(s)")
+    value: JSON | None = default_field(description="JSON scalar", nullable=True)
+    scalar: Scalars | None = default_field(description="typed scalar")
+    row_number: None = default_field(func=ibis.row_number)
 
     eq: list[Expression] = default_field([], description="==")
     ne: list[Expression] = default_field([], description="!=")
@@ -207,10 +216,10 @@ class Expression:
     def __iter__(self) -> Iterable[ibis.Deferred]:
         if self.name:
             yield getitems(ibis._, *self.name)
-        scalars = self.base64, self.date_, self.datetime_, self.decimal, self.duration, self.time_
-        for scalar in (self.value,) + scalars:
-            if scalar is not UNSET:
-                yield scalar
+        if self.value is not UNSET:
+            yield self.value
+        if self.scalar:
+            yield from self.scalar
         if self.row_number is not UNSET:
             yield ibis.row_number()
         for name, (expr, *args) in self.items():

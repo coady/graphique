@@ -83,7 +83,7 @@ class Column:
         return config.name_converter.from_generic(obj.__strawberry_definition__, args)
 
 
-@strawberry.type(description="unique values and counts")
+@strawberry.type(description="distinct values and counts")
 class Set(Generic[T]):
     def __init__(self, column, cache=False):
         self.table, self.nunique = column.value_counts(), column.nunique()
@@ -93,12 +93,12 @@ class Set(Generic[T]):
 
     @doc_field
     def count(self) -> BigInt:
-        """number of unique values"""
+        """distinct count"""
         return self.nunique.to_pyarrow().as_py()
 
     @doc_field
     def values(self) -> list[T | None]:
-        """unique values"""
+        """distinct values"""
         return self.table[0].to_list()
 
     @doc_field

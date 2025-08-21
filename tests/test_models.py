@@ -100,6 +100,12 @@ def test_datetime(executor):
             {{ column(name: "hour") {{ ... on IntColumn {{ values }} }} }} }}"""
         )
         assert data == {'project': {'column': {'values': [0, None]}}}
+    data = executor("""{ filter(where: {gt: [{name: "date"}, {scalar: {date: "1970-01-01"}}]}) 
+        { count } }""")
+    assert data == {'filter': {'count': 0}}
+    data = executor("""{ filter(where: {gt: [{name: "timestamp"}, {scalar: {datetime: "1970-01-01"}}]}) 
+        { count } }""")
+    assert data == {'filter': {'count': 0}}
 
 
 def test_duration(executor):
@@ -110,6 +116,9 @@ def test_duration(executor):
         {delta: [{name: "timestamp"}, {name: "timestamp"}], unit: "day"}})
         { column(name: "diff") { ... on BigIntColumn { values } } } }""")
     assert data == {'project': {'column': {'values': [0, None]}}}
+    data = executor("""{ project(columns: {alias: "date", add: [{name: "date"}, {scalar: {duration: "P1D"}}]}) 
+        { columns { date { values } } } }""")
+    assert data == {'project': {'columns': {'date': {'values': ["1970-01-02", None]}}}}
 
 
 def test_array(executor):
@@ -158,8 +167,9 @@ def test_bigint(executor):
 
 
 def test_base64(executor):
-    data = executor("""{ project(columns: {alias: "binary", coalesce: [{name: "binary"}, {base64: "Xw=="}]})
+    data = executor("""{ project(columns: {alias: "binary", coalesce: [{name: "binary"}, {scalar: {base64: "Xw=="}}]})
         { columns { binary { values } } } }""")
     assert data == {'project': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
-    data = executor('{ filter(where: {eq: [{name: "binary"}, {base64: "Xw=="}]}) { count } }')
+    data = executor("""{ filter(where: {eq: [{name: "binary"}, {scalar: {base64: "Xw=="}}]})
+        { count } }""")
     assert data == {'filter': {'count': 0}}
