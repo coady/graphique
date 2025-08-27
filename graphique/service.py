@@ -19,7 +19,7 @@ from graphique import GraphQL
 config = Config('.env' if Path('.env').is_file() else None)
 PARQUET_PATH = Path(config('PARQUET_PATH')).resolve()
 FEDERATED = config('FEDERATED', default='')
-DEBUG = config('DEBUG', cast=bool, default=False)
+METRICS = config('METRICS', cast=bool, default=False)
 COLUMNS = config('COLUMNS', cast=json.loads, default=None)
 FILTERS = config('FILTERS', cast=json.loads, default=None)
 
@@ -37,6 +37,6 @@ elif COLUMNS or not Parquet.schema(root):
         root = root.select(COLUMNS)
 
 if FEDERATED:
-    app = GraphQL.federated({FEDERATED: root}, debug=DEBUG)
+    app = GraphQL.federated({FEDERATED: root}, metrics=METRICS)
 else:
-    app = GraphQL(root, debug=DEBUG)
+    app = GraphQL(root, metrics=METRICS)

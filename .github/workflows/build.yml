@@ -13,16 +13,11 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.10', '3.11', '3.12', '3.13']
-        arrow-version: ['']
-        include:
-        - python-version: 3.x
-          arrow-version: '--pre --only-binary :all: '
     steps:
     - uses: actions/checkout@v5
     - uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - run: pip install --extra-index-url https://pypi.fury.io/arrow-nightlies/ ${{ matrix.arrow-version }}pyarrow
     - run: pip install -r tests/requirements.in
     - run: make check
     - run: coverage xml

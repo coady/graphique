@@ -31,8 +31,8 @@ outputs the graphql schema for a parquet data set.
 Graphique uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file. Config variables are used as input to an [parquet dataset](https://arrow.apache.org/docs/python/dataset.html).
 
 * PARQUET_PATH: path to the parquet directory or file
-* FEDERATED = '': field name to extend type `Query` with a federated `Table` 
-* DEBUG = False: run service in debug mode, which includes metrics
+* FEDERATED = '': field name to extend type `Query` with a federated `Table`
+* METRICS = False: include timings from apollo tracing extension
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
 * FILTERS = None: json `filter` query for which rows to read at startup
 
