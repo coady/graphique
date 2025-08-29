@@ -118,7 +118,7 @@ class Dataset:
         return self.resolve(info, source.filter(*exprs) if exprs else source)
 
     @strawberry.field(
-        description=f"[arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html) or [ibis table]({links.ref}/expression-table)"
+        description=f"[ibis table]({links.ref}/expression-table) or [arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html)"
     )
     def type(self) -> str:
         return type(self.source).__name__
@@ -146,9 +146,10 @@ class Dataset:
         """
         return self.resolve(info, self.source)
 
-    @doc_field
+    @strawberry.field(
+        description=f"[Count]({links.ref}/expression-tables#ibis.expr.types.relations.Table.count) the number of rows."
+    )
     def count(self) -> BigInt:
-        """number of rows"""
         if isinstance(self.source, ibis.Table):
             return self.source.count().to_pyarrow().as_py()
         return self.source.count_rows()
@@ -190,7 +191,7 @@ class Dataset:
     @doc_field(
         on="column names to deduplicate on; defaults to all",
         keep="which duplicates to keep",
-        counts="[value counts](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`",
+        counts=f"[value counts]({links.ref}/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`",
     )
     def distinct(
         self,
@@ -199,7 +200,10 @@ class Dataset:
         keep: str | None = 'first',
         counts: str = '',
     ) -> Self:
-        """[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table."""
+        """[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
+
+        Differs from `group` by keeping all columns, and defaulting to all keys.
+        """
         table = self.table
         if not counts or keep is None:
             return self.resolve(info, table.distinct(on=on, keep=keep))
@@ -224,10 +228,7 @@ class Dataset:
         row_number: str = '',
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
-        """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns.
-
-        See `column` for accessing any column which has changed type.
-        """
+        """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns."""
         aggs = dict(aggregate)  # type: ignore
         if not aggs and by == Parquet.keys(self.source, *by):
             return self.resolve(info, Parquet.group(self.source, *by, counts=counts))
@@ -259,7 +260,12 @@ class Dataset:
             limit = groups.order_by(*map(order_key, by))[:limit]['_'].sum().to_pyarrow().as_py()
         return self.resolve(info, table[:limit])
 
-    @doc_field
+    @doc_field(
+        name="column name",
+        offset="optionally include index column",
+        keep_empty="keep empty array values as null",
+        row_number="optionally include first row number in an aliased column",
+    )
     def unnest(
         self,
         info: Info,
@@ -312,7 +318,7 @@ class Dataset:
             table = ds.Scanner.from_batches(batches).take(indices)
         return type(self)(ibis.memtable(table))
 
-    @doc_field
+    @doc_field(subset="columns names; defaults to all", how="remove if `any` or `all` are null")
     def drop_null(self, info: Info, subset: list[str] | None = None, how: str = 'any') -> Self:
         """[Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values."""
         return self.resolve(info, self.table.drop_null(subset, how=how))

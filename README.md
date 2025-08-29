@@ -36,8 +36,7 @@ Graphique uses [Starlette's config](https://www.starlette.io/config/): in enviro
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
 * FILTERS = None: json `filter` query for which rows to read at startup
 
-For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an ibis [Table](https://ibis-project.org/reference/expression-tables) or arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html). The GraphQL `Table` type will be the root Query type.
-
+For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an ibis [Table](https://ibis-project.org/reference/expression-tables) or arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html).
 Supply a mapping of names to datasets for multiple roots, and to enable federation.
 
 ```python
@@ -45,7 +44,7 @@ import ibis
 import pyarrow.dataset as ds
 from graphique import GraphQL
 
-source = ibis.read_parquet(...)  # or ds.dataset(...)
+source = ibis.read_*(...)  # or ibis.connect(...).table(...) or ds.dataset(...)
 app = GraphQL(source)  # Table is root query type
 app = GraphQL.federated({<name>: source, ...}, keys={<name>: [], ...})  # Tables on federated fields
 ```
@@ -62,7 +61,7 @@ Configuration options exist to provide a convenient no-code solution, but are su
 #### types
 * `Dataset`: interface for an ibis table or arrow dataset.
 * `Table`: implements the `Dataset` interface. Adds typed `row`, `columns`, and `filter` fields from introspecting the schema.
-* `Column`: interface for an ibis column. Each data type has a corresponding column implementation: Boolean, Int, BigInt, Float, Decimal, Date, Datetime, Time, Duration, Base64, String, List, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
+* `Column`: interface for an ibis column. Each data type has a corresponding column implementation: Boolean, Int, BigInt, Float, Decimal, Date, Datetime, Time, Duration, Base64, String, Array, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
 * `Row`: scalar fields. Tables are column-oriented, and graphique encourages that usage for performance. A single `row` field is provided for convenience, but a field for a list of rows is not. Requesting parallel columns is far more efficient.
 
 #### selection
@@ -77,9 +76,12 @@ Configuration options exist to provide a convenient no-code solution, but are su
 * `columns`: provides a field for every `Column` in the schema
 * `column`: access a column of any type by name
 * `row`: provides a field for each scalar of a single row
+* `cast`: cast column types
+* `fillNull`: fill null values
 
 #### aggregation
 * `group`: group by given columns, and aggregate the others
+* `distinct`: group with all columns
 * `unnest`: unnest an array column
 * `count`: number of rows
 
@@ -94,7 +96,7 @@ Performance is dependent on the [ibis backend](https://ibis-project.org/backends
 
 ## Installation
 ```console
-% pip install graphique[server]
+pip install graphique[server]
 ```
 
 ## Dependencies
@@ -108,5 +110,5 @@ Performance is dependent on the [ibis backend](https://ibis-project.org/backends
 100% branch coverage.
 
 ```console
-% pytest [--cov]
+pytest [--cov]
 ```
