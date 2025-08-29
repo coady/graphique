@@ -85,10 +85,7 @@ class Dataset:
     def columns(self, info: Info) -> dict:
         """fields for each column"""
         names = selections(*info.selected_fields)
-        projection = {} if names else {'_': ibis.row_number()}
-        table = self.table.select(*names, **projection)
-        if len(names) > 1:
-            table = table.cache()
+        table = self.table.select(*names).cache()
         return {name: Column.cast(table[name]) for name in table.columns}
 
     def row(self, info: Info, index: int = 0) -> dict:

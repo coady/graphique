@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "graphique"
 version = "1.9"
 dynamic = ["dependencies"]
-description = "GraphQL service for arrow tables and parquet data sets."
+description = "GraphQL service for python dataframes and parquet datasets."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}

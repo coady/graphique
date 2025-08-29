@@ -32,7 +32,7 @@ def test_columns(executor):
     assert execute('{ time { values } }') == {'time': {'values': ['00:00:00', None]}}
     assert execute('{ time { min max } }')
 
-    for name in ('binary', 'string'):
+    for name in ('bytes', 'string'):
         assert execute(f'{{ {name} {{ values }} }}') == {name: {'values': ['', None]}}
         assert execute(f'{{ {name} {{ dropNull }} }}') == {name: {'dropNull': ['']}}
         data = execute(f'{{ {name} {{ fillNull(value: "") }} }}')
@@ -175,12 +175,12 @@ def test_bigint(executor):
 
 
 def test_base64(executor):
-    data = executor("""{ project(columns: {alias: "binary", coalesce: [{name: "binary"}, {scalar: {base64: "Xw=="}}]})
-        { columns { binary { values } } } }""")
-    assert data == {'project': {'columns': {'binary': {'values': ['', 'Xw==']}}}}
-    data = executor("""{ filter(where: {eq: [{name: "binary"}, {scalar: {base64: "Xw=="}}]})
+    data = executor("""{ project(columns: {alias: "bytes", coalesce: [{name: "bytes"}, {scalar: {base64: "Xw=="}}]})
+        { columns { bytes { values } } } }""")
+    assert data == {'project': {'columns': {'bytes': {'values': ['', 'Xw==']}}}}
+    data = executor("""{ filter(where: {eq: [{name: "bytes"}, {scalar: {base64: "Xw=="}}]})
         { count } }""")
     assert data == {'filter': {'count': 0}}
-    data = executor("""{ fillNull(name: "binary", scalar: {base64: ""})
-        { columns { binary { values } } } }""")
-    assert data == {'fillNull': {'columns': {'binary': {'values': ['', '']}}}}
+    data = executor("""{ fillNull(name: "bytes", scalar: {base64: ""})
+        { columns { bytes { values } } } }""")
+    assert data == {'fillNull': {'columns': {'bytes': {'values': ['', '']}}}}
