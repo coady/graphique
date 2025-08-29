@@ -77,3 +77,18 @@ Default values and non-null types are used wherever possible. When an input is o
 
 * if null is expected and semantically different, the input's description explains null behavior
 * otherwise the input has an `@optional` directive, and explicit null behavior is undefined
+
+## Extending
+The `Dataset` interface can subclassed to add fields, making a custom [strawberry](https://strawberry.rocks/docs) [asgi app](https://strawberry.rocks/docs/integrations/asgi).
+
+```python
+from graphique import Dataset
+
+@strawberry.type
+class NewType(Dataset):
+    __init__ = Dataset.__init__
+
+    @strawberry.field
+    def new_field(self) -> T:
+        self.table # the underlying ibis table
+```

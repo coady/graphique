@@ -98,7 +98,7 @@ def test_datetime(executor):
         data = executor(f"""{{ project(columns: {{alias: "{name}",
             temporal: {{truncate: {{name: "{name}"}}, unit: "D"}}}})
             {{ column(name: "{name}") {{ type }} }} }}""")
-        assert data['project']['column']['type'] in ('timestamp', 'date')
+        assert data['project']['column']['type'] in ('timestamp(6)', 'date')
     data = executor("""{ project(columns: {alias: "timestamp", temporal: {strftime: {name: "timestamp"}, formatStr: "%Y"}})
         { column(name: "timestamp") { type } } }""")
     assert data == {'project': {'column': {'type': 'string'}}}

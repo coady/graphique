@@ -20,7 +20,7 @@ from .models import Column, doc_field, links, selections
 from .core import getitems
 from .scalars import BigInt
 
-Source: TypeAlias = ds.Dataset | ibis.Table
+Source: TypeAlias = ibis.Table | ds.Dataset
 
 
 def references(field) -> Iterator:
@@ -49,7 +49,7 @@ def ibis_schema(root: Source) -> ibis.Schema:
     return root.schema() if isinstance(root, ibis.Table) else ibis.Schema.from_pyarrow(root.schema)
 
 
-@strawberry.interface(description="arrow `Dataset` or ibis `Table`")
+@strawberry.interface(description="ibis `Table` or arrow `Dataset`")
 class Dataset:
     def __init__(self, source: Source):
         self.source = source
@@ -83,13 +83,13 @@ class Dataset:
         return set(itertools.chain(*map(references, fields))) & set(ibis_schema(self.source))
 
     def columns(self, info: Info) -> dict:
-        """fields for each column"""
+        """Fields for each column."""
         names = selections(*info.selected_fields)
         table = self.table.select(*names).cache()
         return {name: Column.cast(table[name]) for name in table.columns}
 
     def row(self, info: Info, index: int = 0) -> dict:
-        """Return scalar values at index."""
+        """Scalar values at index."""
         names = selections(*info.selected_fields)
         table = self.table.select(*names)[index:][:1].cache()
         row = {}
@@ -153,7 +153,7 @@ class Dataset:
 
     @doc_field
     def any(self, info: Info, limit: BigInt = 1) -> bool:
-        """Return whether there are at least `limit` rows.
+        """Whether there are at least `limit` rows.
 
         May be significantly faster than `count` for out-of-core data.
         """
@@ -167,15 +167,14 @@ class Dataset:
     def column(
         self, info: Info, name: list[str], cast: str = '', try_: bool = False
     ) -> Column | None:
-        """Return column of any type by name.
+        """Column of any type by name.
 
-        This is typically only needed for aliased or casted columns.
         If the column is in the schema, `columns` can be used instead.
         """
         column = getitems(self.table, *name)
         if cast:
             column = (column.try_cast if try_ else column.cast)(cast)
-        return Column.cast(column)
+        return Column.cast(column.as_table().cache()[0])
 
     @doc_field(
         offset="number of rows to skip; negative value skips from the end",
