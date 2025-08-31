@@ -154,7 +154,7 @@ class Dataset:
         return self.source.count_rows()
 
     @doc_field
-    def any(self, info: Info, limit: BigInt = 1) -> bool:
+    def any(self, limit: BigInt = 1) -> bool:
         """Whether there are at least `limit` rows.
 
         May be significantly faster than `count` for out-of-core data.
@@ -166,9 +166,7 @@ class Dataset:
         cast=f"cast expression to indicated {links.types}",
         try_="return null if cast fails",
     )
-    def column(
-        self, info: Info, name: list[str], cast: str = '', try_: bool = False
-    ) -> Column | None:
+    def column(self, name: list[str], cast: str = '', try_: bool = False) -> Column | None:
         """Column of any type by name.
 
         If the column is in the schema, `columns` can be used instead.

@@ -21,7 +21,7 @@ from strawberry.types.arguments import StrawberryArgument
 from strawberry.schema_directive import Location
 from strawberry.types.field import StrawberryField
 from strawberry.scalars import JSON
-from .core import getitems, links
+from .core import getitems, links, order_key
 
 T = TypeVar('T')
 
@@ -125,10 +125,19 @@ class Aggregate:
     description=f"options for [collect]({links.ref}/expression-generic#ibis.expr.types.generic.Value.collect)"
 )
 class CollectAggregate(Aggregate):
+    where: Expression | None = None
+    order_by: list[str] = default_field([])
+    include_null: bool = False
     distinct: bool = False
 
     def to_ibis(self, func: str) -> tuple:  # type: ignore
-        return super().to_ibis(func, distinct=self.distinct)
+        options = dict(
+            where=self.where and self.where.to_ibis(),
+            order_by=list(map(order_key, self.order_by)) or None,
+            include_null=self.include_null,
+            distinct=self.distinct,
+        )
+        return super().to_ibis(func, **options)
 
 
 @strawberry.input(description=f"aggregation [expressions]({links.ref}/expression-generic)")

@@ -275,6 +275,10 @@ def test_group(client):
     data = client.execute("""{ group(by: ["state"], rowNumber: "idx", aggregate: {min: {name: "county"}}) { 
         order(by: "idx") { row { state county } } } }""")
     assert data == {'group': {'order': {'row': {'state': 'NY', 'county': 'Albany'}}}}
+    data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city", orderBy: "longitude", where: {eq: [{name: "county"}, {name: "city"}]}}})
+        { project(columns: {alias: "num", array: {length: {name: "city"}}})
+        { filter(where: {eq: [{name: "num"}, {value: null}]}) { count } } } }""")
+    assert data == {'group': {'project': {'filter': {'count': 2}}}}
 
 
 def test_unnest(client):
