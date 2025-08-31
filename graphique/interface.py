@@ -63,7 +63,7 @@ class Dataset:
         """Cache the table if it will be reused."""
         count = sum(len(field.selections) for field in info.selected_fields)
         if count > 1 and isinstance(source, ibis.Table):
-            if names := self.references(info, level=1):
+            if names := self.select(info, source, level=1):
                 source = source.select(*names).cache()
         return type(self)(source)
 
@@ -75,12 +75,14 @@ class Dataset:
         queries = {name: Filter(eq=[keys[name]]) for name in keys}
         return self.filter(info, **queries)
 
-    def references(self, info: Info, level: int = 0) -> set:
-        """Return set of every possible future column reference."""
+    @staticmethod
+    def select(info: Info, source: Source, level: int = 0) -> list:
+        """Return minimal schema needed to continue."""
         fields = info.selected_fields
         for _ in range(level):
             fields = itertools.chain(*[field.selections for field in fields])
-        return set(itertools.chain(*map(references, fields))) & set(ibis_schema(self.source))
+        refs = set(itertools.chain(*map(references, fields)))
+        return [name for name in ibis_schema(source).names if name in refs]
 
     def columns(self, info: Info) -> dict:
         """Fields for each column."""
@@ -230,7 +232,7 @@ class Dataset:
     ) -> Self:
         """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns."""
         aggs = dict(aggregate)  # type: ignore
-        if not aggs and by == Parquet.keys(self.source, *by):
+        if not aggs and not row_number and by == Parquet.keys(self.source, *by):
             return self.resolve(info, Parquet.group(self.source, *by, counts=counts))
         table = self.table
         if counts:
@@ -310,9 +312,9 @@ class Dataset:
     @doc_field
     def take(self, info: Info, indices: list[BigInt]) -> Self:
         """[Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index."""
-        names = self.references(info)
+        names = self.select(info, self.source)
         if isinstance(self.source, ds.Dataset):
-            table = self.source.take(indices, columns=list(names))
+            table = self.source.take(indices, columns=names)
         else:
             batches = self.source.select(*names).to_pyarrow_batches()
             table = ds.Scanner.from_batches(batches).take(indices)
