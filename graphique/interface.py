@@ -188,6 +188,7 @@ class Dataset:
         on="column names to deduplicate on; defaults to all",
         keep="which duplicates to keep",
         counts=f"[value counts]({links.ref}/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`",
+        row_number="optionally include row number in an aliased column",
     )
     def distinct(
         self,
@@ -195,19 +196,22 @@ class Dataset:
         on: list[str] | None = None,
         keep: str | None = 'first',
         counts: str = '',
+        row_number: str = '',
     ) -> Self:
         """[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
 
         Differs from `group` by keeping all columns, and defaulting to all keys.
         """
         table = self.table
+        if row_number:
+            table = table.mutate({row_number: ibis.row_number()})
         if not counts or keep is None:
             return self.resolve(info, table.distinct(on=on, keep=keep))
         if on is None:
             return self.resolve(info, table.value_counts(name=counts))
         keys, func = set(on), operator.methodcaller(keep)
         aggs = {name: func(table[name]) for name in table.columns if name not in keys}
-        aggs[counts] = ibis._.count()
+        aggs[counts] = table.count()
         return self.resolve(info, table.aggregate(aggs, by=on))
 
     @doc_field(
@@ -228,12 +232,12 @@ class Dataset:
         aggs = dict(aggregate)  # type: ignore
         if not aggs and by == Parquet.keys(self.source, *by):
             return self.resolve(info, Parquet.group(self.source, *by, counts=counts))
-        if counts:
-            aggs[counts] = ibis._.count()
         table = self.table
+        if counts:
+            aggs[counts] = table.count()
         if row_number:
             table = table.mutate({row_number: ibis.row_number()})
-            aggs[row_number] = ibis._[row_number].first()
+            aggs[row_number] = table[row_number].first()
         return self.resolve(info, table.aggregate(aggs, by=by))
 
     @doc_field(
@@ -252,7 +256,7 @@ class Dataset:
             table = self.table
         table = table.order_by(*map(order_key, by))
         if dense:
-            groups = table.aggregate(_=ibis._.count(), by=[name.lstrip('-') for name in by])
+            groups = table.aggregate(_=table.count(), by=[name.lstrip('-') for name in by])
             limit = groups.order_by(*map(order_key, by))[:limit]['_'].sum().to_pyarrow().as_py()
         return self.resolve(info, table[:limit])
 

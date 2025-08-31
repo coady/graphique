@@ -244,8 +244,9 @@ def test_order(client):
 def test_distinct(client):
     data = client.execute('{ distinct { count } }')
     assert data == {'distinct': {'count': 41700}}
-    data = client.execute('{ distinct(on: "state") { count } }')
-    assert data == {'distinct': {'count': 52}}
+    data = client.execute("""{ distinct(on: "state", rowNumber: "idx") 
+        { count column(name: "idx") { type } } }""")
+    assert data == {'distinct': {'count': 52, 'column': {'type': 'int64'}}}
     data = client.execute('{ distinct(on: ["state", "county"], keep: null) { count } }')
     assert data == {'distinct': {'count': 132}}
     data = client.execute("""{ distinct(counts: "c") { column(name: "c")
