@@ -252,13 +252,14 @@ class Dataset:
         keys = Parquet.keys(self.source, *by)
         if keys and limit is not None:
             table = Parquet.rank(self.source, limit, *keys, dense=dense)
+            if keys == by:
+                return self.resolve(info, table if dense else table[:limit])
         else:
             table = self.table
-        table = table.order_by(*map(order_key, by))
-        if dense:
+        if dense and limit is not None:
             groups = table.aggregate(_=table.count(), by=[name.lstrip('-') for name in by])
             limit = groups.order_by(*map(order_key, by))[:limit]['_'].sum().to_pyarrow().as_py()
-        return self.resolve(info, table[:limit])
+        return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
 
     @doc_field(
         name="column name",
