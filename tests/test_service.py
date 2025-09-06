@@ -14,6 +14,8 @@ def test_slice(client):
     assert data == {'take': {'row': {'zipcode': 501}}}
     data = client.execute('{ any many: any(limit: 50000)}')
     assert data == {'any': True, 'many': False}
+    data = client.execute('{ slice { count c: count } }')
+    assert data == {'slice': {'count': 41700, 'c': 41700}}
 
 
 def test_ints(client):

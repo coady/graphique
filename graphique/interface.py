@@ -14,10 +14,9 @@ import strawberry.asgi
 from strawberry import Info, UNSET
 from strawberry.scalars import JSON
 from typing_extensions import Self
-from .core import Parquet, order_key
+from .core import Parquet, getitems, order_key
 from .inputs import Aggregates, Field, Filter, Expression, Projection, Scalars
 from .models import Column, doc_field, links, selections
-from .core import getitems
 from .scalars import BigInt
 
 Source: TypeAlias = ibis.Table | ds.Dataset
@@ -61,9 +60,10 @@ class Dataset:
 
     def resolve(self, info: Info, source: ibis.Table) -> Self:
         """Cache the table if it will be reused."""
-        count = sum(len(field.selections) for field in info.selected_fields)
-        if count > 1 and isinstance(source, ibis.Table):
-            if names := self.select(info, source, level=1):
+        counts = selections(*info.selected_fields)
+        counts['type'] = counts['schema'] = 0
+        if counts.total() > 1 and isinstance(source, ibis.Table):
+            if names := self.select(info, source):
                 source = source.select(*names).cache()
         return type(self)(source)
 
@@ -76,13 +76,13 @@ class Dataset:
         return self.filter(info, **queries)
 
     @staticmethod
-    def select(info: Info, source: Source, level: int = 0) -> list:
+    def select(info: Info, source: Source) -> list:
         """Return minimal schema needed to continue."""
-        fields = info.selected_fields
-        for _ in range(level):
-            fields = itertools.chain(*[field.selections for field in fields])
-        refs = set(itertools.chain(*map(references, fields)))
-        return [name for name in ibis_schema(source).names if name in refs]
+        refs: set = set()
+        for field in info.selected_fields:
+            for selection in field.selections:
+                refs.update(references(selection))
+        return [name for name in ibis_schema(source) if name in refs]
 
     def columns(self, info: Info) -> dict:
         """Fields for each column."""

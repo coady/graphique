@@ -140,7 +140,7 @@ def test_federation(fedclient):
         """{ _entities(representations: {__typename: "ZipcodesTable", zipcode: 90001}) {
         ... on ZipcodesTable { count type row { state } } } }"""
     )
-    assert data == {'_entities': [{'count': 1, 'type': 'Table', 'row': {'state': 'CA'}}]}
+    assert data == {'_entities': [{'count': 1, 'type': 'CachedTable', 'row': {'state': 'CA'}}]}
     data = fedclient.execute("""{ states { filter(state: {eq: "CA"}) { columns { indices {
         takeFrom(field: "zipcodes") { __typename column(name: "state") { count } } } } } } }""")
     table = data['states']['filter']['columns']['indices']['takeFrom']

@@ -3,6 +3,7 @@ GraphQL output types and resolvers.
 """
 
 from __future__ import annotations
+import collections
 import functools
 import inspect
 from collections.abc import Callable
@@ -23,9 +24,16 @@ if TYPE_CHECKING:  # pragma: no cover
 T = TypeVar('T')
 
 
-def selections(*fields) -> set:
+def selections(*fields) -> collections.Counter:
     """Return field name selections from strawberry `SelectedField`."""
-    return {selection.name for field in fields for selection in field.selections}
+    counts = collections.Counter()  # type: ignore
+    for field in fields:
+        for selection in field.selections:
+            if hasattr(selection, 'name'):
+                counts[selection.name] += 1
+            else:
+                counts.update(selections(selection))
+    return counts
 
 
 def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
@@ -121,7 +129,8 @@ class GenericColumn(Generic[T], Column):
     @doc_field
     def distinct(self, info: Info) -> Set[T]:
         """distinct values and counts"""
-        return Set(self.column, cache=selections(*info.selected_fields) != {'count'})
+        count = selections(*info.selected_fields).total()
+        return Set(self.column, cache=count > 1)
 
     @col_field
     def first(self) -> T | None:
