@@ -1,13 +1,13 @@
 check:
-	python -m pytest -s --cov
+	uv run pytest -s --cov
 
 lint:
-	ruff check .
-	ruff format --check .
+	uv run ruff check .
+	uv run ruff format --check .
 	mypy -p graphique
 
 html: docs/schema.md
-	PYTHONPATH=$(PWD) python -m mkdocs build
+	PYTHONPATH=$(PWD) uv run mkdocs build
 
 docs/schema.md: docs/schema.graphql
 	./node_modules/.bin/graphql-markdown \
@@ -17,4 +17,4 @@ docs/schema.md: docs/schema.graphql
 		$? > $@
 
 docs/schema.graphql: graphique/*.py
-	PARQUET_PATH=tests/fixtures/zipcodes.parquet strawberry export-schema graphique.service:app.schema > $@
+	PARQUET_PATH=tests/fixtures/zipcodes.parquet uv run strawberry export-schema graphique.service:app.schema > $@

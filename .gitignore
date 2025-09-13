@@ -3,3 +3,4 @@ __pycache__/
 site/
 docs/schema.*
 node_modules/
+uv.lock

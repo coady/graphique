@@ -15,12 +15,11 @@ jobs:
         python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/setup-python@v6
+    - uses: astral-sh/setup-uv@v6
       with:
         python-version: ${{ matrix.python-version }}
-    - run: pip install -r tests/requirements.in
     - run: make check
-    - run: coverage xml
+    - run: uv run coverage xml
     - uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -29,19 +28,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/setup-python@v6
-      with:
-        python-version: 3.x
-    - run: pip install ruff mypy
+    - uses: astral-sh/setup-uv@v6
+    - run: pip install mypy
     - run: make lint
 
   docs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/setup-python@v6
-      with:
-        python-version: 3.x
-    - run: pip install -r docs/requirements.in
+    - uses: astral-sh/setup-uv@v6
     - run: npm install
     - run: make html

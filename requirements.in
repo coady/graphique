@@ -1,6 +1,0 @@
-pyarrow>=20
-strawberry-graphql[asgi,cli]>=0.236
-ibis-framework>=10.7
-duckdb
-pyarrow-hotfix
-isodate>=0.7

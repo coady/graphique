@@ -2,8 +2,7 @@ name: release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
 
 jobs:
   publish:
@@ -11,12 +10,9 @@ jobs:
     permissions: write-all
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/setup-python@v6
-      with:
-        python-version: 3.x
-    - run: pip install build -r docs/requirements.in
-    - run: python -m build
+    - uses: astral-sh/setup-uv@v6
+    - run: uv build
     - run: npm install
     - run: make html
-    - run: PYTHONPATH=$PWD python -m mkdocs gh-deploy --force
+    - run: PYTHONPATH=$(PWD) uv run mkdocs gh-deploy --force
     - uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,15 +1,10 @@
-[build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "graphique"
 version = "1.9"
-dynamic = ["dependencies"]
 description = "GraphQL service for python dataframes and parquet datasets."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 authors = [{name = "Aric Coady", email = "aric.coady@gmail.com"}]
 keywords = ["graphql", "arrow", "parquet"]
 classifiers = [
@@ -28,6 +23,14 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
+dependencies = [
+    "pyarrow>=20",
+    "strawberry-graphql[asgi,cli]>=0.236",
+    "ibis-framework>=10.7",
+    "duckdb",
+    "pyarrow-hotfix",
+    "isodate>=0.7",
+]
 
 [project.urls]
 Homepage = "https://github.com/coady/graphique"
@@ -38,9 +41,6 @@ Issues = "https://github.com/coady/graphique/issues"
 [project.optional-dependencies]
 server = ["uvicorn[standard]"]
 cli = ["tqdm"]
-
-[tool.setuptools.dynamic]
-dependencies = {file = "requirements.in"}
 
 [tool.ruff]
 line-length = 100
@@ -56,3 +56,12 @@ ignore_missing_imports = true
 source = ["graphique"]
 branch = true
 omit = ["graphique/shell.py"]
+
+[dependency-groups]
+dev = [
+    "pytest-cov",
+    "ruff",
+    "uvicorn[standard]",
+    "mkdocstrings[python]",
+    "mkdocs-jupyter",
+]
