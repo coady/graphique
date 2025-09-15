@@ -44,7 +44,7 @@ def test_floats(client):
     assert longitudes['min'] == pytest.approx(-174.21333)
     assert longitudes['max'] == pytest.approx(-65.301389)
     data = client.execute('{ columns { latitude { quantile(q: 0.5) } } }')
-    assert data == {'columns': {'latitude': {'quantile': pytest.approx(39.12054)}}}
+    assert data == {'columns': {'latitude': {'quantile': [pytest.approx(39.12054)]}}}
     data = client.execute("""{project(columns: {alias: "l", numeric: {bucket: {name: "latitude"}, buckets: [40, 50]}})
         { column(name: "l") { ... on IntColumn { distinct { values } } } } }""")
     assert set(data['project']['column']['distinct']['values']) == {0, None}
@@ -68,13 +68,13 @@ def test_floats(client):
 
 def test_strings(client):
     data = client.execute("""{ columns {
-        state { values distinct { count values counts } }
+        state { values nunique distinct { values counts } }
         county { distinct { values } }
         city { min max }
     } }""")
     states = data['columns']['state']
     assert len(states['values']) == 41700
-    assert len(states['distinct']['values']) == states['distinct']['count'] == 52
+    assert len(states['distinct']['values']) == states['nunique'] == 52
     assert sum(states['distinct']['counts']) == 41700
     assert data['columns']['city'] == {'min': 'Aaronsburg', 'max': 'Zwolle'}
     data = client.execute("""{ filter(state: {eq: "CA"}, where: {gt: [{string: {length: {name: "city"}}}, {value: 23}]})
@@ -94,6 +94,8 @@ def test_strings(client):
         { column(name: "has") { ... on BooleanColumn { distinct { values } } } } }"""
     )
     assert set(data['project']['column']['distinct']['values']) == {False, True}
+    data = client.execute('{ columns { state { quantile } } }')
+    assert data == {'columns': {'state': {'quantile': ['MS']}}}
 
 
 def test_string_methods(client):

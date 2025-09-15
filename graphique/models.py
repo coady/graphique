@@ -87,6 +87,11 @@ class Column:
     def count(self) -> BigInt:
         return self.column.count().to_pyarrow().as_py()
 
+    @col_field
+    def nunique(self, approx: bool = False) -> BigInt:
+        method = self.column.approx_nunique if approx else self.column.nunique
+        return method().to_pyarrow().as_py()
+
     @classmethod
     def resolve_type(cls, obj, info, *_) -> str:
         config = Info(info, None).schema.config
@@ -97,15 +102,8 @@ class Column:
 @strawberry.type(description="distinct values and counts")
 class Set(Generic[T]):
     def __init__(self, column, cache=False):
-        self.table, self.nunique = column.value_counts(), column.nunique()
-        if cache:
-            self.table = self.table.cache()
-            self.nunique = self.table[0].count()
-
-    @doc_field
-    def count(self) -> BigInt:
-        """distinct count"""
-        return self.nunique.to_pyarrow().as_py()
+        table = column.value_counts()
+        self.table = table.cache() if cache else table
 
     @doc_field
     def values(self) -> list[T | None]:
@@ -162,7 +160,7 @@ class GenericColumn(Generic[T], Column):
         return self.column.max().to_pyarrow().as_py()
 
     @col_field
-    def quantile(self, q: float = 0.5) -> float | None:
+    def quantile(self, q: list[float] = [0.5]) -> list[T] | None:
         return self.column.quantile(q).to_pyarrow().as_py()
 
 
@@ -204,6 +202,11 @@ class NumericColumn(GenericColumn[T]):
     @col_field
     def var(self, how: str = 'sample') -> float | None:
         return self.column.var(how=how).to_pyarrow().as_py()
+
+    @col_field
+    def quantile(self, q: list[float] = [0.5], approx: bool = False) -> list[float] | None:
+        method = self.column.approx_quantile if approx else self.column.quantile
+        return method(q).to_pyarrow().as_py()
 
 
 @Column.register(bool)

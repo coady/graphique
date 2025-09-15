@@ -68,8 +68,8 @@ def test_numeric(executor):
         assert data == {'columns': {name: {'mean': 0.0, 'std': None, 'var': None}}}
         data = executor(f'{{ columns {{ {name} {{ mode }} }} }}')
         assert data == {'columns': {name: {'mode': 0}}}
-        data = executor(f'{{ columns {{ {name} {{ quantile }} }} }}')
-        assert data == {'columns': {name: {'quantile': 0.0}}}
+        data = executor(f'{{ columns {{ {name} {{ quantile(approx: true) }} }} }}')
+        assert data == {'columns': {name: {'quantile': [0.0]}}}
 
     data = executor('{ column(name: "float64", cast: "int32") { type } }')
     assert data == {'column': {'type': 'int32'}}
