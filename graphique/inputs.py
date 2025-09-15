@@ -116,28 +116,58 @@ class Filter(Generic[T]):
 class Aggregate:
     name: str = strawberry.field(description="column name")
     alias: str = strawberry.field(default='', description="output column name")
+    where: Expression | None = None
 
     def to_ibis(self, func: str, **options) -> tuple:
+        options['where'] = self.where and self.where.to_ibis()
         return (self.alias or self.name), getattr(ibis._[self.name], func)(**options)
+
+
+@strawberry.input
+class UniqueAggregate(Aggregate):
+    approx: bool = False
+
+    def to_ibis(self, func: str, **options) -> tuple:  # type: ignore
+        return super().to_ibis('approx_' + func if self.approx else func, **options)
+
+
+@strawberry.input
+class OrderAggregate(Aggregate):
+    order_by: list[str] = default_field([])
+    include_null: bool = False
+
+    def to_ibis(self, func: str, **options) -> tuple:
+        options.update(
+            order_by=list(map(order_key, self.order_by)) or None,
+            include_null=self.include_null,
+        )
+        return super().to_ibis(func, **options)
+
+
+@strawberry.input
+class VarAggregate(Aggregate):
+    how: str = 'sample'
+
+    def to_ibis(self, func: str) -> tuple:  # type: ignore
+        return super().to_ibis(func, how=self.how)
+
+
+@strawberry.input
+class QuantileAggregate(UniqueAggregate):
+    q: float = 0.5
+
+    def to_ibis(self, func: str) -> tuple:  # type: ignore
+        return super().to_ibis(func, quantile=self.q)
 
 
 @strawberry.input(
     description=f"options for [collect]({links.ref}/expression-generic#ibis.expr.types.generic.Value.collect)"
 )
-class CollectAggregate(Aggregate):
-    where: Expression | None = None
-    order_by: list[str] = default_field([])
-    include_null: bool = False
+class CollectAggregate(OrderAggregate):
     distinct: bool = False
 
     def to_ibis(self, func: str) -> tuple:  # type: ignore
-        options = dict(
-            where=self.where and self.where.to_ibis(),
-            order_by=list(map(order_key, self.order_by)) or None,
-            include_null=self.include_null,
-            distinct=self.distinct,
-        )
-        return super().to_ibis(func, **options)
+        return super().to_ibis(func, distinct=self.distinct)
 
 
 @strawberry.input(description=f"aggregation [expressions]({links.ref}/expression-generic)")
@@ -145,15 +175,17 @@ class Aggregates:
     all: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.all)
     any: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.any)
     collect: list[CollectAggregate] = default_field([], func=ibis.Column.collect)
-    first: list[Aggregate] = default_field([], func=ibis.Column.first)
-    last: list[Aggregate] = default_field([], func=ibis.Column.last)
+    count: list[Aggregate] = default_field([], func=ibis.Column.count)
+    first: list[OrderAggregate] = default_field([], func=ibis.Column.first)
+    last: list[OrderAggregate] = default_field([], func=ibis.Column.last)
     max: list[Aggregate] = default_field([], func=ibis.Column.max)
     mean: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.mean)
-    median: list[Aggregate] = default_field([], func=ibis.Column.median)
     min: list[Aggregate] = default_field([], func=ibis.Column.min)
-    std: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.std)
+    nunique: list[UniqueAggregate] = default_field([], func=ibis.Column.nunique)
+    quantile: list[QuantileAggregate] = default_field([], func=ibis.Column.quantile)
+    std: list[VarAggregate] = default_field([], func=ibis.expr.types.NumericColumn.std)
     sum: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.sum)
-    var: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.var)
+    var: list[VarAggregate] = default_field([], func=ibis.expr.types.NumericColumn.var)
 
     def __iter__(self) -> Iterable[tuple]:
         for name, aggs in self.__dict__.items():

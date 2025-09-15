@@ -283,6 +283,12 @@ def test_group(client):
         { project(columns: {alias: "num", array: {length: {name: "city"}}})
         { filter(where: {eq: [{name: "num"}, {value: null}]}) { count } } } }""")
     assert data == {'group': {'project': {'filter': {'count': 2}}}}
+    data = client.execute("""{ group(aggregate: {nunique: {name: "state", alias: "num"}, quantile: {name: "state"}})
+        { row { state } column(name: "num") { ... on BigIntColumn { first } } } }""")
+    assert data == {'group': {'row': {'state': 'MS'}, 'column': {'first': 52}}}
+    data = client.execute("""{ group(aggregate: {std: {name: "latitude", how: "pop"}})
+        { row { latitude } } }""")
+    assert data == {'group': {'row': {'latitude': pytest.approx(5.378499)}}}
 
 
 def test_unnest(client):
