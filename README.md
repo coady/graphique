@@ -102,7 +102,7 @@ pip install graphique[server]
 ```
 
 ## Dependencies
-* ibis-framework[duckdb]
+* ibis-framework (with duckdb or other backend)
 * strawberry-graphql[asgi,cli]
 * pyarrow
 * isodate

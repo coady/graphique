@@ -27,7 +27,6 @@ dependencies = [
     "pyarrow>=20",
     "strawberry-graphql[asgi,cli]>=0.236",
     "ibis-framework>=10.7",
-    "duckdb",
     "pyarrow-hotfix",
     "isodate>=0.7",
 ]
@@ -39,7 +38,7 @@ Changelog = "https://github.com/coady/graphique/blob/main/CHANGELOG.md"
 Issues = "https://github.com/coady/graphique/issues"
 
 [project.optional-dependencies]
-server = ["uvicorn[standard]"]
+server = ["uvicorn[standard]", "duckdb"]
 cli = ["tqdm"]
 
 [tool.ruff]
@@ -62,6 +61,7 @@ dev = [
     "pytest-cov",
     "ruff",
     "uvicorn[standard]",
+    "duckdb<1.4",
     "mkdocstrings[python]",
     "mkdocs-jupyter",
 ]
