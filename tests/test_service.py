@@ -134,6 +134,8 @@ def test_search(client):
     assert data == {'filter': {'count': 0}}
     data = client.execute('{ filter(zipcode: {eq: [0]}) { count } }')
     assert data == {'filter': {'count': 0}}
+    data = client.execute('{ filter(zipcode: {ne: [0, 1]}) { count } }')
+    assert data == {'filter': {'count': 41700}}
     data = client.execute(
         '{ filter(zipcode: {eq: [501, 601]}) { columns { zipcode { values } } } }'
     )
@@ -151,6 +153,8 @@ def test_filter(client):
     assert data['filter']['count'] == 7
     data = client.execute('{ filter(state: {eq: null}) { columns { state { values } } } }')
     assert data['filter']['columns']['state']['values'] == []
+    data = client.execute('{ filter(state: {ne: null}) { count } }')
+    assert data == {'filter': {'count': 41700}}
     data = client.execute(
         '{ filter(where: {le: [{numeric: {abs: {name: "longitude"}}}, {value: 66}]}) { count } }'
     )

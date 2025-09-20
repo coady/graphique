@@ -67,8 +67,8 @@ class Field:
 
 @strawberry.input(description="predicates for scalars")
 class Filter(Generic[T]):
-    eq: list[T | None] | None = default_field(description="== or `isin`", nullable=True)
-    ne: T | None = default_field(description="!=", nullable=True)
+    eq: list[T] | None = default_field(description="== or `isin`", nullable=True)
+    ne: list[T] | None = default_field(description="!= or `notin`", nullable=True)
     lt: T | None = default_field(description="<")
     le: T | None = default_field(description="<=")
     gt: T | None = default_field(description=r"\>")
@@ -95,8 +95,13 @@ class Filter(Generic[T]):
         for name, query in queries.items():
             field = ibis._[name]
             for op, value in query:  # type: ignore
-                isin = op == 'eq' and isinstance(value, list)
-                yield field.isin(value) if isin else getattr(operator, op)(field, value)
+                match value, op:
+                    case list(), 'eq':
+                        yield field.isin(value)
+                    case list(), 'ne':
+                        yield field.notin(value)
+                    case _:
+                        yield getattr(operator, op)(field, value)
 
     @staticmethod
     def to_arrow(**queries: Filter | dict) -> ds.Expression | None:
@@ -160,9 +165,7 @@ class QuantileAggregate(UniqueAggregate):
         return super().to_ibis(func, quantile=self.q)
 
 
-@strawberry.input(
-    description=f"options for [collect]({links.ref}/expression-generic#ibis.expr.types.generic.Value.collect)"
-)
+@strawberry.input
 class CollectAggregate(OrderAggregate):
     distinct: bool = False
 
@@ -222,6 +225,7 @@ class Expression:
     gt: list[Expression] = default_field([], description=r"\>")
     ge: list[Expression] = default_field([], description=r"\>=")
     isin: list[Expression] = default_field([], func=ibis.Column.isin)
+    notin: list[Expression] = default_field([], func=ibis.Column.notin)
 
     inv: Expression | None = default_field(description="~")
     and_: list[Expression] = default_field([], name='and', description="&")
