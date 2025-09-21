@@ -188,7 +188,7 @@ class Dataset:
         on="column names to deduplicate on; defaults to all",
         keep="which duplicates to keep",
         counts=f"[value counts]({links.ref}/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`",
-        row_number="optionally include row number in an aliased column",
+        order="optionally include and order by first row number; incompatible with `on: null`",
     )
     def distinct(
         self,
@@ -196,28 +196,30 @@ class Dataset:
         on: list[str] | None = None,
         keep: str | None = 'first',
         counts: str = '',
-        row_number: str = '',
+        order: str = '',
     ) -> Self:
         """[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
 
         Differs from `group` by keeping all columns, and defaulting to all keys.
         """
         table = self.table
-        if row_number:
-            table = table.mutate({row_number: ibis.row_number()})
+        if order:
+            table = table.mutate({order: ibis.row_number()})
         if not counts or keep is None:
-            return self.resolve(info, table.distinct(on=on, keep=keep))
-        if on is None:
-            return self.resolve(info, table.value_counts(name=counts))
-        keys, func = set(on), operator.methodcaller(keep)
-        aggs = {name: func(table[name]) for name in table.columns if name not in keys}
-        aggs[counts] = table.count()
-        return self.resolve(info, table.aggregate(aggs, by=on))
+            table = table.distinct(on=on, keep=keep)
+        elif on is None:
+            table = table.value_counts(name=counts)
+        else:
+            keys, func = set(on), operator.methodcaller(keep)
+            aggs = {name: func(table[name]) for name in table.columns if name not in keys}
+            aggs[counts] = table.count()
+            table = table.aggregate(aggs, by=on)
+        return self.resolve(info, table.order_by(order) if order else table)
 
     @doc_field(
         by="column names; empty will aggregate into a single row table",
         counts="optionally include counts in an aliased column",
-        row_number="optionally include first row number in an aliased column",
+        order="optionally include and order by first row number",
         aggregate="aggregation functions applied to other columns",
     )
     def group(
@@ -225,20 +227,21 @@ class Dataset:
         info: Info,
         by: list[str] = [],
         counts: str = '',
-        row_number: str = '',
+        order: str = '',
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
         """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns."""
         aggs = dict(aggregate)  # type: ignore
-        if not aggs and not row_number and by == Parquet.keys(self.source, *by):
+        if not aggs and not order and by == Parquet.keys(self.source, *by):
             return self.resolve(info, Parquet.group(self.source, *by, counts=counts))
         table = self.table
         if counts:
             aggs[counts] = table.count()
-        if row_number:
-            table = table.mutate({row_number: ibis.row_number()})
-            aggs[row_number] = table[row_number].first()
-        return self.resolve(info, table.aggregate(aggs, by=by))
+        if order:
+            table = table.mutate({order: ibis.row_number()})
+            aggs[order] = table[order].first()
+        table = table.aggregate(aggs, by=by)
+        return self.resolve(info, table.order_by(order) if order else table)
 
     @doc_field(
         by="column names; prefix with `-` for descending order",

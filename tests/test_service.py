@@ -252,7 +252,7 @@ def test_order(client):
 def test_distinct(client):
     data = client.execute('{ distinct { count } }')
     assert data == {'distinct': {'count': 41700}}
-    data = client.execute("""{ distinct(on: "state", rowNumber: "idx") 
+    data = client.execute("""{ distinct(on: "state", order: "idx") 
         { count column(name: "idx") { type } } }""")
     assert data == {'distinct': {'count': 52, 'column': {'type': 'int64'}}}
     data = client.execute('{ distinct(on: ["state", "county"], keep: null) { count } }')
@@ -280,9 +280,9 @@ def test_group(client):
         project(columns: {array: {length: {name: "county"}}, alias: "c"}) { column(name: "c") { ... on BigIntColumn { min } } } } }""")
     assert len(data['group']['columns']['state']['values']) == 52
     assert data['group']['project'] == {'column': {'min': 1}}
-    data = client.execute("""{ group(by: ["state"], rowNumber: "idx", aggregate: {min: {name: "county"}}) { 
-        order(by: "idx") { row { state county } } } }""")
-    assert data == {'group': {'order': {'row': {'state': 'NY', 'county': 'Albany'}}}}
+    data = client.execute("""{ group(by: ["state"], order: "idx", aggregate: {min: {name: "county"}})
+        { row { state county } } }""")
+    assert data == {'group': {'row': {'state': 'NY', 'county': 'Albany'}}}
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city", orderBy: "longitude", where: {eq: [{name: "county"}, {name: "city"}]}}})
         { project(columns: {alias: "num", array: {length: {name: "city"}}})
         { filter(where: {eq: [{name: "num"}, {value: null}]}) { count } } } }""")
