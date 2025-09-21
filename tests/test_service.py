@@ -217,6 +217,18 @@ def test_project(client):
     assert data == {'project': {'column': {'min': 0, 'max': 51}}}
 
 
+def test_window(client):
+    data = client.execute("""{ project(columns: {alias: "state", window: {lag: {name: "state"}, offset: 2}})
+        { columns { state { values } } } }""")
+    assert data['project']['columns']['state']['values'][:3] == [None, None, 'NY']
+    data = client.execute("""{ project(columns: {alias: "state", window: {lead: {name: "state"}, default: ""}})
+        { columns { state { values } } } }""")
+    assert data['project']['columns']['state']['values'][-2:] == ['AK', '']
+    data = client.execute("""{ project(columns: {alias: "runs", window: {ne: {name: "state"}, default: false}})
+        { column(name: "runs") { ... on BooleanColumn { values } } } }""")
+    assert data['project']['column']['values'][:4] == [False, False, True, False]
+
+
 def test_order(client):
     with pytest.raises(ValueError, match="is required"):
         client.execute('{ order { columns { state { values } } } }')

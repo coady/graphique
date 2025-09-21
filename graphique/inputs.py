@@ -110,8 +110,9 @@ class Filter(Generic[T]):
         for name, query in queries.items():
             field = pc.field(name)
             for op, value in dict(query).items():  # type: ignore
-                if op == 'eq' and isinstance(value, list):
-                    exprs.append(pc.is_in(field, pa.array(value)))
+                if isinstance(value, list):
+                    expr = pc.is_in(field, pa.array(value))
+                    exprs.append(pc.invert(expr) if op == 'ne' else expr)
                 else:
                     exprs.append(getattr(operator, op)(field, value))
         return functools.reduce(operator.and_, exprs or [None])
@@ -250,6 +251,7 @@ class Expression:
     numeric: Numeric | None = default_field(description="numeric functions")
     string: Strings | None = default_field(description="string functions")
     temporal: Temporal | None = default_field(description="temporal functions")
+    window: Window | None = default_field(description="window functions")
 
     def items(self) -> Iterable[tuple]:
         for name, value in self.__dict__.items():
@@ -275,7 +277,7 @@ class Expression:
                     yield getattr(operator, name)(expr, *args)
                 case _:
                     yield getattr(expr, name)(*args)
-        for field in (self.array, self.numeric, self.string, self.temporal):
+        for field in (self.array, self.numeric, self.string, self.temporal, self.window):
             if field:
                 yield from field  # type: ignore
 
@@ -433,3 +435,32 @@ class Temporal:
                     yield expr.strftime(self.format_str)
                 case _:
                     yield getattr(expr, name)(*args)
+
+
+@strawberry.input(
+    description=f"window [expressions]({links.ref}/expression-tables.html#ibis.window)"
+)
+class Window:
+    lag: Expression | None = default_field(func=ibis.Column.lag)
+    lead: Expression | None = default_field(func=ibis.Column.lead)
+
+    eq: Expression | None = default_field(description="pairwise ==")
+    ne: Expression | None = default_field(description="pairwise !=")
+    lt: Expression | None = default_field(description="pairwise <")
+    le: Expression | None = default_field(description="pairwise <=")
+    gt: Expression | None = default_field(description=r"pairwise \>")
+    ge: Expression | None = default_field(description=r"pairwise \>=")
+    sub: Expression | None = default_field(description="pairwise -")
+
+    offset: int = 1
+    default: JSON | None = default_field(None, description="default JSON scalar")
+    scalar: Scalars | None = default_field(description="default typed scalar")
+
+    def __iter__(self) -> Iterable[ibis.Deferred]:
+        (default,) = self.scalar or [self.default]
+        for name, (expr, *args) in Expression.items(self):  # type: ignore
+            match name:
+                case 'lag' | 'lead':
+                    yield getattr(expr, name)(self.offset, default)
+                case _:
+                    yield getattr(operator, name)(expr, expr.lag(self.offset)).fill_null(default)
