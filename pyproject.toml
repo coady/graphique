@@ -61,7 +61,7 @@ dev = [
     "pytest-cov",
     "ruff",
     "uvicorn[standard]",
-    "duckdb<1.4",
+    "duckdb<1.5",
     "mkdocstrings[python]",
     "mkdocs-jupyter",
 ]
