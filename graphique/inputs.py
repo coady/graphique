@@ -292,6 +292,12 @@ class Expression:
 class Projection(Expression):
     alias: str = strawberry.field(default='', description="name of projected column")
 
+    def to_ibis(self) -> tuple:
+        name = self.alias or '.'.join(self.name)
+        if name:
+            return name, super().to_ibis()
+        raise ValueError(f"projected fields require a name or alias: {self}")
+
 
 @strawberry.input(description=f"array [expressions]({links.ref}/expression-collections)")
 class Arrays:
@@ -458,7 +464,7 @@ class Window:
 
     def __iter__(self) -> Iterable[ibis.Deferred]:
         (default,) = self.scalar or [self.default]
-        for name, (expr, *args) in Expression.items(self):  # type: ignore
+        for name, (expr,) in Expression.items(self):  # type: ignore
             match name:
                 case 'lag' | 'lead':
                     yield getattr(expr, name)(self.offset, default)

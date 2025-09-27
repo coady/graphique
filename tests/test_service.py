@@ -327,3 +327,15 @@ def test_rows(client):
     assert data == {'row': {'state': 'NY'}}
     data = client.execute('{ row(index: -1) { state } }')
     assert data == {'row': {'state': 'AK'}}
+
+
+def test_runs(client):
+    data = client.execute("""{ runs(by: "state", aggregate: {collect: {name: "county"}})
+        { count columns { state { values } } column(name: "county") { type } } }""")
+    assert data['runs'].pop('columns')['state']['values'][:3] == ['NY', 'PR', 'MA']
+    assert data == {'runs': {'count': 66, 'column': {'type': 'array<string>'}}}
+    data = client.execute("""{ runs(split: {alias: "lat", window: {gt: {name: "latitude"}}}, counts: "c")
+        { count schema { names types } } }""")
+    assert data == {
+        "runs": {"count": 20888, "schema": {"names": ["lat", "c"], "types": ["int64", "int64"]}}
+    }

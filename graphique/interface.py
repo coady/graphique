@@ -15,7 +15,7 @@ from strawberry import Info, UNSET
 from strawberry.scalars import JSON
 from typing_extensions import Self
 from .core import Parquet, getitems, order_key
-from .inputs import Aggregates, Field, Filter, Expression, Projection, Scalars
+from .inputs import Aggregates, Field, Filter, Expression, Projection, Scalars, provisional
 from .models import Column, doc_field, links, selections
 from .scalars import BigInt
 
@@ -346,7 +346,37 @@ class Dataset:
 
         Renamed to not be confused with a mutation.
         """
-        projection = {column.alias or ''.join(column.name): column.to_ibis() for column in columns}
-        if '' in projection:
-            raise ValueError(f"projected fields require a name or alias: {projection['']}")
+        projection = dict(map(Projection.to_ibis, columns))
         return self.resolve(info, self.table.mutate(projection))
+
+    @doc_field(
+        by="column names to compare by equality",
+        split="boolean column expressions to split on true values",
+        counts="optionally include counts in an aliased column",
+        alias="format string to name index columns",
+        aggregate="aggregation functions applied to other columns",
+    )
+    def runs(
+        self,
+        info: Info,
+        by: list[str] = [],
+        split: list[Projection] = [],
+        counts: str = '',
+        alias: str = '{}_index',
+        aggregate: Aggregates = {},  # type: ignore
+    ) -> Self:
+        """Provisionally group table by adjacent values in columns."""
+        table = self.table
+        projection = dict(map(Projection.to_ibis, split))
+        for name in by:
+            column = table[name] != table[name].lag()
+            projection[alias.format(name)] = column.fill_null(False)
+        aggs = {name: ibis._[name].first() for name in by}
+        aggs.update(aggregate)  # type: ignore
+        if counts:
+            aggs[counts] = ibis._.count()
+        table = table.mutate(projection)  # window functions can't be nested
+        table = table.mutate({name: table[name].cumsum() for name in projection})
+        return self.resolve(info, table.aggregate(aggs, by=list(projection)).order_by(*projection))
+
+    runs.directives = [provisional()]
