@@ -16,7 +16,7 @@ import strawberry
 from strawberry import Info, UNSET
 from strawberry.types.field import StrawberryField
 from .core import links
-from .inputs import optional
+from .inputs import optional, provisional
 from .scalars import BigInt, py_type, scalar_map
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -172,6 +172,7 @@ class TemporalColumn(GenericColumn[T]): ...
 @Column.register(timedelta, pa.MonthDayNano)
 @strawberry.type(
     name='Column',
+    directives=[provisional()],
     description=f"""provisional [interval column]({links.ref}/expression-temporal#ibis.expr.types.temporal.IntervalValue)
 
 Interval support varies by backend; durations may still be useful for computation and as scalar inputs.""",
