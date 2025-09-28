@@ -212,7 +212,7 @@ class Dataset:
         else:
             keys, func = set(on), operator.methodcaller(keep)
             aggs = {name: func(table[name]) for name in table.columns if name not in keys}
-            aggs[counts] = table.count()
+            aggs[counts] = ibis._.count()
             table = table.aggregate(aggs, by=on)
         return self.resolve(info, table.order_by(order) if order else table)
 
@@ -236,7 +236,7 @@ class Dataset:
             return self.resolve(info, Parquet.group(self.source, *by, counts=counts))
         table = self.table
         if counts:
-            aggs[counts] = table.count()
+            aggs[counts] = ibis._.count()
         if order:
             table = table.mutate({order: ibis.row_number()})
             aggs[order] = table[order].first()
@@ -260,7 +260,7 @@ class Dataset:
         else:
             table = self.table
         if dense and limit is not None:
-            groups = table.aggregate(_=table.count(), by=[name.lstrip('-') for name in by])
+            groups = table.aggregate(_=ibis._.count(), by=[name.lstrip('-') for name in by])
             limit = groups.order_by(*map(order_key, by))[:limit]['_'].sum().to_pyarrow().as_py()
         return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
 

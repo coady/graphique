@@ -305,6 +305,7 @@ def test_group(client):
     data = client.execute("""{ group(aggregate: {std: {name: "latitude", how: "pop"}})
         { row { latitude } } }""")
     assert data == {'group': {'row': {'latitude': pytest.approx(5.378499)}}}
+    assert client.execute("""{ group(by: "state", counts: "c", order: "_") { count } }""")
 
 
 def test_unnest(client):
