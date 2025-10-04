@@ -1,6 +1,8 @@
 from pathlib import Path
+
 import ibis
 import pyarrow.dataset as ds
+
 from graphique import GraphQL
 
 fixtures = Path(__file__).parent / 'fixtures'

@@ -13,6 +13,7 @@ import operator
 import shutil
 from pathlib import Path
 from typing import Annotated, Callable
+
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds

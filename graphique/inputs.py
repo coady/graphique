@@ -3,6 +3,7 @@ GraphQL input types.
 """
 
 from __future__ import annotations
+
 import functools
 import inspect
 import operator
@@ -10,6 +11,7 @@ from collections.abc import Callable, Iterable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Generic, TypeVar
+
 import ibis
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -17,10 +19,11 @@ import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.types.arguments import StrawberryArgument
-from strawberry.schema_directive import Location
-from strawberry.types.field import StrawberryField
 from strawberry.scalars import JSON
+from strawberry.schema_directive import Location
+from strawberry.types.arguments import StrawberryArgument
+from strawberry.types.field import StrawberryField
+
 from .core import getitems, links, order_key
 
 T = TypeVar('T')
@@ -40,10 +43,7 @@ class optional:
     """
 
 
-@use_doc(
-    strawberry.schema_directive,
-    locations=[Location.OBJECT, Location.FIELD_DEFINITION],
-)
+@use_doc(strawberry.schema_directive, locations=[Location.OBJECT, Location.FIELD_DEFINITION])
 class provisional:
     """Provisional feature; subject to change in the future."""
 

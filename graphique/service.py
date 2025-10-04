@@ -3,18 +3,20 @@ Default GraphQL service.
 
 Copy and customize as needed. Demonstrates:
 * federation versus root type
-* datasets  and tables
+* datasets and tables
 * filtering and projection
 """
 
 import json
 from pathlib import Path
+
 import ibis
 import pyarrow.dataset as ds
 from starlette.config import Config
+
+from graphique import GraphQL
 from graphique.core import Parquet
 from graphique.inputs import Filter
-from graphique import GraphQL
 
 config = Config('.env' if Path('.env').is_file() else None)
 PARQUET_PATH = Path(config('PARQUET_PATH')).resolve()

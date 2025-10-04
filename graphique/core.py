@@ -3,6 +3,7 @@ Core arrow utilities.
 """
 
 import itertools
+
 import ibis
 import pyarrow as pa
 import pyarrow.dataset as ds

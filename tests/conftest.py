@@ -2,6 +2,7 @@ import os
 import sys
 from importlib import metadata
 from pathlib import Path
+
 import pyarrow.dataset as ds
 import pytest
 

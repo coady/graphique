@@ -5,6 +5,7 @@ GraphQL scalars.
 import functools
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+
 import ibis
 import isodate
 import pyarrow as pa

@@ -3,18 +3,21 @@ GraphQL output types and resolvers.
 """
 
 from __future__ import annotations
+
 import collections
 import functools
 import inspect
 from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Annotated, Generic, TypeVar, TYPE_CHECKING, get_args
+from typing import TYPE_CHECKING, Annotated, Generic, TypeVar, get_args
+
 import ibis
 import pyarrow as pa
 import strawberry
-from strawberry import Info, UNSET
+from strawberry import UNSET, Info
 from strawberry.types.field import StrawberryField
+
 from .core import links
 from .inputs import optional, provisional
 from .scalars import BigInt, py_type, scalar_map

@@ -1,7 +1,10 @@
 import asyncio
 import json
+
 import pytest
+
 from graphique import middleware
+
 from .conftest import load
 
 

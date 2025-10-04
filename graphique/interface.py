@@ -8,14 +8,16 @@ import itertools
 import operator
 from collections.abc import Iterable, Iterator, Mapping
 from typing import TypeAlias, no_type_check
+
 import ibis
 import pyarrow.dataset as ds
-import strawberry.asgi
-from strawberry import Info, UNSET
+import strawberry
+from strawberry import UNSET, Info
 from strawberry.scalars import JSON
 from typing_extensions import Self
+
 from .core import Parquet, getitems, order_key
-from .inputs import Aggregates, Field, Filter, Expression, Projection, Scalars, provisional
+from .inputs import Aggregates, Expression, Field, Filter, Projection, Scalars, provisional
 from .models import Column, doc_field, links, selections
 from .scalars import BigInt
 

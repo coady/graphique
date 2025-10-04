@@ -1,8 +1,9 @@
 import ibis
 import pyarrow.compute as pc
 import pytest
+
 from graphique.core import Parquet
-from graphique.scalars import Duration, BigInt, parse_duration, duration_isoformat, py_type
+from graphique.scalars import BigInt, Duration, duration_isoformat, parse_duration, py_type
 
 
 def test_duration():
