@@ -1,0 +1,1993 @@
+"""
+This input is optional, not nullable.
+If the client insists on sending an explicit null value, the behavior is undefined.
+"""
+directive @optional on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+
+"""Provisional feature; subject to change in the future."""
+directive @provisional on OBJECT | FIELD_DEFINITION
+
+schema {
+  query: Table
+}
+
+"""name and optional alias for aggregation"""
+input Aggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  where: Expression = null
+}
+
+"""
+aggregation [expressions](https://ibis-project.org/reference/expression-generic)
+"""
+input Aggregates {
+  """Return whether all elements are `True`."""
+  all: [Aggregate!]! = []
+
+  """Return whether at least one element is `True`."""
+  any: [Aggregate!]! = []
+
+  """Aggregate this expression's elements into an array."""
+  collect: [CollectAggregate!]! = []
+
+  """Compute the number of rows in an expression."""
+  count: [Aggregate!]! = []
+
+  """Return the first value of a column."""
+  first: [OrderAggregate!]! = []
+
+  """Return the last value of a column."""
+  last: [OrderAggregate!]! = []
+
+  """Return the maximum of a column."""
+  max: [Aggregate!]! = []
+
+  """Return the mean of a numeric column."""
+  mean: [Aggregate!]! = []
+
+  """Return the minimum of a column."""
+  min: [Aggregate!]! = []
+
+  """Compute the number of distinct rows in an expression."""
+  nunique: [UniqueAggregate!]! = []
+
+  """Return value at the given quantile."""
+  quantile: [QuantileAggregate!]! = []
+
+  """Return the standard deviation of a numeric column."""
+  std: [VarAggregate!]! = []
+
+  """Return the sum of a numeric column."""
+  sum: [Aggregate!]! = []
+
+  """Return the variance of a numeric column."""
+  var: [VarAggregate!]! = []
+}
+
+"""
+[array column](https://ibis-project.org/reference/expression-collections)
+"""
+type ArrayColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+}
+
+"""
+array [expressions](https://ibis-project.org/reference/expression-collections)
+"""
+input Arrays {
+  """Return whether all elements (ignoring nulls) in the array are true."""
+  alls: Expression @optional
+
+  """Return whether any element in the array is true."""
+  anys: Expression @optional
+
+  """Compute the length of an array."""
+  length: Expression @optional
+
+  """Return the maximum value in the array."""
+  maxs: Expression @optional
+
+  """Return the mean of the values in the array."""
+  means: Expression @optional
+
+  """Return the mode of the values in the array."""
+  modes: Expression @optional
+
+  """Return the minimum value in the array."""
+  mins: Expression @optional
+
+  """Sort the elements in an array."""
+  sort: Expression @optional
+
+  """Return the sum of the values in the array."""
+  sums: Expression @optional
+
+  """Return the unique values in an array."""
+  unique: Expression @optional
+
+  """Return the position of `other` in an array."""
+  index: [Expression!]! = []
+
+  """array slice"""
+  slice: Expression @optional
+
+  """value at offset"""
+  value: Expression @optional
+  offset: Int! = 0
+  limit: Int = null
+}
+
+"""
+Represents binary data as Base64-encoded strings, using the standard alphabet.
+"""
+scalar Base64 @specifiedBy(url: "https://datatracker.ietf.org/doc/html/rfc4648.html#section-4")
+
+"""
+[generic column](https://ibis-project.org/reference/expression-generic)
+"""
+type Base64Column implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [Base64]!
+
+  """distinct values and counts"""
+  distinct: Base64Set!
+
+  """Return the first value of a column."""
+  first: Base64
+
+  """Return the last value of a column."""
+  last: Base64
+
+  """non-null values"""
+  dropNull: [Base64!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: Base64!): [Base64!]!
+
+  """Return the mode of a column."""
+  mode: Base64
+
+  """Return the minimum of a column."""
+  min: Base64
+
+  """Return the maximum of a column."""
+  max: Base64
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5]): [Base64!]
+}
+
+"""distinct values and counts"""
+type Base64Set {
+  """distinct values"""
+  values: [Base64]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""64-bit int"""
+scalar BigInt
+
+"""
+[integer column](https://ibis-project.org/reference/expression-numeric#ibis.expr.types.numeric.IntegerColumn)
+"""
+type BigIntColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [BigInt]!
+
+  """distinct values and counts"""
+  distinct: BigIntSet!
+
+  """Return the first value of a column."""
+  first: BigInt
+
+  """Return the last value of a column."""
+  last: BigInt
+
+  """non-null values"""
+  dropNull: [BigInt!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: BigInt!): [BigInt!]!
+
+  """Return the mode of a column."""
+  mode: BigInt
+
+  """Return the minimum of a column."""
+  min: BigInt
+
+  """Return the maximum of a column."""
+  max: BigInt
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5], approx: Boolean! = false): [Float!]
+
+  """Return the sum of a numeric column."""
+  sum: BigInt
+
+  """Return the mean of a numeric column."""
+  mean: Float
+
+  """Return the standard deviation of a numeric column."""
+  std(how: String! = "sample"): Float
+
+  """Return the variance of a numeric column."""
+  var(how: String! = "sample"): Float
+
+  """Select indices from a table on the root Query type."""
+  takeFrom(field: String!): Dataset
+}
+
+"""distinct values and counts"""
+type BigIntSet {
+  """distinct values"""
+  values: [BigInt]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""distinct values and counts"""
+type BoolSet {
+  """distinct values"""
+  values: [Boolean]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""
+[boolean column](https://ibis-project.org/reference/expression-numeric#ibis.expr.types.logical.BooleanColumn)
+"""
+type BooleanColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [Boolean]!
+
+  """distinct values and counts"""
+  distinct: BoolSet!
+
+  """Return the first value of a column."""
+  first: Boolean
+
+  """Return the last value of a column."""
+  last: Boolean
+
+  """non-null values"""
+  dropNull: [Boolean!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: Boolean!): [Boolean!]!
+
+  """Return the mode of a column."""
+  mode: Boolean
+
+  """Return the minimum of a column."""
+  min: Boolean
+
+  """Return the maximum of a column."""
+  max: Boolean
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5], approx: Boolean! = false): [Float!]
+
+  """Return the sum of a numeric column."""
+  sum: Boolean
+
+  """Return the mean of a numeric column."""
+  mean: Float
+
+  """Return the standard deviation of a numeric column."""
+  std(how: String! = "sample"): Float
+
+  """Return the variance of a numeric column."""
+  var(how: String! = "sample"): Float
+
+  """Return whether at least one element is `True`."""
+  any: Boolean
+
+  """Return whether all elements are `True`."""
+  all: Boolean
+}
+
+input CollectAggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  where: Expression = null
+  orderBy: [String!]! = []
+  includeNull: Boolean! = false
+  distinct: Boolean! = false
+}
+
+"""ibis column interface"""
+interface Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+}
+
+"""fields for each column"""
+type Columns {
+  latitude: FloatColumn
+  longitude: FloatColumn
+  state: StringColumn
+  city: StringColumn
+  county: StringColumn
+  zipcode: IntColumn
+}
+
+"""ibis `Table` or arrow `Dataset`"""
+interface Dataset {
+  """
+  [ibis table](https://ibis-project.org/reference/expression-table) or [arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html)
+  """
+  type: String!
+
+  """
+  [table schema](https://ibis-project.org/reference/schemas#ibis.expr.schema.Schema)
+  """
+  schema: Schema!
+
+  """
+  [Cast](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cast) the columns of a table.
+  """
+  cast(
+    """field names and types"""
+    schema: [Field!]!
+
+    """return null if cast fails"""
+    try: Boolean! = false
+  ): Dataset!
+
+  """
+  Nullable field to stop error propagation, enabling partial query results.
+  
+  Will be replaced by client controlled nullability.
+  """
+  optional: Dataset
+
+  """
+  [Count](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.count) the number of rows.
+  """
+  count: BigInt!
+
+  """
+  Whether there are at least `limit` rows.
+  
+  May be significantly faster than `count` for out-of-core data.
+  """
+  any(limit: BigInt! = 1): Boolean!
+
+  """
+  Column of any type by name.
+  
+  If the column is in the schema, `columns` can be used instead.
+  """
+  column(
+    """column name(s); multiple names access nested struct fields"""
+    name: [String!]!
+
+    """
+    cast expression to indicated [data type](https://ibis-project.org/reference/datatypes)
+    """
+    cast: String! = ""
+
+    """return null if cast fails"""
+    try: Boolean! = false
+  ): Column
+
+  """
+  [Limit](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.limit) row selection.
+  """
+  slice(
+    """number of rows to skip; negative value skips from the end"""
+    offset: BigInt! = 0
+
+    """maximum number of rows to return"""
+    limit: BigInt = null
+  ): Dataset!
+
+  """
+  [Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
+  
+  Differs from `group` by keeping all columns, and defaulting to all keys.
+  """
+  distinct(
+    """column names to deduplicate on; defaults to all"""
+    on: [String!] = null
+
+    """which duplicates to keep"""
+    keep: String = "first"
+
+    """
+    [value counts](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`
+    """
+    counts: String! = ""
+
+    """
+    optionally include and order by first row number; incompatible with `on: null`
+    """
+    order: String! = ""
+  ): Dataset!
+
+  """
+  [Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns.
+  """
+  group(
+    """column names; empty will aggregate into a single row table"""
+    by: [String!]! = []
+
+    """optionally include counts in an aliased column"""
+    counts: String! = ""
+
+    """optionally include and order by first row number"""
+    order: String! = ""
+
+    """aggregation functions applied to other columns"""
+    aggregate: Aggregates! = {}
+  ): Dataset!
+
+  """
+  [Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns.
+  """
+  order(
+    """column names; prefix with `-` for descending order"""
+    by: [String!]!
+
+    """
+    maximum number of rows to return; optimized for partitioned dataset keys
+    """
+    limit: BigInt = null
+
+    """use dense rank with `limit`"""
+    dense: Boolean! = false
+  ): Dataset!
+
+  """
+  [Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table.
+  """
+  unnest(
+    """column name"""
+    name: String!
+
+    """optionally include index column"""
+    offset: String! = ""
+
+    """keep empty array values as null"""
+    keepEmpty: Boolean! = false
+
+    """optionally include first row number in an aliased column"""
+    rowNumber: String! = ""
+  ): Dataset!
+
+  """
+  [Join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.join) two tables.
+  """
+  join(
+    """name of right table; must be on root Query type"""
+    right: String!
+
+    """column names used as keys on the left side"""
+    keys: [String!]!
+
+    """column names used as keys on the right side; defaults to left side"""
+    rkeys: [String!]! = []
+
+    """the kind of join: 'inner', 'left', 'right', ..."""
+    how: String! = "inner"
+
+    """format string to use to rename overlapping columns in the left table"""
+    lname: String! = ""
+
+    """format string to use to rename overlapping columns in the right table"""
+    rname: String! = "{name}_right"
+  ): Dataset!
+
+  """
+  [Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index.
+  """
+  take(indices: [BigInt!]!): Dataset!
+
+  """
+  [Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values.
+  """
+  dropNull(
+    """columns names; defaults to all"""
+    subset: [String!] = null
+
+    """remove if `any` or `all` are null"""
+    how: String! = "any"
+  ): Dataset!
+
+  """
+  [Fill null](https://ibis-project.org/reference/expression-tables.html#ibis.expr.types.relations.Table.fill_null) values.
+  """
+  fillNull(
+    """column name(s); defaults to all"""
+    name: [String!] = null
+
+    """JSON scalar"""
+    value: JSON @optional
+
+    """typed scalar"""
+    scalar: Scalars! = {}
+  ): Dataset!
+
+  """
+  [Mutate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.mutate) columns by expressions.
+  
+  Renamed to not be confused with a mutation.
+  """
+  project(columns: [Projection!]!): Dataset!
+
+  """Provisionally group table by adjacent values in columns."""
+  runs(
+    """column names to compare by equality"""
+    by: [String!]! = []
+
+    """boolean column expressions to split on true values"""
+    split: [Projection!]! = []
+
+    """optionally include counts in an aliased column"""
+    counts: String! = ""
+
+    """format string to name index columns"""
+    alias: String! = "{}_index"
+
+    """aggregation functions applied to other columns"""
+    aggregate: Aggregates! = {}
+  ): Dataset! @provisional
+}
+
+"""Date (isoformat)"""
+scalar Date
+
+"""
+[temporal column](https://ibis-project.org/reference/expression-temporal)
+"""
+type DateColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [Date]!
+
+  """distinct values and counts"""
+  distinct: DateSet!
+
+  """Return the first value of a column."""
+  first: Date
+
+  """Return the last value of a column."""
+  last: Date
+
+  """non-null values"""
+  dropNull: [Date!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: Date!): [Date!]!
+
+  """Return the mode of a column."""
+  mode: Date
+
+  """Return the minimum of a column."""
+  min: Date
+
+  """Return the maximum of a column."""
+  max: Date
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5]): [Date!]
+}
+
+"""distinct values and counts"""
+type DateSet {
+  """distinct values"""
+  values: [Date]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""Date with time (isoformat)"""
+scalar DateTime
+
+"""
+[temporal column](https://ibis-project.org/reference/expression-temporal)
+"""
+type DatetimeColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [DateTime]!
+
+  """distinct values and counts"""
+  distinct: DatetimeSet!
+
+  """Return the first value of a column."""
+  first: DateTime
+
+  """Return the last value of a column."""
+  last: DateTime
+
+  """non-null values"""
+  dropNull: [DateTime!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: DateTime!): [DateTime!]!
+
+  """Return the mode of a column."""
+  mode: DateTime
+
+  """Return the minimum of a column."""
+  min: DateTime
+
+  """Return the maximum of a column."""
+  max: DateTime
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5]): [DateTime!]
+}
+
+"""distinct values and counts"""
+type DatetimeSet {
+  """distinct values"""
+  values: [DateTime]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""Decimal (fixed-point)"""
+scalar Decimal
+
+"""
+[numeric column](https://ibis-project.org/reference/expression-numeric)
+"""
+type DecimalColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [Decimal]!
+
+  """distinct values and counts"""
+  distinct: DecimalSet!
+
+  """Return the first value of a column."""
+  first: Decimal
+
+  """Return the last value of a column."""
+  last: Decimal
+
+  """non-null values"""
+  dropNull: [Decimal!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: Decimal!): [Decimal!]!
+
+  """Return the mode of a column."""
+  mode: Decimal
+
+  """Return the minimum of a column."""
+  min: Decimal
+
+  """Return the maximum of a column."""
+  max: Decimal
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5], approx: Boolean! = false): [Float!]
+
+  """Return the sum of a numeric column."""
+  sum: Decimal
+
+  """Return the mean of a numeric column."""
+  mean: Float
+
+  """Return the standard deviation of a numeric column."""
+  std(how: String! = "sample"): Float
+
+  """Return the variance of a numeric column."""
+  var(how: String! = "sample"): Float
+}
+
+"""distinct values and counts"""
+type DecimalSet {
+  """distinct values"""
+  values: [Decimal]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""Duration (isoformat)"""
+scalar Duration @specifiedBy(url: "https://en.wikipedia.org/wiki/ISO_8601#Durations")
+
+"""
+provisional [interval column](https://ibis-project.org/reference/expression-temporal#ibis.expr.types.temporal.IntervalValue)
+
+Interval support varies by backend; durations may still be useful for computation and as scalar inputs.
+"""
+type DurationColumn implements Column @provisional {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [Duration]!
+
+  """distinct values and counts"""
+  distinct: DurationSet!
+
+  """Return the first value of a column."""
+  first: Duration
+
+  """Return the last value of a column."""
+  last: Duration
+
+  """non-null values"""
+  dropNull: [Duration!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: Duration!): [Duration!]!
+
+  """Return the mode of a column."""
+  mode: Duration
+
+  """Return the minimum of a column."""
+  min: Duration
+
+  """Return the maximum of a column."""
+  max: Duration
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5]): [Duration!]
+}
+
+"""distinct values and counts"""
+type DurationSet {
+  """distinct values"""
+  values: [Duration]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""[expression API](https://ibis-project.org/reference/#expression-api)"""
+input Expression {
+  """column name(s)"""
+  name: [String!]! = []
+
+  """JSON scalar"""
+  value: JSON
+
+  """typed scalar"""
+  scalar: Scalars @optional
+
+  """Return an analytic function expression for the current row number."""
+  rowNumber: Void @optional
+
+  """=="""
+  eq: [Expression!]! = []
+
+  """!="""
+  ne: [Expression!]! = []
+
+  """<"""
+  lt: [Expression!]! = []
+
+  """<="""
+  le: [Expression!]! = []
+
+  """\>"""
+  gt: [Expression!]! = []
+
+  """\>="""
+  ge: [Expression!]! = []
+
+  """Check whether this expression is in `values`."""
+  isin: [Expression!]! = []
+
+  """Check whether this expression is not in `values`."""
+  notin: [Expression!]! = []
+
+  """~"""
+  inv: Expression @optional
+
+  """&"""
+  and: [Expression!]! = []
+
+  """|"""
+  or: [Expression!]! = []
+
+  """^"""
+  xor: [Expression!]! = []
+
+  """+"""
+  add: [Expression!]! = []
+
+  """-"""
+  sub: [Expression!]! = []
+
+  """*"""
+  mul: [Expression!]! = []
+
+  """/"""
+  div: [Expression!]! = []
+
+  """Return the first non-null value from `args`."""
+  coalesce: [Expression!]! = []
+
+  """Return the cumulative distribution over a window."""
+  cumeDist: Expression @optional
+
+  """Return the cumulative max over a window."""
+  cummax: Expression @optional
+
+  """Return the cumulative min over a window."""
+  cummin: Expression @optional
+
+  """Position of first element within each group of equal values."""
+  denseRank: Expression @optional
+
+  """Construct a ternary conditional expression."""
+  ifelse: [Expression!]! = []
+
+  """Return the relative rank of the values in the column."""
+  percentRank: Expression @optional
+
+  """
+  Compute position of first element within each equal-value group in sorted order.
+  """
+  rank: Expression @optional
+
+  """array value functions"""
+  array: Arrays @optional
+
+  """numeric functions"""
+  numeric: Numeric @optional
+
+  """string functions"""
+  string: Strings @optional
+
+  """temporal functions"""
+  temporal: Temporal @optional
+
+  """window functions"""
+  window: Window @optional
+}
+
+"""a schema field"""
+input Field {
+  name: String!
+  type: String!
+}
+
+"""
+[numeric column](https://ibis-project.org/reference/expression-numeric)
+"""
+type FloatColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [Float]!
+
+  """distinct values and counts"""
+  distinct: FloatSet!
+
+  """Return the first value of a column."""
+  first: Float
+
+  """Return the last value of a column."""
+  last: Float
+
+  """non-null values"""
+  dropNull: [Float!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: Float!): [Float!]!
+
+  """Return the mode of a column."""
+  mode: Float
+
+  """Return the minimum of a column."""
+  min: Float
+
+  """Return the maximum of a column."""
+  max: Float
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5], approx: Boolean! = false): [Float!]
+
+  """Return the sum of a numeric column."""
+  sum: Float
+
+  """Return the mean of a numeric column."""
+  mean: Float
+
+  """Return the standard deviation of a numeric column."""
+  std(how: String! = "sample"): Float
+
+  """Return the variance of a numeric column."""
+  var(how: String! = "sample"): Float
+}
+
+"""predicates for scalars"""
+input FloatFilter {
+  """== or `isin`"""
+  eq: [Float!]
+
+  """!= or `notin`"""
+  ne: [Float!]
+
+  """<"""
+  lt: Float @optional
+
+  """<="""
+  le: Float @optional
+
+  """\>"""
+  gt: Float @optional
+
+  """\>="""
+  ge: Float @optional
+}
+
+"""distinct values and counts"""
+type FloatSet {
+  """distinct values"""
+  values: [Float]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""
+[integer column](https://ibis-project.org/reference/expression-numeric#ibis.expr.types.numeric.IntegerColumn)
+"""
+type IntColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [Int]!
+
+  """distinct values and counts"""
+  distinct: IntSet!
+
+  """Return the first value of a column."""
+  first: Int
+
+  """Return the last value of a column."""
+  last: Int
+
+  """non-null values"""
+  dropNull: [Int!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: Int!): [Int!]!
+
+  """Return the mode of a column."""
+  mode: Int
+
+  """Return the minimum of a column."""
+  min: Int
+
+  """Return the maximum of a column."""
+  max: Int
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5], approx: Boolean! = false): [Float!]
+
+  """Return the sum of a numeric column."""
+  sum: Int
+
+  """Return the mean of a numeric column."""
+  mean: Float
+
+  """Return the standard deviation of a numeric column."""
+  std(how: String! = "sample"): Float
+
+  """Return the variance of a numeric column."""
+  var(how: String! = "sample"): Float
+
+  """Select indices from a table on the root Query type."""
+  takeFrom(field: String!): Dataset
+}
+
+"""predicates for scalars"""
+input IntFilter {
+  """== or `isin`"""
+  eq: [Int!]
+
+  """!= or `notin`"""
+  ne: [Int!]
+
+  """<"""
+  lt: Int @optional
+
+  """<="""
+  le: Int @optional
+
+  """\>"""
+  gt: Int @optional
+
+  """\>="""
+  ge: Int @optional
+}
+
+"""distinct values and counts"""
+type IntSet {
+  """distinct values"""
+  values: [Int]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf).
+"""
+scalar JSON @specifiedBy(url: "https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf")
+
+"""
+[struct column](https://ibis-project.org/reference/expression-collections#ibis.expr.types.structs.StructValue)
+"""
+type JSONColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [JSON]!
+
+  """distinct values and counts"""
+  distinct: JSONSet!
+
+  """Return the first value of a column."""
+  first: JSON
+
+  """Return the last value of a column."""
+  last: JSON
+
+  """non-null values"""
+  dropNull: [JSON!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: JSON!): [JSON!]!
+
+  """Return the mode of a column."""
+  mode: JSON
+
+  """Return the minimum of a column."""
+  min: JSON
+
+  """Return the maximum of a column."""
+  max: JSON
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5]): [JSON!]
+
+  """field names"""
+  names: [String!]!
+}
+
+"""distinct values and counts"""
+type JSONSet {
+  """distinct values"""
+  values: [JSON]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""
+numeric [expressions](https://ibis-project.org/reference/expression-numeric)
+"""
+input Numeric {
+  """Return the absolute value of `self`."""
+  abs: Expression @optional
+
+  """Compute the arc cosine of `self`."""
+  acos: Expression @optional
+
+  """Compute the arc sine of `self`."""
+  asin: Expression @optional
+
+  """Compute the arc tangent of `self`."""
+  atan: Expression @optional
+
+  """Compute the two-argument version of arc tangent."""
+  atan2: [Expression!]! = []
+
+  """Return the ceiling of `self`."""
+  ceil: Expression @optional
+
+  """Compute the cosine of `self`."""
+  cos: Expression @optional
+
+  """Compute $e^\texttt{self}$."""
+  exp: Expression @optional
+
+  """Return the floor of an expression."""
+  floor: Expression @optional
+
+  """
+  Return whether the value is +/-inf. Does NOT detect `NULL` and `inf` values.
+  """
+  isinf: Expression @optional
+
+  """
+  Return whether the value is NaN. Does NOT detect `NULL` and `inf` values.
+  """
+  isnan: Expression @optional
+
+  """Compute $\log_{\texttt{base}}\left(\texttt{self}\right)$."""
+  log: [Expression!]! = []
+
+  """Negate a numeric expression."""
+  negate: Expression @optional
+
+  """Round values to an indicated number of decimal places."""
+  round: [Expression!]! = []
+
+  """Return the sign of the input."""
+  sign: Expression @optional
+
+  """Compute the sine of `self`."""
+  sin: Expression @optional
+
+  """Compute the square root of `self`."""
+  sqrt: Expression @optional
+
+  """Compute the tangent of `self`."""
+  tan: Expression @optional
+
+  """Compute a discrete binning of a numeric array."""
+  bucket: Expression @optional
+
+  """Return the cumulative mean of the input."""
+  cummean: Expression @optional
+
+  """Return the cumulative sum of the input."""
+  cumsum: Expression @optional
+  buckets: [JSON!]! = []
+  closed: String! = "left"
+  closeExtreme: Boolean! = true
+  includeUnder: Boolean! = false
+  includeOver: Boolean! = false
+}
+
+input OrderAggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  where: Expression = null
+  orderBy: [String!]! = []
+  includeNull: Boolean! = false
+}
+
+"""an `Expression` with an optional alias"""
+input Projection {
+  """column name(s)"""
+  name: [String!]! = []
+
+  """JSON scalar"""
+  value: JSON
+
+  """typed scalar"""
+  scalar: Scalars @optional
+
+  """Return an analytic function expression for the current row number."""
+  rowNumber: Void @optional
+
+  """=="""
+  eq: [Expression!]! = []
+
+  """!="""
+  ne: [Expression!]! = []
+
+  """<"""
+  lt: [Expression!]! = []
+
+  """<="""
+  le: [Expression!]! = []
+
+  """\>"""
+  gt: [Expression!]! = []
+
+  """\>="""
+  ge: [Expression!]! = []
+
+  """Check whether this expression is in `values`."""
+  isin: [Expression!]! = []
+
+  """Check whether this expression is not in `values`."""
+  notin: [Expression!]! = []
+
+  """~"""
+  inv: Expression @optional
+
+  """&"""
+  and: [Expression!]! = []
+
+  """|"""
+  or: [Expression!]! = []
+
+  """^"""
+  xor: [Expression!]! = []
+
+  """+"""
+  add: [Expression!]! = []
+
+  """-"""
+  sub: [Expression!]! = []
+
+  """*"""
+  mul: [Expression!]! = []
+
+  """/"""
+  div: [Expression!]! = []
+
+  """Return the first non-null value from `args`."""
+  coalesce: [Expression!]! = []
+
+  """Return the cumulative distribution over a window."""
+  cumeDist: Expression @optional
+
+  """Return the cumulative max over a window."""
+  cummax: Expression @optional
+
+  """Return the cumulative min over a window."""
+  cummin: Expression @optional
+
+  """Position of first element within each group of equal values."""
+  denseRank: Expression @optional
+
+  """Construct a ternary conditional expression."""
+  ifelse: [Expression!]! = []
+
+  """Return the relative rank of the values in the column."""
+  percentRank: Expression @optional
+
+  """
+  Compute position of first element within each equal-value group in sorted order.
+  """
+  rank: Expression @optional
+
+  """array value functions"""
+  array: Arrays @optional
+
+  """numeric functions"""
+  numeric: Numeric @optional
+
+  """string functions"""
+  string: Strings @optional
+
+  """temporal functions"""
+  temporal: Temporal @optional
+
+  """window functions"""
+  window: Window @optional
+
+  """name of projected column"""
+  alias: String! = ""
+}
+
+input QuantileAggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  where: Expression = null
+  approx: Boolean! = false
+  q: Float! = 0.5
+}
+
+"""scalar fields"""
+type Row {
+  latitude: Float
+  longitude: Float
+  state: String
+  city: String
+  county: String
+  zipcode: Int
+}
+
+"""typed scalars"""
+input Scalars {
+  """binary scalar"""
+  base64: Base64 @optional
+
+  """date scalar"""
+  date: Date @optional
+
+  """datetime scalar"""
+  datetime: DateTime @optional
+
+  """decimal scalar"""
+  decimal: Decimal @optional
+
+  """duration scalar"""
+  duration: Duration @optional
+
+  """time scalar"""
+  time: Time @optional
+}
+
+"""
+[table schema](https://ibis-project.org/reference/schemas#ibis.expr.schema.Schema)
+"""
+type Schema {
+  """field names"""
+  names: [String!]!
+
+  """
+  [data type](https://ibis-project.org/reference/datatypes), corresponding to `names`
+  """
+  types: [String!]!
+
+  """partition keys"""
+  partitioning: [String!]!
+}
+
+"""predicates for scalars"""
+input StrFilter {
+  """== or `isin`"""
+  eq: [String!]
+
+  """!= or `notin`"""
+  ne: [String!]
+
+  """<"""
+  lt: String @optional
+
+  """<="""
+  le: String @optional
+
+  """\>"""
+  gt: String @optional
+
+  """\>="""
+  ge: String @optional
+}
+
+"""distinct values and counts"""
+type StrSet {
+  """distinct values"""
+  values: [String]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+"""[string column](https://ibis-project.org/reference/expression-strings)"""
+type StringColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [String]!
+
+  """distinct values and counts"""
+  distinct: StrSet!
+
+  """Return the first value of a column."""
+  first: String
+
+  """Return the last value of a column."""
+  last: String
+
+  """non-null values"""
+  dropNull: [String!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: String!): [String!]!
+
+  """Return the mode of a column."""
+  mode: String
+
+  """Return the minimum of a column."""
+  min: String
+
+  """Return the maximum of a column."""
+  max: String
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5]): [String!]
+}
+
+"""
+string [expressions](https://ibis-project.org/reference/expression-strings)
+"""
+input Strings {
+  """Uppercase the first letter, lowercase the rest."""
+  capitalize: Expression @optional
+
+  """Return whether the expression contains `substr`."""
+  contains: [Expression!]! = []
+
+  """Determine if `self` ends with `end`."""
+  endswith: [Expression!]! = []
+
+  """Return the position of the first occurrence of substring."""
+  find: [Expression!]! = []
+
+  """Compute the length of a string."""
+  length: Expression @optional
+
+  """Convert string to all lowercase."""
+  lower: Expression @optional
+
+  """Pad `arg` by truncating on the right or padding on the left."""
+  lpad: [Expression!]! = []
+
+  """Remove whitespace from the left side of string."""
+  lstrip: [Expression!]! = []
+
+  """Return the specified match at `index` from a regex `pattern`."""
+  reExtract: [Expression!]! = []
+
+  """Return whether `self` contains the regex `pattern`."""
+  reSearch: [Expression!]! = []
+
+  """Split a string by a regular expression `pattern`."""
+  reSplit: [Expression!]! = []
+
+  """Replace each exact match of `pattern` with `replacement`."""
+  replace: [Expression!]! = []
+
+  """Reverse the characters of a string."""
+  reverse: Expression @optional
+
+  """Pad `self` by truncating or padding on the right."""
+  rpad: [Expression!]! = []
+
+  """Remove whitespace from the right side of string."""
+  rstrip: [Expression!]! = []
+
+  """Split as string on `delimiter`."""
+  split: [Expression!]! = []
+
+  """Determine whether `self` starts with `start`."""
+  startswith: [Expression!]! = []
+
+  """Remove whitespace from left and right sides of a string."""
+  strip: [Expression!]! = []
+
+  """Convert string to all uppercase."""
+  upper: Expression @optional
+}
+
+"""a dataset with a derived schema"""
+type Table implements Dataset {
+  """
+  [ibis table](https://ibis-project.org/reference/expression-table) or [arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html)
+  """
+  type: String!
+
+  """
+  [table schema](https://ibis-project.org/reference/schemas#ibis.expr.schema.Schema)
+  """
+  schema: Schema!
+
+  """
+  [Cast](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cast) the columns of a table.
+  """
+  cast(
+    """field names and types"""
+    schema: [Field!]!
+
+    """return null if cast fails"""
+    try: Boolean! = false
+  ): Table!
+
+  """
+  Nullable field to stop error propagation, enabling partial query results.
+  
+  Will be replaced by client controlled nullability.
+  """
+  optional: Table
+
+  """
+  [Count](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.count) the number of rows.
+  """
+  count: BigInt!
+
+  """
+  Whether there are at least `limit` rows.
+  
+  May be significantly faster than `count` for out-of-core data.
+  """
+  any(limit: BigInt! = 1): Boolean!
+
+  """
+  Column of any type by name.
+  
+  If the column is in the schema, `columns` can be used instead.
+  """
+  column(
+    """column name(s); multiple names access nested struct fields"""
+    name: [String!]!
+
+    """
+    cast expression to indicated [data type](https://ibis-project.org/reference/datatypes)
+    """
+    cast: String! = ""
+
+    """return null if cast fails"""
+    try: Boolean! = false
+  ): Column
+
+  """
+  [Limit](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.limit) row selection.
+  """
+  slice(
+    """number of rows to skip; negative value skips from the end"""
+    offset: BigInt! = 0
+
+    """maximum number of rows to return"""
+    limit: BigInt = null
+  ): Table!
+
+  """
+  [Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
+  
+  Differs from `group` by keeping all columns, and defaulting to all keys.
+  """
+  distinct(
+    """column names to deduplicate on; defaults to all"""
+    on: [String!] = null
+
+    """which duplicates to keep"""
+    keep: String = "first"
+
+    """
+    [value counts](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`
+    """
+    counts: String! = ""
+
+    """
+    optionally include and order by first row number; incompatible with `on: null`
+    """
+    order: String! = ""
+  ): Table!
+
+  """
+  [Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns.
+  """
+  group(
+    """column names; empty will aggregate into a single row table"""
+    by: [String!]! = []
+
+    """optionally include counts in an aliased column"""
+    counts: String! = ""
+
+    """optionally include and order by first row number"""
+    order: String! = ""
+
+    """aggregation functions applied to other columns"""
+    aggregate: Aggregates! = {}
+  ): Table!
+
+  """
+  [Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns.
+  """
+  order(
+    """column names; prefix with `-` for descending order"""
+    by: [String!]!
+
+    """
+    maximum number of rows to return; optimized for partitioned dataset keys
+    """
+    limit: BigInt = null
+
+    """use dense rank with `limit`"""
+    dense: Boolean! = false
+  ): Table!
+
+  """
+  [Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table.
+  """
+  unnest(
+    """column name"""
+    name: String!
+
+    """optionally include index column"""
+    offset: String! = ""
+
+    """keep empty array values as null"""
+    keepEmpty: Boolean! = false
+
+    """optionally include first row number in an aliased column"""
+    rowNumber: String! = ""
+  ): Table!
+
+  """
+  [Join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.join) two tables.
+  """
+  join(
+    """name of right table; must be on root Query type"""
+    right: String!
+
+    """column names used as keys on the left side"""
+    keys: [String!]!
+
+    """column names used as keys on the right side; defaults to left side"""
+    rkeys: [String!]! = []
+
+    """the kind of join: 'inner', 'left', 'right', ..."""
+    how: String! = "inner"
+
+    """format string to use to rename overlapping columns in the left table"""
+    lname: String! = ""
+
+    """format string to use to rename overlapping columns in the right table"""
+    rname: String! = "{name}_right"
+  ): Table!
+
+  """
+  [Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index.
+  """
+  take(indices: [BigInt!]!): Table!
+
+  """
+  [Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values.
+  """
+  dropNull(
+    """columns names; defaults to all"""
+    subset: [String!] = null
+
+    """remove if `any` or `all` are null"""
+    how: String! = "any"
+  ): Table!
+
+  """
+  [Fill null](https://ibis-project.org/reference/expression-tables.html#ibis.expr.types.relations.Table.fill_null) values.
+  """
+  fillNull(
+    """column name(s); defaults to all"""
+    name: [String!] = null
+
+    """JSON scalar"""
+    value: JSON @optional
+
+    """typed scalar"""
+    scalar: Scalars! = {}
+  ): Table!
+
+  """
+  [Mutate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.mutate) columns by expressions.
+  
+  Renamed to not be confused with a mutation.
+  """
+  project(columns: [Projection!]!): Table!
+
+  """Provisionally group table by adjacent values in columns."""
+  runs(
+    """column names to compare by equality"""
+    by: [String!]! = []
+
+    """boolean column expressions to split on true values"""
+    split: [Projection!]! = []
+
+    """optionally include counts in an aliased column"""
+    counts: String! = ""
+
+    """format string to name index columns"""
+    alias: String! = "{}_index"
+
+    """aggregation functions applied to other columns"""
+    aggregate: Aggregates! = {}
+  ): Table! @provisional
+
+  """fields for each column"""
+  columns: Columns!
+
+  """Return scalar values at index."""
+  row(index: BigInt! = 0): Row
+
+  """
+  [Filter](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.filter) rows by predicates.
+  
+  Schema derived fields provide syntax for simple queries; `where` supports complex queries.
+  """
+  filter(latitude: FloatFilter! = {}, longitude: FloatFilter! = {}, state: StrFilter! = {}, city: StrFilter! = {}, county: StrFilter! = {}, zipcode: IntFilter! = {}, where: Expression = null): Table!
+}
+
+"""
+temporal [expressions](https://ibis-project.org/reference/expression-temporal)
+"""
+input Temporal {
+  """Return the date component of the expression."""
+  date: Expression @optional
+
+  """Extract the day component."""
+  day: Expression @optional
+
+  """Extract the day of the year component."""
+  dayOfYear: Expression @optional
+
+  """Compute the number of `part`s between two timestamps."""
+  delta: [Expression!]! = []
+
+  """Extract UNIX epoch in seconds."""
+  epochSeconds: Expression @optional
+
+  """Extract the hour component."""
+  hour: Expression @optional
+
+  """Extract the microsecond component."""
+  microsecond: Expression @optional
+
+  """Extract the millisecond component."""
+  millisecond: Expression @optional
+
+  """Extract the minute component."""
+  minute: Expression @optional
+
+  """Extract the month component."""
+  month: Expression @optional
+
+  """Extract the quarter component."""
+  quarter: Expression @optional
+
+  """Extract the second component."""
+  second: Expression @optional
+
+  """Format a timestamp according to `format_str`."""
+  strftime: Expression @optional
+
+  """Return the time component of the expression."""
+  time: Expression @optional
+
+  """Truncate timestamp expression to units of `unit`."""
+  truncate: Expression @optional
+
+  """Extract the week of the year component."""
+  weekOfYear: Expression @optional
+
+  """Extract the year component."""
+  year: Expression @optional
+  formatStr: String! = ""
+  unit: String! = ""
+}
+
+"""Time (isoformat)"""
+scalar Time
+
+"""
+[temporal column](https://ibis-project.org/reference/expression-temporal)
+"""
+type TimeColumn implements Column {
+  """[data type](https://ibis-project.org/reference/datatypes)"""
+  type: String!
+
+  """Compute the number of rows in an expression."""
+  count: BigInt!
+
+  """Compute the number of distinct rows in an expression."""
+  nunique(approx: Boolean! = false): BigInt!
+
+  """list of values"""
+  values: [Time]!
+
+  """distinct values and counts"""
+  distinct: TimeSet!
+
+  """Return the first value of a column."""
+  first: Time
+
+  """Return the last value of a column."""
+  last: Time
+
+  """non-null values"""
+  dropNull: [Time!]!
+
+  """
+  Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+  """
+  fillNull(value: Time!): [Time!]!
+
+  """Return the mode of a column."""
+  mode: Time
+
+  """Return the minimum of a column."""
+  min: Time
+
+  """Return the maximum of a column."""
+  max: Time
+
+  """Return value at the given quantile."""
+  quantile(q: [Float!]! = [0.5]): [Time!]
+}
+
+"""distinct values and counts"""
+type TimeSet {
+  """distinct values"""
+  values: [Time]!
+
+  """corresponding counts"""
+  counts: [BigInt!]!
+}
+
+input UniqueAggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  where: Expression = null
+  approx: Boolean! = false
+}
+
+input VarAggregate {
+  """column name"""
+  name: String!
+
+  """output column name"""
+  alias: String! = ""
+  where: Expression = null
+  how: String! = "sample"
+}
+
+"""Represents NULL values"""
+scalar Void
+
+"""
+window [expressions](https://ibis-project.org/reference/expression-tables.html#ibis.window)
+"""
+input Window {
+  """Return the row located at `offset` rows **before** the current row."""
+  lag: Expression @optional
+
+  """Return the row located at `offset` rows **after** the current row."""
+  lead: Expression @optional
+
+  """pairwise =="""
+  eq: Expression @optional
+
+  """pairwise !="""
+  ne: Expression @optional
+
+  """pairwise <"""
+  lt: Expression @optional
+
+  """pairwise <="""
+  le: Expression @optional
+
+  """pairwise \>"""
+  gt: Expression @optional
+
+  """pairwise \>="""
+  ge: Expression @optional
+
+  """pairwise -"""
+  sub: Expression @optional
+  offset: Int! = 1
+
+  """default JSON scalar"""
+  default: JSON = null
+
+  """default typed scalar"""
+  scalar: Scalars @optional
+}
