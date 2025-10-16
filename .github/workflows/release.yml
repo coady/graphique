@@ -14,5 +14,5 @@ jobs:
     - run: uv build
     - run: npm install
     - run: make html
-    - run: PYTHONPATH=$(PWD) uv run mkdocs gh-deploy --force
+    - run: PYTHONPATH=${PWD} uv run mkdocs gh-deploy --force
     - uses: pypa/gh-action-pypi-publish@release/v1
