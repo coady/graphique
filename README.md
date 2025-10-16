@@ -10,10 +10,12 @@
 
 [GraphQL](https://graphql.org) service for [ibis](https://ibis-project.org) dataframes, [arrow](https://arrow.apache.org) tables, and [parquet](https://parquet.apache.org) datasets. The schema for a query API is derived automatically.
 
-## Roadmap
+## Version 2
 When this project started, there was no out-of-core execution engine with performance comparable to [PyArrow](https://arrow.apache.org/docs/python/index.html). So it effectively included one, based on datasets and [Acero](https://arrow.apache.org/docs/python/api/acero.html).
 
-Since then the ecosystem has grown considerably: [DuckDB](https://duckdb.org), [DataFusion](https://datafusion.apache.org), and [Ibis](https://ibis-project.org). The next major version plans to reuse `ibis`, because it provides a common expression API for multiple backends. Graphique can similarly offer a default but configurable backend.
+Since then the ecosystem has grown considerably: [DuckDB](https://duckdb.org), [DataFusion](https://datafusion.apache.org), and [Ibis](https://ibis-project.org). As of version 2, graphique is based on `ibis`. It provides a common dataframe API for multiple backends, enabling graphique to also have a default but configurable backend.
+
+Being a major version upgrade, there are incompatible changes from version 1. However the overall API remains largely the same.
 
 ## Usage
 There is an example app which reads a parquet dataset.
