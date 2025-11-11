@@ -50,14 +50,10 @@ class GraphQL(strawberry.asgi.GraphQL):
 
     def __init__(self, root: Source, metrics: bool = False, **kwargs):
         options: dict = dict(self.options, extensions=[MetricsExtension] if metrics else [])
-        if type(root).__name__ == 'Query':
-            self.root_value = root
-            options['enable_federation_2'] = True
-            schema = strawberry.federation.Schema(type(self.root_value), **options)
-        else:
-            self.root_value = implemented(root)
-            schema = strawberry.Schema(type(self.root_value), **options)
-        super().__init__(schema, **kwargs)
+        self.root_value, Schema = root, strawberry.federation.Schema
+        if isinstance(root, Source):
+            self.root_value, Schema = implemented(root), strawberry.Schema
+        super().__init__(Schema(type(self.root_value), **options), **kwargs)
 
     async def get_root_value(self, request):
         return self.root_value
