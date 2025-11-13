@@ -1,0 +1,8091 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="GraphQL service for python dataframes and parquet datasets.">
+      
+      
+      
+        <link rel="canonical" href="https://coady.github.io/graphique/schema/">
+      
+      
+        <link rel="prev" href="../api/">
+      
+      
+        <link rel="next" href="../examples/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Example Schema - graphique</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#example-schema" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="graphique" class="md-header__button md-logo" aria-label="graphique" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            graphique
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Example Schema
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/coady/graphique" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    coady/graphique
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="graphique" class="md-nav__button md-logo" aria-label="graphique" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    graphique
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/coady/graphique" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    coady/graphique
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GraphQL API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example Schema
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#query-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query (Table)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Objects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Objects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arraycolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ArrayColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#base64column" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base64Column
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#base64set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base64Set
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bigintcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BigIntColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bigintset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BigIntSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boolset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BoolSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#booleancolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BooleanColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Columns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datecolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DateColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dateset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DateSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datetimecolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DatetimeColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datetimeset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DatetimeSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decimalcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DecimalColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decimalset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DecimalSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#durationcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DurationColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#durationset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DurationSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#floatcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FloatColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#floatset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FloatSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IntColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IntSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jsoncolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSONColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jsonset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSONSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#row" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Row
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StrSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stringcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StringColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timecolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TimeColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timeset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TimeSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aggregates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrays
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#collectaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CollectAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#expression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Expression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#floatfilter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FloatFilter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intfilter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IntFilter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numeric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Numeric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#orderaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OrderAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Projection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quantileaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        QuantileAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scalars" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scalars
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strfilter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StrFilter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Temporal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uniqueaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UniqueAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#varaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VarAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#window" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Window
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scalars_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scalars
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scalars">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#base64" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base64
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bigint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BigInt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boolean" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boolean
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#date" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DateTime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decimal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decimal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#float" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Float
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#int" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Int
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#string" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        String
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#void" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Void
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interfaces
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interfaces">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#column" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Column
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Example Queries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#query-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query (Table)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Objects
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Objects">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#arraycolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ArrayColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#base64column" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base64Column
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#base64set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base64Set
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bigintcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BigIntColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bigintset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BigIntSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boolset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BoolSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#booleancolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BooleanColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Columns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datecolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DateColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dateset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DateSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datetimecolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DatetimeColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datetimeset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DatetimeSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decimalcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DecimalColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decimalset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DecimalSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#durationcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DurationColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#durationset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DurationSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#floatcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FloatColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#floatset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FloatSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IntColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IntSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jsoncolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSONColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jsonset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSONSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#row" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Row
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StrSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stringcolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StringColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timecolumn" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TimeColumn
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timeset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TimeSet
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aggregates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arrays
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#collectaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CollectAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#expression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Expression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#floatfilter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FloatFilter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intfilter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IntFilter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numeric" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Numeric
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#orderaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OrderAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Projection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quantileaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        QuantileAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scalars" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scalars
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strfilter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StrFilter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#temporal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Temporal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uniqueaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UniqueAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#varaggregate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VarAggregate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#window" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Window
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scalars_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scalars
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scalars">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#base64" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base64
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bigint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BigInt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boolean" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Boolean
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#date" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DateTime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decimal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decimal
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#duration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Duration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#float" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Float
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#int" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Int
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#string" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        String
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Time
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#void" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Void
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interfaces
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interfaces">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#column" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Column
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dataset
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="example-schema">Example Schema</h1>
+<p>Generated from a test fixture of zipcodes.</p>
+<h2 id="query-table">Query (Table)</h2>
+<p>a dataset with a derived schema</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="table.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[ibis table](https://ibis-project.org/reference/expression-table) or [arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.schema">schema</strong></td>
+<td valign="top"><a href="#schema">Schema</a>!</td>
+<td>
+
+[table schema](https://ibis-project.org/reference/schemas#ibis.expr.schema.Schema)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.cast">cast</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Cast](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cast) the columns of a table.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">schema</td>
+<td valign="top">[<a href="#field">Field</a>!]!</td>
+<td>
+
+field names and types
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">try</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+return null if cast fails
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.optional">optional</strong></td>
+<td valign="top"><a href="#table">Table</a></td>
+<td>
+
+Nullable field to stop error propagation, enabling partial query results.
+
+Will be replaced by client controlled nullability.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+[Count](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.count) the number of rows.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.any">any</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+Whether there are at least `limit` rows.
+
+May be significantly faster than `count` for out-of-core data.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">limit</td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.column">column</strong></td>
+<td valign="top"><a href="#column">Column</a></td>
+<td>
+
+Column of any type by name.
+
+If the column is in the schema, `columns` can be used instead.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">name</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column name(s); multiple names access nested struct fields
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">cast</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+cast expression to indicated [data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">try</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+return null if cast fails
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.slice">slice</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Limit](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.limit) row selection.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">offset</td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+number of rows to skip; negative value skips from the end
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">limit</td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+maximum number of rows to return
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.distinct">distinct</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
+
+Differs from `group` by keeping all columns, and defaulting to all keys.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">on</td>
+<td valign="top">[<a href="#string">String</a>!]</td>
+<td>
+
+column names to deduplicate on; defaults to all
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">keep</td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+which duplicates to keep
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">counts</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[value counts](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">order</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include and order by first row number; incompatible with `on: null`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.group">group</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">by</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names; empty will aggregate into a single row table
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">counts</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include counts in an aliased column
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">order</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include and order by first row number
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">aggregate</td>
+<td valign="top"><a href="#aggregates">Aggregates</a>!</td>
+<td>
+
+aggregation functions applied to other columns
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.order">order</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">by</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names; prefix with `-` for descending order
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">limit</td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+maximum number of rows to return; optimized for partitioned dataset keys
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">dense</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+use dense rank with `limit`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.unnest">unnest</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">name</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">offset</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include index column
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">keepEmpty</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+keep empty array values as null
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">rowNumber</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include first row number in an aliased column
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.join">join</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.join) two tables.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">right</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+name of right table; must be on root Query type
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">keys</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names used as keys on the left side
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">rkeys</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names used as keys on the right side; defaults to left side
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+the kind of join: 'inner', 'left', 'right', ...
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">lname</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+format string to use to rename overlapping columns in the left table
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">rname</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+format string to use to rename overlapping columns in the right table
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.take">take</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">indices</td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.dropnull">dropNull</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">subset</td>
+<td valign="top">[<a href="#string">String</a>!]</td>
+<td>
+
+columns names; defaults to all
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+remove if `any` or `all` are null
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.fillnull">fillNull</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Fill null](https://ibis-project.org/reference/expression-tables.html#ibis.expr.types.relations.Table.fill_null) values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">name</td>
+<td valign="top">[<a href="#string">String</a>!]</td>
+<td>
+
+column name(s); defaults to all
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+JSON scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">scalar</td>
+<td valign="top"><a href="#scalars">Scalars</a>!</td>
+<td>
+
+typed scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.project">project</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Mutate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.mutate) columns by expressions.
+
+Renamed to not be confused with a mutation.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">columns</td>
+<td valign="top">[<a href="#projection">Projection</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.runs">runs</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+Provisionally group table by adjacent values in columns.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">by</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names to compare by equality
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">split</td>
+<td valign="top">[<a href="#projection">Projection</a>!]!</td>
+<td>
+
+boolean column expressions to split on true values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">counts</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include counts in an aliased column
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">alias</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+format string to name index columns
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">aggregate</td>
+<td valign="top"><a href="#aggregates">Aggregates</a>!</td>
+<td>
+
+aggregation functions applied to other columns
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.columns">columns</strong></td>
+<td valign="top"><a href="#columns">Columns</a>!</td>
+<td>
+
+fields for each column
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.row">row</strong></td>
+<td valign="top"><a href="#row">Row</a></td>
+<td>
+
+Return scalar values at index.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">index</td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="table.filter">filter</strong></td>
+<td valign="top"><a href="#table">Table</a>!</td>
+<td>
+
+[Filter](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.filter) rows by predicates.
+
+Schema derived fields provide syntax for simple queries; `where` supports complex queries.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">latitude</td>
+<td valign="top"><a href="#floatfilter">FloatFilter</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">longitude</td>
+<td valign="top"><a href="#floatfilter">FloatFilter</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">state</td>
+<td valign="top"><a href="#strfilter">StrFilter</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">city</td>
+<td valign="top"><a href="#strfilter">StrFilter</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">county</td>
+<td valign="top"><a href="#strfilter">StrFilter</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">zipcode</td>
+<td valign="top"><a href="#intfilter">IntFilter</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">where</td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="objects">Objects</h2>
+<h3 id="arraycolumn">ArrayColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-collections">array column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="arraycolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arraycolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arraycolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="base64column">Base64Column</h3>
+<p><a href="https://ibis-project.org/reference/expression-generic">generic column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.values">values</strong></td>
+<td valign="top">[<a href="#base64">Base64</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.distinct">distinct</strong></td>
+<td valign="top"><a href="#base64set">Base64Set</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.first">first</strong></td>
+<td valign="top"><a href="#base64">Base64</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.last">last</strong></td>
+<td valign="top"><a href="#base64">Base64</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#base64">Base64</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#base64">Base64</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#base64">Base64</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.mode">mode</strong></td>
+<td valign="top"><a href="#base64">Base64</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.min">min</strong></td>
+<td valign="top"><a href="#base64">Base64</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.max">max</strong></td>
+<td valign="top"><a href="#base64">Base64</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64column.quantile">quantile</strong></td>
+<td valign="top">[<a href="#base64">Base64</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="base64set">Base64Set</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="base64set.values">values</strong></td>
+<td valign="top">[<a href="#base64">Base64</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="base64set.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="bigintcolumn">BigIntColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-numeric#ibis.expr.types.numeric.IntegerColumn">integer column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.values">values</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#bigintset">BigIntSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.first">first</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.last">last</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.mode">mode</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.min">min</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.max">max</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#float">Float</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.sum">sum</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+Return the sum of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.mean">mean</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the mean of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.std">std</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the standard deviation of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.var">var</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the variance of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintcolumn.takefrom">takeFrom</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a></td>
+<td>
+
+Select indices from a table on the root Query type.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">field</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="bigintset">BigIntSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintset.values">values</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="bigintset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="boolset">BoolSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="boolset.values">values</strong></td>
+<td valign="top">[<a href="#boolean">Boolean</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="boolset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="booleancolumn">BooleanColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-numeric#ibis.expr.types.logical.BooleanColumn">boolean column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.values">values</strong></td>
+<td valign="top">[<a href="#boolean">Boolean</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#boolset">BoolSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.first">first</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.last">last</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#boolean">Boolean</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#boolean">Boolean</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.mode">mode</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.min">min</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.max">max</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#float">Float</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.sum">sum</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a></td>
+<td>
+
+Return the sum of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.mean">mean</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the mean of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.std">std</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the standard deviation of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.var">var</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the variance of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.any">any</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a></td>
+<td>
+
+Return whether at least one element is `True`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="booleancolumn.all">all</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a></td>
+<td>
+
+Return whether all elements are `True`.
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="columns">Columns</h3>
+<p>fields for each column</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="columns.latitude">latitude</strong></td>
+<td valign="top"><a href="#floatcolumn">FloatColumn</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="columns.longitude">longitude</strong></td>
+<td valign="top"><a href="#floatcolumn">FloatColumn</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="columns.state">state</strong></td>
+<td valign="top"><a href="#stringcolumn">StringColumn</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="columns.city">city</strong></td>
+<td valign="top"><a href="#stringcolumn">StringColumn</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="columns.county">county</strong></td>
+<td valign="top"><a href="#stringcolumn">StringColumn</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="columns.zipcode">zipcode</strong></td>
+<td valign="top"><a href="#intcolumn">IntColumn</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="datecolumn">DateColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-temporal">temporal column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.values">values</strong></td>
+<td valign="top">[<a href="#date">Date</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#dateset">DateSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.first">first</strong></td>
+<td valign="top"><a href="#date">Date</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.last">last</strong></td>
+<td valign="top"><a href="#date">Date</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#date">Date</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#date">Date</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#date">Date</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.mode">mode</strong></td>
+<td valign="top"><a href="#date">Date</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.min">min</strong></td>
+<td valign="top"><a href="#date">Date</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.max">max</strong></td>
+<td valign="top"><a href="#date">Date</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datecolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#date">Date</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="dateset">DateSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="dateset.values">values</strong></td>
+<td valign="top">[<a href="#date">Date</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dateset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="datetimecolumn">DatetimeColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-temporal">temporal column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.values">values</strong></td>
+<td valign="top">[<a href="#datetime">DateTime</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#datetimeset">DatetimeSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.first">first</strong></td>
+<td valign="top"><a href="#datetime">DateTime</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.last">last</strong></td>
+<td valign="top"><a href="#datetime">DateTime</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#datetime">DateTime</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#datetime">DateTime</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#datetime">DateTime</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.mode">mode</strong></td>
+<td valign="top"><a href="#datetime">DateTime</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.min">min</strong></td>
+<td valign="top"><a href="#datetime">DateTime</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.max">max</strong></td>
+<td valign="top"><a href="#datetime">DateTime</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimecolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#datetime">DateTime</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="datetimeset">DatetimeSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimeset.values">values</strong></td>
+<td valign="top">[<a href="#datetime">DateTime</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="datetimeset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="decimalcolumn">DecimalColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-numeric">numeric column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.values">values</strong></td>
+<td valign="top">[<a href="#decimal">Decimal</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#decimalset">DecimalSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.first">first</strong></td>
+<td valign="top"><a href="#decimal">Decimal</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.last">last</strong></td>
+<td valign="top"><a href="#decimal">Decimal</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#decimal">Decimal</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#decimal">Decimal</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#decimal">Decimal</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.mode">mode</strong></td>
+<td valign="top"><a href="#decimal">Decimal</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.min">min</strong></td>
+<td valign="top"><a href="#decimal">Decimal</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.max">max</strong></td>
+<td valign="top"><a href="#decimal">Decimal</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#float">Float</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.sum">sum</strong></td>
+<td valign="top"><a href="#decimal">Decimal</a></td>
+<td>
+
+Return the sum of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.mean">mean</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the mean of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.std">std</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the standard deviation of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalcolumn.var">var</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the variance of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="decimalset">DecimalSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalset.values">values</strong></td>
+<td valign="top">[<a href="#decimal">Decimal</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="decimalset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="durationcolumn">DurationColumn</h3>
+<p>provisional <a href="https://ibis-project.org/reference/expression-temporal#ibis.expr.types.temporal.IntervalValue">interval column</a></p>
+<p>Interval support varies by backend; durations may still be useful for computation and as scalar inputs.</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.values">values</strong></td>
+<td valign="top">[<a href="#duration">Duration</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#durationset">DurationSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.first">first</strong></td>
+<td valign="top"><a href="#duration">Duration</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.last">last</strong></td>
+<td valign="top"><a href="#duration">Duration</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#duration">Duration</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#duration">Duration</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#duration">Duration</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.mode">mode</strong></td>
+<td valign="top"><a href="#duration">Duration</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.min">min</strong></td>
+<td valign="top"><a href="#duration">Duration</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.max">max</strong></td>
+<td valign="top"><a href="#duration">Duration</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationcolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#duration">Duration</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="durationset">DurationSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="durationset.values">values</strong></td>
+<td valign="top">[<a href="#duration">Duration</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="durationset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="floatcolumn">FloatColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-numeric">numeric column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.values">values</strong></td>
+<td valign="top">[<a href="#float">Float</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#floatset">FloatSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.first">first</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.last">last</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#float">Float</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.mode">mode</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.min">min</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.max">max</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#float">Float</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.sum">sum</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the sum of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.mean">mean</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the mean of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.std">std</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the standard deviation of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatcolumn.var">var</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the variance of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="floatset">FloatSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="floatset.values">values</strong></td>
+<td valign="top">[<a href="#float">Float</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="intcolumn">IntColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-numeric#ibis.expr.types.numeric.IntegerColumn">integer column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.values">values</strong></td>
+<td valign="top">[<a href="#int">Int</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#intset">IntSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.first">first</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.last">last</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#int">Int</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#int">Int</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#int">Int</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.mode">mode</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.min">min</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.max">max</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#float">Float</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.sum">sum</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+Return the sum of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.mean">mean</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the mean of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.std">std</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the standard deviation of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.var">var</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+Return the variance of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intcolumn.takefrom">takeFrom</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a></td>
+<td>
+
+Select indices from a table on the root Query type.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">field</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="intset">IntSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="intset.values">values</strong></td>
+<td valign="top">[<a href="#int">Int</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="jsoncolumn">JSONColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-collections#ibis.expr.types.structs.StructValue">struct column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.values">values</strong></td>
+<td valign="top">[<a href="#json">JSON</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#jsonset">JSONSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.first">first</strong></td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.last">last</strong></td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#json">JSON</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#json">JSON</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#json">JSON</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.mode">mode</strong></td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.min">min</strong></td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.max">max</strong></td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#json">JSON</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsoncolumn.names">names</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+field names
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="jsonset">JSONSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="jsonset.values">values</strong></td>
+<td valign="top">[<a href="#json">JSON</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="jsonset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="row">Row</h3>
+<p>scalar fields</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="row.latitude">latitude</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="row.longitude">longitude</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="row.state">state</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="row.city">city</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="row.county">county</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="row.zipcode">zipcode</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="schema">Schema</h3>
+<p><a href="https://ibis-project.org/reference/schemas#ibis.expr.schema.Schema">table schema</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="schema.names">names</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+field names
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="schema.types">types</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes), corresponding to `names`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="schema.partitioning">partitioning</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+partition keys
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="strset">StrSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="strset.values">values</strong></td>
+<td valign="top">[<a href="#string">String</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="stringcolumn">StringColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-strings">string column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.values">values</strong></td>
+<td valign="top">[<a href="#string">String</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#strset">StrSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.first">first</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.last">last</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.mode">mode</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.min">min</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.max">max</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="stringcolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#string">String</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="timecolumn">TimeColumn</h3>
+<p><a href="https://ibis-project.org/reference/expression-temporal">temporal column</a></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.values">values</strong></td>
+<td valign="top">[<a href="#time">Time</a>]!</td>
+<td>
+
+list of values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.distinct">distinct</strong></td>
+<td valign="top"><a href="#timeset">TimeSet</a>!</td>
+<td>
+
+distinct values and counts
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.first">first</strong></td>
+<td valign="top"><a href="#time">Time</a></td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.last">last</strong></td>
+<td valign="top"><a href="#time">Time</a></td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.dropnull">dropNull</strong></td>
+<td valign="top">[<a href="#time">Time</a>!]!</td>
+<td>
+
+non-null values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.fillnull">fillNull</strong></td>
+<td valign="top">[<a href="#time">Time</a>!]!</td>
+<td>
+
+Replace `NULL`s with the given value. Does NOT affect `NaN` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#time">Time</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.mode">mode</strong></td>
+<td valign="top"><a href="#time">Time</a></td>
+<td>
+
+Return the mode of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.min">min</strong></td>
+<td valign="top"><a href="#time">Time</a></td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.max">max</strong></td>
+<td valign="top"><a href="#time">Time</a></td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timecolumn.quantile">quantile</strong></td>
+<td valign="top">[<a href="#time">Time</a>!]</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">q</td>
+<td valign="top">[<a href="#float">Float</a>!]!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="timeset">TimeSet</h3>
+<p>distinct values and counts</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="timeset.values">values</strong></td>
+<td valign="top">[<a href="#time">Time</a>]!</td>
+<td>
+
+distinct values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="timeset.counts">counts</strong></td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td>
+
+corresponding counts
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="inputs">Inputs</h2>
+<h3 id="aggregate">Aggregate</h3>
+<p>name and optional alias for aggregation</p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregate.name">name</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregate.alias">alias</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+output column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregate.where">where</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="aggregates">Aggregates</h3>
+<p>aggregation <a href="https://ibis-project.org/reference/expression-generic">expressions</a></p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.all">all</strong></td>
+<td valign="top">[<a href="#aggregate">Aggregate</a>!]!</td>
+<td>
+
+Return whether all elements are `True`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.any">any</strong></td>
+<td valign="top">[<a href="#aggregate">Aggregate</a>!]!</td>
+<td>
+
+Return whether at least one element is `True`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.collect">collect</strong></td>
+<td valign="top">[<a href="#collectaggregate">CollectAggregate</a>!]!</td>
+<td>
+
+Aggregate this expression's elements into an array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.count">count</strong></td>
+<td valign="top">[<a href="#aggregate">Aggregate</a>!]!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.first">first</strong></td>
+<td valign="top">[<a href="#orderaggregate">OrderAggregate</a>!]!</td>
+<td>
+
+Return the first value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.last">last</strong></td>
+<td valign="top">[<a href="#orderaggregate">OrderAggregate</a>!]!</td>
+<td>
+
+Return the last value of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.max">max</strong></td>
+<td valign="top">[<a href="#aggregate">Aggregate</a>!]!</td>
+<td>
+
+Return the maximum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.mean">mean</strong></td>
+<td valign="top">[<a href="#aggregate">Aggregate</a>!]!</td>
+<td>
+
+Return the mean of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.min">min</strong></td>
+<td valign="top">[<a href="#aggregate">Aggregate</a>!]!</td>
+<td>
+
+Return the minimum of a column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.nunique">nunique</strong></td>
+<td valign="top">[<a href="#uniqueaggregate">UniqueAggregate</a>!]!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.quantile">quantile</strong></td>
+<td valign="top">[<a href="#quantileaggregate">QuantileAggregate</a>!]!</td>
+<td>
+
+Return value at the given quantile.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.std">std</strong></td>
+<td valign="top">[<a href="#varaggregate">VarAggregate</a>!]!</td>
+<td>
+
+Return the standard deviation of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.sum">sum</strong></td>
+<td valign="top">[<a href="#aggregate">Aggregate</a>!]!</td>
+<td>
+
+Return the sum of a numeric column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="aggregates.var">var</strong></td>
+<td valign="top">[<a href="#varaggregate">VarAggregate</a>!]!</td>
+<td>
+
+Return the variance of a numeric column.
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="arrays">Arrays</h3>
+<p>array <a href="https://ibis-project.org/reference/expression-collections">expressions</a></p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.alls">alls</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return whether all elements (ignoring nulls) in the array are true.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.anys">anys</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return whether any element in the array is true.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.length">length</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute the length of an array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.maxs">maxs</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the maximum value in the array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.means">means</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the mean of the values in the array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.modes">modes</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the mode of the values in the array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.mins">mins</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the minimum value in the array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.sort">sort</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Sort the elements in an array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.sums">sums</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the sum of the values in the array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.unique">unique</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the unique values in an array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.index">index</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Return the position of `other` in an array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.slice">slice</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+array slice
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.value">value</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+value at offset
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.offset">offset</strong></td>
+<td valign="top"><a href="#int">Int</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="arrays.limit">limit</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="collectaggregate">CollectAggregate</h3>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="collectaggregate.name">name</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="collectaggregate.alias">alias</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+output column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="collectaggregate.where">where</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="collectaggregate.orderby">orderBy</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="collectaggregate.includenull">includeNull</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="collectaggregate.distinct">distinct</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="expression">Expression</h3>
+<p><a href="https://ibis-project.org/reference/#expression-api">expression API</a></p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.name">name</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column name(s)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.value">value</strong></td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+JSON scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.scalar">scalar</strong></td>
+<td valign="top"><a href="#scalars">Scalars</a></td>
+<td>
+
+typed scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.rownumber">rowNumber</strong></td>
+<td valign="top"><a href="#void">Void</a></td>
+<td>
+
+Return an analytic function expression for the current row number.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.eq">eq</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+==
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.ne">ne</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+!=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.lt">lt</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+<
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.le">le</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+<=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.gt">gt</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+\>
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.ge">ge</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+\>=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.isin">isin</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Check whether this expression is in `values`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.notin">notin</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Check whether this expression is not in `values`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.inv">inv</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+~
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.and">and</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+&
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.or">or</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+|
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.xor">xor</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+^
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.add">add</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
++
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.sub">sub</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+-
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.mul">mul</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+*
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.div">div</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+/
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.coalesce">coalesce</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Return the first non-null value from `args`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.cumedist">cumeDist</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the cumulative distribution over a window.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.cummax">cummax</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the cumulative max over a window.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.cummin">cummin</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the cumulative min over a window.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.denserank">denseRank</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Position of first element within each group of equal values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.ifelse">ifelse</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Construct a ternary conditional expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.percentrank">percentRank</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the relative rank of the values in the column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.rank">rank</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute position of first element within each equal-value group in sorted order.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.array">array</strong></td>
+<td valign="top"><a href="#arrays">Arrays</a></td>
+<td>
+
+array value functions
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.numeric">numeric</strong></td>
+<td valign="top"><a href="#numeric">Numeric</a></td>
+<td>
+
+numeric functions
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.string">string</strong></td>
+<td valign="top"><a href="#strings">Strings</a></td>
+<td>
+
+string functions
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.temporal">temporal</strong></td>
+<td valign="top"><a href="#temporal">Temporal</a></td>
+<td>
+
+temporal functions
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="expression.window">window</strong></td>
+<td valign="top"><a href="#window">Window</a></td>
+<td>
+
+window functions
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="field">Field</h3>
+<p>a schema field</p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="field.name">name</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="field.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="floatfilter">FloatFilter</h3>
+<p>predicates for scalars</p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="floatfilter.eq">eq</strong></td>
+<td valign="top">[<a href="#float">Float</a>!]</td>
+<td>
+
+== or `isin`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatfilter.ne">ne</strong></td>
+<td valign="top">[<a href="#float">Float</a>!]</td>
+<td>
+
+!= or `notin`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatfilter.lt">lt</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+<
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatfilter.le">le</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+<=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatfilter.gt">gt</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+\>
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="floatfilter.ge">ge</strong></td>
+<td valign="top"><a href="#float">Float</a></td>
+<td>
+
+\>=
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="intfilter">IntFilter</h3>
+<p>predicates for scalars</p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="intfilter.eq">eq</strong></td>
+<td valign="top">[<a href="#int">Int</a>!]</td>
+<td>
+
+== or `isin`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intfilter.ne">ne</strong></td>
+<td valign="top">[<a href="#int">Int</a>!]</td>
+<td>
+
+!= or `notin`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intfilter.lt">lt</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+<
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intfilter.le">le</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+<=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intfilter.gt">gt</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+\>
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="intfilter.ge">ge</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td>
+
+\>=
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="numeric">Numeric</h3>
+<p>numeric <a href="https://ibis-project.org/reference/expression-numeric">expressions</a></p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.abs">abs</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the absolute value of `self`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.acos">acos</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute the arc cosine of `self`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.asin">asin</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute the arc sine of `self`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.atan">atan</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute the arc tangent of `self`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.atan2">atan2</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Compute the two-argument version of arc tangent.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.ceil">ceil</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the ceiling of `self`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.cos">cos</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute the cosine of `self`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.exp">exp</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute $e^\texttt{self}$.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.floor">floor</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the floor of an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.isinf">isinf</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return whether the value is +/-inf. Does NOT detect `NULL` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.isnan">isnan</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return whether the value is NaN. Does NOT detect `NULL` and `inf` values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.log">log</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Compute $\log_{\texttt{base}}\left(\texttt{self}\right)$.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.negate">negate</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Negate a numeric expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.round">round</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Round values to an indicated number of decimal places.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.sign">sign</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the sign of the input.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.sin">sin</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute the sine of `self`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.sqrt">sqrt</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute the square root of `self`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.tan">tan</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute the tangent of `self`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.bucket">bucket</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute a discrete binning of a numeric array.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.cummean">cummean</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the cumulative mean of the input.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.cumsum">cumsum</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the cumulative sum of the input.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.buckets">buckets</strong></td>
+<td valign="top">[<a href="#json">JSON</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.closed">closed</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.closeextreme">closeExtreme</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.includeunder">includeUnder</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="numeric.includeover">includeOver</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="orderaggregate">OrderAggregate</h3>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="orderaggregate.name">name</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="orderaggregate.alias">alias</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+output column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="orderaggregate.where">where</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="orderaggregate.orderby">orderBy</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="orderaggregate.includenull">includeNull</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="projection">Projection</h3>
+<p>an <code>Expression</code> with an optional alias</p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.name">name</strong></td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column name(s)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.value">value</strong></td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+JSON scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.scalar">scalar</strong></td>
+<td valign="top"><a href="#scalars">Scalars</a></td>
+<td>
+
+typed scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.rownumber">rowNumber</strong></td>
+<td valign="top"><a href="#void">Void</a></td>
+<td>
+
+Return an analytic function expression for the current row number.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.eq">eq</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+==
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.ne">ne</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+!=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.lt">lt</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+<
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.le">le</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+<=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.gt">gt</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+\>
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.ge">ge</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+\>=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.isin">isin</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Check whether this expression is in `values`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.notin">notin</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Check whether this expression is not in `values`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.inv">inv</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+~
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.and">and</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+&
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.or">or</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+|
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.xor">xor</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+^
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.add">add</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
++
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.sub">sub</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+-
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.mul">mul</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+*
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.div">div</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+/
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.coalesce">coalesce</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Return the first non-null value from `args`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.cumedist">cumeDist</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the cumulative distribution over a window.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.cummax">cummax</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the cumulative max over a window.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.cummin">cummin</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the cumulative min over a window.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.denserank">denseRank</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Position of first element within each group of equal values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.ifelse">ifelse</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Construct a ternary conditional expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.percentrank">percentRank</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the relative rank of the values in the column.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.rank">rank</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute position of first element within each equal-value group in sorted order.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.array">array</strong></td>
+<td valign="top"><a href="#arrays">Arrays</a></td>
+<td>
+
+array value functions
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.numeric">numeric</strong></td>
+<td valign="top"><a href="#numeric">Numeric</a></td>
+<td>
+
+numeric functions
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.string">string</strong></td>
+<td valign="top"><a href="#strings">Strings</a></td>
+<td>
+
+string functions
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.temporal">temporal</strong></td>
+<td valign="top"><a href="#temporal">Temporal</a></td>
+<td>
+
+temporal functions
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.window">window</strong></td>
+<td valign="top"><a href="#window">Window</a></td>
+<td>
+
+window functions
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="projection.alias">alias</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+name of projected column
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="quantileaggregate">QuantileAggregate</h3>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="quantileaggregate.name">name</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="quantileaggregate.alias">alias</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+output column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="quantileaggregate.where">where</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="quantileaggregate.approx">approx</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="quantileaggregate.q">q</strong></td>
+<td valign="top"><a href="#float">Float</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="scalars">Scalars</h3>
+<p>typed scalars</p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="scalars.base64">base64</strong></td>
+<td valign="top"><a href="#base64">Base64</a></td>
+<td>
+
+binary scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="scalars.date">date</strong></td>
+<td valign="top"><a href="#date">Date</a></td>
+<td>
+
+date scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="scalars.datetime">datetime</strong></td>
+<td valign="top"><a href="#datetime">DateTime</a></td>
+<td>
+
+datetime scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="scalars.decimal">decimal</strong></td>
+<td valign="top"><a href="#decimal">Decimal</a></td>
+<td>
+
+decimal scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="scalars.duration">duration</strong></td>
+<td valign="top"><a href="#duration">Duration</a></td>
+<td>
+
+duration scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="scalars.time">time</strong></td>
+<td valign="top"><a href="#time">Time</a></td>
+<td>
+
+time scalar
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="strfilter">StrFilter</h3>
+<p>predicates for scalars</p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="strfilter.eq">eq</strong></td>
+<td valign="top">[<a href="#string">String</a>!]</td>
+<td>
+
+== or `isin`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strfilter.ne">ne</strong></td>
+<td valign="top">[<a href="#string">String</a>!]</td>
+<td>
+
+!= or `notin`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strfilter.lt">lt</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+<
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strfilter.le">le</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+<=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strfilter.gt">gt</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+\>
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strfilter.ge">ge</strong></td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+\>=
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="strings">Strings</h3>
+<p>string <a href="https://ibis-project.org/reference/expression-strings">expressions</a></p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.capitalize">capitalize</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Uppercase the first letter, lowercase the rest.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.contains">contains</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Return whether the expression contains `substr`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.endswith">endswith</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Determine if `self` ends with `end`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.find">find</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Return the position of the first occurrence of substring.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.length">length</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Compute the length of a string.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.lower">lower</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Convert string to all lowercase.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.lpad">lpad</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Pad `arg` by truncating on the right or padding on the left.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.lstrip">lstrip</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Remove whitespace from the left side of string.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.reextract">reExtract</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Return the specified match at `index` from a regex `pattern`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.research">reSearch</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Return whether `self` contains the regex `pattern`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.resplit">reSplit</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Split a string by a regular expression `pattern`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.replace">replace</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Replace each exact match of `pattern` with `replacement`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.reverse">reverse</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Reverse the characters of a string.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.rpad">rpad</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Pad `self` by truncating or padding on the right.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.rstrip">rstrip</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Remove whitespace from the right side of string.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.split">split</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Split as string on `delimiter`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.startswith">startswith</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Determine whether `self` starts with `start`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.strip">strip</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Remove whitespace from left and right sides of a string.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="strings.upper">upper</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Convert string to all uppercase.
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="temporal">Temporal</h3>
+<p>temporal <a href="https://ibis-project.org/reference/expression-temporal">expressions</a></p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.date">date</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the date component of the expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.day">day</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the day component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.dayofyear">dayOfYear</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the day of the year component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.delta">delta</strong></td>
+<td valign="top">[<a href="#expression">Expression</a>!]!</td>
+<td>
+
+Compute the number of `part`s between two timestamps.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.epochseconds">epochSeconds</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract UNIX epoch in seconds.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.hour">hour</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the hour component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.microsecond">microsecond</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the microsecond component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.millisecond">millisecond</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the millisecond component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.minute">minute</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the minute component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.month">month</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the month component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.quarter">quarter</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the quarter component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.second">second</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the second component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.strftime">strftime</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Format a timestamp according to `format_str`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.time">time</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the time component of the expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.truncate">truncate</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Truncate timestamp expression to units of `unit`.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.weekofyear">weekOfYear</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the week of the year component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.year">year</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Extract the year component.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.formatstr">formatStr</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="temporal.unit">unit</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="uniqueaggregate">UniqueAggregate</h3>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="uniqueaggregate.name">name</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="uniqueaggregate.alias">alias</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+output column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="uniqueaggregate.where">where</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="uniqueaggregate.approx">approx</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="varaggregate">VarAggregate</h3>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="varaggregate.name">name</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="varaggregate.alias">alias</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+output column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="varaggregate.where">where</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="varaggregate.how">how</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="window">Window</h3>
+<p>window <a href="https://ibis-project.org/reference/expression-tables.html#ibis.window">expressions</a></p>
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="window.lag">lag</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the row located at `offset` rows **before** the current row.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.lead">lead</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+Return the row located at `offset` rows **after** the current row.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.eq">eq</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+pairwise ==
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.ne">ne</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+pairwise !=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.lt">lt</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+pairwise <
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.le">le</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+pairwise <=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.gt">gt</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+pairwise \>
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.ge">ge</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+pairwise \>=
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.sub">sub</strong></td>
+<td valign="top"><a href="#expression">Expression</a></td>
+<td>
+
+pairwise -
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.offset">offset</strong></td>
+<td valign="top"><a href="#int">Int</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.default">default</strong></td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+default JSON scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="window.scalar">scalar</strong></td>
+<td valign="top"><a href="#scalars">Scalars</a></td>
+<td>
+
+default typed scalar
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="scalars_1">Scalars</h2>
+<h3 id="base64">Base64</h3>
+<p>Represents binary data as Base64-encoded strings, using the standard alphabet.</p>
+<h3 id="bigint">BigInt</h3>
+<p>64-bit int</p>
+<h3 id="boolean">Boolean</h3>
+<p>The <code>Boolean</code> scalar type represents <code>true</code> or <code>false</code>.</p>
+<h3 id="date">Date</h3>
+<p>Date (isoformat)</p>
+<h3 id="datetime">DateTime</h3>
+<p>Date with time (isoformat)</p>
+<h3 id="decimal">Decimal</h3>
+<p>Decimal (fixed-point)</p>
+<h3 id="duration">Duration</h3>
+<p>Duration (isoformat)</p>
+<h3 id="float">Float</h3>
+<p>The <code>Float</code> scalar type represents signed double-precision fractional values as specified by <a href="https://en.wikipedia.org/wiki/IEEE_floating_point">IEEE 754</a>.</p>
+<h3 id="int">Int</h3>
+<p>The <code>Int</code> scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.</p>
+<h3 id="json">JSON</h3>
+<p>The <code>JSON</code> scalar type represents JSON values as specified by <a href="https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf">ECMA-404</a>.</p>
+<h3 id="string">String</h3>
+<p>The <code>String</code> scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.</p>
+<h3 id="time">Time</h3>
+<p>Time (isoformat)</p>
+<h3 id="void">Void</h3>
+<p>Represents NULL values</p>
+<h2 id="interfaces">Interfaces</h2>
+<h3 id="column">Column</h3>
+<p>ibis column interface</p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="column.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="column.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="column.nunique">nunique</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+Compute the number of distinct rows in an expression.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">approx</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>Possible Types:</strong> <a href="#arraycolumn">ArrayColumn</a>, <a href="#base64column">Base64Column</a>, <a href="#bigintcolumn">BigIntColumn</a>, <a href="#booleancolumn">BooleanColumn</a>, <a href="#datecolumn">DateColumn</a>, <a href="#datetimecolumn">DatetimeColumn</a>, <a href="#decimalcolumn">DecimalColumn</a>, <a href="#durationcolumn">DurationColumn</a>, <a href="#floatcolumn">FloatColumn</a>, <a href="#intcolumn">IntColumn</a>, <a href="#jsoncolumn">JSONColumn</a>, <a href="#stringcolumn">StringColumn</a>, <a href="#timecolumn">TimeColumn</a></p>
+<h3 id="dataset">Dataset</h3>
+<p>ibis <code>Table</code> or arrow <code>Dataset</code></p>
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.type">type</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[ibis table](https://ibis-project.org/reference/expression-table) or [arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.schema">schema</strong></td>
+<td valign="top"><a href="#schema">Schema</a>!</td>
+<td>
+
+[table schema](https://ibis-project.org/reference/schemas#ibis.expr.schema.Schema)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.cast">cast</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Cast](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cast) the columns of a table.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">schema</td>
+<td valign="top">[<a href="#field">Field</a>!]!</td>
+<td>
+
+field names and types
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">try</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+return null if cast fails
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.optional">optional</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a></td>
+<td>
+
+Nullable field to stop error propagation, enabling partial query results.
+
+Will be replaced by client controlled nullability.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.count">count</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+[Count](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.count) the number of rows.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.any">any</strong></td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+Whether there are at least `limit` rows.
+
+May be significantly faster than `count` for out-of-core data.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">limit</td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.column">column</strong></td>
+<td valign="top"><a href="#column">Column</a></td>
+<td>
+
+Column of any type by name.
+
+If the column is in the schema, `columns` can be used instead.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">name</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column name(s); multiple names access nested struct fields
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">cast</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+cast expression to indicated [data type](https://ibis-project.org/reference/datatypes)
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">try</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+return null if cast fails
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.slice">slice</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Limit](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.limit) row selection.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">offset</td>
+<td valign="top"><a href="#bigint">BigInt</a>!</td>
+<td>
+
+number of rows to skip; negative value skips from the end
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">limit</td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+maximum number of rows to return
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.distinct">distinct</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
+
+Differs from `group` by keeping all columns, and defaulting to all keys.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">on</td>
+<td valign="top">[<a href="#string">String</a>!]</td>
+<td>
+
+column names to deduplicate on; defaults to all
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">keep</td>
+<td valign="top"><a href="#string">String</a></td>
+<td>
+
+which duplicates to keep
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">counts</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+[value counts](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">order</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include and order by first row number; incompatible with `on: null`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.group">group</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">by</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names; empty will aggregate into a single row table
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">counts</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include counts in an aliased column
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">order</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include and order by first row number
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">aggregate</td>
+<td valign="top"><a href="#aggregates">Aggregates</a>!</td>
+<td>
+
+aggregation functions applied to other columns
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.order">order</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">by</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names; prefix with `-` for descending order
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">limit</td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td>
+
+maximum number of rows to return; optimized for partitioned dataset keys
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">dense</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+use dense rank with `limit`
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.unnest">unnest</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">name</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+column name
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">offset</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include index column
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">keepEmpty</td>
+<td valign="top"><a href="#boolean">Boolean</a>!</td>
+<td>
+
+keep empty array values as null
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">rowNumber</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include first row number in an aliased column
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.join">join</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.join) two tables.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">right</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+name of right table; must be on root Query type
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">keys</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names used as keys on the left side
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">rkeys</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names used as keys on the right side; defaults to left side
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+the kind of join: 'inner', 'left', 'right', ...
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">lname</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+format string to use to rename overlapping columns in the left table
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">rname</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+format string to use to rename overlapping columns in the right table
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.take">take</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">indices</td>
+<td valign="top">[<a href="#bigint">BigInt</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.dropnull">dropNull</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">subset</td>
+<td valign="top">[<a href="#string">String</a>!]</td>
+<td>
+
+columns names; defaults to all
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">how</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+remove if `any` or `all` are null
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.fillnull">fillNull</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Fill null](https://ibis-project.org/reference/expression-tables.html#ibis.expr.types.relations.Table.fill_null) values.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">name</td>
+<td valign="top">[<a href="#string">String</a>!]</td>
+<td>
+
+column name(s); defaults to all
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">value</td>
+<td valign="top"><a href="#json">JSON</a></td>
+<td>
+
+JSON scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">scalar</td>
+<td valign="top"><a href="#scalars">Scalars</a>!</td>
+<td>
+
+typed scalar
+
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.project">project</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+[Mutate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.mutate) columns by expressions.
+
+Renamed to not be confused with a mutation.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">columns</td>
+<td valign="top">[<a href="#projection">Projection</a>!]!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong id="dataset.runs">runs</strong></td>
+<td valign="top"><a href="#dataset">Dataset</a>!</td>
+<td>
+
+Provisionally group table by adjacent values in columns.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">by</td>
+<td valign="top">[<a href="#string">String</a>!]!</td>
+<td>
+
+column names to compare by equality
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">split</td>
+<td valign="top">[<a href="#projection">Projection</a>!]!</td>
+<td>
+
+boolean column expressions to split on true values
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">counts</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+optionally include counts in an aliased column
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">alias</td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+format string to name index columns
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">aggregate</td>
+<td valign="top"><a href="#aggregates">Aggregates</a>!</td>
+<td>
+
+aggregation functions applied to other columns
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>Possible Types:</strong> <a href="#table">Table</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>
