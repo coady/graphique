@@ -10,7 +10,7 @@ fixtures = Path(__file__).parent / 'fixtures'
 
 
 def pytest_report_header(config):
-    names = 'ibis-framework', 'pyarrow', 'strawberry-graphql'
+    names = 'ibis-framework', 'strawberry-graphql', 'duckdb', 'pyarrow'
     return [f'{name}: {metadata.version(name)}' for name in names]
 
 

@@ -169,7 +169,7 @@ class GenericColumn(Generic[T], Column):
 
 @Column.register(date, datetime, time)
 @strawberry.type(name='Column', description=f"[temporal column]({links.ref}/expression-temporal)")
-class TemporalColumn(GenericColumn[T]): ...
+class TemporalColumn(GenericColumn[T]): ...  # pragma: no branch
 
 
 @Column.register(timedelta, pa.MonthDayNano)
@@ -180,12 +180,12 @@ class TemporalColumn(GenericColumn[T]): ...
 
 Interval support varies by backend; durations may still be useful for computation and as scalar inputs.""",
 )
-class DurationColumn(GenericColumn[T]): ...
+class DurationColumn(GenericColumn[T]): ...  # pragma: no branch
 
 
 @Column.register(str)
 @strawberry.type(name='ingColumn', description=f"[string column]({links.ref}/expression-strings)")
-class StringColumn(GenericColumn[T]): ...
+class StringColumn(GenericColumn[T]): ...  # pragma: no branch
 
 
 @Column.register(float, Decimal)
@@ -245,7 +245,7 @@ class IntColumn(NumericColumn[T]):
 
 @Column.register(list)
 @strawberry.type(description=f"[array column]({links.ref}/expression-collections)")
-class ArrayColumn(Column): ...
+class ArrayColumn(Column): ...  # pragma: no branch
 
 
 @Column.register(dict)
