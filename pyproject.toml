@@ -61,11 +61,5 @@ branch = true
 omit = ["graphique/shell.py"]
 
 [dependency-groups]
-dev = [
-    "pytest-cov",
-    "ruff",
-    "uvicorn[standard]",
-    "duckdb",
-    "mkdocstrings[python]",
-    "mkdocs-jupyter",
-]
+dev = ["pytest-cov", "uvicorn[standard]", "duckdb"]
+docs = ["mkdocstrings[python]", "mkdocs-jupyter"]

@@ -2,12 +2,12 @@ check:
 	uv run pytest -s --cov
 
 lint:
-	uv run ruff check
-	uv run ruff format --check
+	uvx ruff check
+	uvx ruff format --check
 	mypy -p graphique
 
 html: docs/schema.md
-	PYTHONPATH=$(PWD) uv run mkdocs build
+	PYTHONPATH=$(PWD) uv run --group docs mkdocs build
 
 docs/schema.md: docs/schema.graphql
 	./node_modules/.bin/graphql-markdown \
