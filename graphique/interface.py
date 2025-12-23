@@ -109,7 +109,7 @@ class Dataset:
 
         Schema derived fields provide syntax for simple queries; `where` supports complex queries.
         """
-        exprs: list = [] if where is None else list(where)  # type: ignore
+        exprs: list = [] if where is None else list(where)
         source = Parquet.filter(self.source, Filter.to_arrow(**queries))
         if source is None:
             exprs += Filter.to_exprs(**queries)
@@ -128,7 +128,7 @@ class Dataset:
     def schema(self) -> Schema:
         schema = ibis_schema(self.source)
         partitioning = Parquet.schema(self.source).names
-        return Schema(names=schema.names, types=schema.types, partitioning=partitioning)  # type: ignore
+        return Schema(names=schema.names, types=schema.types, partitioning=partitioning)
 
     @doc_field(
         schema="field names and types",
@@ -338,7 +338,7 @@ class Dataset:
         scalar: Scalars = {},  # type: ignore
     ) -> Self:
         """[Fill null](https://ibis-project.org/reference/expression-tables.html#ibis.expr.types.relations.Table.fill_null) values."""
-        (value,) = itertools.chain(scalar, [] if value is UNSET else [value])  # type: ignore
+        (value,) = itertools.chain(scalar, [] if value is UNSET else [value])
         replacements = dict.fromkeys(ibis_schema(self.source) if name is None else name, value)
         return self.resolve(info, self.table.fill_null(replacements))
 

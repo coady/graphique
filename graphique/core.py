@@ -22,7 +22,7 @@ def getitems(obj, *keys):
     return obj
 
 
-def order_key(name: str) -> ibis.Deferred:
+def order_key(name: str) -> ibis.Value:
     """Parse sort order."""
     return (ibis.desc if name.startswith('-') else ibis.asc)(ibis._[name.lstrip('-')])
 
@@ -77,7 +77,7 @@ class Parquet(ds.Dataset):
         groups = groups.order_by(*keys.values()).cache()
         if not dense:
             totals = itertools.accumulate(groups['total'].to_list())
-            limit = next((index for index, total in enumerate(totals, 1) if total >= limit), None)  # type: ignore
+            limit = next((index for index, total in enumerate(totals, 1) if total >= limit), None)
         limit = groups[:limit]['count'].sum().to_pyarrow().as_py()
         hive = isinstance(self.partitioning, ds.HivePartitioning)
         return ibis.read_parquet(table[:limit]['__path__'].to_list(), hive_partitioning=hive)

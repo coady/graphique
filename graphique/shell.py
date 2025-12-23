@@ -17,8 +17,8 @@ from typing import Annotated, Callable
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
-import typer  # type: ignore
-from tqdm import tqdm  # type: ignore
+import typer
+from tqdm import tqdm
 
 
 def sort_key(name: str) -> tuple:

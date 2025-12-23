@@ -7,7 +7,7 @@ from __future__ import annotations
 import functools
 import inspect
 import operator
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Generic, TypeVar
@@ -53,7 +53,7 @@ def default_field(
 ) -> StrawberryField:
     """Use dataclass `default_factory` for `UNSET` or mutables."""
     if func is not None:
-        kwargs['description'] = inspect.getdoc(func).splitlines()[0]  # type: ignore
+        kwargs['description'] = inspect.getdoc(func).splitlines()[0]
     if not nullable and default is UNSET:
         kwargs.setdefault('directives', []).append(optional())
     return strawberry.field(default_factory=type(default), **kwargs)
@@ -74,7 +74,7 @@ class Filter(Generic[T]):
     gt: T | None = default_field(description=r"\>")
     ge: T | None = default_field(description=r"\>=")
 
-    def __iter__(self) -> Iterable[tuple]:
+    def __iter__(self) -> Iterator[tuple]:
         for name, value in self.__dict__.items():
             if value is not UNSET:
                 yield name, value
@@ -94,7 +94,7 @@ class Filter(Generic[T]):
         """Transform query syntax into ibis expressions."""
         for name, query in queries.items():
             field = ibis._[name]
-            for op, value in query:  # type: ignore
+            for op, value in query:
                 match value, op:
                     case list(), 'eq':
                         yield field.isin(value)
@@ -109,7 +109,7 @@ class Filter(Generic[T]):
         exprs = []
         for name, query in queries.items():
             field = pc.field(name)
-            for op, value in dict(query).items():  # type: ignore
+            for op, value in dict(query).items():
                 if isinstance(value, list):
                     expr = pc.is_in(field, pa.array(value))
                     exprs.append(pc.invert(expr) if op == 'ne' else expr)
@@ -133,7 +133,7 @@ class Aggregate:
 class UniqueAggregate(Aggregate):
     approx: bool = False
 
-    def to_ibis(self, func: str, **options) -> tuple:  # type: ignore
+    def to_ibis(self, func: str, **options) -> tuple:
         return super().to_ibis('approx_' + func if self.approx else func, **options)
 
 
@@ -154,7 +154,7 @@ class OrderAggregate(Aggregate):
 class VarAggregate(Aggregate):
     how: str = 'sample'
 
-    def to_ibis(self, func: str) -> tuple:  # type: ignore
+    def to_ibis(self, func: str, **_) -> tuple:
         return super().to_ibis(func, how=self.how)
 
 
@@ -162,7 +162,7 @@ class VarAggregate(Aggregate):
 class QuantileAggregate(UniqueAggregate):
     q: float = 0.5
 
-    def to_ibis(self, func: str) -> tuple:  # type: ignore
+    def to_ibis(self, func: str, **_) -> tuple:
         return super().to_ibis(func, quantile=self.q)
 
 
@@ -170,7 +170,7 @@ class QuantileAggregate(UniqueAggregate):
 class CollectAggregate(OrderAggregate):
     distinct: bool = False
 
-    def to_ibis(self, func: str) -> tuple:  # type: ignore
+    def to_ibis(self, func: str, **_) -> tuple:
         return super().to_ibis(func, distinct=self.distinct)
 
 
@@ -279,10 +279,10 @@ class Expression:
                     yield getattr(expr, name)(*args)
         for field in (self.array, self.numeric, self.string, self.temporal, self.window):
             if field:
-                yield from field  # type: ignore
+                yield from field
 
     def to_ibis(self) -> ibis.Deferred | None:
-        fields = list(self) or [None]  # type: ignore
+        fields = list(self) or [None]
         if len(fields) == 1:
             return fields[0]
         raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
@@ -292,7 +292,7 @@ class Expression:
 class Projection(Expression):
     alias: str = strawberry.field(default='', description="name of projected column")
 
-    def to_ibis(self) -> tuple:
+    def to_ibis(self) -> tuple:  # type: ignore
         name = self.alias or '.'.join(self.name)
         if name:
             return name, super().to_ibis()
@@ -319,8 +319,8 @@ class Arrays:
     offset: int = 0
     limit: int | None = None
 
-    def __iter__(self) -> Iterable[ibis.Deferred]:
-        for name, (expr, *args) in Expression.items(self):  # type: ignore
+    def __iter__(self) -> Iterator[ibis.Deferred]:
+        for name, (expr, *args) in Expression.items(self):
             match name:
                 case 'slice':
                     yield expr[self.offset :][: self.limit]
@@ -361,8 +361,8 @@ class Numeric:
     include_under: bool = False
     include_over: bool = False
 
-    def __iter__(self) -> Iterable[ibis.Deferred]:
-        for name, (expr, *args) in Expression.items(self):  # type: ignore
+    def __iter__(self) -> Iterator[ibis.Deferred]:
+        for name, (expr, *args) in Expression.items(self):
             match name:
                 case 'bucket':
                     yield expr.bucket(
@@ -398,8 +398,8 @@ class Strings:
     strip: list[Expression] = default_field([], func=ibis.expr.types.StringColumn.strip)
     upper: Expression | None = default_field(func=ibis.expr.types.StringColumn.upper)
 
-    def __iter__(self) -> Iterable[ibis.Deferred]:
-        for name, (expr, *args) in Expression.items(self):  # type: ignore
+    def __iter__(self) -> Iterator[ibis.Deferred]:
+        for name, (expr, *args) in Expression.items(self):
             yield getattr(expr, name)(*args)
 
 
@@ -430,8 +430,8 @@ class Temporal:
     format_str: str = ''
     unit: str = ''
 
-    def __iter__(self) -> Iterable[ibis.Deferred]:
-        for name, (expr, *args) in Expression.items(self):  # type: ignore
+    def __iter__(self) -> Iterator[ibis.Deferred]:
+        for name, (expr, *args) in Expression.items(self):
             match name:
                 case 'delta':
                     yield expr.delta(*args, unit=self.unit)
@@ -462,9 +462,9 @@ class Window:
     default: JSON | None = default_field(None, description="default JSON scalar")
     scalar: Scalars | None = default_field(description="default typed scalar")
 
-    def __iter__(self) -> Iterable[ibis.Deferred]:
+    def __iter__(self) -> Iterator[ibis.Deferred]:
         (default,) = self.scalar or [self.default]
-        for name, (expr,) in Expression.items(self):  # type: ignore
+        for name, (expr,) in Expression.items(self):
             match name:
                 case 'lag' | 'lead':
                     yield getattr(expr, name)(self.offset, default)

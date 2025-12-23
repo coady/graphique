@@ -4,7 +4,7 @@ check:
 lint:
 	uvx ruff check
 	uvx ruff format --check
-	mypy -p graphique
+	uvx ty check graphique
 
 html: docs/schema.md
 	PYTHONPATH=$(PWD) uv run --group docs mkdocs build

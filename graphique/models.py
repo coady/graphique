@@ -29,7 +29,7 @@ T = TypeVar('T')
 
 def selections(*fields) -> collections.Counter:
     """Return field name selections from strawberry `SelectedField`."""
-    counts = collections.Counter()  # type: ignore
+    counts = collections.Counter()
     for field in fields:
         for selection in field.selections:
             if hasattr(selection, 'name'):
@@ -55,12 +55,12 @@ def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
 def col_field(func: Callable):
     """Wrap `Column` method with its description."""
     doc = inspect.getdoc(getattr(ibis.expr.types.BooleanColumn, func.__name__))
-    return strawberry.field(func, description=doc.splitlines()[0])  # type: ignore
+    return strawberry.field(func, description=doc.splitlines()[0])
 
 
 @strawberry.interface(description="ibis column interface")
 class Column:
-    registry = {}  # type: ignore
+    registry = {}
 
     def __init__(self, column: ibis.Column):
         self.column = column
