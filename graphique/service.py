@@ -18,14 +18,14 @@ from graphique import GraphQL
 from graphique.core import Parquet
 from graphique.inputs import Filter
 
-config = Config('.env' if Path('.env').is_file() else None)
-PARQUET_PATH = Path(config('PARQUET_PATH')).resolve()
-FEDERATED = config('FEDERATED', default='')
-METRICS = config('METRICS', cast=bool, default=False)
-COLUMNS = config('COLUMNS', cast=json.loads, default=None)
-FILTERS = config('FILTERS', cast=json.loads, default=None)
+config = Config(".env" if Path(".env").is_file() else None)
+PARQUET_PATH = Path(config("PARQUET_PATH")).resolve()
+FEDERATED = config("FEDERATED", default="")
+METRICS = config("METRICS", cast=bool, default=False)
+COLUMNS = config("COLUMNS", cast=json.loads, default=None)
+FILTERS = config("FILTERS", cast=json.loads, default=None)
 
-root = ds.dataset(PARQUET_PATH, partitioning='hive' if PARQUET_PATH.is_dir() else None)
+root = ds.dataset(PARQUET_PATH, partitioning="hive" if PARQUET_PATH.is_dir() else None)
 
 if FILTERS is not None:
     if isinstance(COLUMNS, dict):

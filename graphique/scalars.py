@@ -20,9 +20,9 @@ def parse_bigint(value) -> int:
 
 def parse_duration(value):
     duration = isodate.parse_duration(value)
-    if isinstance(duration, timedelta) and set(value.partition('T')[0]).isdisjoint('YM'):
+    if isinstance(duration, timedelta) and set(value.partition("T")[0]).isdisjoint("YM"):
         return duration
-    months = getattr(duration, 'years', 0) * 12 + getattr(duration, 'months', 0)
+    months = getattr(duration, "years", 0) * 12 + getattr(duration, "months", 0)
     nanoseconds = duration.seconds * 1_000_000_000 + duration.microseconds * 1_000
     return pa.MonthDayNano([months, duration.days, nanoseconds])
 
@@ -35,13 +35,13 @@ def _(mdn: pa.MonthDayNano) -> str:
     value = isodate.duration_isoformat(
         isodate.Duration(months=mdn.months, days=mdn.days, microseconds=mdn.nanoseconds // 1_000)
     )
-    return value if mdn.months else value.replace('P', 'P0M')
+    return value if mdn.months else value.replace("P", "P0M")
 
 
-BigInt = strawberry.scalar(int, name='BigInt', description="64-bit int", parse_value=parse_bigint)
+BigInt = strawberry.scalar(int, name="BigInt", description="64-bit int", parse_value=parse_bigint)
 Duration = strawberry.scalar(
     timedelta | pa.MonthDayNano,
-    name='Duration',
+    name="Duration",
     description="Duration (isoformat)",
     specified_by_url="https://en.wikipedia.org/wiki/ISO_8601#Durations",
     serialize=duration_isoformat,

@@ -6,12 +6,12 @@ from pathlib import Path
 import pyarrow.dataset as ds
 import pytest
 
-fixtures = Path(__file__).parent / 'fixtures'
+fixtures = Path(__file__).parent / "fixtures"
 
 
 def pytest_report_header(config):
-    names = 'ibis-framework', 'strawberry-graphql', 'duckdb', 'pyarrow'
-    return [f'{name}: {metadata.version(name)}' for name in names]
+    names = "ibis-framework", "strawberry-graphql", "duckdb", "pyarrow"
+    return [f"{name}: {metadata.version(name)}" for name in names]
 
 
 class TestClient:
@@ -27,7 +27,7 @@ class TestClient:
 
 def load(path, **vars):
     os.environ.update(vars, PARQUET_PATH=str(fixtures / path))
-    sys.modules.pop('graphique.service', None)
+    sys.modules.pop("graphique.service", None)
     from graphique.service import app
 
     for var in vars:
@@ -35,28 +35,28 @@ def load(path, **vars):
     return app
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def dataset():
-    return ds.dataset(fixtures / 'zipcodes.parquet')
+    return ds.dataset(fixtures / "zipcodes.parquet")
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def client():
-    return TestClient(load('zipcodes.parquet'))
+    return TestClient(load("zipcodes.parquet"))
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def dsclient(request):
-    return TestClient(load('partitioned'))
+    return TestClient(load("partitioned"))
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def fedclient():
     from .federated import app
 
     return TestClient(app)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def executor():
-    return TestClient(load('alltypes.parquet')).execute
+    return TestClient(load("alltypes.parquet")).execute

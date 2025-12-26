@@ -47,9 +47,6 @@ line-length = 100
 [tool.ruff.lint]
 select = ["I"]
 
-[tool.ruff.format]
-quote-style = "preserve"
-
 [tool.ty.rules]
 # unused-ignore-comment = "error"
 invalid-argument-type = "ignore"

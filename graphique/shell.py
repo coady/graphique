@@ -23,31 +23,31 @@ from tqdm import tqdm
 
 def sort_key(name: str) -> tuple:
     """Parse sort order."""
-    return name.lstrip('-'), ('descending' if name.startswith('-') else 'ascending')
+    return name.lstrip("-"), ("descending" if name.startswith("-") else "ascending")
 
 
 def write_batches(
-    scanner: ds.Scanner, base_dir: str, *partitioning: str, indices: str = '', **options
+    scanner: ds.Scanner, base_dir: str, *partitioning: str, indices: str = "", **options
 ):
     """Partition dataset by batches.
 
     Optionally include original indices.
     """
-    options.update(format='parquet', partitioning=partitioning)
-    options.update(partitioning_flavor='hive', existing_data_behavior='overwrite_or_ignore')
+    options.update(format="parquet", partitioning=partitioning)
+    options.update(partitioning_flavor="hive", existing_data_behavior="overwrite_or_ignore")
     with tqdm(total=scanner.count_rows(), desc="Batches") as pbar:
         for index, batch in enumerate(scanner.to_batches()):
             if indices:
                 arange = pc.cumulative_sum(pa.repeat(1, len(batch)), pbar.n - 1)
                 batch = batch.append_column(indices, arange)
-            options['basename_template'] = f'part-{index}-{{i}}.parquet'
+            options["basename_template"] = f"part-{index}-{{i}}.parquet"
             ds.write_dataset(batch, base_dir, **options)
             pbar.update(len(batch))
 
 
 def write_fragments(dataset: ds.Dataset, base_dir: str, func: Callable | None = None, **options):
     """Rewrite partition files by fragment to consolidate, optionally transforming."""
-    options['format'] = 'parquet'
+    options["format"] = "parquet"
     exprs = {Path(frag.path).parent: frag.partition_expression for frag in dataset.get_fragments()}
     offset = len(dataset.partitioning.schema)
     for path in tqdm(exprs, desc="Fragments"):
@@ -64,12 +64,12 @@ def partition(
     sort: Annotated[list[str], typer.Option(help="sort keys; will load fragments")] = [],
 ):
     """Partition dataset by keys."""
-    temp = Path(dest) / 'temp'
-    write_batches(ds.dataset(src, partitioning='hive'), str(temp), *partitioning)
-    dataset = ds.dataset(temp, partitioning='hive')
-    options = dict(partitioning_flavor='hive', existing_data_behavior='overwrite_or_ignore')
+    temp = Path(dest) / "temp"
+    write_batches(ds.dataset(src, partitioning="hive"), str(temp), *partitioning)
+    dataset = ds.dataset(temp, partitioning="hive")
+    options = dict(partitioning_flavor="hive", existing_data_behavior="overwrite_or_ignore")
     if sorting := list(map(sort_key, sort)):
-        write_fragments(dataset, dest, operator.methodcaller('sort_by', sorting))
+        write_fragments(dataset, dest, operator.methodcaller("sort_by", sorting))
     elif fragments:
         write_fragments(dataset, dest)
     else:
@@ -78,6 +78,6 @@ def partition(
     shutil.rmtree(temp)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     partition.__doc__ = __doc__
     typer.run(partition)

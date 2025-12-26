@@ -22,19 +22,19 @@ class MetricsExtension(tracing.ApolloTracingExtension):
     """Human-readable metrics from apollo tracing."""
 
     def get_results(self) -> dict:
-        tracing = super().get_results()['tracing']
-        metrics = self.execution_context.context.get('metrics', {})
+        tracing = super().get_results()["tracing"]
+        metrics = self.execution_context.context.get("metrics", {})
         resolvers = []
-        for resolver in tracing['execution']['resolvers']:  # pragma: no cover
-            path = tuple(resolver['path'])
-            resolvers.append({'path': path, 'duration': self.duration(resolver)})
+        for resolver in tracing["execution"]["resolvers"]:  # pragma: no cover
+            path = tuple(resolver["path"])
+            resolvers.append({"path": path, "duration": self.duration(resolver)})
             resolvers[-1].update(metrics.get(path, {}))
-        metrics = {'duration': self.duration(tracing), 'execution': {'resolvers': resolvers}}
-        return {'metrics': metrics}
+        metrics = {"duration": self.duration(tracing), "execution": {"resolvers": resolvers}}
+        return {"metrics": metrics}
 
     @staticmethod
     def duration(data: dict) -> str | None:
-        return data['duration'] and str(timedelta(microseconds=data['duration'] / 1e3))
+        return data["duration"] and str(timedelta(microseconds=data["duration"] / 1e3))
 
 
 class GraphQL(strawberry.asgi.GraphQL):
@@ -69,7 +69,7 @@ class GraphQL(strawberry.asgi.GraphQL):
         """
         root_values = {name: implemented(roots[name], name, keys.get(name, ())) for name in roots}
         annotations = {name: type(root_values[name]) for name in root_values}
-        Query = type('Query', (), {'__annotations__': annotations})
+        Query = type("Query", (), {"__annotations__": annotations})
         return cls(strawberry.type(Query)(**root_values), **kwargs)  # type: ignore
 
 
@@ -77,22 +77,22 @@ def valid_name(name: str) -> bool:
     return name.isidentifier() and not iskeyword(name)
 
 
-def implemented(root: Source, name: str = '', keys: Iterable = ()):
+def implemented(root: Source, name: str = "", keys: Iterable = ()):
     """Return type which extends the Dataset interface with knowledge of the schema."""
     schema = ibis_schema(root)
     types = {name: py_type(schema[name]) for name in schema if valid_name(name)}
     if invalid := set(schema.names) - set(types):
-        warnings.warn(f'invalid field names: {invalid}')
+        warnings.warn(f"invalid field names: {invalid}")
     prefix = to_camel_case(name.title())
 
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
     annotations = {name: Column.registry[types[name]] | None for name in types}
-    cls = type(prefix + 'Columns', (), dict(namespace, __annotations__=annotations))
+    cls = type(prefix + "Columns", (), dict(namespace, __annotations__=annotations))
     Columns = strawberry.type(cls, description="fields for each column")
 
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
     annotations = {name: (Column if cls is list else cls) | None for name, cls in types.items()}
-    cls = type(prefix + 'Row', (), dict(namespace, __annotations__=annotations))
+    cls = type(prefix + "Row", (), dict(namespace, __annotations__=annotations))
     Row = strawberry.type(cls, description="scalar fields")
 
     class Table(Dataset):
@@ -112,11 +112,11 @@ def implemented(root: Source, name: str = '', keys: Iterable = ()):
             return Row(**row)  # type: ignore
 
     if types:
-        for field in ('filter', 'columns', 'row'):
+        for field in ("filter", "columns", "row"):
             setattr(Table, field, doc_field(getattr(Table, field)))
         Table.filter.type = Table
         Table.filter.base_resolver.arguments = list(Filter.resolve_args(types))
-    options = dict(name=prefix + 'Table', description="a dataset with a derived schema")
+    options = dict(name=prefix + "Table", description="a dataset with a derived schema")
     if name:
         return strawberry.federation.type(Table, keys=keys, **options)(root)
     return strawberry.type(Table, **options)(root)

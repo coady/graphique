@@ -26,7 +26,7 @@ Source: TypeAlias = ibis.Table | ds.Dataset
 def references(field) -> Iterator:
     """Generate every possible column reference from strawberry `SelectedField`."""
     if isinstance(field, str):
-        yield field.lstrip('-')
+        yield field.lstrip("-")
     elif isinstance(field, Iterable):
         for value in field:
             yield from references(value)
@@ -34,7 +34,7 @@ def references(field) -> Iterator:
             for value in field.values():
                 yield from references(value)
     else:
-        for name in ('name', 'arguments', 'selections'):
+        for name in ("name", "arguments", "selections"):
             yield from references(getattr(field, name, []))
 
 
@@ -62,7 +62,7 @@ class Dataset:
     def resolve(self, info: Info, source: ibis.Table) -> Self:
         """Cache the table if it will be reused."""
         counts = selections(*info.selected_fields)
-        counts['type'] = counts['schema'] = 0
+        counts["type"] = counts["schema"] = 0
         if counts.total() > 1 and isinstance(source, ibis.Table):
             if names := self.select(info, source):
                 source = source.select(*names).cache()
@@ -167,7 +167,7 @@ class Dataset:
         cast=f"cast expression to indicated {links.types}",
         try_="return null if cast fails",
     )
-    def column(self, name: list[str], cast: str = '', try_: bool = False) -> Column | None:
+    def column(self, name: list[str], cast: str = "", try_: bool = False) -> Column | None:
         """Column of any type by name.
 
         If the column is in the schema, `columns` can be used instead.
@@ -195,9 +195,9 @@ class Dataset:
         self,
         info: Info,
         on: list[str] | None = None,
-        keep: str | None = 'first',
-        counts: str = '',
-        order: str = '',
+        keep: str | None = "first",
+        counts: str = "",
+        order: str = "",
     ) -> Self:
         """[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
 
@@ -227,8 +227,8 @@ class Dataset:
         self,
         info: Info,
         by: list[str] = [],
-        counts: str = '',
-        order: str = '',
+        counts: str = "",
+        order: str = "",
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
         """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns."""
@@ -261,8 +261,8 @@ class Dataset:
         else:
             table = self.table
         if dense and limit is not None:
-            groups = table.aggregate(_=ibis._.count(), by=[name.lstrip('-') for name in by])
-            limit = groups.order_by(*map(order_key, by))[:limit]['_'].sum().to_pyarrow().as_py()
+            groups = table.aggregate(_=ibis._.count(), by=[name.lstrip("-") for name in by])
+            limit = groups.order_by(*map(order_key, by))[:limit]["_"].sum().to_pyarrow().as_py()
         return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
 
     @doc_field(
@@ -275,9 +275,9 @@ class Dataset:
         self,
         info: Info,
         name: str,
-        offset: str = '',
+        offset: str = "",
         keep_empty: bool = False,
-        row_number: str = '',
+        row_number: str = "",
     ) -> Self:
         """[Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table."""
         table = self.table
@@ -299,9 +299,9 @@ class Dataset:
         right: str,
         keys: list[str],
         rkeys: list[str] = [],
-        how: str = 'inner',
-        lname: str = '',
-        rname: str = '{name}_right',
+        how: str = "inner",
+        lname: str = "",
+        rname: str = "{name}_right",
     ) -> Self:
         """[Join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.join) two tables."""
         left = self.table
@@ -324,7 +324,7 @@ class Dataset:
         return type(self)(ibis.memtable(table))
 
     @doc_field(subset="columns names; defaults to all", how="remove if `any` or `all` are null")
-    def drop_null(self, info: Info, subset: list[str] | None = None, how: str = 'any') -> Self:
+    def drop_null(self, info: Info, subset: list[str] | None = None, how: str = "any") -> Self:
         """[Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values."""
         return self.resolve(info, self.table.drop_null(subset, how=how))
 
@@ -362,8 +362,8 @@ class Dataset:
         info: Info,
         by: list[str] = [],
         split: list[Projection] = [],
-        counts: str = '',
-        alias: str = '{}_index',
+        counts: str = "",
+        alias: str = "{}_index",
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
         """Provisionally group table by adjacent values in columns."""

@@ -26,7 +26,7 @@ from strawberry.types.field import StrawberryField
 
 from .core import getitems, links, order_key
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def use_doc(decorator: Callable, **kwargs):
@@ -53,9 +53,9 @@ def default_field(
 ) -> StrawberryField:
     """Use dataclass `default_factory` for `UNSET` or mutables."""
     if func is not None:
-        kwargs['description'] = inspect.getdoc(func).splitlines()[0]
+        kwargs["description"] = inspect.getdoc(func).splitlines()[0]
     if not nullable and default is UNSET:
-        kwargs.setdefault('directives', []).append(optional())
+        kwargs.setdefault("directives", []).append(optional())
     return strawberry.field(default_factory=type(default), **kwargs)
 
 
@@ -87,7 +87,7 @@ class Filter(Generic[T]):
             if types[name] not in (list, dict):
                 yield StrawberryArgument(name, name, annotation, default={})
         annotation = StrawberryAnnotation(Expression | None)
-        yield StrawberryArgument('where', None, annotation, default=None)
+        yield StrawberryArgument("where", None, annotation, default=None)
 
     @staticmethod
     def to_exprs(**queries: Filter) -> Iterable[ibis.Deferred]:
@@ -96,9 +96,9 @@ class Filter(Generic[T]):
             field = ibis._[name]
             for op, value in query:
                 match value, op:
-                    case list(), 'eq':
+                    case list(), "eq":
                         yield field.isin(value)
-                    case list(), 'ne':
+                    case list(), "ne":
                         yield field.notin(value)
                     case _:
                         yield getattr(operator, op)(field, value)
@@ -112,7 +112,7 @@ class Filter(Generic[T]):
             for op, value in dict(query).items():
                 if isinstance(value, list):
                     expr = pc.is_in(field, pa.array(value))
-                    exprs.append(pc.invert(expr) if op == 'ne' else expr)
+                    exprs.append(pc.invert(expr) if op == "ne" else expr)
                 else:
                     exprs.append(getattr(operator, op)(field, value))
         return functools.reduce(operator.and_, exprs or [None])
@@ -121,11 +121,11 @@ class Filter(Generic[T]):
 @strawberry.input(description="name and optional alias for aggregation")
 class Aggregate:
     name: str = strawberry.field(description="column name")
-    alias: str = strawberry.field(default='', description="output column name")
+    alias: str = strawberry.field(default="", description="output column name")
     where: Expression | None = None
 
     def to_ibis(self, func: str, **options) -> tuple:
-        options['where'] = self.where and self.where.to_ibis()
+        options["where"] = self.where and self.where.to_ibis()
         return (self.alias or self.name), getattr(ibis._[self.name], func)(**options)
 
 
@@ -134,7 +134,7 @@ class UniqueAggregate(Aggregate):
     approx: bool = False
 
     def to_ibis(self, func: str, **options) -> tuple:
-        return super().to_ibis('approx_' + func if self.approx else func, **options)
+        return super().to_ibis("approx_" + func if self.approx else func, **options)
 
 
 @strawberry.input
@@ -152,7 +152,7 @@ class OrderAggregate(Aggregate):
 
 @strawberry.input
 class VarAggregate(Aggregate):
-    how: str = 'sample'
+    how: str = "sample"
 
     def to_ibis(self, func: str, **_) -> tuple:
         return super().to_ibis(func, how=self.how)
@@ -229,14 +229,14 @@ class Expression:
     notin: list[Expression] = default_field([], func=ibis.Column.notin)
 
     inv: Expression | None = default_field(description="~")
-    and_: list[Expression] = default_field([], name='and', description="&")
-    or_: list[Expression] = default_field([], name='or', description="|")
+    and_: list[Expression] = default_field([], name="and", description="&")
+    or_: list[Expression] = default_field([], name="or", description="|")
     xor: list[Expression] = default_field([], description="^")
 
     add: list[Expression] = default_field([], description="+")
     sub: list[Expression] = default_field([], description="-")
     mul: list[Expression] = default_field([], description="*")
-    truediv: list[Expression] = default_field([], name='div', description="/")
+    truediv: list[Expression] = default_field([], name="div", description="/")
 
     coalesce: list[Expression] = default_field([], func=ibis.Column.coalesce)
     cume_dist: Expression | None = default_field(func=ibis.Column.cume_dist)
@@ -271,9 +271,9 @@ class Expression:
             yield ibis.row_number()
         for name, (expr, *args) in self.items():
             match name:
-                case 'eq' | 'ne' | 'lt' | 'le' | 'gt' | 'ge' | 'inv' | 'and_' | 'or_' | 'xor':
+                case "eq" | "ne" | "lt" | "le" | "gt" | "ge" | "inv" | "and_" | "or_" | "xor":
                     yield getattr(operator, name)(expr, *args)
-                case 'add' | 'sub' | 'mul' | 'truediv':
+                case "add" | "sub" | "mul" | "truediv":
                     yield getattr(operator, name)(expr, *args)
                 case _:
                     yield getattr(expr, name)(*args)
@@ -290,10 +290,10 @@ class Expression:
 
 @strawberry.input(description="an `Expression` with an optional alias")
 class Projection(Expression):
-    alias: str = strawberry.field(default='', description="name of projected column")
+    alias: str = strawberry.field(default="", description="name of projected column")
 
     def to_ibis(self) -> tuple:  # type: ignore
-        name = self.alias or '.'.join(self.name)
+        name = self.alias or ".".join(self.name)
         if name:
             return name, super().to_ibis()
         raise ValueError(f"projected fields require a name or alias: {self}")
@@ -322,9 +322,9 @@ class Arrays:
     def __iter__(self) -> Iterator[ibis.Deferred]:
         for name, (expr, *args) in Expression.items(self):
             match name:
-                case 'slice':
+                case "slice":
                     yield expr[self.offset :][: self.limit]
-                case 'value':
+                case "value":
                     yield expr[self.offset]
                 case _:
                     yield getattr(expr, name)(*args)
@@ -356,7 +356,7 @@ class Numeric:
     cumsum: Expression | None = default_field(func=ibis.expr.types.NumericColumn.cumsum)
 
     buckets: list[JSON] = default_field([])
-    closed: str = 'left'
+    closed: str = "left"
     close_extreme: bool = True
     include_under: bool = False
     include_over: bool = False
@@ -364,7 +364,7 @@ class Numeric:
     def __iter__(self) -> Iterator[ibis.Deferred]:
         for name, (expr, *args) in Expression.items(self):
             match name:
-                case 'bucket':
+                case "bucket":
                     yield expr.bucket(
                         self.buckets,
                         closed=self.closed,
@@ -427,17 +427,17 @@ class Temporal:
     )
     year: Expression | None = default_field(func=ibis.expr.types.TimestampColumn.year)
 
-    format_str: str = ''
-    unit: str = ''
+    format_str: str = ""
+    unit: str = ""
 
     def __iter__(self) -> Iterator[ibis.Deferred]:
         for name, (expr, *args) in Expression.items(self):
             match name:
-                case 'delta':
+                case "delta":
                     yield expr.delta(*args, unit=self.unit)
-                case 'truncate':
+                case "truncate":
                     yield expr.truncate(self.unit)
-                case 'strftime':
+                case "strftime":
                     yield expr.strftime(self.format_str)
                 case _:
                     yield getattr(expr, name)(*args)
@@ -466,7 +466,7 @@ class Window:
         (default,) = self.scalar or [self.default]
         for name, (expr,) in Expression.items(self):
             match name:
-                case 'lag' | 'lead':
+                case "lag" | "lead":
                     yield getattr(expr, name)(self.offset, default)
                 case _:
                     yield getattr(operator, name)(expr, expr.lag(self.offset)).fill_null(default)

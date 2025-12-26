@@ -24,7 +24,7 @@ from .scalars import BigInt, py_type, scalar_map
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def selections(*fields) -> collections.Counter:
@@ -32,7 +32,7 @@ def selections(*fields) -> collections.Counter:
     counts = collections.Counter()
     for field in fields:
         for selection in field.selections:
-            if hasattr(selection, 'name'):
+            if hasattr(selection, "name"):
                 counts[selection.name] += 1
             else:
                 counts.update(selections(selection))
@@ -45,7 +45,7 @@ def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
         return functools.partial(doc_field, **kwargs)  # type: ignore
     parameters = inspect.signature(func).parameters
     for name in kwargs:
-        alias = name.strip('_') if name.endswith('_') else None
+        alias = name.strip("_") if name.endswith("_") else None
         directives = [optional()] if parameters[name].default is UNSET else []
         argument = strawberry.argument(name=alias, description=kwargs[name], directives=directives)
         func.__annotations__[name] = Annotated[func.__annotations__[name], argument]
@@ -98,7 +98,7 @@ class Column:
     @classmethod
     def resolve_type(cls, obj, info, *_) -> str:
         config = Info(info, None).schema.config
-        args = get_args(getattr(obj, '__orig_class__', None))
+        args = get_args(getattr(obj, "__orig_class__", None))
         return config.name_converter.from_generic(obj.__strawberry_definition__, args)
 
 
@@ -120,7 +120,7 @@ class Set(Generic[T]):
 
 
 @Column.register(bytes)
-@strawberry.type(name='Column', description=f"[generic column]({links.ref}/expression-generic)")
+@strawberry.type(name="Column", description=f"[generic column]({links.ref}/expression-generic)")
 class GenericColumn(Generic[T], Column):
     @doc_field
     def values(self) -> list[T | None]:
@@ -168,13 +168,13 @@ class GenericColumn(Generic[T], Column):
 
 
 @Column.register(date, datetime, time)
-@strawberry.type(name='Column', description=f"[temporal column]({links.ref}/expression-temporal)")
+@strawberry.type(name="Column", description=f"[temporal column]({links.ref}/expression-temporal)")
 class TemporalColumn(GenericColumn[T]): ...  # pragma: no branch
 
 
 @Column.register(timedelta, pa.MonthDayNano)
 @strawberry.type(
-    name='Column',
+    name="Column",
     directives=[provisional()],
     description=f"""provisional [interval column]({links.ref}/expression-temporal#ibis.expr.types.temporal.IntervalValue)
 
@@ -184,12 +184,12 @@ class DurationColumn(GenericColumn[T]): ...  # pragma: no branch
 
 
 @Column.register(str)
-@strawberry.type(name='ingColumn', description=f"[string column]({links.ref}/expression-strings)")
+@strawberry.type(name="ingColumn", description=f"[string column]({links.ref}/expression-strings)")
 class StringColumn(GenericColumn[T]): ...  # pragma: no branch
 
 
 @Column.register(float, Decimal)
-@strawberry.type(name='Column', description=f"[numeric column]({links.ref}/expression-numeric)")
+@strawberry.type(name="Column", description=f"[numeric column]({links.ref}/expression-numeric)")
 class NumericColumn(GenericColumn[T]):
     @col_field
     def sum(self) -> T | None:
@@ -200,11 +200,11 @@ class NumericColumn(GenericColumn[T]):
         return self.column.mean().to_pyarrow().as_py()
 
     @col_field
-    def std(self, how: str = 'sample') -> float | None:
+    def std(self, how: str = "sample") -> float | None:
         return self.column.std(how=how).to_pyarrow().as_py()
 
     @col_field
-    def var(self, how: str = 'sample') -> float | None:
+    def var(self, how: str = "sample") -> float | None:
         return self.column.var(how=how).to_pyarrow().as_py()
 
     @col_field
@@ -215,7 +215,7 @@ class NumericColumn(GenericColumn[T]):
 
 @Column.register(bool)
 @strawberry.type(
-    name='eanColumn',
+    name="eanColumn",
     description=f"[boolean column]({links.ref}/expression-numeric#ibis.expr.types.logical.BooleanColumn)",
 )
 class BooleanColumn(NumericColumn[T]):
@@ -230,14 +230,14 @@ class BooleanColumn(NumericColumn[T]):
 
 @Column.register(int, BigInt)
 @strawberry.type(
-    name='Column',
+    name="Column",
     description=f"[integer column]({links.ref}/expression-numeric#ibis.expr.types.numeric.IntegerColumn)",
 )
 class IntColumn(NumericColumn[T]):
     @doc_field
     def take_from(
         self, info: Info, field: str
-    ) -> Annotated['Dataset', strawberry.lazy('.interface')] | None:
+    ) -> Annotated["Dataset", strawberry.lazy(".interface")] | None:
         """Select indices from a table on the root Query type."""
         root = getattr(info.root_value, field)
         return root.take(info, self.column.to_list())
@@ -250,7 +250,7 @@ class ArrayColumn(Column): ...  # pragma: no branch
 
 @Column.register(dict)
 @strawberry.type(
-    name='Column',
+    name="Column",
     description=f"[struct column]({links.ref}/expression-collections#ibis.expr.types.structs.StructValue)",
 )
 class StructColumn(GenericColumn[T]):
