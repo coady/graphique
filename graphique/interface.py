@@ -7,14 +7,13 @@ Doesn't require knowledge of the schema.
 import itertools
 import operator
 from collections.abc import Iterable, Iterator, Mapping
-from typing import TypeAlias, no_type_check
+from typing import Self, TypeAlias, no_type_check
 
 import ibis
 import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET, Info
 from strawberry.scalars import JSON
-from typing_extensions import Self
 
 from .core import Parquet, getitems, order_key
 from .inputs import Aggregates, Expression, Field, Filter, Projection, Scalars, provisional
@@ -128,7 +127,7 @@ class Dataset:
     def schema(self) -> Schema:
         schema = ibis_schema(self.source)
         partitioning = Parquet.schema(self.source).names
-        return Schema(names=schema.names, types=schema.types, partitioning=partitioning)
+        return Schema(names=schema.names, types=schema.types, partitioning=partitioning)  # type: ignore
 
     @doc_field(
         schema="field names and types",
