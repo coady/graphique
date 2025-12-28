@@ -199,7 +199,7 @@ class Aggregates:
 
 @strawberry.input(description="typed scalars")
 class Scalars:
-    base64: bytes | None = default_field(description="binary scalar")
+    base64: strawberry.scalars.Base64 | None = default_field(description="binary scalar")
     date: date | None = default_field(description="date scalar")
     datetime: datetime | None = default_field(description="datetime scalar")
     decimal: Decimal | None = default_field(description="decimal scalar")

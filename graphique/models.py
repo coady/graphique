@@ -119,7 +119,7 @@ class Set(Generic[T]):
         return self.table[1].to_list()
 
 
-@Column.register(bytes)
+@Column.register(strawberry.scalars.Base64)
 @strawberry.type(name="Column", description=f"[generic column]({links.ref}/expression-generic)")
 class GenericColumn(Generic[T], Column):
     @doc_field
@@ -248,7 +248,7 @@ class IntColumn(NumericColumn[T]):
 class ArrayColumn(Column): ...  # pragma: no branch
 
 
-@Column.register(dict)
+@Column.register(strawberry.scalars.JSON)
 @strawberry.type(
     name="Column",
     description=f"[struct column]({links.ref}/expression-collections#ibis.expr.types.structs.StructValue)",

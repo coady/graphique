@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "pyarrow>=20",
-    "strawberry-graphql[asgi,cli]>=0.285",
+    "strawberry-graphql[asgi,cli]>=0.288",
     "ibis-framework>=10.7",
     "pyarrow-hotfix",
     "isodate>=0.7",

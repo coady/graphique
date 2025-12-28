@@ -48,8 +48,6 @@ Duration = strawberry.scalar(
     parse_value=parse_duration,
 )
 scalar_map = {
-    bytes: strawberry.scalars.Base64,
-    dict: strawberry.scalars.JSON,
     timedelta: Duration,
     pa.MonthDayNano: Duration,
 }
@@ -77,11 +75,11 @@ def py_type(dt: ibis.DataType) -> type:
         case ibis.expr.datatypes.Interval():
             return Duration
         case ibis.expr.datatypes.Binary():
-            return bytes
+            return strawberry.scalars.Base64
         case ibis.expr.datatypes.String():
             return str
         case ibis.expr.datatypes.Array():
             return list
         case ibis.expr.datatypes.Struct():
-            return dict
+            return strawberry.scalars.JSON
     raise TypeError("unknown data type")  # pragma: no cover
