@@ -8,7 +8,7 @@ import functools
 import inspect
 import operator
 from collections.abc import Callable, Iterable, Iterator
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Generic, TypeVar
 
@@ -25,6 +25,7 @@ from strawberry.types.arguments import StrawberryArgument
 from strawberry.types.field import StrawberryField
 
 from .core import getitems, links, order_key
+from .scalars import Duration
 
 T = TypeVar("T")
 
@@ -203,7 +204,7 @@ class Scalars:
     date: date | None = default_field(description="date scalar")
     datetime: datetime | None = default_field(description="datetime scalar")
     decimal: Decimal | None = default_field(description="decimal scalar")
-    duration: timedelta | None = default_field(description="duration scalar")
+    duration: Duration | None = default_field(description="duration scalar")
     time: time | None = default_field(description="time scalar")
 
     def __iter__(self):

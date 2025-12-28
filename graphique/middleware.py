@@ -46,7 +46,10 @@ class GraphQL(strawberry.asgi.GraphQL):
         **kwargs: additional `asgi.GraphQL` options
     """
 
-    options = dict(types=Column.registry.values(), scalar_overrides=scalar_map)
+    options = dict(
+        types=Column.registry.values(),
+        config=strawberry.schema.config.StrawberryConfig(scalar_map=scalar_map),
+    )
 
     def __init__(self, root: Source, metrics: bool = False, **kwargs):
         options: dict = dict(self.options, extensions=[MetricsExtension] if metrics else [])

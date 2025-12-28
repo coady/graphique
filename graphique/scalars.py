@@ -3,6 +3,7 @@ GraphQL scalars.
 """
 
 import functools
+import typing
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
@@ -38,18 +39,17 @@ def _(mdn: pa.MonthDayNano) -> str:
     return value if mdn.months else value.replace("P", "P0M")
 
 
-BigInt = strawberry.scalar(int, name="BigInt", description="64-bit int", parse_value=parse_bigint)
-Duration = strawberry.scalar(
-    timedelta | pa.MonthDayNano,
-    name="Duration",
-    description="Duration (isoformat)",
-    specified_by_url="https://en.wikipedia.org/wiki/ISO_8601#Durations",
-    serialize=duration_isoformat,
-    parse_value=parse_duration,
-)
+BigInt = typing.NewType("BigInt", int)
+Duration = typing.NewType("Duration", timedelta)
 scalar_map = {
-    timedelta: Duration,
-    pa.MonthDayNano: Duration,
+    BigInt: strawberry.scalar(name="BigInt", description="64-bit int", parse_value=parse_bigint),
+    Duration: strawberry.scalar(
+        name="Duration",
+        description="Duration (isoformat)",
+        specified_by_url="https://en.wikipedia.org/wiki/ISO_8601#Durations",
+        serialize=duration_isoformat,
+        parse_value=parse_duration,
+    ),
 }
 
 

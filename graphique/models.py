@@ -20,7 +20,7 @@ from strawberry.types.field import StrawberryField
 
 from .core import links
 from .inputs import optional, provisional
-from .scalars import BigInt, py_type, scalar_map
+from .scalars import BigInt, Duration, py_type
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
@@ -75,7 +75,7 @@ class Column:
         # strawberry#1921: scalar python names are prepended to column name
         generic = issubclass(cls, Generic)
         for scalar in scalars:
-            cls.registry[scalar] = cls[scalar_map.get(scalar, scalar)] if generic else cls
+            cls.registry[scalar] = cls[scalar] if generic else cls
 
     @strawberry.field(description=links.types)
     def type(self) -> str:
@@ -172,7 +172,7 @@ class GenericColumn(Generic[T], Column):
 class TemporalColumn(GenericColumn[T]): ...  # pragma: no branch
 
 
-@Column.register(timedelta, pa.MonthDayNano)
+@Column.register(Duration)
 @strawberry.type(
     name="Column",
     directives=[provisional()],

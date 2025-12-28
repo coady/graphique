@@ -155,7 +155,7 @@ class Dataset:
         return self.source.count_rows()
 
     @doc_field
-    def any(self, limit: BigInt = 1) -> bool:
+    def any(self, limit: BigInt = BigInt(1)) -> bool:
         """Whether there are at least `limit` rows.
 
         May be significantly faster than `count` for out-of-core data.
@@ -181,7 +181,7 @@ class Dataset:
         offset="number of rows to skip; negative value skips from the end",
         limit="maximum number of rows to return",
     )
-    def slice(self, info: Info, offset: BigInt = 0, limit: BigInt | None = None) -> Self:
+    def slice(self, info: Info, offset: BigInt = BigInt(0), limit: BigInt | None = None) -> Self:
         """[Limit](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.limit) row selection."""
         return self.resolve(info, self.table[offset:][:limit])
 
