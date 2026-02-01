@@ -73,7 +73,7 @@ class GraphQL(strawberry.asgi.GraphQL):
         root_values = {name: implemented(roots[name], name, keys.get(name, ())) for name in roots}
         annotations = {name: type(root_values[name]) for name in root_values}
         Query = type("Query", (), {"__annotations__": annotations})
-        return cls(strawberry.type(Query)(**root_values), **kwargs)  # type: ignore
+        return cls(strawberry.type(Query)(**root_values), **kwargs)
 
 
 def valid_name(name: str) -> bool:
@@ -102,9 +102,9 @@ def implemented(root: Source, name: str = "", keys: Iterable = ()):
         __init__ = Dataset.__init__
         field = name
 
-        def columns(self, info: Info) -> Columns:
+        def columns(self, info: Info) -> Columns:  # type: ignore
             """fields for each column"""
-            return Columns(**super().columns(info))  # type: ignore
+            return Columns(**super().columns(info))
 
         def row(self, info: Info, index: BigInt = 0) -> Row | None:  # type: ignore
             """Return scalar values at index."""
@@ -112,7 +112,7 @@ def implemented(root: Source, name: str = "", keys: Iterable = ()):
             for name, value in row.items():
                 if isinstance(value, Column) and types[name] is not list:
                     raise TypeError(f"Field `{name}` cannot represent `Column` value")
-            return Row(**row)  # type: ignore
+            return Row(**row)
 
     if types:
         for field in ("filter", "columns", "row"):

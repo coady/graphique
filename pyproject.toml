@@ -29,6 +29,7 @@ dependencies = [
     "ibis-framework>=10.7",
     "pyarrow-hotfix",
     "isodate>=0.7",
+    "sqlglot<28.7",  # tobymao/sqlglot#6908
 ]
 
 [project.urls]
@@ -48,7 +49,6 @@ line-length = 100
 select = ["I"]
 
 [tool.ty.rules]
-# unused-ignore-comment = "error"
 invalid-argument-type = "ignore"
 invalid-assignment = "ignore"
 invalid-type-form = "ignore"
