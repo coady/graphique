@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Annotated, Callable
 
 import pyarrow as pa
-import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import typer
 from tqdm import tqdm
@@ -38,8 +37,7 @@ def write_batches(
     with tqdm(total=scanner.count_rows(), desc="Batches") as pbar:
         for index, batch in enumerate(scanner.to_batches()):
             if indices:
-                arange = pc.cumulative_sum(pa.repeat(1, len(batch)), pbar.n - 1)
-                batch = batch.append_column(indices, arange)
+                batch = batch.append_column(indices, pa.arange(pbar.n, pbar.n + len(batch)))
             options["basename_template"] = f"part-{index}-{{i}}.parquet"
             ds.write_dataset(batch, base_dir, **options)
             pbar.update(len(batch))

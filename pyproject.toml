@@ -24,7 +24,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "pyarrow>=20",
+    "pyarrow>=23",
     "strawberry-graphql[asgi,cli]>=0.288",
     "ibis-framework>=10.7",
     "pyarrow-hotfix",

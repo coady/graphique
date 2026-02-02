@@ -8,12 +8,11 @@ import collections
 import functools
 import inspect
 from collections.abc import Callable
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import TYPE_CHECKING, Annotated, Generic, TypeVar, get_args
 
 import ibis
-import pyarrow as pa
 import strawberry
 from strawberry import UNSET, Info
 from strawberry.types.field import StrawberryField
