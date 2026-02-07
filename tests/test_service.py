@@ -316,9 +316,9 @@ def test_unnest(client):
         unnest(name: "city", offset: "idx") { column(name: "idx") { type } } } }""")
     assert data == {"group": {"unnest": {"column": {"type": "int64"}}}}
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
-         unnest(name: "city", rowNumber: "idx") { column(name: "idx") { 
+         unnest(name: "city", order: "idx") { column(name: "idx") { 
         ... on BigIntColumn { values } } } } }""")
-    assert set(data["group"]["unnest"]["column"]["values"]) == set(range(52))
+    assert list(dict.fromkeys(data["group"]["unnest"]["column"]["values"])) == list(range(52))
 
 
 def test_rows(client):

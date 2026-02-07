@@ -269,7 +269,7 @@ class Dataset:
         name="column name",
         offset="optionally include index column",
         keep_empty="keep empty array values as null",
-        row_number="optionally include first row number in an aliased column",
+        order="optionally include and order by row number; optionally by `offset` too",
     )
     def unnest(
         self,
@@ -277,13 +277,16 @@ class Dataset:
         name: str,
         offset: str = "",
         keep_empty: bool = False,
-        row_number: str = "",
+        order: str = "",
     ) -> Self:
         """[Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table."""
         table = self.table
-        if row_number:
-            table = table.mutate({row_number: ibis.row_number()})
-        return self.resolve(info, table.unnest(name, offset=offset or None, keep_empty=keep_empty))
+        if order:
+            table = table.mutate({order: ibis.row_number()})
+        table = table.unnest(name, offset=offset or None, keep_empty=keep_empty)
+        if order:
+            table = table.order_by(order, offset) if offset else table.order_by(order)
+        return self.resolve(info, table)
 
     @doc_field(
         right="name of right table; must be on root Query type",
