@@ -97,10 +97,9 @@ class Dataset:
         table = self.table.select(*names)[index:][:1].cache()
         row = {}
         for name in table.columns:
-            if isinstance(table[name], ibis.expr.types.ArrayColumn):
-                row[name] = Column.cast(table[name].first().unnest())
-            else:
-                (row[name],) = table[name].to_list()
+            (row[name],) = table[name].to_list()
+            if isinstance(row[name], list):
+                row[name] = Column.cast(table[name].unnest())
         return row
 
     def filter(self, info: Info, where: Expression | None = None, **queries: Filter) -> Self:

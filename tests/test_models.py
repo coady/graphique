@@ -134,8 +134,8 @@ def test_array(executor):
     assert data == {"columns": {"array": {"count": 1, "type": "array<int32>"}}}
     data = executor("{ row { array { ... on IntColumn { values } } } }")
     assert data == {"row": {"array": {"values": [0, 1, 2]}}}
-    data = executor("{ row(index: -1) { array { ... on IntColumn { values } } } }")
-    assert data == {"row": {"array": {"values": []}}}
+    data = executor("{ row(index: -1) { array { type } } }")
+    assert data == {"row": {"array": None}}
 
     data = executor("""{ project(columns: {array: {index: [{name: "array"}, {value: 1}]}, alias: "list"}) {
         column(name: "list") { ... on BigIntColumn { values } } } }""")
