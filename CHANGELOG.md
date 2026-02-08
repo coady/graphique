@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 ### Added
 * `unnest` maintains order
+* `column` index access
 
 ## [2.0.2](https://pypi.org/project/graphique/2.0.2/) - 2026-01-10
 ### Changed

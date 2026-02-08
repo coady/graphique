@@ -166,13 +166,16 @@ class Dataset:
         name="column name(s); multiple names access nested struct fields",
         cast=f"cast expression to indicated {links.types}",
         try_="return null if cast fails",
+        index="column index(es); may access array offsets",
     )
-    def column(self, name: list[str], cast: str = "", try_: bool = False) -> Column | None:
+    def column(
+        self, name: list[str], cast: str = "", try_: bool = False, index: list[BigInt] = []
+    ) -> Column | None:
         """Column of any type by name.
 
         If the column is in the schema, `columns` can be used instead.
         """
-        column = getitems(self.table, *name)
+        column = getitems(self.table, *(name + index))
         if cast:
             column = (column.try_cast if try_ else column.cast)(cast)
         return Column.cast(column.as_table().cache()[0])

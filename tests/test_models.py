@@ -149,6 +149,8 @@ def test_array(executor):
     data = executor("""{ project(columns: {array: {value: {name: "array"}, offset: -1}, alias: "a"})
         { column(name: "a") { ... on IntColumn { values } } } }""")
     assert data == {"project": {"column": {"values": [2, None]}}}
+    data = executor('{ column(name: "array", index: -1) { ... on IntColumn { values } } }')
+    assert data == {"column": {"values": [2, None]}}
 
 
 def test_struct(executor):

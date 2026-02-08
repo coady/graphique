@@ -22,7 +22,7 @@ def getitems(obj, *keys):
     return obj
 
 
-def order_key(name: str) -> ibis.ValueExpression:
+def order_key(name: str):
     """Parse sort order."""
     return (ibis.desc if name.startswith("-") else ibis.asc)(ibis._[name.lstrip("-")])
 
