@@ -154,8 +154,8 @@ def test_array(executor):
 
 
 def test_struct(executor):
-    data = executor("{ columns { struct { names } } }")
-    assert data == {"columns": {"struct": {"names": ["x", "y"]}}}
+    data = executor("{ columns { struct { names types } } }")
+    assert data == {"columns": {"struct": {"names": ["x", "y"], "types": ["int32", "int32"]}}}
     data = executor("""{ project(columns: {alias: "leaf", name: ["struct", "x"]})
         { column(name: "leaf") { ... on IntColumn { values } } } }""")
     assert data == {"project": {"column": {"values": [0, None]}}}

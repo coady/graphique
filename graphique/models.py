@@ -257,3 +257,8 @@ class StructColumn(GenericColumn[T]):
     def names(self) -> list[str]:
         """field names"""
         return self.column.names
+
+    @doc_field
+    def types(self) -> list[str]:
+        """field types"""
+        return self.column.types
