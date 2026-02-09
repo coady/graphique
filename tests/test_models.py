@@ -151,6 +151,8 @@ def test_array(executor):
     assert data == {"project": {"column": {"values": [2, None]}}}
     data = executor('{ column(name: "array", index: -1) { ... on IntColumn { values } } }')
     assert data == {"column": {"values": [2, None]}}
+    data = executor("{ columns { array { unnest { ... on IntColumn { values } } length } } }")
+    assert data == {"columns": {"array": {"unnest": {"values": [0, 1, 2]}, "length": [3, None]}}}
 
 
 def test_struct(executor):

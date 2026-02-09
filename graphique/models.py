@@ -244,7 +244,19 @@ class IntColumn(NumericColumn[T]):
 
 @Column.register(list)
 @strawberry.type(description=f"[array column]({links.ref}/expression-collections)")
-class ArrayColumn(Column): ...  # pragma: no branch
+class ArrayColumn(Column):
+    @doc_field
+    def unnest(self) -> Column:
+        """Unnest an array into a column.
+
+        Combine with `length` to efficiently regroup.
+        """
+        return Column.cast(self.column.unnest())
+
+    @doc_field
+    def length(self) -> list[BigInt | None]:
+        """Compute the length of an array."""
+        return self.column.length().to_list()
 
 
 @Column.register(strawberry.scalars.JSON)

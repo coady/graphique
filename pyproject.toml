@@ -45,7 +45,7 @@ cli = ["tqdm"]
 line-length = 100
 
 [tool.ruff.lint]
-select = ["I"]
+extend-select = ["I"]
 
 [tool.ty.rules]
 invalid-argument-type = "ignore"
