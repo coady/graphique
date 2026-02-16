@@ -290,6 +290,11 @@ class Dataset:
             table = table.order_by(order, offset) if offset else table.order_by(order)
         return self.resolve(info, table)
 
+    @doc_field(names="column names")
+    def unpack(self, info: Info, names: list[str]) -> Self:
+        """[Unpack](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unpack) the struct fields of each column."""
+        return self.resolve(info, self.table.unpack(*names))
+
     @doc_field(
         right="name of right table; must be on root Query type",
         keys="column names used as keys on the left side",

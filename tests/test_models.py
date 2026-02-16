@@ -165,6 +165,8 @@ def test_struct(executor):
     assert data == {"column": {"type": "int32"}}
     data = executor("{ row { struct } columns { struct { first } } }")
     assert data["row"]["struct"] == data["columns"]["struct"]["first"] == {"x": 0, "y": None}
+    data = executor('{ unpack(names: "struct") { schema { names } } }')
+    assert {"x", "y"} < set(data["unpack"]["schema"]["names"])
 
 
 def test_conditions(executor):
