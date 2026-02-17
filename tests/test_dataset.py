@@ -126,19 +126,6 @@ def test_federation(fedclient):
     assert data["zipcodes"] == {"__typename": "ZipcodesTable", "count": 41700}
     assert data["zipDb"] == {"__typename": "ZipDbTable", "count": 42724}
 
-    with pytest.raises(ValueError):
-        fedclient.execute("""{ zipcodes { join(right: "zip_db", keys: "zipcode") { type } } }""")
-    data = fedclient.execute("""{ zipcodes { join(right: "zip_db", keys: "zipcode", rkeys: "zip")
-        { count schema { names } } } }""")
-    table = data["zipcodes"]["join"]
-    assert table["count"] == 41684
-    assert set(table["schema"]["names"]) > {"zipcode", "timezone", "latitude"}
-    data = fedclient.execute("""{ zipcodes { join(right: "zip_db", keys: "zipcode", rkeys: "zip", how: "right")
-        { count schema { names } } } }""")
-    table = data["zipcodes"]["join"]
-    assert table["count"] == 42724
-    assert set(table["schema"]["names"]) > {"zip", "timezone", "latitude"}
-
     data = fedclient.execute(
         """{ _entities(representations: {__typename: "ZipcodesTable", zipcode: 90001}) {
         ... on ZipcodesTable { count type row { state } } } }"""
@@ -165,3 +152,41 @@ def test_sorted(fedclient):
     assert data == {"states": {"filter": {"count": 108}}}
     data = fedclient.execute('{ states { filter { filter(state: {eq: "CA"}) { count } } } }')
     assert data == {"states": {"filter": {"filter": {"count": 2647}}}}
+
+
+def test_join(fedclient):
+    with pytest.raises(ValueError):
+        fedclient.execute("""{ zipcodes { join(right: "zip_db", keys: "zipcode") { type } } }""")
+    data = fedclient.execute("""{ zipcodes { join(right: "zip_db", keys: "zipcode", rkeys: "zip")
+        { count schema { names } } } }""")
+    table = data["zipcodes"]["join"]
+    assert table["count"] == 41684
+    assert set(table["schema"]["names"]) > {"zipcode", "timezone", "latitude"}
+    data = fedclient.execute("""{ zipcodes { join(right: "zip_db", keys: "zipcode", rkeys: "zip", how: "right")
+        { count schema { names } } } }""")
+    table = data["zipcodes"]["join"]
+    assert table["count"] == 42724
+    assert set(table["schema"]["names"]) > {"zip", "timezone", "latitude"}
+    data = fedclient.execute(
+        '{ zipcodes { asofJoin(right: "zipcodes", on: "zipcode", tolerance: 1){ count } } }'
+    )
+    assert data == {"zipcodes": {"asofJoin": {"count": 41700}}}
+    with pytest.raises(ValueError):
+        fedclient.execute(
+            '{ zipcodes { asofJoin(right: "zipcodes", on: "zipcode", scalar: {duration: "PT1S"}){ count } } }'
+        )
+    data = fedclient.execute(
+        '{ zipcodes { asofJoin(right: "zipcodes", on: "zipcode", keys: "city", rkeys: "city"){ count } } }'
+    )
+    assert data == {"zipcodes": {"asofJoin": {"count": 41700}}}
+    data = fedclient.execute('{ zipcodes { crossJoin(right: "zip_db") { count } } }')
+    assert data == {"zipcodes": {"crossJoin": {"count": 1781590800}}}
+
+
+def test_sets(fedclient):
+    data = fedclient.execute('{ zipcodes { difference(table: "zipcodes") { count } } }')
+    assert data == {"zipcodes": {"difference": {"count": 0}}}
+    data = fedclient.execute('{ zipcodes { intersect(table: "zipcodes") { count } } }')
+    assert data == {"zipcodes": {"intersect": {"count": 41700}}}
+    data = fedclient.execute('{ zipcodes { union(table: "zipcodes") { count } } }')
+    assert data == {"zipcodes": {"union": {"count": 83400}}}

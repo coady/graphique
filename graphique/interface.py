@@ -318,9 +318,77 @@ class Dataset:
         right = getattr(info.root_value, right).table
         if rkeys:
             keys = [getattr(left, key) == getattr(right, rkey) for key, rkey in zip(keys, rkeys)]
-        return self.resolve(
-            info, left.join(right, predicates=keys, how=how, lname=lname, rname=rname)
-        )
+        return self.resolve(info, left.join(right, keys, how=how, lname=lname, rname=rname))
+
+    @doc_field(
+        right="name of right table; must be on root Query type",
+        on="column name for closest-match inequality (e.g. timestamp)",
+        keys="column names used as keys on the left side",
+        rkeys="column names used as keys on the right side; defaults to left side",
+        tolerance="optional look-back window for the as-of match",
+        scalar="typed scalar for `tolerance",
+        lname="format string to rename overlapping columns in the left table",
+        rname="format string to rename overlapping columns in the right table",
+    )
+    def asof_join(
+        self,
+        info: Info,
+        right: str,
+        on: str,
+        keys: list[str] = [],
+        rkeys: list[str] = [],
+        tolerance: JSON | None = None,
+        scalar: Scalars = {},  # type: ignore
+        lname: str = "",
+        rname: str = "{name}_right",
+    ) -> Self:
+        """[As-of join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.asof_join) on nearest key rather than equal keys."""
+        left = self.table
+        right = getattr(info.root_value, right).table
+        if rkeys:
+            keys = [getattr(left, key) == getattr(right, rkey) for key, rkey in zip(keys, rkeys)]
+        (tolerance,) = list(scalar) or [tolerance]
+        table = left.asof_join(right, on, keys, tolerance=tolerance, lname=lname, rname=rname)
+        return self.resolve(info, table)
+
+    @doc_field(
+        right="name(s) of right table; must be on root Query type",
+        lname="format string to rename overlapping columns in the left table",
+        rname="format string to rename overlapping columns in the right table",
+    )
+    def cross_join(
+        self, info: Info, right: list[str], lname: str = "", rname: str = "{name}_right"
+    ) -> Self:
+        """[Cross join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cross_join) with one or more tables."""
+        tables = [getattr(info.root_value, name).table for name in right]
+        return self.resolve(info, self.table.cross_join(*tables, lname=lname, rname=rname))
+
+    @doc_field(
+        table="name(s) of other table; must be on root Query type",
+        distinct="use set difference (true) or multiset difference (false)",
+    )
+    def difference(self, info: Info, table: list[str], distinct: bool = True) -> Self:
+        """[Set difference](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.difference) of tables."""
+        tables = [getattr(info.root_value, name).table for name in table]
+        return self.resolve(info, self.table.difference(*tables, distinct=distinct))
+
+    @doc_field(
+        table="name(s) of other table; must be on root Query type",
+        distinct="use set difference (true) or multiset difference (false)",
+    )
+    def intersect(self, info: Info, table: list[str], distinct: bool = True) -> Self:
+        """[Set intersection](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.intersect) of tables."""
+        tables = [getattr(info.root_value, name).table for name in table]
+        return self.resolve(info, self.table.intersect(*tables, distinct=distinct))
+
+    @doc_field(
+        table="name(s) of other table; must be on root Query type",
+        distinct="use set difference (true) or multiset difference (false)",
+    )
+    def union(self, info: Info, table: list[str], distinct: bool = False) -> Self:
+        """[Set union](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.union) of tables."""
+        tables = [getattr(info.root_value, name).table for name in table]
+        return self.resolve(info, self.table.union(*tables, distinct=distinct))
 
     @doc_field
     def take(self, info: Info, indices: list[BigInt]) -> Self:
