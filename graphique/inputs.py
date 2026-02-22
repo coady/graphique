@@ -12,7 +12,7 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Generic, TypeVar
 
-import ibis
+import ibis.expr.types
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -22,7 +22,6 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.scalars import JSON
 from strawberry.schema_directive import Location
 from strawberry.types.arguments import StrawberryArgument
-from strawberry.types.field import StrawberryField
 
 from .core import getitems, links, order_key
 from .scalars import Duration
@@ -49,9 +48,7 @@ class provisional:
     """Provisional feature; subject to change in the future."""
 
 
-def default_field(
-    default=UNSET, func: Callable | None = None, nullable: bool = False, **kwargs
-) -> StrawberryField:
+def default_field(default=UNSET, func: Callable | None = None, nullable: bool = False, **kwargs):
     """Use dataclass `default_factory` for `UNSET` or mutables."""
     if func is not None:
         kwargs["description"] = inspect.getdoc(func).splitlines()[0]

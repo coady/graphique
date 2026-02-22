@@ -69,7 +69,7 @@ class Parquet(ds.Dataset):
         hive = isinstance(self.partitioning, ds.HivePartitioning)
         return ibis.read_parquet(paths, hive_partitioning=hive)
 
-    def rank(self, limit: int, *names: str, dense: bool = False) -> ibis.Table:
+    def rank(self, limit: int | None, *names: str, dense: bool = False) -> ibis.Table:
         """Return ordered limited partitions as a table."""
         keys = {name.strip("-"): order_key(name) for name in names}
         table = Parquet.fragments(self, counts="_").order_by(*keys.values()).cache()

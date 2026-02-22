@@ -8,6 +8,7 @@ from datetime import timedelta
 from keyword import iskeyword
 
 import strawberry.asgi
+import strawberry.schema.config
 from strawberry import UNSET, Info
 from strawberry.extensions import tracing
 from strawberry.utils.str_converters import to_camel_case

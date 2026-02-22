@@ -12,7 +12,7 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from typing import TYPE_CHECKING, Annotated, Generic, TypeVar, get_args
 
-import ibis
+import ibis.expr.types
 import strawberry
 from strawberry import UNSET, Info
 from strawberry.types.field import StrawberryField
@@ -47,7 +47,7 @@ def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
         alias = name.strip("_") if name.endswith("_") else None
         directives = [optional()] if parameters[name].default is UNSET else []
         argument = strawberry.argument(name=alias, description=kwargs[name], directives=directives)
-        func.__annotations__[name] = Annotated[func.__annotations__[name], argument]
+        func.__annotations__[name] = Annotated[func.__annotations__[name], argument]  # type: ignore
     return strawberry.field(func, description=inspect.getdoc(func))
 
 
@@ -65,7 +65,7 @@ class Column:
         self.column = column
 
     def __init_subclass__(cls):
-        cls.__init__ = cls.__init__
+        cls.__init__ = cls.__init__  # type: ignore
 
     @classmethod
     def register(cls, *scalars):

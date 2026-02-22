@@ -7,7 +7,7 @@ import typing
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
-import ibis
+import ibis.expr.datatypes
 import isodate
 import pyarrow as pa
 import strawberry
@@ -53,7 +53,7 @@ scalar_map = {
 }
 
 
-def py_type(dt: ibis.DataType) -> type:
+def py_type(dt: ibis.DataType) -> type | typing.NewType:
     """Return python scalar type from data type."""
     match dt:
         case ibis.expr.datatypes.Boolean():
