@@ -71,7 +71,8 @@ uvicorn <module>:app
 #### selection
 * `slice`: contiguous selection of rows
 * `filter`: select rows by predicates
-* `join`: join tables by key columns
+* `join`, `asofJoin`, `crossJoin`: join tables by key columns
+* `difference`, `intersect`, `union`: set operations on tables
 * `take`: rows by index
 * `dropNull`: remove rows with nulls
 
@@ -81,6 +82,7 @@ uvicorn <module>:app
 * `column`: access a column of any type by name
 * `row`: provides a field for each scalar of a single row
 * `cast`: cast column types
+* `unpack`: project struct fields
 * `fillNull`: fill null values
 
 #### aggregation
@@ -88,11 +90,16 @@ uvicorn <module>:app
 * `distinct`: group with all columns
 * `runs`: provisionally group by adjacency
 * `unnest`: unnest an array column
-* `count`: number of rows
+* `count`, `any`: number of rows
 
 #### ordering
 * `order`: sort table by given columns
 * options `limit` and `dense`: select rows with smallest or largest values
+
+#### reflection
+* `type`: type of data source
+* `schema`: field names and types
+* `optional`: nullable for errors
 
 ### Performance
 Performance is dependent on the [ibis backend](https://ibis-project.org/backends/duckdb), which defaults to [duckdb](https://duckdb.org/). There are no internal Python loops. Scalars do not become Python types until serialized.
