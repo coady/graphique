@@ -2,10 +2,8 @@
 ASGI GraphQL utilities.
 """
 
-import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
-from keyword import iskeyword
 
 import strawberry.asgi
 import strawberry.schema.config
@@ -16,7 +14,7 @@ from strawberry.utils.str_converters import to_camel_case
 from .inputs import Filter
 from .interface import Dataset, Source, ibis_schema
 from .models import Column, doc_field
-from .scalars import BigInt, py_type, scalar_map
+from .scalars import BigInt, scalar_map, schema_types
 
 
 class MetricsExtension(tracing.ApolloTracingExtension):
@@ -77,16 +75,9 @@ class GraphQL(strawberry.asgi.GraphQL):
         return cls(strawberry.type(Query)(**root_values), **kwargs)
 
 
-def valid_name(name: str) -> bool:
-    return name.isidentifier() and not iskeyword(name)
-
-
 def implemented(root: Source, name: str = "", keys: Iterable = ()):
     """Return type which extends the Dataset interface with knowledge of the schema."""
-    schema = ibis_schema(root)
-    types = {name: py_type(schema[name]) for name in schema if valid_name(name)}
-    if invalid := set(schema.names) - set(types):
-        warnings.warn(f"invalid field names: {invalid}")
+    types = dict(schema_types(ibis_schema(root)))
     prefix = to_camel_case(name.title())
 
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}

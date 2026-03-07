@@ -28,6 +28,7 @@ def test_types():
     assert py_type(ibis.expr.datatypes.Int64()) is BigInt
     assert py_type(ibis.expr.datatypes.Int32()) is int
     assert py_type(ibis.expr.datatypes.Interval("s")) is Duration
+    assert py_type(ibis.expr.datatypes.UUID()) is str
 
 
 def test_parquet(dataset):

@@ -3,7 +3,10 @@ GraphQL scalars.
 """
 
 import functools
+import keyword
 import typing
+import warnings
+from collections.abc import Iterator
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
@@ -76,10 +79,22 @@ def py_type(dt: ibis.DataType) -> type | typing.NewType:
             return Duration
         case ibis.expr.datatypes.Binary():
             return strawberry.scalars.Base64
-        case ibis.expr.datatypes.String():
+        case ibis.expr.datatypes.String() | ibis.expr.datatypes.UUID():
             return str
         case ibis.expr.datatypes.Array():
             return list
         case ibis.expr.datatypes.Struct():
             return strawberry.scalars.JSON
-    raise TypeError("unknown data type")  # pragma: no cover
+    raise TypeError("unknown data type", dt)  # pragma: no cover
+
+
+def schema_types(schema: ibis.Schema) -> Iterator:
+    """Generate name and py types from schema."""
+    for name in schema:
+        if not name.isidentifier() or keyword.iskeyword(name):
+            warnings.warn(f"invalid field name: {name}")
+            continue
+        try:
+            yield name, py_type(schema[name])
+        except TypeError as exc:  # pragma: no cover
+            warnings.warn(f"{name}: {exc}")
