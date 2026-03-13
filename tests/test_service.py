@@ -312,9 +312,10 @@ def test_unnest(client):
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
         unnest(name: "city") { columns { city { type } } } } }""")
     assert data == {"group": {"unnest": {"columns": {"city": {"type": "string"}}}}}
-    data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
-        unnest(name: "city", offset: "idx") { column(name: "idx") { type } } } }""")
-    assert data == {"group": {"unnest": {"column": {"type": "int64"}}}}
+    # https://github.com/duckdb/duckdb/issues/21322
+    # data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
+    #     unnest(name: "city", offset: "idx") { column(name: "idx") { type } } } }""")
+    # assert data == {"group": {"unnest": {"column": {"type": "int64"}}}}
     data = client.execute("""{ group(by: "state", aggregate: {collect: {name: "city"}}) {
          unnest(name: "city", order: "idx") { column(name: "idx") { 
         ... on BigIntColumn { values } } } } }""")

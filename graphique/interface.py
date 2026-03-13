@@ -263,8 +263,8 @@ class Dataset:
         else:
             table = self.table
         if dense and limit is not None:
-            groups = table.aggregate(_=ibis._.count(), by=[name.lstrip("-") for name in by])
-            limit = groups.order_by(*map(order_key, by))[:limit]["_"].sum().to_pyarrow().as_py()
+            groups = table.select(name.lstrip("-") for name in by).value_counts()
+            limit = groups.order_by(*map(order_key, by))[:limit][-1].sum().to_pyarrow().as_py()
         return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
 
     @doc_field(
