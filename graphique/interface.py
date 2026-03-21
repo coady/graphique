@@ -107,14 +107,11 @@ class Dataset:
 
         Schema derived fields provide syntax for simple queries; `where` supports complex queries.
         """
-        exprs: list = [] if where is None else list(where)
         source = Parquet.filter(self.source, Filter.to_arrow(**queries))
-        if source is None:
-            exprs += Filter.to_exprs(**queries)
-            source = self.table
-        elif exprs:
-            source = Parquet.to_table(source)
-        return self.resolve(info, source.filter(*exprs) if exprs else source)
+        if source and not where:
+            return type(self)(source)
+        exprs = list(where or []) + list(Filter.to_exprs(**queries))
+        return self.resolve(info, self.table.filter(*exprs) if exprs else self.source)
 
     @strawberry.field(
         description=f"[ibis table]({links.ref}/expression-table) or [arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html)"
