@@ -139,10 +139,7 @@ class Dataset:
 
     @doc_field
     def optional(self, info: Info) -> Self | None:
-        """Nullable field to stop error propagation, enabling partial query results.
-
-        Will be replaced by client controlled nullability.
-        """
+        """Nullable field to stop error propagation, enabling partial query results."""
         return self.resolve(info, self.source)
 
     @strawberry.field(

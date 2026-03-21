@@ -21,7 +21,7 @@ Any column can be accessed by name using `Dataset.column` and [inline fragments]
 ```
 
 ### Input
-Input types don't have the equivalent of inline fragments, but GraphQL is converging on the [OneOf input pattern](https://github.com/graphql/graphql-spec/pull/825). Effectively the type of the field becomes the name of the field.
+Input types don't have the equivalent of inline fragments, but GraphQL does has the [OneOf input](https://graphql.org/blog/2025-09-04-multioption-inputs-with-oneof/) pattern. Effectively the type of the field becomes the name of the field.
 
 
 `Table.filter` provides simple queries for columns within the schema, and a `where` arguments for complex expressions.
@@ -70,7 +70,7 @@ GraphQL continues the long tradition of confusing ["optional" with "nullable"](h
 ### Output
 Ibis has first-class support for nulls, so array scalars are nullable. Non-null scalars are used where relevant.
 
-Columns and rows are nullable to allow partial query results. `Dataset.optional` enables [client controlled nullability](https://github.com/graphql/graphql-spec/issues/867).
+Columns and rows are nullable to allow partial query results. `Dataset.optional` provides the same for table. Subject to change pending GraphQL's [semantic nullability](https://github.com/graphql/graphql-wg/blob/main/rfcs/SemanticNullability.md).
 
 ### Input
 Default values and non-null types are used wherever possible. When an input is optional and has no natural default, there are two cases to distinguish:

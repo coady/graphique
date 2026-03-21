@@ -195,7 +195,7 @@ class Aggregates:
                 yield agg.to_ibis(name)
 
 
-@strawberry.input(description="typed scalars")
+@strawberry.input(description="typed scalars", one_of=True)
 class Scalars:
     base64: strawberry.scalars.Base64 | None = default_field(description="binary scalar")
     date: date | None = default_field(description="date scalar")
