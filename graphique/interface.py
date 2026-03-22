@@ -426,30 +426,27 @@ class Dataset:
         by="column names to compare by equality",
         split="boolean column expressions to split on true values",
         counts="optionally include counts in an aliased column",
-        alias="format string to name index columns",
+        order="alias of row number to maintain order",
         aggregate="aggregation functions applied to other columns",
     )
     def runs(
         self,
         info: Info,
         by: list[str] = [],
-        split: list[Projection] = [],
+        split: list[Expression] = [],
         counts: str = "",
-        alias: str = "{}_index",
+        order: str = "_",
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
         """Provisionally group table by adjacent values in columns."""
-        table = self.table
-        projection = dict(map(Projection.to_ibis, split))
-        for name in by:
-            column = table[name] != table[name].lag()
-            projection[alias.format(name)] = column.fill_null(False)
         aggs = {name: ibis._[name].first() for name in by}
         aggs.update(aggregate)  # type: ignore
         if counts:
             aggs[counts] = ibis._.count()
-        table = table.mutate(projection)  # window functions can't be nested
-        table = table.mutate({name: table[name].cumsum() for name in projection})
-        return self.resolve(info, table.aggregate(aggs, by=list(projection)).order_by(*projection))
+        columns = [(ibis._[name] != ibis._[name].lag()).fill_null(False) for name in by]
+        columns += map(Expression.to_ibis, split)
+        table = self.table.mutate({order: ibis.or_(*columns)})  # window functions can't be nested
+        table = table.mutate({order: table[order].cumsum()})
+        return self.resolve(info, table.aggregate(aggs, by=[order]).order_by(order))
 
     runs.directives = [provisional()]

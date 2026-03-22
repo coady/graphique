@@ -336,7 +336,7 @@ def test_runs(client):
         { count columns { state { values } } column(name: "county") { type } } }""")
     assert data["runs"].pop("columns")["state"]["values"][:3] == ["NY", "PR", "MA"]
     assert data == {"runs": {"count": 66, "column": {"type": "array<string>"}}}
-    data = client.execute("""{ runs(split: {alias: "lat", window: {gt: {name: "latitude"}}}, counts: "c")
+    data = client.execute("""{ runs(split: {window: {gt: {name: "latitude"}}}, counts: "c", order: "lat")
         { count schema { names types } } }""")
     assert data == {
         "runs": {"count": 20888, "schema": {"names": ["lat", "c"], "types": ["int64", "int64"]}}
