@@ -280,10 +280,10 @@ class Expression:
                 yield from field
 
     def to_ibis(self) -> ibis.Deferred | None:
-        fields = list(self) or [None]
-        if len(fields) == 1:
-            return fields[0]
-        raise ValueError(f"conflicting inputs: {', '.join(map(str, fields))}")
+        fields = list(self)
+        if len(fields) > 1:
+            raise ValueError("conflicting inputs: " + ", ".join(map(str, fields)))
+        return next(iter(fields), None)  # type: ignore
 
 
 @strawberry.input(description="an `Expression` with an optional alias")
