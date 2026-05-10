@@ -251,9 +251,10 @@ class Dataset:
         """[Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns."""
         keys = Parquet.keys(self.source, *by)
         if keys and limit is not None:
-            table = Parquet.rank(self.source, limit, *keys, dense=dense)
+            source = Parquet.rank(self.source, limit, *keys, dense=dense)
+            table = Parquet.to_table(source)
             if keys == by:
-                return self.resolve(info, table if dense else table[:limit])
+                return type(self)(source) if dense else self.resolve(info, table[:limit])
         else:
             table = self.table
         if dense and limit is not None:
