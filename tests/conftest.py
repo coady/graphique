@@ -1,3 +1,4 @@
+import collections
 import os
 import sys
 from importlib import metadata
@@ -12,6 +13,11 @@ fixtures = Path(__file__).parent / "fixtures"
 def pytest_report_header(config):
     names = "ibis-framework", "strawberry-graphql", "duckdb", "pyarrow"
     return [f"{name}: {metadata.version(name)}" for name in names]
+
+
+class unordered(collections.Counter):
+    def __eq__(self, other):
+        return dict(self) == collections.Counter(other)
 
 
 class TestClient:

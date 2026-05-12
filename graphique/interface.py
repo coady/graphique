@@ -229,11 +229,12 @@ class Dataset:
     ) -> Self:
         """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns."""
         aggs = dict(aggregate)  # type: ignore
-        if not aggs and not order and by == Parquet.keys(self.source, *by):
-            return self.resolve(info, Parquet.group(self.source, *by, counts=counts))
-        table = self.table
+        if not aggs and by == Parquet.keys(self.source, *by):
+            table = Parquet.fragments(self.source, counts)
+        else:
+            table = self.table
         if counts:
-            aggs[counts] = ibis._.count()
+            aggs[counts] = table[counts].sum() if counts in table else ibis._.count()
         if order:
             table = table.mutate({order: ibis.row_number()})
             aggs[order] = table[order].first()

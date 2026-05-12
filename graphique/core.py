@@ -49,12 +49,6 @@ class Parquet(ds.Dataset):
                 parts[-1][counts] = frag.count_rows()
         return ibis.memtable(pa.Table.from_pylist(parts))
 
-    def group(self, *names, counts: str = "") -> ibis.Table:
-        """Return grouped partitions as a table."""
-        table = Parquet.fragments(self, counts)
-        agg = {counts: table[counts].sum()} if counts else {}
-        return table.aggregate(agg, by=names).order_by(*names)
-
     def filter(self, expr: ds.Expression | None) -> ds.Dataset | None:
         """Attempt to apply filter to partition keys."""
         try:  # raises ValueError if filter references non-partition keys

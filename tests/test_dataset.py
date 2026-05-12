@@ -5,7 +5,7 @@ import pytest
 
 from graphique import middleware
 
-from .conftest import load
+from .conftest import load, unordered
 
 
 def test_extensions():
@@ -34,11 +34,14 @@ def test_search(dsclient):
 def test_fragments(dsclient):
     data = dsclient.execute("{ filter(north: {eq: 1}) { count } }")
     assert data == {"filter": {"count": 20850}}
-    data = dsclient.execute('{ group(by: ["north", "west"]) { columns { north { values } } } }')
+    data = dsclient.execute(
+        '{ group(by: ["north", "west"], order: "_") { columns { north { values } } } }'
+    )
+    assert data == {"group": {"columns": {"north": {"values": [0, 0, 1, 1]}}}}
     data = dsclient.execute(
         '{ group(by: ["north", "west"], counts: "c") { column(name: "c") { ... on BigIntColumn { values } } } }'
     )
-    assert data == {"group": {"column": {"values": [9301, 11549, 11549, 9301]}}}
+    assert data == {"group": {"column": {"values": unordered([9301, 11549, 11549, 9301])}}}
     data = dsclient.execute('{ order(by: "north", limit: 1, dense: true) { row { north } } }')
     assert data == {"order": {"row": {"north": 0}}}
     data = dsclient.execute("""{ order(by: ["-north", "-zipcode"], limit: 1, dense: true) {

@@ -38,8 +38,6 @@ def test_parquet(dataset):
     (path,) = table["__path__"].to_list()
     assert path.endswith(".parquet")
     assert table["count"].to_list() == [41700]
-    table = Parquet.group(dataset, "__path__", counts="count")
-    assert table["count"].to_list() == [41700]
     assert Parquet.filter(dataset, None) is dataset
     assert Parquet.filter(dataset, pc.field("key")) is None
     assert Parquet.to_table(dataset).count().to_pyarrow().as_py() == 41700
