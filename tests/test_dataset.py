@@ -86,6 +86,8 @@ def test_order(dsclient):
     assert data == {"order": {"count": 4, "row": {"state": "WY", "county": "Weston"}}}
     data = dsclient.execute('{ order(by: "state", limit: 3) { columns { state { values } } } }')
     assert data == {"order": {"columns": {"state": {"values": ["AK"] * 3}}}}
+    data = dsclient.execute('{ order(by: "-north") { row { state } } }')
+    assert data == {"order": {"row": {"state": "NY"}}}
     data = dsclient.execute('{ order(by: "north", limit: 1, dense: true) { count } }')
     assert data == {"order": {"count": 20850}}
     data = dsclient.execute('{ order(by: "north", limit: 2, dense: true) { count } }')

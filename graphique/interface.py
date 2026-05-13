@@ -251,6 +251,8 @@ class Dataset:
     ) -> Self:
         """[Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns."""
         keys = Parquet.keys(self.source, *by)
+        if keys == by and limit is None:
+            return type(self)(Parquet.order(self.source, *by))
         if keys and limit is not None:
             source = Parquet.rank(self.source, limit, *keys, dense=dense)
             table = Parquet.to_table(source)
