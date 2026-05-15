@@ -94,7 +94,7 @@ uvicorn <module>:app
 
 #### ordering
 * `order`: sort table by given columns
-* options `limit` and `dense`: select rows with smallest or largest values
+* `first`: select rows with smallest or largest values
 
 #### reflection
 * `type`: type of data source
@@ -104,7 +104,7 @@ uvicorn <module>:app
 ### Performance
 Performance is dependent on the [ibis backend](https://ibis-project.org/backends/duckdb), which defaults to [duckdb](https://duckdb.org/). There are no internal Python loops. Scalars do not become Python types until serialized.
 
-[PyArrow](https://arrow.apache.org/docs/python/) is also used for partitioned dataset optimizations, and for any feature which ibis does not support. Table fields are lazily evaluated up until scalars are reached, and automatically cached as needed for multiple fields.
+[PyArrow](https://arrow.apache.org/docs/python/) is also used for partitioned dataset optimizations. Table fields are lazily evaluated up until scalars are reached, and automatically cached as needed for multiple fields.
 
 ## Installation
 ```console

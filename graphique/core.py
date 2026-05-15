@@ -66,22 +66,18 @@ class Parquet(ds.Dataset):
         hive = isinstance(self.partitioning, ds.HivePartitioning)
         return ibis.read_parquet(paths, hive_partitioning=hive)
 
-    def order(self, *names: str) -> ds.Dataset:
+    def order(self, *names: str, limit: int | None = None) -> ds.Dataset:
         """Return ordered partitions of the dataset."""
-        table = Parquet.fragments(self).order_by(*map(order_key, names))
-        return ds.dataset(table["__path__"].to_list(), partitioning=self.partitioning)
-
-    def rank(self, limit: int | None, *names: str, dense: bool = False) -> ds.Dataset:
-        """Return ordered limited partitions of the dataset."""
-        keys = {name.strip("-"): order_key(name) for name in names}
-        if dense:
-            table = Parquet.fragments(self).order_by(*keys.values()).cache()
-            groups = table.select(*keys).value_counts().order_by(*keys.values())
-        else:
-            table = Parquet.fragments(self, counts="_").order_by(*keys.values()).cache()
-            groups = table.aggregate(_=table[-1].sum(), __=ibis._.count(), by=list(keys))
-            groups = groups.order_by(*keys.values()).cache()
-            totals = itertools.accumulate(groups[-2].to_list())
+        table = Parquet.fragments(self, counts="" if limit is None else "_")
+        table = table.order_by(*map(order_key, names)).cache()
+        if limit is not None:
+            totals = table["_"].cumsum().to_list()
             limit = next((index for index, total in enumerate(totals, 1) if total >= limit), None)
-        limit = groups[:limit][-1].sum().to_pyarrow().as_py()
         return ds.dataset(table[:limit]["__path__"].to_list(), partitioning=self.partitioning)
+
+    def first(self, *names: str, rank: int = 1) -> ds.Dataset:
+        """Return ordered partitions up to max dense rank."""
+        keys = {name.strip("-"): order_key(name) for name in names}
+        table = Parquet.fragments(self).aggregate(_=ibis._["__path__"].collect(), by=list(keys))
+        paths = table.order_by(*keys.values())[:rank]["_"].unnest().to_list()
+        return ds.dataset(paths, partitioning=self.partitioning)

@@ -78,33 +78,34 @@ def test_schema(dsclient):
 
 
 def test_order(dsclient):
-    data = dsclient.execute("""{ order(by: "state", limit: 1, dense: true) {
-        count row { state } } }""")
-    assert data == {"order": {"count": 273, "row": {"state": "AK"}}}
-    data = dsclient.execute("""{ order(by: ["-state", "-county"], limit: 1, dense: true) {
+    data = dsclient.execute('{ first(by: "state", rank: 1) { count row { state } } }')
+    assert data == {"first": {"count": 273, "row": {"state": "AK"}}}
+    data = dsclient.execute("""{ first(by: ["-state", "-county"], rank: 1) {
         count row { state county } } }""")
-    assert data == {"order": {"count": 4, "row": {"state": "WY", "county": "Weston"}}}
+    assert data == {"first": {"count": 4, "row": {"state": "WY", "county": "Weston"}}}
     data = dsclient.execute('{ order(by: "state", limit: 3) { columns { state { values } } } }')
     assert data == {"order": {"columns": {"state": {"values": ["AK"] * 3}}}}
     data = dsclient.execute('{ order(by: "-north") { row { state } } }')
     assert data == {"order": {"row": {"state": "NY"}}}
-    data = dsclient.execute('{ order(by: "north", limit: 1, dense: true) { count } }')
-    assert data == {"order": {"count": 20850}}
-    data = dsclient.execute('{ order(by: "north", limit: 2, dense: true) { count } }')
-    assert data == {"order": {"count": 41700}}
-    data = dsclient.execute('{ order(by: ["north", "west"], limit: 1, dense: true) { count } }')
-    assert data == {"order": {"count": 9301}}
-    data = dsclient.execute('{ order(by: ["north", "west"], limit: 2, dense: true) { count } }')
-    assert data == {"order": {"count": 20850}}
-    data = dsclient.execute('{ order(by: ["north", "west"], limit: 3, dense: true) { count } }')
-    assert data == {"order": {"count": 32399}}
-    data = dsclient.execute("""{ order(by: ["north", "state"], limit: 2, dense: true)
+    data = dsclient.execute('{ first(by: "north", rank: 1) { count } }')
+    assert data == {"first": {"count": 20850}}
+    data = dsclient.execute('{ first(by: "north", rank: 2) { count } }')
+    assert data == {"first": {"count": 41700}}
+    data = dsclient.execute('{ first(by: ["north", "west"], rank: 1) { count } }')
+    assert data == {"first": {"count": 9301}}
+    data = dsclient.execute('{ first(by: ["north", "west"], rank: 2) { count } }')
+    assert data == {"first": {"count": 20850}}
+    data = dsclient.execute('{ first(by: ["north", "west"], rank: 3) { count } }')
+    assert data == {"first": {"count": 32399}}
+    data = dsclient.execute("""{ first(by: ["north", "state"], rank: 2)
         { columns { state { nunique(approx: true) } } } }""")
-    assert data == {"order": {"columns": {"state": {"nunique": 2}}}}
+    assert data == {"first": {"columns": {"state": {"nunique": 2}}}}
     data = dsclient.execute('{ order(by: "north", limit: 3) { count } }')
     assert data == {"order": {"count": 3}}
     data = dsclient.execute('{ order(by: "north", limit: 50000) { count } }')
     assert data == {"order": {"count": 41700}}
+    data = dsclient.execute('{ order(by: ["north", "state"]) { row { state } } }')
+    assert data == {"order": {"row": {"state": "AL"}}}
 
 
 def test_root():

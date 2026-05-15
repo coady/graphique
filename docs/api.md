@@ -43,11 +43,11 @@ Note list inputs allow passing a single value, [coercing the input](https://spec
 The versatility of expressions can become complicated and unreadable. Consider applying expected projections to the root at startup, making `filter` and `project` simpler without performance penalty. Fields are not automatically camel-cased for the same reason; it's simpler to project first.
 
 ## Partitions
-Partitioned parquet datasets have custom optimization for fragment keys.
+Partitioned parquet datasets have custom optimizations for fragment keys.
 
 * `filter` on fragment keys
 * `group` on fragment keys with counts
-* `order` with limit on fragment keys
+* `order` or `first` rank on fragment keys
 
 Otherwise there is no advantage in the root being an arrow dataset over an ibis table.
 
@@ -70,7 +70,7 @@ GraphQL continues the long tradition of confusing ["optional" with "nullable"](h
 ### Output
 Ibis has first-class support for nulls, so array scalars are nullable. Non-null scalars are used where relevant.
 
-Columns and rows are nullable to allow partial query results. `Dataset.optional` provides the same for table. Subject to change pending GraphQL's [semantic nullability](https://github.com/graphql/graphql-wg/blob/main/rfcs/SemanticNullability.md).
+Columns and rows are nullable to allow partial query results. `Dataset.optional` provides the same for tables. Subject to change pending GraphQL's [semantic nullability](https://github.com/graphql/graphql-wg/blob/main/rfcs/SemanticNullability.md).
 
 ### Input
 Default values and non-null types are used wherever possible. When an input is optional and has no natural default, there are two cases to distinguish:

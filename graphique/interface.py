@@ -244,26 +244,44 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         limit="maximum number of rows to return; optimized for partitioned dataset keys",
-        dense="use dense rank with `limit`",
     )
     def order(
         self, info: Info, by: list[str], limit: BigInt | None = None, dense: bool = False
     ) -> Self:
         """[Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns."""
-        keys = Parquet.keys(self.source, *by)
-        if keys == by and limit is None:
-            return type(self)(Parquet.order(self.source, *by))
-        if keys and limit is not None:
-            source = Parquet.rank(self.source, limit, *keys, dense=dense)
+        if dense and limit is not None:
+            return self.first(info, by, rank=limit)  # type: ignore
+        if keys := Parquet.keys(self.source, *by):
+            source = Parquet.order(self.source, *keys, limit=limit)
             table = Parquet.to_table(source)
             if keys == by:
-                return type(self)(source) if dense else self.resolve(info, table[:limit])
+                return type(self)(source) if limit is None else self.resolve(info, table[:limit])
         else:
             table = self.table
-        if dense and limit is not None:
-            groups = table.select(name.lstrip("-") for name in by).value_counts()
-            limit = groups.order_by(*map(order_key, by))[:limit][-1].sum().to_pyarrow().as_py()
         return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
+
+    order.arguments[-1].deprecation_reason = "use `first` instead"
+
+    @doc_field(
+        by="column names; prefix with `-` for descending order",
+        rank="maximum rank of rows to return; optimized for partitioned dataset keys",
+    )
+    def first(self, info: Info, by: list[str], rank: int = 1) -> Self:
+        """Provisionally sort and filter by dense rank."""
+        if keys := Parquet.keys(self.source, *by):
+            source = Parquet.first(self.source, *keys, rank=rank)
+            if keys == by:
+                return type(self)(source)
+            table = Parquet.to_table(source)
+        else:
+            table = self.table
+        mask = table.select(name.lstrip("-") for name in by)
+        if rank > 1:
+            mask = mask.distinct()
+        table = table.semi_join(mask.order_by(*map(order_key, by))[:rank], mask.columns)
+        return self.resolve(info, table.order_by(*map(order_key, by)))
+
+    first.directives = [provisional()]
 
     @doc_field(
         name="column name",
