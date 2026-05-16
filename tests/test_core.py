@@ -41,3 +41,14 @@ def test_parquet(dataset):
     assert Parquet.filter(dataset, None) is dataset
     assert Parquet.filter(dataset, pc.field("key")) is None
     assert Parquet.to_table(dataset).count().to_pyarrow().as_py() == 41700
+
+
+def test_ordering(partitioned):
+    assert Parquet.keys(partitioned, "north") == ["north"]
+    assert Parquet.order(partitioned, "north").count_rows() == 41700
+    assert Parquet.order(partitioned, "north", limit=1).count_rows() == 9301
+
+    assert Parquet.first(partitioned, "north").count_rows() == 20850
+    assert Parquet.first(partitioned, "north", rank=21000).count_rows() == 41700
+    assert Parquet.first(partitioned, "north", dense=True).count_rows() == 20850
+    assert Parquet.first(partitioned, "north", rank=2, dense=True).count_rows() == 41700

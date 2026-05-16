@@ -250,7 +250,7 @@ class Dataset:
     ) -> Self:
         """[Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns."""
         if dense and limit is not None:
-            return self.first(info, by, rank=limit)  # type: ignore
+            return self.first(info, by, rank=limit, dense=True)  # type: ignore
         if keys := Parquet.keys(self.source, *by):
             source = Parquet.order(self.source, *keys, limit=limit)
             table = Parquet.to_table(source)
@@ -265,20 +265,21 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         rank="maximum rank of rows to return; optimized for partitioned dataset keys",
+        dense="use dense rank (all ties) or sparse rank (only ties at the boundary)",
     )
-    def first(self, info: Info, by: list[str], rank: int = 1) -> Self:
-        """Provisionally sort and filter by dense rank."""
+    def first(self, info: Info, by: list[str], rank: int = 1, dense: bool = False) -> Self:
+        """Provisionally sort and filter by rank."""
         if keys := Parquet.keys(self.source, *by):
-            source = Parquet.first(self.source, *keys, rank=rank)
+            source = Parquet.first(self.source, *keys, rank=rank, dense=dense)
             if keys == by:
                 return type(self)(source)
             table = Parquet.to_table(source)
         else:
             table = self.table
         mask = table.select(name.lstrip("-") for name in by)
-        if rank > 1:
+        if dense and rank > 1:
             mask = mask.distinct()
-        table = table.semi_join(mask.order_by(*map(order_key, by))[:rank], mask.columns)
+        table = table.semi_join(mask.order_by(*map(order_key, by))[:rank].distinct(), mask.columns)
         return self.resolve(info, table.order_by(*map(order_key, by)))
 
     first.directives = [provisional()]

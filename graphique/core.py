@@ -2,6 +2,7 @@
 Core arrow utilities.
 """
 
+import bisect
 import itertools
 
 import ibis
@@ -71,13 +72,17 @@ class Parquet(ds.Dataset):
         table = Parquet.fragments(self, counts="" if limit is None else "_")
         table = table.order_by(*map(order_key, names)).cache()
         if limit is not None:
-            totals = table["_"].cumsum().to_list()
-            limit = next((index for index, total in enumerate(totals, 1) if total >= limit), None)
+            limit = bisect.bisect_left(table["_"].cumsum().to_list(), limit) + 1
         return ds.dataset(table[:limit]["__path__"].to_list(), partitioning=self.partitioning)
 
-    def first(self, *names: str, rank: int = 1) -> ds.Dataset:
-        """Return ordered partitions up to max dense rank."""
+    def first(self, *names: str, rank: int = 1, dense: bool = False) -> ds.Dataset:
+        """Return ordered partitions up to max rank (dense or sparse)."""
         keys = {name.strip("-"): order_key(name) for name in names}
-        table = Parquet.fragments(self).aggregate(_=ibis._["__path__"].collect(), by=list(keys))
-        paths = table.order_by(*keys.values())[:rank]["_"].unnest().to_list()
-        return ds.dataset(paths, partitioning=self.partitioning)
+        if dense or rank == 1:
+            table = Parquet.fragments(self).aggregate(_=ibis._["__path__"].collect(), by=list(keys))
+            paths = table.order_by(*keys.values())[:rank]["_"].unnest()
+        else:
+            table = Parquet.fragments(self, counts="_").order_by(*keys.values()).cache()
+            limit = bisect.bisect_left(table["_"].cumsum().to_list(), rank) + 1
+            paths = table.semi_join(table[:limit].select(*keys).distinct(), list(keys))["__path__"]
+        return ds.dataset(paths.to_list(), partitioning=self.partitioning)

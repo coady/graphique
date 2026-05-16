@@ -6,12 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 ### Changed
 * Pyarrow >=23 required
+* dataset `group` and `filter` optimized
 
 ### Added
+* `first` sorts by rank
 * `unnest` maintains order
+* `unnpack` structs
 * `column` index access
 * array column scalars
 * join and set fields
+
+### Deprecated
+* `dense` ordering moved to `first`
 
 ## [2.0.2](https://pypi.org/project/graphique/2.0.2/) - 2026-01-10
 ### Changed

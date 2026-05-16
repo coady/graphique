@@ -90,14 +90,23 @@ def test_order(dsclient):
     data = dsclient.execute('{ first(by: "north", rank: 1) { count } }')
     assert data == {"first": {"count": 20850}}
     data = dsclient.execute('{ first(by: "north", rank: 2) { count } }')
+    assert data == {"first": {"count": 20850}}
+    data = dsclient.execute('{ first(by: "north", rank: 2, dense: true) { count } }')
     assert data == {"first": {"count": 41700}}
     data = dsclient.execute('{ first(by: ["north", "west"], rank: 1) { count } }')
     assert data == {"first": {"count": 9301}}
     data = dsclient.execute('{ first(by: ["north", "west"], rank: 2) { count } }')
+    assert data == {"first": {"count": 9301}}
+    data = dsclient.execute('{ first(by: ["north", "west"], rank: 2, dense: true) { count } }')
     assert data == {"first": {"count": 20850}}
     data = dsclient.execute('{ first(by: ["north", "west"], rank: 3) { count } }')
+    assert data == {"first": {"count": 9301}}
+    data = dsclient.execute('{ first(by: ["north", "west"], rank: 3, dense: true) { count } }')
     assert data == {"first": {"count": 32399}}
     data = dsclient.execute("""{ first(by: ["north", "state"], rank: 2)
+        { columns { state { nunique(approx: true) } } } }""")
+    assert data == {"first": {"columns": {"state": {"nunique": 1}}}}
+    data = dsclient.execute("""{ first(by: ["north", "state"], rank: 2, dense: true)
         { columns { state { nunique(approx: true) } } } }""")
     assert data == {"first": {"columns": {"state": {"nunique": 2}}}}
     data = dsclient.execute('{ order(by: "north", limit: 3) { count } }')

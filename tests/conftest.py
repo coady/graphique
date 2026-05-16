@@ -47,6 +47,11 @@ def dataset():
 
 
 @pytest.fixture(scope="module")
+def partitioned():
+    return ds.dataset(fixtures / "partitioned", partitioning="hive")
+
+
+@pytest.fixture(scope="module")
 def client():
     return TestClient(load("zipcodes.parquet"))
 
