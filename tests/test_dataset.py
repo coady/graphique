@@ -118,19 +118,15 @@ def test_order(dsclient):
 
 
 def test_root():
-    app = load("zipcodes.parquet", FEDERATED="test")
+    app = load("zipcodes.parquet", NAME="test")
     assert asyncio.run(app.get_root_value(None)) is app.root_value
     assert app.root_value.test
     with pytest.warns(UserWarning):
-        assert load("nofields.parquet", FEDERATED="test")
+        assert load("nofields.parquet", NAME="test")
     app = load("zipcodes.parquet", COLUMNS=json.dumps(["state"]))
     assert app.root_value.schema().names == ("state",)
     app = load("zipcodes.parquet", COLUMNS=json.dumps({"zipCode": "zipcode"}))
     assert app.root_value.schema().names == ("zipCode",)
-    app = load("zipcodes.parquet", FILTERS=json.dumps({"state": {"eq": "CA"}}))
-    assert app.root_value.count() == 2647
-    app = load("zipcodes.parquet", FILTERS=json.dumps({}), COLUMNS=json.dumps({"state": "state"}))
-    assert app.root_value.schema().names == ("state",)
 
 
 def test_federation(fedclient):

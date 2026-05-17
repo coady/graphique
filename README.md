@@ -34,10 +34,9 @@ outputs the graphql schema.
 The example app uses [Starlette's config](https://www.starlette.io/config/): in environment variables or a `.env` file.
 
 * PARQUET_PATH: path to the parquet directory or file
-* FEDERATED = '': field name to extend type `Query` with a federated `Table`
+* NAME = '': GraphQL field on `Query`; defaults to root type
 * METRICS = False: include timings from apollo tracing extension
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
-* FILTERS = None: json `filter` query for which rows to read at startup
 
 Configuration options exist to provide a convenient no-code solution, but are subject to change in the future. Using a custom app is recommended for production usage.
 
@@ -52,7 +51,7 @@ from graphique import GraphQL
 source = ibis.read_*(...)  # or ibis.connect(...).table(...) or pyarrow.dataset.dataset(...)
 # apply initial projections or filters to `source`
 app = GraphQL(source)  # Table is root query type
-app = GraphQL.federated({<name>: source, ...}, keys={<name>: [], ...})  # Tables on federated fields
+app = GraphQL.federated({<name>: source, ...}, keys=...)  # Tables on named fields
 ```
 
 Start like any ASGI app.
