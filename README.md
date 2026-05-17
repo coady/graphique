@@ -93,12 +93,13 @@ uvicorn <module>:app
 
 #### ordering
 * `order`: sort table by given columns
-* `first`: select rows with smallest or largest values
+* `first`: provisionally sort and filter by rank
 
 #### reflection
 * `type`: type of data source
 * `schema`: field names and types
 * `optional`: nullable for errors
+* `toSql`: compiles SQL query
 
 ### Performance
 Performance is dependent on the [ibis backend](https://ibis-project.org/backends/duckdb), which defaults to [duckdb](https://duckdb.org/). There are no internal Python loops. Scalars do not become Python types until serialized.

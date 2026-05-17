@@ -113,6 +113,14 @@ class Dataset:
         exprs = list(where or []) + list(Filter.to_exprs(**queries))
         return self.resolve(info, self.table.filter(*exprs) if exprs else self.source)
 
+    @doc_field(
+        dialect="output SQL dialect; defaults to the backend’s native dialect",
+        pretty="whether to use pretty formatting",
+    )
+    def to_sql(self, dialect: str | None = None, pretty: bool = True) -> str:
+        """[Compile to](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.to_sql) a formatted SQL string."""
+        return self.table.to_sql(dialect=dialect, pretty=pretty)
+
     @strawberry.field(
         description=f"[ibis table]({links.ref}/expression-table) or [arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html)"
     )

@@ -26,7 +26,7 @@ COLUMNS = config("COLUMNS", cast=json.loads, default=None)
 root = ds.dataset(PARQUET_PATH, partitioning="hive" if PARQUET_PATH.is_dir() else None)
 
 if COLUMNS or not Parquet.schema(root):
-    root = Parquet.to_table(root)
+    root = Parquet.to_table(root, name=NAME or PARQUET_PATH.name)
     if isinstance(COLUMNS, dict):
         root = root.select(**{alias: ibis._[name] for alias, name in COLUMNS.items()})
     elif COLUMNS:

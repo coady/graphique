@@ -61,11 +61,11 @@ class Parquet(ds.Dataset):
         paths = [frag.path for frag in self.get_fragments(expr)]
         return ds.dataset(paths, partitioning=self.partitioning)
 
-    def to_table(self) -> ibis.Table:
+    def to_table(self, name: str | None = None) -> ibis.Table:
         """Return ibis `Table` from filtered dataset."""
         paths = [frag.path for frag in self.get_fragments()]
         hive = isinstance(self.partitioning, ds.HivePartitioning)
-        return ibis.read_parquet(paths, hive_partitioning=hive)
+        return ibis.read_parquet(paths, table_name=name, hive_partitioning=hive)
 
     def order(self, *names: str, limit: int | None = None) -> ds.Dataset:
         """Return ordered partitions of the dataset."""

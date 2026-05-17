@@ -340,3 +340,8 @@ def test_runs(client):
     assert data == {
         "runs": {"count": 20888, "schema": {"names": ["lat", "c"], "types": ["int64", "int64"]}}
     }
+
+
+def test_sql(client):
+    data = client.execute("{ toSql(pretty: false) }")
+    assert data == {"toSql": 'SELECT * FROM "zipcodes.parquet"'}

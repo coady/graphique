@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * `unnest` maintains order
 * `unnpack` structs
 * `column` index access
+* `toSql` compiles SQL query
 * array column scalars
 * join and set fields
 
