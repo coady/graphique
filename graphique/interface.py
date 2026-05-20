@@ -54,6 +54,9 @@ class Dataset:
     def __init__(self, source: Source):
         self.source = source
 
+    def __init_subclass__(cls):
+        cls.__init__ = cls.__init__  # type: ignore
+
     @property
     def table(self) -> ibis.Table:
         """source as ibis table"""

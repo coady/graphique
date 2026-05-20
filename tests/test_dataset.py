@@ -9,7 +9,7 @@ from .conftest import load, unordered
 
 
 def test_extensions():
-    ext = middleware.MetricsExtension(type("", (), {"context": {}}))
+    ext = middleware.MetricsExtension(execution_context=type("", (), {"context": {}}))
     for name in ("operation", "parse", "validate"):
         assert list(getattr(ext, "on_" + name)()) == [None]
     assert set(ext.get_results()["metrics"]) == {"duration", "execution"}

@@ -50,11 +50,11 @@ class GraphQL(strawberry.asgi.GraphQL):
         config=strawberry.schema.config.StrawberryConfig(scalar_map=scalar_map),
     )
 
-    def __init__(self, root: Source, metrics: bool = False, **kwargs):
+    def __init__(self, root: Source | type, metrics: bool = False, **kwargs):
         options: dict = dict(self.options, extensions=[MetricsExtension] if metrics else [])
         self.root_value, Schema = root, strawberry.federation.Schema
         if isinstance(root, Source):
-            self.root_value, Schema = implemented(root), strawberry.Schema
+            self.root_value, Schema = extend(root), strawberry.Schema
         super().__init__(Schema(type(self.root_value), **options), **kwargs)
 
     async def get_root_value(self, request):
@@ -69,14 +69,14 @@ class GraphQL(strawberry.asgi.GraphQL):
             keys: mapping of optional federation keys for each root
             **kwargs: additional `asgi.GraphQL` options
         """
-        root_values = {name: implemented(roots[name], name, keys.get(name, ())) for name in roots}
+        root_values = {name: extend(roots[name], name, keys.get(name, ())) for name in roots}
         annotations = {name: type(root_values[name]) for name in root_values}
         Query = type("Query", (), {"__annotations__": annotations})
         return cls(strawberry.type(Query)(**root_values), **kwargs)
 
 
-def implemented(root: Source, name: str = "", keys: Iterable = ()):
-    """Return type which extends the Dataset interface with knowledge of the schema."""
+def extend(root: Source, name: str = "", keys: Iterable = ()):
+    """Extend `Dataset` with schema-aware `filter`, `columns`, and `row`. Used by `GraphQL`."""
     types = dict(schema_types(ibis_schema(root)))
     prefix = to_camel_case(name.title())
 
@@ -91,7 +91,6 @@ def implemented(root: Source, name: str = "", keys: Iterable = ()):
     Row = strawberry.type(cls, description="scalar fields")
 
     class Table(Dataset):
-        __init__ = Dataset.__init__
         field = name
 
         def columns(self, info: Info) -> Columns:  # type: ignore
