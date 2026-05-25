@@ -12,6 +12,8 @@ def test_slice(client):
     assert data["columns"]["zipcode"]["count"] == 41700
     data = client.execute("{ take(indices: [0]) { row { zipcode } } }")
     assert data == {"take": {"row": {"zipcode": 501}}}
+    data = client.execute("{ take(indices: [0, 1]) { count } }")
+    assert data == {"take": {"count": 2}}
     data = client.execute("{ any many: any(limit: 50000)}")
     assert data == {"any": True, "many": False}
     data = client.execute("{ slice { count c: count } }")

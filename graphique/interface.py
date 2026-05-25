@@ -10,6 +10,7 @@ from collections.abc import Iterable, Iterator, Mapping
 from typing import Self, TypeAlias, no_type_check
 
 import ibis
+import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET, Info
@@ -62,13 +63,13 @@ class Dataset:
         """source as ibis table"""
         return self.source if isinstance(self.source, ibis.Table) else Parquet.to_table(self.source)
 
-    def resolve(self, info: Info, source: ibis.Table) -> Self:
+    def resolve(self, info: Info, source: Source) -> Self:
         """Cache the table if it will be reused."""
         counts = selections(*info.selected_fields)
-        counts["type"] = counts["schema"] = 0
+        counts["type"] = counts["schema"] = counts["toSql"] = 0
         if counts.total() > 1 and isinstance(source, ibis.Table):
-            if names := self.select(info, source):
-                source = source.select(*names).cache()
+            names = self.select(info, source) or [ibis.row_number()]
+            source = source.select(*names).cache()
         return type(self)(source)
 
     @classmethod
@@ -422,7 +423,9 @@ class Dataset:
     def take(self, info: Info, indices: list[BigInt]) -> Self:
         """[Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index."""
         names = self.select(info, self.source)
-        if isinstance(self.source, ds.Dataset):
+        if not names:
+            table = pa.table({"_": indices})
+        elif isinstance(self.source, ds.Dataset):
             table = self.source.take(indices, columns=names)
         else:
             batches = self.source.select(*names).to_pyarrow_batches()
