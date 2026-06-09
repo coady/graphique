@@ -74,7 +74,7 @@ class Column:
         # strawberry#1921: scalar python names are prepended to column name
         generic = issubclass(cls, Generic)
         for scalar in scalars:
-            cls.registry[scalar] = cls[scalar] if generic else cls
+            cls.registry[scalar] = cls[scalar] if generic else cls  # type: ignore
 
     @strawberry.field(description=links.types)
     def type(self) -> str:
