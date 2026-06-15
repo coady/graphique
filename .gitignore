@@ -1,6 +1,6 @@
 __pycache__/
 .coverage
-site/
+great-docs/
 docs/schema.*
 node_modules/
 uv.lock

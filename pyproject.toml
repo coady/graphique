@@ -5,7 +5,7 @@ description = "GraphQL service for python dataframes and parquet datasets."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
-authors = [{name = "Aric Coady", email = "aric.coady@gmail.com"}]
+authors = [{name = "A. Coady"}]
 keywords = ["graphql", "arrow", "parquet"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -62,4 +62,4 @@ omit = ["graphique/shell.py"]
 
 [dependency-groups]
 dev = ["pytest-cov", "uvicorn[standard]", "duckdb"]
-docs = ["mkdocstrings[python]", "mkdocs-jupyter"]
+docs = ["great-docs"]

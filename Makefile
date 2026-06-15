@@ -7,7 +7,7 @@ lint:
 	uvx ty check graphique
 
 html: docs/schema.md
-	PYTHONPATH=$(PWD) uv run --group docs mkdocs build
+	uv run --group docs great-docs build
 
 docs/schema.md: docs/schema.graphql
 	./node_modules/.bin/graphql-markdown \

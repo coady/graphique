@@ -1,3 +1,4 @@
+# API
 ## Types
 A typed schema is automatically generated from the table and its columns. However, advanced usage of tables often creates new columns - or changes the type of existing ones - and therefore falls outside the schema. Fields which create columns also allow aliasing, otherwise the column is replaced.
 

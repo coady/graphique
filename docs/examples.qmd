@@ -1,0 +1,111 @@
+---
+title: Example Queries
+---
+
+```{python}
+import ibis
+from strawberry.utils.str_converters import to_camel_case
+
+from graphique import GraphQL
+
+
+def execute(query):
+    result = app.schema.execute_sync(query, root_value=app.root_value)
+    for error in result.errors or []:
+        raise ValueError(error)
+    return result.data
+
+
+table = ibis.read_parquet("../../tests/fixtures/zipcodes.parquet")
+# example projection: camel-cased fields (not relevant in this dataset)
+_ = table.select({to_camel_case(name): table[name] for name in table.columns})
+app = GraphQL(table)
+```
+
+### View schema.
+```{python}
+execute("""{
+  count
+  schema {
+    names
+    types
+    partitioning
+  }
+}""")
+```
+
+### California counties with the most cities.
+* `filter` state by "CA"
+* `group` by county
+  * aggregate distinct cities
+* `project` city count
+* `order` by city counts descending
+* access `columns`
+  * `county` is still known in the schema
+  * cities is a new `column` accessed through an inline fragment
+
+```{python}
+execute("""{
+  filter(state: {eq: "CA"}) {
+    group(by: "county", aggregate: {collect: {name: "city", distinct: true}}) {
+	  project(columns: {alias: "cities", array: {length: {name: "city"}}}) {
+        order(by: "-cities", limit: 5) {
+          columns {
+            county {
+              values
+            }
+          }
+          cities: column(name: "cities") {
+            ... on BigIntColumn {
+              values
+            }
+          }
+        }
+      }
+    }
+  }
+}""")
+```
+
+### States with cities which match the name of their county.
+* `filter` using `where` expression, because comparing two columns is not a "simple" query
+* `Column.distinct` instead of `group`, because no other aggregates are needed
+
+```{python}
+execute("""{
+  filter(where: {eq: [{name: "county"}, {name: "city"}]}) {
+    columns {
+      state {
+        distinct {
+          values
+        }
+      }
+    }
+  }
+}""")
+```
+
+### States which have no cities which match the name of their county.
+The opposite of the previous example. Filtering rows would drop needed data; the "zeros" have to be counted.
+
+* `project` column matching names instead of filtering
+* `group` by state
+  * aggregate whether there are `any` matches
+* `filter` for no matches
+* access column
+
+```{python}
+execute("""{
+  project(columns: {alias: "match", eq: [{name: "county"}, {name: "city"}]}) {
+    group(by: "state", aggregate: {any: {name: "match"}}) {
+      filter(where: {inv: {name: "match"}}) {
+        columns {
+          state {
+            values
+          }
+        }
+      }
+    }
+  }
+}""")
+```

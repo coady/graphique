@@ -1,0 +1,11 @@
+user_guide: docs
+
+authors:
+- name: A. Coady
+  github: coady
+
+reference:
+- title: Classes
+  contents:
+  - name: Dataset
+  - name: GraphQL
