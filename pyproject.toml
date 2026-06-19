@@ -39,7 +39,7 @@ Issues = "https://github.com/coady/graphique/issues"
 
 [project.optional-dependencies]
 server = ["uvicorn[standard]", "duckdb"]
-cli = ["tqdm"]
+cli = ["tqdm", "typer"]
 
 [tool.ruff]
 line-length = 100
@@ -58,7 +58,7 @@ unresolved-import = "ignore"
 [tool.coverage.run]
 source = ["graphique"]
 branch = true
-omit = ["graphique/shell.py"]
+omit = ["graphique/partition.py"]
 
 [dependency-groups]
 dev = ["pytest-cov", "uvicorn[standard]", "duckdb"]

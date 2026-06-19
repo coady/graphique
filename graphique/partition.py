@@ -1,5 +1,5 @@
 """
-Partition datasets out-of-core, in parquet hive format.
+Partition datasets out-of-core, into parquet hive format.
 
 It follows a 2-pass strategy. First, batches are scanned and partitioned into fragments, with
 multiple parts per fragment.

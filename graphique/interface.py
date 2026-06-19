@@ -135,7 +135,7 @@ class Dataset:
     def schema(self) -> Schema:
         schema = ibis_schema(self.source)
         partitioning = Parquet.schema(self.source).names
-        return Schema(names=schema.names, types=schema.types, partitioning=partitioning)  # type: ignore
+        return Schema(names=schema.names, types=schema.types, partitioning=partitioning)
 
     @doc_field(
         schema="field names and types",

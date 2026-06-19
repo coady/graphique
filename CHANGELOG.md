@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * Pyarrow >=23 required
 * dataset `group` and `filter` optimized
 * example app config: FEDERATED renamed, FILTERS removed
+* `partition` script renamed
 
 ### Added
 * `first` sorts by rank

@@ -102,13 +102,13 @@ uvicorn <module>:app
 * `toSql`: compiles SQL query
 
 ### Performance
-Performance is dependent on the [ibis backend](https://ibis-project.org/backends/duckdb), which defaults to [duckdb](https://duckdb.org/). There are no internal Python loops. Scalars do not become Python types until serialized.
+Performance is dependent on the [ibis backend](https://ibis-project.org/backends/duckdb), which defaults to [duckdb](https://duckdb.org/). There are no internal Python loops. Scalars do not become Python types until serialized. Table fields are lazily evaluated up until scalars are reached, and automatically cached as needed for multiple fields.
 
-[PyArrow](https://arrow.apache.org/docs/python/) is also used for partitioned dataset optimizations. Table fields are lazily evaluated up until scalars are reached, and automatically cached as needed for multiple fields.
+[PyArrow](https://arrow.apache.org/docs/python/) is also used for partitioned dataset optimizations. `python -m graphique.partition` is a command-line script provided in `graphique[cli]`, for out-of-core partitioning.
 
 ## Installation
 ```console
-pip install graphique[server]
+pip install graphique[server,cli]
 ```
 
 ## Dependencies
