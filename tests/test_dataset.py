@@ -120,7 +120,7 @@ def test_order(dsclient):
 
 
 def test_root():
-    app = load("zipcodes.parquet", NAME="test")
+    app = load("partitioned", NAME="test")
     assert asyncio.run(app.get_root_value(None)) is app.root_value
     assert app.root_value.test
     with pytest.warns(UserWarning):

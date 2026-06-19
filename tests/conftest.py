@@ -7,6 +7,9 @@ from pathlib import Path
 import pyarrow.dataset as ds
 import pytest
 
+from graphique import GraphQL
+from graphique.core import Parquet
+
 fixtures = Path(__file__).parent / "fixtures"
 
 
@@ -20,12 +23,9 @@ class unordered(collections.Counter):
         return dict(self) == collections.Counter(other)
 
 
-class TestClient:
-    def __init__(self, app):
-        self.app = app
-
+class TestClient(GraphQL):
     def execute(self, query):
-        result = self.app.schema.execute_sync(query, root_value=self.app.root_value)
+        result = self.schema.execute_sync(query, root_value=self.root_value)
         for error in result.errors or []:
             raise ValueError(error)
         return result.data
@@ -52,22 +52,22 @@ def partitioned():
 
 
 @pytest.fixture(scope="module")
-def client():
-    return TestClient(load("zipcodes.parquet"))
+def client(dataset):
+    return TestClient(Parquet.to_table(dataset, name="zipcodes.parquet"))
 
 
 @pytest.fixture(scope="module")
-def dsclient(request):
-    return TestClient(load("partitioned"))
+def dsclient(partitioned):
+    return TestClient(partitioned)
 
 
 @pytest.fixture(scope="module")
 def fedclient():
     from .federated import app
 
-    return TestClient(app)
+    return app
 
 
 @pytest.fixture(scope="module")
 def executor():
-    return TestClient(load("alltypes.parquet")).execute
+    return TestClient(ds.dataset(fixtures / "alltypes.parquet")).execute
