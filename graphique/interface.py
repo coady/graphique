@@ -9,7 +9,7 @@ import operator
 from collections.abc import Iterable, Iterator, Mapping
 from typing import Self, TypeAlias, no_type_check
 
-import ibis
+import ibis.expr.types
 import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
@@ -65,11 +65,12 @@ class Dataset:
 
     def resolve(self, info: Info, source: Source) -> Self:
         """Cache the table if it will be reused."""
-        counts = selections(*info.selected_fields)
-        counts["type"] = counts["schema"] = counts["toSql"] = 0
-        if counts.total() > 1 and isinstance(source, ibis.Table):
-            names = self.select(info, source) or [ibis.row_number()]
-            source = source.select(*names).cache()
+        if isinstance(source, ibis.Table) and not isinstance(source, ibis.expr.types.CachedTable):
+            counts = selections(*info.selected_fields)
+            counts["type"] = counts["schema"] = counts["toSql"] = 0
+            if counts.total() > 1:
+                names = self.select(info, source) or [ibis.row_number()]
+                source = source.select(*names).cache()
         return type(self)(source)
 
     @classmethod

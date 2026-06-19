@@ -73,8 +73,10 @@ def test_schema(dsclient):
     assert len(schema["names"]) == 8
     assert set(schema["types"]) == {"float64", "int32", "string"}
     assert schema["partitioning"] == ["north", "west"]
-    data = dsclient.execute("{ type }")
-    assert data["type"].endswith("Dataset")
+    data = dsclient.execute("{ type optional { type } }")
+    assert data == {"type": "FileSystemDataset", "optional": {"type": "FileSystemDataset"}}
+    data = dsclient.execute(" { slice { count optional { type } } }")
+    assert data == {"slice": {"count": 41700, "optional": {"type": "CachedTable"}}}
 
 
 def test_order(dsclient):
