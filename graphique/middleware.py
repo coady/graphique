@@ -112,5 +112,5 @@ def extend(root: Source, name: str = "", keys: Iterable = ()):
         Table.filter.base_resolver.arguments = list(Filter.resolve_args(types))
     options = dict(name=prefix + "Table", description="a dataset with a derived schema")
     if name:
-        return strawberry.federation.type(Table, keys=keys, **options)(root)
-    return strawberry.type(Table, **options)(root)
+        return strawberry.federation.type(Table, keys=keys, **options)(source=root)
+    return strawberry.type(Table, **options)(source=root)

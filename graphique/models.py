@@ -60,12 +60,7 @@ def col_field(func: Callable):
 @strawberry.interface(description="ibis column interface")
 class Column:
     registry = {}
-
-    def __init__(self, column: ibis.Column):
-        self.column = column
-
-    def __init_subclass__(cls):
-        cls.__init__ = cls.__init__  # type: ignore
+    column: strawberry.Private[ibis.Column]
 
     @classmethod
     def register(cls, *scalars):
@@ -83,7 +78,7 @@ class Column:
     @classmethod
     def cast(cls, column: ibis.Column) -> Column:
         """Return typed column based on array type."""
-        return cls.registry[py_type(column.type())](column)
+        return cls.registry[py_type(column.type())](column=column)
 
     @col_field
     def count(self) -> BigInt:

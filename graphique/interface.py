@@ -7,7 +7,7 @@ Doesn't require knowledge of the schema.
 import itertools
 import operator
 from collections.abc import Iterable, Iterator, Mapping
-from typing import Self, TypeAlias, no_type_check
+from typing import Self, TypeAlias
 
 import ibis.expr.types
 import pyarrow as pa
@@ -52,11 +52,7 @@ def ibis_schema(root: Source) -> ibis.Schema:
 
 @strawberry.interface(description="ibis `Table` or arrow `Dataset`")
 class Dataset:
-    def __init__(self, source: Source):
-        self.source = source
-
-    def __init_subclass__(cls):
-        cls.__init__ = cls.__init__  # type: ignore
+    source: strawberry.Private[Source]
 
     @property
     def table(self) -> ibis.Table:
@@ -71,10 +67,9 @@ class Dataset:
             if counts.total() > 1:
                 names = self.select(info, source) or [ibis.row_number()]
                 source = source.select(*names).cache()
-        return type(self)(source)
+        return type(self)(source=source)
 
     @classmethod
-    @no_type_check
     def resolve_reference(cls, info: Info, **keys) -> Self:
         """Return table filtered by federated keys."""
         self = getattr(info.root_value, cls.field)
@@ -114,7 +109,7 @@ class Dataset:
         """
         source = Parquet.filter(self.source, Filter.to_arrow(**queries))
         if source and not where:
-            return type(self)(source)
+            return type(self)(source=source)
         exprs = list(where or []) + list(Filter.to_exprs(**queries))
         return self.resolve(info, self.table.filter(*exprs) if exprs else self.source)
 
@@ -268,7 +263,7 @@ class Dataset:
             source = Parquet.order(self.source, *keys, limit=limit)
             table = Parquet.to_table(source)
             if keys == by:
-                return type(self)(source) if limit is None else self.resolve(info, table[:limit])
+                return self.resolve(info, source if limit is None else table[:limit])
         else:
             table = self.table
         return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
@@ -285,7 +280,7 @@ class Dataset:
         if keys := Parquet.keys(self.source, *by):
             source = Parquet.first(self.source, *keys, rank=rank, dense=dense)
             if keys == by:
-                return type(self)(source)
+                return type(self)(source=source)
             table = Parquet.to_table(source)
         else:
             table = self.table
@@ -431,7 +426,7 @@ class Dataset:
         else:
             batches = self.source.select(*names).to_pyarrow_batches()
             table = ds.Scanner.from_batches(batches).take(indices)
-        return type(self)(ibis.memtable(table))
+        return type(self)(source=ibis.memtable(table))
 
     @doc_field(subset="columns names; defaults to all", how="remove if `any` or `all` are null")
     def drop_null(self, info: Info, subset: list[str] | None = None, how: str = "any") -> Self:
