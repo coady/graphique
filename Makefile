@@ -4,7 +4,7 @@ check:
 lint:
 	uvx ruff check
 	uvx ruff format --check
-	uvx ty check graphique
+	uv run ty check graphique
 
 html: docs/schema.md
 	uv run --group docs great-docs build

@@ -61,5 +61,5 @@ branch = true
 omit = ["graphique/partition.py"]
 
 [dependency-groups]
-dev = ["pytest-cov", "uvicorn[standard]", "duckdb"]
+dev = ["pytest-cov", "uvicorn[standard]", "duckdb", "ty"]
 docs = ["great-docs"]

@@ -4,6 +4,7 @@ Primary Dataset interface.
 Doesn't require knowledge of the schema.
 """
 
+import collections
 import itertools
 import operator
 from collections.abc import Iterable, Iterator, Mapping
@@ -18,10 +19,22 @@ from strawberry.scalars import JSON
 
 from .core import Parquet, getitems, order_key
 from .inputs import Aggregates, Expression, Field, Filter, Projection, Scalars, provisional
-from .models import Column, doc_field, links, selections
+from .models import Column, doc_field, links
 from .scalars import BigInt
 
 Source: TypeAlias = ibis.Table | ds.Dataset
+
+
+def selections(*fields) -> collections.Counter:
+    """Return field name selections from strawberry `SelectedField`."""
+    counts = collections.Counter()
+    for field in fields:
+        for selection in field.selections:
+            if hasattr(selection, "name"):
+                counts[selection.name] += 1
+            else:
+                counts.update(selections(selection))
+    return counts
 
 
 def references(field) -> Iterator:

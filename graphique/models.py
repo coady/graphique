@@ -4,7 +4,6 @@ GraphQL output types and resolvers.
 
 from __future__ import annotations
 
-import collections
 import functools
 import inspect
 from collections.abc import Callable
@@ -24,18 +23,6 @@ from .scalars import BigInt, Duration, py_type
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
 T = TypeVar("T")
-
-
-def selections(*fields) -> collections.Counter:
-    """Return field name selections from strawberry `SelectedField`."""
-    counts = collections.Counter()
-    for field in fields:
-        for selection in field.selections:
-            if hasattr(selection, "name"):
-                counts[selection.name] += 1
-            else:
-                counts.update(selections(selection))
-    return counts
 
 
 def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
@@ -98,19 +85,17 @@ class Column:
 
 @strawberry.type(description="distinct values and counts")
 class Set(Generic[T]):
-    def __init__(self, column, cache=False):
-        table = column.value_counts()
-        self.table = table.cache() if cache else table
+    value_counts: strawberry.Private[ibis.Table]
 
     @doc_field
     def values(self) -> list[T | None]:
         """distinct values"""
-        return self.table[0].to_list()
+        return self.value_counts[0].to_list()
 
     @doc_field
     def counts(self) -> list[BigInt]:
         """corresponding counts"""
-        return self.table[1].to_list()
+        return self.value_counts[1].to_list()
 
 
 @Column.register(strawberry.scalars.Base64)
@@ -122,10 +107,9 @@ class GenericColumn(Generic[T], Column):
         return self.column.to_list()
 
     @doc_field
-    def distinct(self, info: Info) -> Set[T]:
+    def distinct(self) -> Set[T]:
         """distinct values and counts"""
-        count = selections(*info.selected_fields).total()
-        return Set(self.column, cache=count > 1)
+        return Set(value_counts=self.column.value_counts().cache())
 
     @col_field
     def first(self) -> T | None:
