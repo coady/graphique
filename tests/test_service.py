@@ -347,3 +347,5 @@ def test_runs(client):
 def test_sql(client):
     data = client.execute("{ toSql(pretty: false) }")
     assert data == {"toSql": 'SELECT * FROM "zipcodes.parquet"'}
+    with pytest.raises(ValueError, match="denied"):
+        client.execute('{ sql(query: "select * from t") { type } }')

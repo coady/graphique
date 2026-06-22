@@ -15,6 +15,7 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET, Info
+from strawberry.permission import BasePermission
 from strawberry.scalars import JSON
 
 from .core import Parquet, getitems, order_key
@@ -50,6 +51,13 @@ def references(field) -> Iterator:
     else:
         for name in ("name", "arguments", "selections"):
             yield from references(getattr(field, name, []))
+
+
+class Deny(BasePermission):
+    message = "field is denied by default"
+
+    def has_permission(self, source, info: Info, **kwargs) -> bool:
+        return False
 
 
 @strawberry.type(description=links.schema)
@@ -97,34 +105,6 @@ class Dataset:
             for selection in field.selections:
                 refs.update(references(selection))
         return [name for name in ibis_schema(source) if name in refs]
-
-    def columns(self, info: Info) -> dict:
-        """Fields for each column."""
-        names = selections(*info.selected_fields)
-        table = self.table.select(*names).cache()
-        return {name: Column.cast(table[name]) for name in table.columns}
-
-    def row(self, info: Info, index: int = 0) -> dict:
-        """Scalar values at index."""
-        names = selections(*info.selected_fields)
-        table = self.table.select(*names)[index:][:1].cache()
-        row = {}
-        for name in table.columns:
-            (row[name],) = table[name].to_list()
-            if isinstance(row[name], list):
-                row[name] = Column.cast(table[name].unnest())
-        return row
-
-    def filter(self, info: Info, where: Expression | None = None, **queries: Filter) -> Self:
-        """[Filter](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.filter) rows by predicates.
-
-        Schema derived fields provide syntax for simple queries; `where` supports complex queries.
-        """
-        source = Parquet.filter(self.source, Filter.to_arrow(**queries))
-        if source and not where:
-            return type(self)(source=source)
-        exprs = list(where or []) + list(Filter.to_exprs(**queries))
-        return self.resolve(info, self.table.filter(*exprs) if exprs else self.source)
 
     @doc_field(
         dialect="output SQL dialect; defaults to the backend’s native dialect",
@@ -337,7 +317,7 @@ class Dataset:
         right="name of right table; must be on root Query type",
         keys="column names used as keys on the left side",
         rkeys="column names used as keys on the right side; defaults to left side",
-        how="the kind of join: 'inner', 'left', 'right', ...",
+        how="the kind of join: 'inner', 'left', 'outer', 'semi', ...",
         lname="format string to use to rename overlapping columns in the left table",
         rname="format string to use to rename overlapping columns in the right table",
     )
@@ -496,3 +476,49 @@ class Dataset:
         return self.resolve(info, table.aggregate(aggs, by=[order]).order_by(order))
 
     runs.directives = [provisional()]
+
+    # dynamic fields - these methods are wrapped with type annotations
+
+    def columns(self, info: Info) -> dict:
+        """Fields for each column."""
+        names = selections(*info.selected_fields)
+        table = self.table.select(*names).cache()
+        return {name: Column.cast(table[name]) for name in table.columns}
+
+    def row(self, info: Info, index: int = 0) -> dict:
+        """Scalar values at index."""
+        names = selections(*info.selected_fields)
+        table = self.table.select(*names)[index:][:1].cache()
+        row = {}
+        for name in table.columns:
+            (row[name],) = table[name].to_list()
+            if isinstance(row[name], list):
+                row[name] = Column.cast(table[name].unnest())
+        return row
+
+    def filter(self, info: Info, where: Expression | None = None, **queries: Filter) -> Self:
+        """[Filter](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.filter) rows by predicates.
+
+        Schema derived fields provide syntax for simple queries; `where` supports complex queries.
+        """
+        source = Parquet.filter(self.source, Filter.to_arrow(**queries))
+        if source and not where:
+            return type(self)(source=source)
+        exprs = list(where or []) + list(Filter.to_exprs(**queries))
+        return self.resolve(info, self.table.filter(*exprs) if exprs else self.source)
+
+    # protected fields = these methods can optionally be registered with `strawberry.field`
+
+    @doc_field(
+        query="SQL query string",
+        alias="[alias](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.alias) of the table expression referenced in the query",
+        dialect="input SQL dialect; defaults to the backend’s native dialect",
+    )
+    def sql(
+        self, info: Info, query: str, alias: str = "", dialect: str | None = None
+    ) -> Self:  # pragma: no cover
+        """[Run a SQL](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.sql) query against a table expression."""
+        table = self.table.alias(alias) if alias else self.table
+        return self.resolve(info, table.sql(query, dialect=dialect))
+
+    sql.permission_classes = [Deny]
