@@ -2,34 +2,42 @@
 title: Customize
 ---
 
-By default, `GraphQL(source)` derives typed `filter`, `columns`, and `row` from the schema. To add fields, subclass `Dataset`, define a `Query`, and pass a root value to `GraphQL`.
-
-Protected fields such as `sql` are denied by default; opt in with `strawberry.field(Dataset.sql, ...)`.
+By default, `GraphQL(source)` derives typed `filter`, `columns`, and `row` from the schema. This can be done explicitly by calling `implement` on the ibis schema.
 
 ```{python}
 import ibis
 import strawberry
 
-from graphique import Dataset, GraphQL
+from graphique import Dataset, GraphQL, implement
 
-table = ibis.read_parquet("../../tests/fixtures/zipcodes.parquet")
+source = ibis.read_parquet("../../tests/fixtures/zipcodes.parquet")
+Table = implement(source.schema())
+issubclass(Table, Dataset)
+```
 
+Subclass `Dataset` - or `Table` to include the typed fields - and register additional fields.
 
+Protected fields such as `sql` are denied by default; opt in with `strawberry.field(Dataset.sql, ...)`.
+
+```{python}
 @strawberry.type
-class Zipcodes(Dataset):
+class Zipcodes(Table):
     sql = strawberry.field(Dataset.sql, permission_classes=[])  # enable permissions
 
     @strawberry.field  # add schema-aware fields manually
     def states(self) -> list[str]:
         return self.table["state"].value_counts()[0].to_list()
+```
 
+Call `GraphQL` on the `Query` _instance_, so that the root value is stored.
 
+```{python}
 @strawberry.type
 class Query:
     zipcodes: Zipcodes
 
 
-app = GraphQL(Query(zipcodes=Zipcodes(source=table)))
+app = GraphQL(Query(zipcodes=Zipcodes(source=source)))
 ```
 
 ### Usage
@@ -41,5 +49,10 @@ def execute(query):
     return result.data
 
 
-execute('{ zipcodes { states count sql(query: "select * from t where state = \'CA\'", alias: "t") { count } } }')
+execute("""{ zipcodes {
+    count
+    filter(state: {eq: "CA"}) { count }
+    sql(query: "select * from t where state = 'CA'", alias: "t") { count }
+    states
+} }""")
 ```

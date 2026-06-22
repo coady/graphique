@@ -5,6 +5,7 @@ ASGI GraphQL utilities.
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
 
+import ibis
 import strawberry.asgi
 import strawberry.schema.config
 from strawberry import UNSET, Info
@@ -77,18 +78,21 @@ class GraphQL(strawberry.asgi.GraphQL):
 
 def extend(root: Source, name: str = "", keys: Iterable = ()):
     """Extend `Dataset` with schema-aware `filter`, `columns`, and `row`. Used by `GraphQL`."""
-    types = dict(schema_types(ibis_schema(root)))
+    return implement(ibis_schema(root), name, keys)(source=root)
+
+
+def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[Dataset]:
+    """Create `Table` type which implements `Dataset` interface with schema-aware fields.
+
+    Args:
+        schema: ibis schema
+        name: optional name of the dataset, prefixed to the type names
+        keys: keys for federation
+    """
+    types = dict(schema_types(schema))
     prefix = to_camel_case(name.title())
-
-    namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
-    annotations = {name: Column.registry[types[name]] | None for name in types}
-    cls = type(prefix + "Columns", (), dict(namespace, __annotations__=annotations))
-    Columns = strawberry.type(cls, description="fields for each column")
-
-    namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
-    annotations = {name: (Column if cls is list else cls) | None for name, cls in types.items()}
-    cls = type(prefix + "Row", (), dict(namespace, __annotations__=annotations))
-    Row = strawberry.type(cls, description="scalar fields")
+    Columns = columns_type(types, prefix)
+    Row = row_type(types, prefix)
 
     class Table(Dataset):
         field = name
@@ -112,5 +116,21 @@ def extend(root: Source, name: str = "", keys: Iterable = ()):
         Table.filter.base_resolver.arguments = list(Filter.resolve_args(types))
     options = dict(name=prefix + "Table", description="a dataset with a derived schema")
     if name:
-        return strawberry.federation.type(Table, keys=keys, **options)(source=root)
-    return strawberry.type(Table, **options)(source=root)
+        return strawberry.federation.type(Table, keys=keys, **options)
+    return strawberry.type(Table, **options)
+
+
+def row_type(types: Mapping, prefix: str = "") -> type:
+    """Return typed `Row`."""
+    namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
+    annotations = {name: (Column if cls is list else cls) | None for name, cls in types.items()}
+    cls = type(prefix + "Row", (), dict(namespace, __annotations__=annotations))
+    return strawberry.type(cls, description="scalar fields")
+
+
+def columns_type(types: Mapping, prefix: str = "") -> type:
+    """Return typed `Columns`."""
+    namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
+    annotations = {name: Column.registry[types[name]] | None for name in types}
+    cls = type(prefix + "Columns", (), dict(namespace, __annotations__=annotations))
+    return strawberry.type(cls, description="fields for each column")
