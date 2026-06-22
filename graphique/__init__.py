@@ -1,2 +1,2 @@
 from .interface import Dataset
-from .middleware import GraphQL
+from .middleware import GraphQL, MetricsExtension

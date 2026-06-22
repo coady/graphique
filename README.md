@@ -35,7 +35,6 @@ The example app uses [Starlette's config](https://www.starlette.io/config/): in 
 
 * PARQUET_PATH: path to the parquet directory or file
 * NAME = '': GraphQL field on `Query`; defaults to root type
-* METRICS = False: include timings from apollo tracing extension
 * COLUMNS = None: list of names, or mapping of aliases, of columns to select
 
 Configuration options exist to provide a convenient no-code solution, but are subject to change in the future. Using a custom app is recommended for production usage.

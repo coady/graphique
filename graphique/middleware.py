@@ -41,7 +41,7 @@ class GraphQL(strawberry.asgi.GraphQL):
 
     Args:
         root: root dataset to attach as the Query type
-        metrics: enable timing extension
+        extensions: additional extensions to enable
         **kwargs: additional `asgi.GraphQL` options
     """
 
@@ -50,12 +50,12 @@ class GraphQL(strawberry.asgi.GraphQL):
         config=strawberry.schema.config.StrawberryConfig(scalar_map=scalar_map),
     )
 
-    def __init__(self, root: Source | type, metrics: bool = False, **kwargs):
-        options: dict = dict(self.options, extensions=[MetricsExtension] if metrics else [])
+    def __init__(self, root: Source | type, extensions: Iterable = (), **kwargs):
         self.root_value, Schema = root, strawberry.federation.Schema
         if isinstance(root, Source):
             self.root_value, Schema = extend(root), strawberry.Schema
-        super().__init__(Schema(type(self.root_value), **options), **kwargs)
+        schema = Schema(type(self.root_value), extensions=extensions, **self.options)
+        super().__init__(schema, **kwargs)
 
     async def get_root_value(self, request):
         return self.root_value

@@ -1,5 +1,5 @@
 """
-Default GraphQL service.
+Example GraphQL service.
 
 Copy and customize as needed. Demonstrates:
 * named versus root query type
@@ -14,12 +14,11 @@ import ibis
 import pyarrow.dataset as ds
 from starlette.config import Config
 
-from graphique import GraphQL
+from graphique import GraphQL, MetricsExtension
 
 config = Config(".env" if Path(".env").is_file() else None)
 PARQUET_PATH = Path(config("PARQUET_PATH")).resolve()
 NAME = config("NAME", default="")
-METRICS = config("METRICS", cast=bool, default=False)
 COLUMNS = config("COLUMNS", cast=json.loads, default=None)
 
 root = ds.dataset(PARQUET_PATH, partitioning="hive" if PARQUET_PATH.is_dir() else None)
@@ -32,6 +31,6 @@ if COLUMNS or not root.partitioning.schema:
         root = root.select(COLUMNS)
 
 if NAME:
-    app = GraphQL.federated({NAME: root}, metrics=METRICS)
+    app = GraphQL.federated({NAME: root}, extensions=[MetricsExtension])
 else:
-    app = GraphQL(root, metrics=METRICS)
+    app = GraphQL(root, extensions=[MetricsExtension])
