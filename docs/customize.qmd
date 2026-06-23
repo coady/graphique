@@ -29,15 +29,13 @@ class Zipcodes(Table):
         return self.table["state"].value_counts()[0].to_list()
 ```
 
-Call `GraphQL` on the `Query` _instance_, so that the root value is stored.
+Call `GraphQL` on a `Query` type with attributes, so that the root value is stored. The types are inferred.
 
 ```{python}
-@strawberry.type
 class Query:
-    zipcodes: Zipcodes
+    zipcodes = Zipcodes(source=source)
 
-
-app = GraphQL(Query(zipcodes=Zipcodes(source=source)))
+app = GraphQL(Query)
 ```
 
 ### Usage
@@ -48,11 +46,20 @@ def execute(query):
         raise ValueError(error)
     return result.data
 
-
 execute("""{ zipcodes {
     count
     filter(state: {eq: "CA"}) { count }
     sql(query: "select * from t where state = 'CA'", alias: "t") { count }
     states
 } }""")
+```
+
+### Advanced
+GraphQL implementations commonly treat top-level fields as [static methods](https://coady.github.io/posts/graphql-root-fields.html#static-methods). Whereas `graphique` requires root values to function as expected. The above example is syntactic sugar for:
+```{python}
+@strawberry.type
+class Query:
+    zipcodes: Zipcodes
+
+app = GraphQL(Query(zipcodes=Zipcodes(source=source)))
 ```

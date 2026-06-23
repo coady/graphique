@@ -132,6 +132,7 @@ def test_root():
 
 
 def test_federation(fedclient):
+    assert fedclient.federated({})  # deprecated coverage
     data = fedclient.execute(
         "{ _service { sdl } zipcodes { __typename count } zipDb { __typename count } }"
     )

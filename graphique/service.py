@@ -30,7 +30,6 @@ if COLUMNS or not root.partitioning.schema:
     elif COLUMNS:
         root = root.select(COLUMNS)
 
-if NAME:
-    app = GraphQL.federated({NAME: root}, extensions=[MetricsExtension])
-else:
-    app = GraphQL(root, extensions=[MetricsExtension])
+if NAME:  # typically a class; only needed because `NAME` is dynamic
+    root = type("Query", (), {NAME: root})
+app = GraphQL(root, extensions=[MetricsExtension])

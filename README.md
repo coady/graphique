@@ -41,16 +41,20 @@ Configuration options exist to provide a convenient no-code solution, but are su
 
 ### App
 For more options create a custom [ASGI](https://asgi.readthedocs.io/en/latest/index.html) app. Call graphique's `GraphQL` on an ibis [Table](https://ibis-project.org/reference/expression-tables) or arrow [Dataset](https://arrow.apache.org/docs/python/api/dataset.html).
-Supply a mapping of names to datasets for multiple roots, and to enable federation.
+Use a `Query` type with dataset attributes for multiple roots, and to enable federation.
 
 ```python
 import ibis
-from graphique import GraphQL
+from graphique import GraphQL, implement
 
-source = ibis.read_*(...)  # or ibis.connect(...).table(...) or pyarrow.dataset.dataset(...)
+source = ibis.read_*(...)  # or `ibis.connect(...).table(...)` or `pyarrow.dataset.dataset(...)`
 # apply initial projections or filters to `source`
 app = GraphQL(source)  # Table is root query type
-app = GraphQL.federated({<name>: source, ...}, keys=...)  # Tables on named fields
+
+# multiple named fields, with optional federation keys
+class Query:
+    name = source  # or `implement(source.schema(), name, keys=...)`
+app = GraphQL(Query)
 ```
 
 Start like any ASGI app.

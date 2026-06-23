@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * dataset `group` and `filter` optimized
 * example app config: FEDERATED renamed, FILTERS and METRICS removed
 * `partition` script renamed
+* `GraphQL` supports classes with attributes
 
 ### Added
 * `first` sorts by rank
@@ -18,9 +19,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * `toSql` compiles SQL query
 * array column scalars
 * join and set fields
+* `implement` for customized types
 
 ### Deprecated
 * `dense` ordering moved to `first`
+* `GraphQL.federated` replaced with class-based approach
 
 ## [2.0.2](https://pypi.org/project/graphique/2.0.2/) - 2026-01-10
 ### Changed

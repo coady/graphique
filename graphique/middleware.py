@@ -41,7 +41,7 @@ class GraphQL(strawberry.asgi.GraphQL):
     """ASGI GraphQL app with root value(s).
 
     Args:
-        root: root dataset to attach as the Query type
+        root: root dataset, Query type, or instance to attach as the Query root
         extensions: additional extensions to enable
         **kwargs: additional `asgi.GraphQL` options
     """
@@ -51,10 +51,12 @@ class GraphQL(strawberry.asgi.GraphQL):
         config=strawberry.schema.config.StrawberryConfig(scalar_map=scalar_map),
     )
 
-    def __init__(self, root: Source | type, extensions: Iterable = (), **kwargs):
+    def __init__(self, root: Source | type | object, extensions: Iterable = (), **kwargs):
         self.root_value, Schema = root, strawberry.federation.Schema
         if isinstance(root, Source):
-            self.root_value, Schema = extend(root), strawberry.Schema
+            self.root_value, Schema = implement(ibis_schema(root))(source=root), strawberry.Schema
+        elif isinstance(root, type):  # pragma: no branch
+            self.root_value = root_value(root)
         schema = Schema(type(self.root_value), extensions=extensions, **self.options)
         super().__init__(schema, **kwargs)
 
@@ -63,22 +65,42 @@ class GraphQL(strawberry.asgi.GraphQL):
 
     @classmethod
     def federated(cls, roots: Mapping[str, Source], keys: Mapping[str, Iterable] = {}, **kwargs):
-        """Construct GraphQL app with multiple federated datasets.
+        """Deprecated: construct GraphQL app with multiple federated datasets.
 
-        Args:
-            roots: mapping of field names to root datasets
-            keys: mapping of optional federation keys for each root
-            **kwargs: additional `asgi.GraphQL` options
+        Create a `Query` class with typed fields using `implement` instead. See customize docs.
         """
-        root_values = {name: extend(roots[name], name, keys.get(name, ())) for name in roots}
-        annotations = {name: type(root_values[name]) for name in root_values}
-        Query = type("Query", (), {"__annotations__": annotations})
-        return cls(strawberry.type(Query)(**root_values), **kwargs)
+        root_values = {
+            name: implement(ibis_schema(value), name, keys.get(name, ()))(source=value)
+            for name, value in roots.items()
+        }
+        return cls(type("Query", (), root_values), **kwargs)
 
 
-def extend(root: Source, name: str = "", keys: Iterable = ()):
-    """Extend `Dataset` with schema-aware `filter`, `columns`, and `row`. Used by `GraphQL`."""
-    return implement(ibis_schema(root), name, keys)(source=root)
+def root_value(cls: type):
+    """Convert a `Query` class to be a root value instance with typed fields.
+
+    ```python
+    class Query:
+        name = source
+        ...
+
+    @strawberry.type
+    class Query:
+        name: Table
+        ...
+
+    Query(name=Table(source=source), ...)
+    ```
+    """
+    data = {}
+    for name, value in cls.__dict__.items():
+        if isinstance(value, Source):
+            value = implement(ibis_schema(value), name)(source=value)
+        if isinstance(value, Dataset):
+            data[name] = value
+    annotations = {name: type(data[name]) for name in data}
+    cls = type(cls.__name__, cls.__bases__, {"__annotations__": annotations})
+    return strawberry.type(cls)(**data)
 
 
 def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[Dataset]:

@@ -9,3 +9,6 @@ reference:
   contents:
   - name: Dataset
   - name: GraphQL
+- title: Functions
+  contents:
+  - name: implement
