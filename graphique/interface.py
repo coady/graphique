@@ -18,7 +18,7 @@ from strawberry import UNSET, Info
 from strawberry.permission import BasePermission
 from strawberry.scalars import JSON
 
-from .core import Parquet, getitems, order_key
+from .core import Parquet, getitems, order_key, rank_over
 from .inputs import Aggregates, Expression, Field, Filter, Projection, Scalars, provisional
 from .models import Column, doc_field, links
 from .scalars import BigInt
@@ -245,13 +245,21 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         limit="maximum number of rows to return; optimized for partitioned dataset keys",
+        over="column names; `limit` applies separately over each grouping window",
     )
     def order(
-        self, info: Info, by: list[str], limit: BigInt | None = None, dense: bool = False
+        self,
+        info: Info,
+        by: list[str],
+        limit: BigInt | None = None,
+        over: list[str] = [],
+        dense: bool = False,
     ) -> Self:
         """[Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns."""
         if dense and limit is not None:
-            return self.first(info, by, rank=limit, dense=True)  # type: ignore
+            return self.first(info, by, rank=limit, dense=True, over=over)  # type: ignore
+        if over and limit is not None:
+            return self.resolve(info, rank_over(self.table, by, over, ibis.row_number(), limit))
         if keys := Parquet.keys(self.source, *by):
             source = Parquet.order(self.source, *keys, limit=limit)
             table = Parquet.to_table(source)
@@ -261,15 +269,27 @@ class Dataset:
             table = self.table
         return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
 
+    order.arguments[-2].directives = [provisional()]
     order.arguments[-1].deprecation_reason = "use `first` instead"
 
     @doc_field(
         by="column names; prefix with `-` for descending order",
         rank="maximum rank of rows to return; optimized for partitioned dataset keys",
         dense="use dense rank (all ties) or sparse rank (only ties at the boundary)",
+        over="column names; `rank` applies separately over each grouping window",
     )
-    def first(self, info: Info, by: list[str], rank: int = 1, dense: bool = False) -> Self:
+    def first(
+        self,
+        info: Info,
+        by: list[str],
+        rank: int = 1,
+        dense: bool = False,
+        over: list[str] = [],
+    ) -> Self:
         """Provisionally sort and filter by rank."""
+        if over:
+            column = ibis.dense_rank() if dense else ibis.rank()
+            return self.resolve(info, rank_over(self.table, by, over, column, rank))
         if keys := Parquet.keys(self.source, *by):
             source = Parquet.first(self.source, *keys, rank=rank, dense=dense)
             if keys == by:

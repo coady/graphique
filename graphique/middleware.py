@@ -2,6 +2,7 @@
 ASGI GraphQL utilities.
 """
 
+import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
 
@@ -69,6 +70,7 @@ class GraphQL(strawberry.asgi.GraphQL):
 
         Create a `Query` class with typed fields using `implement` instead. See customize docs.
         """
+        warnings.warn("use a Query class with attributes instead", DeprecationWarning)
         root_values = {
             name: implement(ibis_schema(value), name, keys.get(name, ()))(source=value)
             for name, value in roots.items()

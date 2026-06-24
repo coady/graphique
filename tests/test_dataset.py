@@ -79,6 +79,17 @@ def test_schema(dsclient):
     assert data == {"slice": {"count": 41700, "optional": {"type": "CachedTable"}}}
 
 
+def test_rank_over(dsclient):
+    data = dsclient.execute('{ first(over: "state", by: "-zipcode") { count } }')
+    assert data == {"first": {"count": 52}}
+    data = dsclient.execute('{ first(over: "state", by: "-zipcode", rank: 2) { count } }')
+    assert data == {"first": {"count": 104}}
+    data = dsclient.execute('{ order(over: "state", by: "-zipcode", limit: 1) { count } }')
+    assert data == {"order": {"count": 52}}
+    data = dsclient.execute('{ order(over: "state", by: "-zipcode", limit: 2) { count } }')
+    assert data == {"order": {"count": 104}}
+
+
 def test_order(dsclient):
     data = dsclient.execute('{ first(by: "state", rank: 1) { count row { state } } }')
     assert data == {"first": {"count": 273, "row": {"state": "AK"}}}
@@ -132,7 +143,8 @@ def test_root():
 
 
 def test_federation(fedclient):
-    assert fedclient.federated({})  # deprecated coverage
+    with pytest.warns(DeprecationWarning):
+        assert fedclient.federated({})
     data = fedclient.execute(
         "{ _service { sdl } zipcodes { __typename count } zipDb { __typename count } }"
     )

@@ -14,12 +14,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 * `first` sorts by rank
 * `unnest` maintains order
-* `unnpack` structs
+* `unpack` structs
 * `column` index access
-* `toSql` compiles SQL query
+* `toSql` and `sql` compiles and runs SQL query
 * array column scalars
 * join and set fields
 * `implement` for customized types
+* rank `over` grouping windows
 
 ### Deprecated
 * `dense` ordering moved to `first`

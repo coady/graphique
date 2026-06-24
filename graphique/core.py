@@ -28,6 +28,19 @@ def order_key(name: str):
     return (ibis.desc if name.startswith("-") else ibis.asc)(ibis._[name.lstrip("-")])
 
 
+def rank_over(
+    table: ibis.Table,
+    by: list[str],
+    over: list[str],
+    column: ibis.IntColumn,
+    rank: int = 1,
+) -> ibis.Table:
+    """Filter rows by rank within each grouping window."""
+    window = ibis.window(group_by=over, order_by=list(map(order_key, by)))
+    table = table.mutate(_=column.over(window))
+    return table.filter(table["_"] < rank).drop("_").order_by(*map(order_key, by))
+
+
 class Parquet(ds.Dataset):
     """Partitioned parquet dataset."""
 
