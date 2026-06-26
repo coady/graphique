@@ -32,13 +32,13 @@ def rank_over(
     table: ibis.Table,
     by: list[str],
     over: list[str],
-    column: ibis.IntColumn,
+    index: ibis.Column,
     rank: int = 1,
 ) -> ibis.Table:
     """Filter rows by rank within each grouping window."""
-    window = ibis.window(group_by=over, order_by=list(map(order_key, by)))
-    table = table.mutate(_=column.over(window))
-    return table.filter(table["_"] < rank).drop("_").order_by(*map(order_key, by))
+    order_by = list(map(order_key, by))
+    table = table.mutate(_=index.over(group_by=over, order_by=order_by))
+    return table.filter(table["_"] < rank).drop("_").order_by(*order_by)
 
 
 class Parquet(ds.Dataset):

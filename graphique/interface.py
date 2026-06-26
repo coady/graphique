@@ -288,8 +288,8 @@ class Dataset:
     ) -> Self:
         """Provisionally sort and filter by rank."""
         if over:
-            column = ibis.dense_rank() if dense else ibis.rank()
-            return self.resolve(info, rank_over(self.table, by, over, column, rank))
+            index = ibis.dense_rank() if dense else ibis.rank()
+            return self.resolve(info, rank_over(self.table, by, over, index, rank))
         if keys := Parquet.keys(self.source, *by):
             source = Parquet.first(self.source, *keys, rank=rank, dense=dense)
             if keys == by:
@@ -300,8 +300,9 @@ class Dataset:
         mask = table.select(name.lstrip("-") for name in by)
         if dense and rank > 1:
             mask = mask.distinct()
-        table = table.semi_join(mask.order_by(*map(order_key, by))[:rank].distinct(), mask.columns)
-        return self.resolve(info, table.order_by(*map(order_key, by)))
+        order_by = list(map(order_key, by))
+        table = table.semi_join(mask.order_by(*order_by)[:rank].distinct(), mask.columns)
+        return self.resolve(info, table.order_by(*order_by))
 
     first.directives = [provisional()]
 
