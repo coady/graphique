@@ -448,6 +448,9 @@ class Temporal:
     description=f"window [expressions]({links.ref}/expression-tables.html#ibis.window)"
 )
 class Window:
+    over: list[str] = default_field([], description="partition column names")
+    by: list[str] = default_field([], description="order column names within each partition")
+
     lag: Expression | None = default_field(func=ibis.Column.lag)
     lead: Expression | None = default_field(func=ibis.Column.lead)
 
@@ -459,15 +462,27 @@ class Window:
     ge: Expression | None = default_field(description=r"pairwise \>=")
     sub: Expression | None = default_field(description="pairwise -")
 
+    count: Expression | None = default_field(func=ibis.Column.count)
+    sum: Expression | None = default_field(func=ibis.expr.types.NumericColumn.sum)
+    mean: Expression | None = default_field(func=ibis.expr.types.NumericColumn.mean)
+    min: Expression | None = default_field(func=ibis.Column.min)
+    max: Expression | None = default_field(func=ibis.Column.max)
+
     offset: int = 1
     default: JSON | None = default_field(None, description="default JSON scalar")
     scalar: Scalars | None = default_field(description="default typed scalar")
 
-    def __iter__(self) -> Iterator[ibis.Deferred]:
+    def __iter__(self) -> Iterator[ibis.Expr]:
         (default,) = self.scalar or [self.default]
+        orderings = list(map(order_key, self.by))
+        win = ibis.window(group_by=self.over, order_by=orderings) if self.over or self.by else None
+        cumwin = ibis.cumulative_window(group_by=self.over, order_by=orderings) if self.by else None
         for name, (expr,) in Expression.items(self):
             match name:
+                case "count" | "sum" | "mean" | "min" | "max":
+                    yield getattr(expr, name)().over(cumwin or win)
                 case "lag" | "lead":
-                    yield getattr(expr, name)(self.offset, default)
+                    yield getattr(expr, name)(self.offset, default).over(win)
                 case _:
-                    yield getattr(operator, name)(expr, expr.lag(self.offset)).fill_null(default)
+                    lag = expr.lag(self.offset).over(win)
+                    yield getattr(operator, name)(expr, lag).fill_null(default)

@@ -229,6 +229,22 @@ def test_window(client):
     data = client.execute("""{ project(columns: {alias: "runs", window: {ne: {name: "state"}, default: false}})
         { column(name: "runs") { ... on BooleanColumn { values } } } }""")
     assert data["project"]["column"]["values"][:4] == [False, False, True, False]
+    data = client.execute("""{ project(columns: {alias: "running", window: {over: ["state"], by: ["zipcode"], sum: {name: "zipcode"}}}) {
+        filter(state: {eq: "AK"}) { column(name: "running") { ... on BigIntColumn { values } } } } }""")
+    assert data["project"]["filter"]["column"]["values"][:3] == [99501, 199003, 298506]
+    data = client.execute("""{ project(columns: {alias: "prev", window: {over: ["state"], by: ["zipcode"], lag: {name: "zipcode"}}}) {
+        filter(state: {eq: "AK"}) { column(name: "prev") { ... on IntColumn { values } } } } }""")
+    assert data["project"]["filter"]["column"]["values"][:3] == [None, 99501, 99502]
+    data = client.execute("""{ project(columns: {alias: "n", window: {over: ["state"], by: ["zipcode"], count: {name: "zipcode"}}}) {
+        filter(state: {eq: "AK"}) { column(name: "n") { ... on BigIntColumn { values } } } } }""")
+    assert data["project"]["filter"]["column"]["values"][:3] == [1, 2, 3]
+    data = client.execute("""{ project(columns: {alias: "total", window: {over: ["state"], sum: {name: "zipcode"}}}) {
+        filter(state: {eq: "AK"}) { column(name: "total") { nunique } } } }""")
+    assert data == {"project": {"filter": {"column": {"nunique": 1}}}}
+    data = client.execute("""{ project(columns: {alias: "diff", window: {over: ["state"], by: ["zipcode"], ne: {name: "city"}}}) {
+        filter(state: {eq: "AK"}) {
+        column(name: "diff") { ... on BooleanColumn { values } } } } }""")
+    assert data["project"]["filter"]["column"]["values"][:5] == [None, False, False, False, True]
 
 
 def test_order(client):

@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * array column scalars
 * join and set fields
 * `implement` for customized types
-* rank `over` grouping windows
+* rank and aggregate `over` grouping windows
 
 ### Deprecated
 * `dense` ordering moved to `first`
