@@ -218,7 +218,9 @@ class Expression:
     name: list[str] = default_field([], description="column name(s)")
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
     scalar: Scalars | None = default_field(description="typed scalar")
-    row_number: None = default_field(func=ibis.row_number)
+    row_number: None = default_field(
+        func=ibis.row_number, deprecation_reason="use `window.rowNumber`"
+    )
 
     eq: list[Expression] = default_field([], description="==")
     ne: list[Expression] = default_field([], description="!=")
@@ -240,13 +242,21 @@ class Expression:
     truediv: list[Expression] = default_field([], name="div", description="/")
 
     coalesce: list[Expression] = default_field([], func=ibis.Column.coalesce)
-    cume_dist: Expression | None = default_field(func=ibis.Column.cume_dist)
+    cume_dist: Expression | None = default_field(
+        func=ibis.Column.cume_dist, deprecation_reason="use `window.cumeDist`"
+    )
     cummax: Expression | None = default_field(func=ibis.Column.cummax)
     cummin: Expression | None = default_field(func=ibis.Column.cummin)
-    dense_rank: Expression | None = default_field(func=ibis.Column.dense_rank)
+    dense_rank: Expression | None = default_field(
+        func=ibis.Column.dense_rank, deprecation_reason="use `window.denseRank`"
+    )
     ifelse: list[Expression] = default_field([], func=ibis.expr.types.BooleanColumn.ifelse)
-    percent_rank: Expression | None = default_field(func=ibis.Column.percent_rank)
-    rank: Expression | None = default_field(func=ibis.Column.rank)
+    percent_rank: Expression | None = default_field(
+        func=ibis.Column.percent_rank, deprecation_reason="use `window.percentRank`"
+    )
+    rank: Expression | None = default_field(
+        func=ibis.Column.rank, deprecation_reason="use `window.rank`"
+    )
 
     array: Arrays | None = default_field(description="array value functions")
     numeric: Numeric | None = default_field(description="numeric functions")
@@ -468,6 +478,12 @@ class Window:
     min: Expression | None = default_field(func=ibis.Column.min)
     max: Expression | None = default_field(func=ibis.Column.max)
 
+    row_number: None = default_field(func=ibis.row_number)
+    rank: None = default_field(func=ibis.rank)
+    dense_rank: None = default_field(func=ibis.dense_rank)
+    percent_rank: None = default_field(func=ibis.percent_rank)
+    cume_dist: None = default_field(func=ibis.cume_dist)
+
     offset: int = 1
     default: JSON | None = default_field(None, description="default JSON scalar")
     scalar: Scalars | None = default_field(description="default typed scalar")
@@ -477,6 +493,10 @@ class Window:
         orderings = list(map(order_key, self.by))
         win = ibis.window(group_by=self.over, order_by=orderings) if self.over or self.by else None
         cumwin = ibis.cumulative_window(group_by=self.over, order_by=orderings) if self.by else None
+        for name in ("row_number", "rank", "dense_rank", "percent_rank", "cume_dist"):
+            if getattr(self, name) is not UNSET:
+                yield getattr(ibis, name)().over(win)
+                return
         for name, (expr,) in Expression.items(self):
             match name:
                 case "count" | "sum" | "mean" | "min" | "max":

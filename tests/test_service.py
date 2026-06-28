@@ -245,6 +245,12 @@ def test_window(client):
         filter(state: {eq: "AK"}) {
         column(name: "diff") { ... on BooleanColumn { values } } } } }""")
     assert data["project"]["filter"]["column"]["values"][:5] == [None, False, False, False, True]
+    data = client.execute("""{ project(columns: {alias: "idx", window: {by: ["state"], denseRank: null}})
+        { column(name: "idx") { ... on BigIntColumn { min max } } } }""")
+    assert data == {"project": {"column": {"min": 0, "max": 51}}}
+    data = client.execute("""{ project(columns: {alias: "index", window: {rowNumber: null}})
+        { column(name: "index") { ... on BigIntColumn { min max } } } }""")
+    assert data == {"project": {"column": {"min": 0, "max": 41699}}}
 
 
 def test_order(client):
