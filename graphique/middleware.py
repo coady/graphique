@@ -55,7 +55,7 @@ class GraphQL(strawberry.asgi.GraphQL):
     def __init__(self, root: Source | type | object, extensions: Iterable = (), **kwargs):
         self.root_value, Schema = root, strawberry.federation.Schema
         if isinstance(root, Source):
-            self.root_value, Schema = implement(ibis_schema(root))(source=root), strawberry.Schema
+            self.root_value, Schema = typed(root), strawberry.Schema
         elif isinstance(root, type):  # pragma: no branch
             self.root_value = root_value(root)
         schema = Schema(type(self.root_value), extensions=extensions, **self.options)
@@ -68,13 +68,10 @@ class GraphQL(strawberry.asgi.GraphQL):
     def federated(cls, roots: Mapping[str, Source], keys: Mapping[str, Iterable] = {}, **kwargs):
         """Deprecated: construct GraphQL app with multiple federated datasets.
 
-        Create a `Query` class with typed fields using `implement` instead. See customize docs.
+        Create a `Query` class with typed fields using `typed` instead. See customize docs.
         """
         warnings.warn("use a Query class with attributes instead", DeprecationWarning)
-        root_values = {
-            name: implement(ibis_schema(value), name, keys.get(name, ()))(source=value)
-            for name, value in roots.items()
-        }
+        root_values = {name: typed(roots[name], name, keys.get(name, ())) for name in roots}
         return cls(type("Query", (), root_values), **kwargs)
 
 
@@ -96,13 +93,22 @@ def root_value(cls: type):
     """
     data = {}
     for name, value in cls.__dict__.items():
-        if isinstance(value, Source):
-            value = implement(ibis_schema(value), name)(source=value)
-        if isinstance(value, Dataset):
-            data[name] = value
+        if isinstance(value, (Source, Dataset)):
+            data[name] = typed(value, name) if isinstance(value, Source) else value
     annotations = {name: type(data[name]) for name in data}
     cls = type(cls.__name__, cls.__bases__, {"__annotations__": annotations})
     return strawberry.type(cls)(**data)
+
+
+def typed(source: Source, name: str = "", keys: Iterable = ()) -> Dataset:
+    """Return schema-derived `Dataset` instance for `source`.
+
+    Args:
+        source: ibis table or arrow dataset
+        name: optional name of the dataset, prefixed to the type names
+        keys: keys for federation
+    """
+    return implement(ibis_schema(source), name, keys)(source=source)
 
 
 def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[Dataset]:

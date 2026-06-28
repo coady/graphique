@@ -3,7 +3,7 @@ from pathlib import Path
 import ibis
 import pyarrow.dataset as ds
 
-from graphique import implement
+from graphique import typed
 
 from .conftest import TestClient
 
@@ -13,7 +13,7 @@ table = ibis.read_parquet(fixtures / "zipcodes.parquet")
 
 
 class Query:
-    zipcodes = implement(table.schema(), name="zipcodes", keys=["zipcode"])(source=dataset)
+    zipcodes = typed(dataset, name="zipcodes", keys=["zipcode"])
     states = table.mutate({"indices": ibis.row_number()}).order_by("state", "county")
     zip_db = ds.dataset(fixtures / "zip_db.parquet")
 

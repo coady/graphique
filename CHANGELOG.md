@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * `toSql` and `sql` compiles and runs SQL query
 * array column scalars
 * join and set fields
-* `implement` for customized types
+* `implement` and `typed` for customized types and instances
 * rank and aggregate `over` grouping windows
 
 ### Deprecated

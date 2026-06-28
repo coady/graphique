@@ -12,3 +12,4 @@ reference:
 - title: Functions
   contents:
   - name: implement
+  - name: typed
