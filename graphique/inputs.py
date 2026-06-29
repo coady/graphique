@@ -485,15 +485,29 @@ class Window:
     cume_dist: None = default_field(func=ibis.cume_dist)
     ntile: int = default_field(0, func=ibis.ntile)
 
+    preceding: int | None = strawberry.field(
+        default=None, description="number of preceding rows in the window"
+    )
+    following: int | None = strawberry.field(
+        default=None, description="number of following rows in the window"
+    )
+    range: bool = strawberry.field(
+        default=False, description="aggregate rows based upon differences in the order by values"
+    )
+
     offset: int = strawberry.field(default=1, description="offset for lag and lead")
-    default: JSON | None = default_field(None, description="default JSON scalar")
+    default: JSON | None = strawberry.field(default=None, description="default JSON scalar")
     scalar: Scalars | None = default_field(description="default typed scalar")
 
     def __iter__(self) -> Iterator[ibis.Expr]:
         (default,) = self.scalar or [self.default]
         orderings = list(map(order_key, self.by))
-        win = ibis.window(group_by=self.over, order_by=orderings) if self.over or self.by else None
-        cumwin = ibis.cumulative_window(group_by=self.over, order_by=orderings) if self.by else None
+        win = cumwin = None
+        if self.over or self.by:
+            frame = ibis.range_window if self.range else ibis.window
+            win = frame(self.preceding, self.following, group_by=self.over, order_by=orderings)
+        if self.by and self.preceding is self.following is None:
+            cumwin = ibis.cumulative_window(group_by=self.over, order_by=orderings)
         for name in ("row_number", "rank", "dense_rank", "percent_rank", "cume_dist"):
             if getattr(self, name) is not UNSET:
                 yield getattr(ibis, name)().over(win)

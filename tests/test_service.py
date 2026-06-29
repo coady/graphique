@@ -254,6 +254,18 @@ def test_window(client):
     data = client.execute("""{ project(columns: {alias: "q", window: {over: ["state"], by: ["zipcode"], ntile: 4}}) {
         filter(state: {eq: "AK"}) { column(name: "q") { ... on IntColumn { min max } } } } }""")
     assert data == {"project": {"filter": {"column": {"min": 0, "max": 3}}}}
+    data = client.execute("""{ project(columns: {alias: "running", window: {over: ["state"], by: ["zipcode"], preceding: 2, following: 0, sum: {name: "zipcode"}}}) {
+        filter(state: {eq: "AK"}) { column(name: "running") { ... on BigIntColumn { values } } } } }""")
+    assert data["project"]["filter"]["column"]["values"][:4] == [99501, 199003, 298506, 298509]
+    data = client.execute("""{ project(columns: {alias: "running", window: {over: ["state"], by: ["zipcode"], preceding: 1, following: 1, sum: {name: "zipcode"}}}) {
+        filter(state: {eq: "AK"}) { column(name: "running") { ... on BigIntColumn { values } } } } }""")
+    assert data["project"]["filter"]["column"]["values"][:3] == [199003, 298506, 298509]
+    data = client.execute("""{ project(columns: {alias: "n", window: {over: ["state"], by: ["zipcode"], preceding: 2, following: 0, count: {name: "zipcode"}}}) {
+        filter(state: {eq: "MA"}, zipcode: {ge: 1001, le: 1005}) { column(name: "n") { ... on BigIntColumn { values } } } } }""")
+    assert data["project"]["filter"]["column"]["values"] == [1, 2, 3, 3, 3]
+    data = client.execute("""{ project(columns: {alias: "n", window: {over: ["state"], by: ["zipcode"], range: true, preceding: 50, following: 50, count: {name: "zipcode"}}}) {
+        filter(state: {eq: "MA"}, zipcode: {ge: 1001, le: 1005}) { column(name: "n") { ... on BigIntColumn { values } } } } }""")
+    assert data["project"]["filter"]["column"]["values"] == [33, 33, 34, 35, 35]
 
 
 def test_order(client):
