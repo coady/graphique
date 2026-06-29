@@ -251,6 +251,9 @@ def test_window(client):
     data = client.execute("""{ project(columns: {alias: "index", window: {rowNumber: null}})
         { column(name: "index") { ... on BigIntColumn { min max } } } }""")
     assert data == {"project": {"column": {"min": 0, "max": 41699}}}
+    data = client.execute("""{ project(columns: {alias: "q", window: {over: ["state"], by: ["zipcode"], ntile: 4}}) {
+        filter(state: {eq: "AK"}) { column(name: "q") { ... on IntColumn { min max } } } } }""")
+    assert data == {"project": {"filter": {"column": {"min": 0, "max": 3}}}}
 
 
 def test_order(client):

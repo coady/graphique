@@ -483,8 +483,9 @@ class Window:
     dense_rank: None = default_field(func=ibis.dense_rank)
     percent_rank: None = default_field(func=ibis.percent_rank)
     cume_dist: None = default_field(func=ibis.cume_dist)
+    ntile: int = default_field(0, func=ibis.ntile)
 
-    offset: int = 1
+    offset: int = strawberry.field(default=1, description="offset for lag and lead")
     default: JSON | None = default_field(None, description="default JSON scalar")
     scalar: Scalars | None = default_field(description="default typed scalar")
 
@@ -496,7 +497,8 @@ class Window:
         for name in ("row_number", "rank", "dense_rank", "percent_rank", "cume_dist"):
             if getattr(self, name) is not UNSET:
                 yield getattr(ibis, name)().over(win)
-                return
+        if self.ntile:
+            yield ibis.ntile(self.ntile).over(win).cast("int32")
         for name, (expr,) in Expression.items(self):
             match name:
                 case "count" | "sum" | "mean" | "min" | "max":
