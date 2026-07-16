@@ -125,17 +125,17 @@ class Aggregate:
     alias: str = strawberry.field(default="", description="output column name")
     where: Expression | None = None
 
-    def to_ibis(self, func: str, **options) -> tuple:
+    def to_ibis(self, func: str, *args, **options) -> tuple:
         options["where"] = self.where and self.where.to_ibis()
-        return (self.alias or self.name), getattr(ibis._[self.name], func)(**options)
+        return (self.alias or self.name), getattr(ibis._[self.name], func)(*args, **options)
 
 
 @strawberry.input
 class UniqueAggregate(Aggregate):
     approx: bool = False
 
-    def to_ibis(self, func: str, **options) -> tuple:
-        return super().to_ibis("approx_" + func if self.approx else func, **options)
+    def to_ibis(self, func: str, *args) -> tuple:
+        return super().to_ibis("approx_" + func if self.approx else func, *args)
 
 
 @strawberry.input
@@ -155,7 +155,7 @@ class OrderAggregate(Aggregate):
 class VarAggregate(Aggregate):
     how: str = "sample"
 
-    def to_ibis(self, func: str, **_) -> tuple:
+    def to_ibis(self, func: str) -> tuple:
         return super().to_ibis(func, how=self.how)
 
 
@@ -163,8 +163,8 @@ class VarAggregate(Aggregate):
 class QuantileAggregate(UniqueAggregate):
     q: float = 0.5
 
-    def to_ibis(self, func: str, **_) -> tuple:
-        return super().to_ibis(func, quantile=self.q)
+    def to_ibis(self, func: str, *_) -> tuple:
+        return super().to_ibis(func, self.q)
 
 
 @strawberry.input
