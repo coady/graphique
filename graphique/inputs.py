@@ -98,9 +98,9 @@ class Filter(Generic[T]):
             for op, value in query:
                 match value, op:
                     case list(), "eq":
-                        yield field.isin(value)
+                        yield field == value[0] if len(value) == 1 else field.isin(value)
                     case list(), "ne":
-                        yield field.notin(value)
+                        yield field != value[0] if len(value) == 1 else field.notin(value)
                     case _:
                         yield getattr(operator, op)(field, value)
 
