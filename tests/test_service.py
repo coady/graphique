@@ -348,6 +348,11 @@ def test_group(client):
         { row { latitude } } }""")
     assert data == {"group": {"row": {"latitude": pytest.approx(5.378499)}}}
     assert client.execute("""{ group(by: "state", counts: "c", order: "_") { count } }""")
+    data = client.execute('{ group(aggregate: {concat: {name: "state"}}) { row { state } } }')
+    assert data["group"]["row"]["state"].split()
+    data = client.execute("""{ group(aggregate: {argmax: {name: "state", key: "county"}})
+        { row { state } } }""")
+    assert data == {"group": {"row": {"state": "SD"}}}
 
 
 def test_unnest(client):

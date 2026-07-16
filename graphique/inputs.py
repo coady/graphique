@@ -175,17 +175,40 @@ class CollectAggregate(OrderAggregate):
         return super().to_ibis(func, distinct=self.distinct)
 
 
+@strawberry.input
+class ConcatAggregate(Aggregate):
+    sep: str = ","
+    order_by: list[str] = default_field([])
+
+    def to_ibis(self, func: str) -> tuple:
+        order_by = list(map(order_key, self.order_by)) or None
+        return super().to_ibis("group_" + func, sep=self.sep, order_by=order_by)
+
+
+@strawberry.input
+class ArgAggregate(Aggregate):
+    key: str
+
+    def to_ibis(self, func: str) -> tuple:
+        return super().to_ibis(func, key=self.key)
+
+
 @strawberry.input(description=f"aggregation [expressions]({links.ref}/expression-generic)")
 class Aggregates:
     all: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.all)
     any: list[Aggregate] = default_field([], func=ibis.expr.types.BooleanColumn.any)
+    argmax: list[ArgAggregate] = default_field([], func=ibis.Column.argmax)
+    argmin: list[ArgAggregate] = default_field([], func=ibis.Column.argmin)
     collect: list[CollectAggregate] = default_field([], func=ibis.Column.collect)
+    concat: list[ConcatAggregate] = default_field([], func=ibis.Column.group_concat)
     count: list[Aggregate] = default_field([], func=ibis.Column.count)
     first: list[OrderAggregate] = default_field([], func=ibis.Column.first)
+    kurtosis: list[VarAggregate] = default_field([], func=ibis.expr.types.NumericColumn.kurtosis)
     last: list[OrderAggregate] = default_field([], func=ibis.Column.last)
     max: list[Aggregate] = default_field([], func=ibis.Column.max)
     mean: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.mean)
     min: list[Aggregate] = default_field([], func=ibis.Column.min)
+    mode: list[Aggregate] = default_field([], func=ibis.Column.mode)
     nunique: list[UniqueAggregate] = default_field([], func=ibis.Column.nunique)
     quantile: list[QuantileAggregate] = default_field([], func=ibis.Column.quantile)
     std: list[VarAggregate] = default_field([], func=ibis.expr.types.NumericColumn.std)
