@@ -337,6 +337,7 @@ class Projection(Expression):
 class Arrays:
     alls: Expression | None = default_field(func=ibis.expr.types.ArrayValue.alls)
     anys: Expression | None = default_field(func=ibis.expr.types.ArrayValue.anys)
+    flatten: Expression | None = default_field(func=ibis.expr.types.ArrayValue.flatten)
     length: Expression | None = default_field(func=ibis.expr.types.ArrayValue.length)
     maxs: Expression | None = default_field(func=ibis.expr.types.ArrayValue.maxs)
     means: Expression | None = default_field(func=ibis.expr.types.ArrayValue.means)
@@ -346,12 +347,24 @@ class Arrays:
     sums: Expression | None = default_field(func=ibis.expr.types.ArrayValue.sums)
     unique: Expression | None = default_field(func=ibis.expr.types.ArrayValue.unique)
 
+    concat: list[Expression] = default_field([], func=ibis.expr.types.ArrayValue.concat)
+    contains: list[Expression] = default_field([], func=ibis.expr.types.ArrayValue.contains)
     index: list[Expression] = default_field([], func=ibis.expr.types.ArrayValue.index)
+    intersect: list[Expression] = default_field([], func=ibis.expr.types.ArrayValue.intersect)
+    remove: list[Expression] = default_field([], func=ibis.expr.types.ArrayValue.remove)
+    union: list[Expression] = default_field([], func=ibis.expr.types.ArrayValue.union)
+    zip: list[Expression] = default_field([], func=ibis.expr.types.ArrayValue.zip)
 
     slice: Expression | None = default_field(description="array slice")
     value: Expression | None = default_field(description="value at offset")
     offset: int = 0
     limit: int | None = None
+
+    join: Expression | None = default_field(func=ibis.expr.types.ArrayValue.join)
+    sep: str = ""
+
+    repeat: Expression | None = default_field(func=ibis.expr.types.ArrayValue.repeat)
+    n: int = 1
 
     def __iter__(self) -> Iterator[ibis.Deferred]:
         for name, (expr, *args) in Expression.items(self):
@@ -360,6 +373,10 @@ class Arrays:
                     yield expr[self.offset :][: self.limit]
                 case "value":
                     yield expr[self.offset]
+                case "join":
+                    yield expr.join(self.sep)
+                case "repeat":
+                    yield expr.repeat(self.n)
                 case _:
                     yield getattr(expr, name)(*args)
 

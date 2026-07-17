@@ -153,6 +153,16 @@ def test_array(executor):
     assert data == {"column": {"values": [2, None]}}
     data = executor("{ columns { array { unnest { ... on IntColumn { values } } length } } }")
     assert data == {"columns": {"array": {"unnest": {"values": [0, 1, 2]}, "length": [3, None]}}}
+    data = executor("""{ project(columns: {array: {contains: [{name: "array"}, {value: 1}]}, alias: "a"})
+        { column(name: "a") { ... on BooleanColumn { values } } } }""")
+    assert data == {"project": {"column": {"values": [True, None]}}}
+    data = executor("""{ project(columns: {array: {repeat: {name: "array"}}, alias: "a"})
+        { column(name: "a") { ... on ArrayColumn { unnest { ... on IntColumn { values } } } } } }""")
+    assert data == {"project": {"column": {"unnest": {"values": [0, 1, 2]}}}}
+    data = executor("""{ cast(schema: {name: "array", type: "array<string>"})
+        { project(columns: {array: {join: {name: "array"}, sep: ","}, alias: "a"})
+        { column(name: "a") { ... on StringColumn { values } } } } }""")
+    assert data == {"cast": {"project": {"column": {"values": ["0,1,2", None]}}}}
 
 
 def test_struct(executor):
