@@ -3,7 +3,14 @@ import pyarrow.compute as pc
 import pytest
 
 from graphique.core import Parquet, rank_over
-from graphique.scalars import BigInt, Duration, duration_isoformat, parse_duration, py_type
+from graphique.scalars import (
+    BigInt,
+    Duration,
+    duration_isoformat,
+    parse_duration,
+    py_type,
+    schema_types,
+)
 
 
 def test_duration():
@@ -29,6 +36,11 @@ def test_types():
     assert py_type(ibis.expr.datatypes.Int32()) is int
     assert py_type(ibis.expr.datatypes.Interval("s")) is Duration
     assert py_type(ibis.expr.datatypes.UUID()) is str
+    schema = ibis.Schema({"_": ibis.dtype("map<string, int>")})
+    with pytest.warns(UserWarning):
+        assert not dict(schema_types(schema))
+    schema = ibis.Schema({"_": ibis.dtype("array<array<string>>")})
+    assert not dict(schema_types(schema, filters=True))
 
 
 def test_parquet(dataset):

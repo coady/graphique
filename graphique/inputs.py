@@ -83,10 +83,12 @@ class Filter(Generic[T]):
     @classmethod
     def resolve_args(cls, types: dict) -> Iterable[StrawberryArgument]:
         """Generate dynamically resolved arguments for filter field."""
-        for name in types:
-            annotation = StrawberryAnnotation(cls[types[name]])  # type: ignore
-            if types[name] not in (list, dict):
-                yield StrawberryArgument(name, name, annotation, default={})
+        for name, scalar in types.items():
+            if getattr(scalar, "__origin__", None) is list:
+                annotation = ArrayFilter[scalar.__args__[0]]
+            else:
+                annotation = cls[scalar]  # type: ignore
+            yield StrawberryArgument(name, name, StrawberryAnnotation(annotation), default={})
         annotation = StrawberryAnnotation(Expression | None)
         yield StrawberryArgument("where", None, annotation, default=None)
 
@@ -101,6 +103,8 @@ class Filter(Generic[T]):
                         yield field == value[0] if len(value) == 1 else field.isin(value)
                     case list(), "ne":
                         yield field != value[0] if len(value) == 1 else field.notin(value)
+                    case _, "contains":
+                        yield field.contains(value)
                     case _:
                         yield getattr(operator, op)(field, value)
 
@@ -114,9 +118,18 @@ class Filter(Generic[T]):
                 if isinstance(value, list):
                     expr = pc.is_in(field, pa.array(value))
                     exprs.append(pc.invert(expr) if op == "ne" else expr)
+                elif op == "contains":  # placeholder, will not be in partition schema
+                    exprs.append(field == value)
                 else:
                     exprs.append(getattr(operator, op)(field, value))
         return functools.reduce(operator.and_, exprs or [None])
+
+
+@strawberry.input(description="predicates for arrays")
+class ArrayFilter(Generic[T]):
+    contains: T | None = default_field(description="array contains element")
+
+    __iter__ = Filter.__iter__
 
 
 @strawberry.input(description="name and optional alias for aggregation")

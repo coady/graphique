@@ -56,7 +56,7 @@ scalar_map = {
 }
 
 
-def py_type(dt: ibis.DataType) -> type | typing.NewType:
+def py_type(dt: ibis.DataType) -> type | typing.NewType | None:
     """Return python scalar type from data type."""
     match dt:
         case ibis.expr.datatypes.Boolean():
@@ -85,16 +85,27 @@ def py_type(dt: ibis.DataType) -> type | typing.NewType:
             return list
         case ibis.expr.datatypes.Struct():
             return strawberry.scalars.JSON
-    raise TypeError("unknown data type", dt)  # pragma: no cover
 
 
-def schema_types(schema: ibis.Schema) -> Iterator:
-    """Generate name and py types from schema."""
+def schema_types(schema: ibis.Schema, *, filters: bool = False) -> Iterator:
+    """Generate name and py types from schema.
+
+    Args:
+        filters: only yield filterable columns; arrays become `list[element]`
+    """
     for name in schema:
         if not name.isidentifier() or keyword.iskeyword(name):
             warnings.warn(f"invalid field name: {name}")
             continue
-        try:
-            yield name, py_type(schema[name])
-        except TypeError as exc:  # pragma: no cover
-            warnings.warn(f"{name}: {exc}")
+        scalar = py_type(schema[name])
+        if scalar is None:
+            warnings.warn(f"unknown data type: {schema[name]}")
+            continue
+        elif scalar is strawberry.scalars.JSON and filters:
+            continue
+        elif scalar is list and filters:
+            scalar = py_type(schema[name].value_type)
+            if scalar in (None, list, strawberry.scalars.JSON):
+                continue
+            scalar = list[scalar]
+        yield name, scalar

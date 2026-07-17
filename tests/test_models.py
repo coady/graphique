@@ -156,6 +156,10 @@ def test_array(executor):
     data = executor("""{ project(columns: {array: {contains: [{name: "array"}, {value: 1}]}, alias: "a"})
         { column(name: "a") { ... on BooleanColumn { values } } } }""")
     assert data == {"project": {"column": {"values": [True, None]}}}
+    data = executor("{ filter(array: {contains: 1}) { count } }")
+    assert data == {"filter": {"count": 1}}
+    with pytest.raises(ValueError, match="Int cannot represent"):
+        executor('{ filter(array: {contains: "1"}) { count } }')
     data = executor("""{ project(columns: {array: {repeat: {name: "array"}}, alias: "a"})
         { column(name: "a") { ... on ArrayColumn { unnest { ... on IntColumn { values } } } } } }""")
     assert data == {"project": {"column": {"unnest": {"values": [0, 1, 2]}}}}
