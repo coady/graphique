@@ -1,12 +1,12 @@
 [project]
 name = "graphique"
-version = "2.0.2"
+version = "2.1"
 description = "GraphQL service for python dataframes and parquet datasets."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "A. Coady"}]
-keywords = ["graphql", "arrow", "parquet"]
+keywords = ["graphql", "ibis", "dataframes", "arrow", "parquet"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
