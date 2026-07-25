@@ -228,7 +228,7 @@ class Aggregates:
     sum: list[Aggregate] = default_field([], func=ibis.expr.types.NumericColumn.sum)
     var: list[VarAggregate] = default_field([], func=ibis.expr.types.NumericColumn.var)
 
-    def __iter__(self) -> Iterable[tuple]:
+    def __iter__(self) -> Iterator[tuple]:
         for name, aggs in self.__dict__.items():
             for agg in aggs:
                 yield agg.to_ibis(name)

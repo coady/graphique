@@ -11,8 +11,9 @@ progress on the second pass.
 
 import operator
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Callable
+from typing import Annotated
 
 import pyarrow as pa
 import pyarrow.dataset as ds

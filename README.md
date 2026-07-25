@@ -47,13 +47,16 @@ Use a `Query` type with dataset attributes for multiple roots, and to enable fed
 import ibis
 from graphique import GraphQL, typed
 
-source = ibis.read_*(...)  # or `ibis.connect(...).table(...)` or `pyarrow.dataset.dataset(...)`
+source = ibis.read_ * (...)  # or `ibis.connect(...).table(...)` or `pyarrow.dataset.dataset(...)`
 # apply initial projections or filters to `source`
 app = GraphQL(source)  # Table is root query type
+
 
 # multiple named fields, with optional federation keys
 class Query:
     name = source  # or `typed(source, name, keys=...)`
+
+
 app = GraphQL(Query)
 ```
 

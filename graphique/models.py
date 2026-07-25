@@ -9,7 +9,7 @@ import inspect
 from collections.abc import Callable
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import TYPE_CHECKING, Annotated, Generic, TypeVar, get_args
+from typing import TYPE_CHECKING, Annotated, ClassVar, Generic, TypeVar, get_args
 
 import ibis.expr.types
 import strawberry
@@ -46,7 +46,7 @@ def col_field(func: Callable):
 
 @strawberry.interface(description="ibis column interface")
 class Column:
-    registry = {}
+    registry: ClassVar[dict] = {}
     column: strawberry.Private[ibis.Column]
 
     @classmethod
@@ -100,7 +100,7 @@ class Set(Generic[T]):
 
 @Column.register(strawberry.scalars.Base64)
 @strawberry.type(name="Column", description=f"[generic column]({links.ref}/expression-generic)")
-class GenericColumn(Generic[T], Column):
+class GenericColumn(Column, Generic[T]):
     @doc_field
     def values(self) -> list[T | None]:
         """list of values"""
@@ -215,7 +215,7 @@ class IntColumn(NumericColumn[T]):
     @doc_field
     def take_from(
         self, info: Info, field: str
-    ) -> Annotated["Dataset", strawberry.lazy(".interface")] | None:
+    ) -> Annotated[Dataset, strawberry.lazy(".interface")] | None:
         """Select indices from a table on the root Query type."""
         root = getattr(info.root_value, field)
         return root.take(info, self.column.to_list())

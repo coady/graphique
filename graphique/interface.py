@@ -229,7 +229,7 @@ class Dataset:
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
         """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns."""
-        aggs = dict(aggregate)  # type: ignore
+        aggs = dict(aggregate)
         if not aggs and by == Parquet.keys(self.source, *by):
             table = Parquet.fragments(self.source, counts)
         else:
@@ -487,7 +487,7 @@ class Dataset:
     ) -> Self:
         """Provisionally group table by adjacent values in columns."""
         aggs = {name: ibis._[name].first() for name in by}
-        aggs.update(aggregate)  # type: ignore
+        aggs.update(aggregate)
         if counts:
             aggs[counts] = ibis._.count()
         columns = [(ibis._[name] != ibis._[name].lag()).fill_null(False) for name in by]

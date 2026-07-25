@@ -45,7 +45,7 @@ cli = ["tqdm", "typer"]
 line-length = 100
 
 [tool.ruff.lint]
-extend-select = ["I"]
+ignore = ["B", "C408", "PL", "PYI045", "RUF012"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]

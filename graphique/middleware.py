@@ -5,6 +5,7 @@ ASGI GraphQL utilities.
 import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
+from typing import ClassVar
 
 import ibis
 import strawberry.asgi
@@ -47,7 +48,7 @@ class GraphQL(strawberry.asgi.GraphQL):
         **kwargs: additional `asgi.GraphQL` options
     """
 
-    options = dict(
+    options: ClassVar[dict] = dict(
         types=Column.registry.values(),
         config=strawberry.schema.config.StrawberryConfig(scalar_map=scalar_map),
     )
