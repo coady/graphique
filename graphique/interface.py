@@ -485,7 +485,7 @@ class Dataset:
         order: str = "_",
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
-        """Provisionally group table by adjacent values in columns."""
+        """Group table by adjacent values in columns."""
         aggs = {name: ibis._[name].first() for name in by}
         aggs.update(aggregate)
         if counts:
@@ -495,8 +495,6 @@ class Dataset:
         table = self.table.mutate({order: ibis.or_(*columns)})  # window functions can't be nested
         table = table.mutate({order: table[order].cumsum()})
         return self.resolve(info, table.aggregate(aggs, by=[order]).order_by(order))
-
-    runs.directives = [provisional()]
 
     # dynamic fields - these methods are wrapped with type annotations
 

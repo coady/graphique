@@ -93,7 +93,7 @@ uvicorn <module>:app
 #### aggregation
 * `group`: group by given columns, and aggregate the others
 * `distinct`: group with all columns
-* `runs`: provisionally group by adjacency
+* `runs`: group by adjacency
 * `unnest`: unnest an array column
 * `count`, `any`: number of rows
 
