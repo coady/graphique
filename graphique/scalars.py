@@ -107,5 +107,5 @@ def schema_types(schema: ibis.Schema, *, filters: bool = False) -> Iterator:
             scalar = py_type(schema[name].value_type)
             if scalar in (None, list, strawberry.scalars.JSON):
                 continue
-            scalar = list[scalar]
+            scalar = list[scalar]  # type: ignore
         yield name, scalar

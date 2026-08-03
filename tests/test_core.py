@@ -70,7 +70,7 @@ def test_rank_over(dataset):
     table = Parquet.to_table(dataset)
     data = rank_over(table, ["longitude"], ["state"], ibis.row_number(), 2)
     assert data.count().to_pyarrow().as_py() == 104
-    assert data[:4]["state"].to_list() == ["AK", "AK", "HI", "HI"]
+    assert data["state"].nunique().to_pyarrow().as_py() == 52
     data = rank_over(table, ["longitude"], ["state"], ibis.rank())
     assert data.count().to_pyarrow().as_py() == 52
-    assert data[:2]["state"].to_list() == ["AK", "HI"]
+    assert data["state"].nunique().to_pyarrow().as_py() == 52
