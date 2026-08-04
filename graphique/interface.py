@@ -19,7 +19,7 @@ from strawberry.permission import BasePermission
 from strawberry.scalars import JSON
 
 from .core import Parquet, getitems, order_key, rank_over
-from .inputs import Aggregates, Expression, Field, Filter, Projection, Scalars, provisional
+from .inputs import Aggregates, Expression, Field, Filter, Projection, Scalars
 from .models import Column, doc_field, links
 from .scalars import BigInt
 
@@ -245,7 +245,7 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         limit="maximum number of rows to return; optimized for partitioned dataset keys",
-        over="column names; `limit` applies separately over each grouping window",
+        over="column names; sort and `limit` applies separately over each grouping window",
     )
     def order(
         self,
@@ -269,14 +269,13 @@ class Dataset:
             table = self.table
         return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
 
-    order.arguments[-2].directives = [provisional()]
     order.arguments[-1].deprecation_reason = "use `first` instead"
 
     @doc_field(
         by="column names; prefix with `-` for descending order",
         rank="maximum rank of rows to return; optimized for partitioned dataset keys",
         dense="use dense rank (all ties) or sparse rank (only ties at the boundary)",
-        over="column names; `rank` applies separately over each grouping window",
+        over="column names; sort and `rank` applies separately over each grouping window",
     )
     def first(
         self,
@@ -286,7 +285,7 @@ class Dataset:
         dense: bool = False,
         over: list[str] = [],
     ) -> Self:
-        """Provisionally sort and filter by rank."""
+        """Sort and filter by rank."""
         if over:
             index = ibis.dense_rank() if dense else ibis.rank()
             return self.resolve(info, rank_over(self.table, by, over, index, rank))
@@ -303,8 +302,6 @@ class Dataset:
         order_by = list(map(order_key, by))
         table = table.semi_join(mask.order_by(*order_by)[:rank].distinct(), mask.columns)
         return self.resolve(info, table.order_by(*order_by))
-
-    first.directives = [provisional()]
 
     @doc_field(
         name="column name",

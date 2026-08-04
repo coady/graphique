@@ -99,7 +99,7 @@ uvicorn <module>:app
 
 #### ordering
 * `order`: sort table by given columns
-* `first`: provisionally sort and filter by rank
+* `first`: sort and filter by rank
 
 #### reflection
 * `type`: type of data source

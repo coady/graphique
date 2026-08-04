@@ -43,10 +43,7 @@ class optional:
     """
 
 
-@use_doc(
-    strawberry.schema_directive,
-    locations=[Location.ARGUMENT_DEFINITION, Location.FIELD_DEFINITION, Location.OBJECT],
-)
+@use_doc(strawberry.schema_directive, locations=[Location.OBJECT])
 class provisional:
     """Provisional feature; subject to change in the future."""
 
