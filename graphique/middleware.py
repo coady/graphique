@@ -2,7 +2,6 @@
 ASGI GraphQL utilities.
 """
 
-import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
 from typing import ClassVar
@@ -64,16 +63,6 @@ class GraphQL(strawberry.asgi.GraphQL):
 
     async def get_root_value(self, request):
         return self.root_value
-
-    @classmethod
-    def federated(cls, roots: Mapping[str, Source], keys: Mapping[str, Iterable] = {}, **kwargs):
-        """Deprecated: construct GraphQL app with multiple federated datasets.
-
-        Create a `Query` class with typed fields using `typed` instead. See customize docs.
-        """
-        warnings.warn("use a Query class with attributes instead", DeprecationWarning)
-        root_values = {name: typed(roots[name], name, keys.get(name, ())) for name in roots}
-        return cls(type("Query", (), root_values), **kwargs)
 
 
 def root_value(cls: type):

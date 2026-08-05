@@ -251,9 +251,6 @@ class Expression:
     name: list[str] = default_field([], description="column name(s)")
     value: JSON | None = default_field(description="JSON scalar", nullable=True)
     scalar: Scalars | None = default_field(description="typed scalar")
-    row_number: None = default_field(
-        func=ibis.row_number, deprecation_reason="use `window.rowNumber`"
-    )
 
     eq: list[Expression] = default_field([], description="==")
     ne: list[Expression] = default_field([], description="!=")
@@ -275,21 +272,9 @@ class Expression:
     truediv: list[Expression] = default_field([], name="div", description="/")
 
     coalesce: list[Expression] = default_field([], func=ibis.Column.coalesce)
-    cume_dist: Expression | None = default_field(
-        func=ibis.Column.cume_dist, deprecation_reason="use `window.cumeDist`"
-    )
     cummax: Expression | None = default_field(func=ibis.Column.cummax)
     cummin: Expression | None = default_field(func=ibis.Column.cummin)
-    dense_rank: Expression | None = default_field(
-        func=ibis.Column.dense_rank, deprecation_reason="use `window.denseRank`"
-    )
     ifelse: list[Expression] = default_field([], func=ibis.expr.types.BooleanColumn.ifelse)
-    percent_rank: Expression | None = default_field(
-        func=ibis.Column.percent_rank, deprecation_reason="use `window.percentRank`"
-    )
-    rank: Expression | None = default_field(
-        func=ibis.Column.rank, deprecation_reason="use `window.rank`"
-    )
 
     array: Arrays | None = default_field(description="array value functions")
     numeric: Numeric | None = default_field(description="numeric functions")
@@ -311,8 +296,6 @@ class Expression:
             yield self.value
         if self.scalar:
             yield from self.scalar
-        if self.row_number is not UNSET:
-            yield ibis.row_number()
         for name, (expr, *args) in self.items():
             match name:
                 case "eq" | "ne" | "lt" | "le" | "gt" | "ge" | "inv" | "and_" | "or_" | "xor":

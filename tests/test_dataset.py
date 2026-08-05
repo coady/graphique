@@ -42,11 +42,6 @@ def test_fragments(dsclient):
         '{ group(by: ["north", "west"], counts: "c") { column(name: "c") { ... on BigIntColumn { values } } } }'
     )
     assert data == {"group": {"column": {"values": unordered([9301, 11549, 11549, 9301])}}}
-    data = dsclient.execute('{ order(by: "north", limit: 1, dense: true) { row { north } } }')
-    assert data == {"order": {"row": {"north": 0}}}
-    data = dsclient.execute("""{ order(by: ["-north", "-zipcode"], limit: 1, dense: true) {
-        row { zipcode } } }""")
-    assert data == {"order": {"row": {"zipcode": 99950}}}
     data = dsclient.execute('{ order(by: "north", limit: 1) { row { north } } }')
     assert data == {"order": {"row": {"north": 0}}}
     data = dsclient.execute(
@@ -143,8 +138,6 @@ def test_root():
 
 
 def test_federation(fedclient):
-    with pytest.warns(DeprecationWarning):
-        assert fedclient.federated({})
     data = fedclient.execute(
         "{ _service { sdl } zipcodes { __typename count } zipDb { __typename count } }"
     )

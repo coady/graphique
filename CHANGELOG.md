@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
+### Removed
+* `dense` ordering moved to `first`
+* `GraphQL.federated` replaced with class-based approach
+* expression ranking functions moved to `window` input
 
 ## [2.1](https://pypi.org/project/graphique/2.1/) - 2026-07-21
 ### Changed

@@ -253,11 +253,8 @@ class Dataset:
         by: list[str],
         limit: BigInt | None = None,
         over: list[str] = [],
-        dense: bool = False,
     ) -> Self:
         """[Sort](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.order_by) table by columns."""
-        if dense and limit is not None:
-            return self.first(info, by, rank=limit, dense=True, over=over)  # type: ignore
         if over and limit is not None:
             return self.resolve(info, rank_over(self.table, by, over, ibis.row_number(), limit))
         if keys := Parquet.keys(self.source, *by):
@@ -268,8 +265,6 @@ class Dataset:
         else:
             table = self.table
         return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
-
-    order.arguments[-1].deprecation_reason = "use `first` instead"
 
     @doc_field(
         by="column names; prefix with `-` for descending order",

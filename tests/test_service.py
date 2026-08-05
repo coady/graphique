@@ -214,7 +214,7 @@ def test_project(client):
     data = client.execute("""{ project(columns: {alias: "state", cummin: {name: "state"}}) {
         columns { state { last } } } }""")
     assert data == {"project": {"columns": {"state": {"last": "AK"}}}}
-    data = client.execute("""{ project(columns: {alias: "idx", denseRank: {name: "state"}}) {
+    data = client.execute("""{ project(columns: {alias: "idx", window: {denseRank: null, by: "state"}}) {
         column(name: "idx") { ... on BigIntColumn { min max } } } }""")
     assert data == {"project": {"column": {"min": 0, "max": 51}}}
 
@@ -292,7 +292,7 @@ def test_order(client):
         project(columns: {array: {value: {array: {sort: {name: "county"}}}, offset: 0}, alias: "county"}) {
         row { state county } } } } }""")
     assert data["group"]["order"]["project"]["row"] == {"state": "AK", "county": "Aleutians East"}
-    data = client.execute("""{ project(columns: {alias: "index", rowNumber: null}) {
+    data = client.execute("""{ project(columns: {alias: "index", window: {rowNumber: null}}) {
         group(by: "state", aggregate: {first: {name: "index"}, collect: {name: "city"}}) {
         order(by: "index") {
         project(columns: {alias: "city", array: {slice: {name: "city"}, limit: 1}}) {
