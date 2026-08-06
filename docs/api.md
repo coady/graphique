@@ -50,7 +50,7 @@ Partitioned parquet datasets have custom optimizations for fragment keys.
 * `group` on fragment keys with counts
 * `order` or `first` rank on fragment keys
 
-Otherwise there is no advantage in the root being an arrow dataset over an ibis table.
+Otherwise there is no advantage in the root being a parquet dataset over an ibis table.
 
 ## Roots
 A single root can be attached directly. This is not common - but perfectly valid - GraphQL usage. The resolvers receive the [table object](https://graphql.org/learn/execution/#root-fields-and-resolvers) as the first argument, just as with nested fields.

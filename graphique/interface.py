@@ -71,7 +71,7 @@ def ibis_schema(root: Source) -> ibis.Schema:
     return root.schema() if isinstance(root, ibis.Table) else ibis.Schema.from_pyarrow(root.schema)
 
 
-@strawberry.interface(description="ibis `Table` or arrow `Dataset`")
+@strawberry.interface(description="ibis `Table` or parquet `Dataset`")
 class Dataset:
     source: strawberry.Private[Source]
 
@@ -115,7 +115,7 @@ class Dataset:
         return self.table.to_sql(dialect=dialect, pretty=pretty)
 
     @strawberry.field(
-        description=f"[ibis table]({links.ref}/expression-table) or [arrow dataset](https://arrow.apache.org/docs/python/api/dataset.html)"
+        description=f"ibis [table]({links.ref}/expression-table) or parquet [dataset](https://arrow.apache.org/docs/python/api/dataset.html)"
     )
     def type(self) -> str:
         return type(self.source).__name__

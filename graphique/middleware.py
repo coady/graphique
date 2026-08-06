@@ -94,7 +94,7 @@ def typed(source: Source, name: str = "", keys: Iterable = ()) -> Dataset:
     """Return schema-derived `Dataset` instance for `source`.
 
     Args:
-        source: ibis table or arrow dataset
+        source: ibis table or parquet dataset
         name: optional name of the dataset, prefixed to the type names
         keys: keys for federation
     """
