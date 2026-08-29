@@ -15,7 +15,7 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET, Info
-from strawberry.permission import BasePermission
+from strawberry.permission import BasePermission, PermissionExtension
 from strawberry.scalars import JSON
 
 from .core import Parquet, getitems, order_key, rank_over
@@ -532,4 +532,4 @@ class Dataset:
         table = self.table.alias(alias) if alias else self.table
         return self.resolve(info, table.sql(query, dialect=dialect))
 
-    sql.permission_classes = [Deny]
+    sql.extensions.append(PermissionExtension([Deny()], use_directives=False))

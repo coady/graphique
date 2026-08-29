@@ -312,7 +312,7 @@ class Expression:
         fields = list(self)
         if len(fields) > 1:
             raise ValueError("conflicting inputs: " + ", ".join(map(str, fields)))
-        return next(iter(fields), None)  # type: ignore
+        return next(iter(fields), None)
 
 
 @strawberry.input(description="an `Expression` with an optional alias")
