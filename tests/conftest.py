@@ -1,5 +1,4 @@
 import collections
-import os
 import sys
 from importlib import metadata
 from pathlib import Path
@@ -32,12 +31,12 @@ class TestClient(GraphQL):
 
 
 def load(path, **vars):
-    os.environ.update(vars, PARQUET_PATH=str(fixtures / path))
-    sys.modules.pop("graphique.service", None)
-    from graphique.service import app
-
-    for var in vars:
-        del os.environ[var]
+    vars["PARQUET_PATH"] = str(fixtures / path)
+    with pytest.MonkeyPatch.context() as mp:
+        for key in vars:
+            mp.setenv(key, vars[key])
+        mp.delitem(sys.modules, "graphique.service", raising=False)
+        from graphique.service import app
     return app
 
 
