@@ -117,6 +117,8 @@ def test_order(dsclient):
     data = dsclient.execute("""{ first(by: ["north", "state"], rank: 2, dense: true)
         { columns { state { nunique(approx: true) } } } }""")
     assert data == {"first": {"columns": {"state": {"nunique": 2}}}}
+    data = dsclient.execute('{ first(by: "-state", rank: 2, dense: true) { row { state } } }')
+    assert data == {"first": {"row": {"state": "WY"}}}
     data = dsclient.execute('{ order(by: "north", limit: 3) { count } }')
     assert data == {"order": {"count": 3}}
     data = dsclient.execute('{ order(by: "north", limit: 50000) { count } }')

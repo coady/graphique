@@ -292,12 +292,10 @@ class Dataset:
             table = Parquet.to_table(source)
         else:
             table = self.table
-        mask = table.select(name.lstrip("-") for name in by)
-        if dense and rank > 1:
-            mask = mask.distinct()
-        order_by = list(map(order_key, by))
-        table = table.semi_join(mask.order_by(*order_by)[:rank].distinct(), mask.columns)
-        return self.resolve(info, table.order_by(*order_by))
+        order_by = {name.strip("-"): order_key(name) for name in by}
+        mask = table.distinct(on=order_by) if dense and rank > 1 else table
+        table = table.semi_join(mask.order_by(*order_by.values())[:rank], list(order_by))
+        return self.resolve(info, table.order_by(*order_by.values()))
 
     @doc_field(
         name="column name",

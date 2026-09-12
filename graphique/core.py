@@ -95,5 +95,5 @@ class Parquet(ds.Dataset):
         else:
             table = Parquet.fragments(self, counts="_").order_by(*keys.values()).cache()
             limit = bisect.bisect_left(table["_"].cumsum().to_list(), rank) + 1
-            paths = table.semi_join(table[:limit].select(*keys).distinct(), list(keys))["__path__"]
+            paths = table.semi_join(table[:limit], list(keys))["__path__"]
         return ds.dataset(paths.to_list(), partitioning=self.partitioning)
