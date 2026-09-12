@@ -14,6 +14,7 @@ import ibis.expr.types
 import pyarrow as pa
 import pyarrow.dataset as ds
 import strawberry
+from sqlglot import exp, parse_one
 from strawberry import UNSET, Info
 from strawberry.permission import BasePermission, PermissionExtension
 from strawberry.scalars import JSON
@@ -523,12 +524,29 @@ class Dataset:
     @doc_field(
         query="SQL query string",
         alias="[alias](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.alias) of the table expression referenced in the query",
-        dialect="input SQL dialect; defaults to the backend’s native dialect",
+        dialect="input SQL dialect; defaults to the backend's native dialect",
+        params="JSON object or array for `:name` or `?` placeholders",
     )
     def sql(
-        self, info: Info, query: str, alias: str = "", dialect: str | None = None
-    ) -> Self:  # pragma: no cover
+        self,
+        info: Info,
+        query: str,
+        alias: str = "",
+        dialect: str | None = None,
+        params: JSON | None = UNSET,
+    ) -> Self:
         """[Run a SQL](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.sql) query against a table expression."""
+        if params is not UNSET:
+            expr = parse_one(query, dialect=dialect)
+            match params:
+                case dict():
+                    params: dict = {key: exp.convert(params[key]) for key in params}
+                    expr = exp.replace_placeholders(expr, **params)
+                case list():
+                    expr = exp.replace_placeholders(expr, *params)
+                case _:
+                    expr = exp.replace_placeholders(expr, params)
+            query = expr.sql(dialect=dialect)
         table = self.table.alias(alias) if alias else self.table
         return self.resolve(info, table.sql(query, dialect=dialect))
 

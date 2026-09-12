@@ -49,7 +49,7 @@ def execute(query):
 execute("""{ zipcodes {
     count
     filter(state: {eq: "CA"}) { count }
-    sql(query: "select * from t where state = 'CA'", alias: "t") { count }
+    sql(query: "select * from t where state = :state", alias: "t", params: {state: "CA"}) { count }
     states
 } }""")
 ```

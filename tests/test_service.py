@@ -389,8 +389,27 @@ def test_runs(client):
     }
 
 
-def test_sql(client):
+def test_sql(client, monkeypatch):
     data = client.execute("{ toSql(pretty: false) }")
     assert data == {"toSql": 'SELECT * FROM "zipcodes.parquet"'}
     with pytest.raises(ValueError, match="denied"):
         client.execute('{ sql(query: "select * from t", alias: "t") { type } }')
+    monkeypatch.setattr("graphique.interface.Deny.has_permission", lambda *_, **__: True)
+    data = client.execute('{ sql(query: "select * from t", alias: "t") { count } }')
+    assert data == {"sql": {"count": 41700}}
+    data = client.execute(
+        '{ sql(query: "select * from t where state = :st", alias: "t", params: {st: "CA"}) { count } }'
+    )
+    assert data == {"sql": {"count": 2647}}
+    data = client.execute(
+        '{ sql(query: "select * from t where state = :st", alias: "t", params: {st: null}) { count } }'
+    )
+    assert data == {"sql": {"count": 0}}
+    data = client.execute(
+        '{ sql(query: "select * from t where state = ?", alias: "t", params: ["CA"]) { count } }'
+    )
+    assert data == {"sql": {"count": 2647}}
+    data = client.execute(
+        '{ sql(query: "select * from t where state = ?", alias: "t", params: "CA") { count } }'
+    )
+    assert data == {"sql": {"count": 2647}}
