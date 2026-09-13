@@ -13,7 +13,7 @@ table = ibis.read_parquet(fixtures / "zipcodes.parquet")
 
 
 class Query:
-    zipcodes = typed(dataset, name="zipcodes", keys=["zipcode"])
+    zipcodes = typed(dataset, name="zipcode", keys=["zipcode"])
     states = table.mutate({"indices": ibis.row_number()}).order_by("state", "county")
     zip_db = ds.dataset(fixtures / "zip_db.parquet")
 

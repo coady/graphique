@@ -144,18 +144,18 @@ def test_federation(fedclient):
         "{ _service { sdl } zipcodes { __typename count } zipDb { __typename count } }"
     )
     assert data["_service"]["sdl"]
-    assert data["zipcodes"] == {"__typename": "ZipcodesTable", "count": 41700}
+    assert data["zipcodes"] == {"__typename": "ZipcodeTable", "count": 41700}
     assert data["zipDb"] == {"__typename": "ZipDbTable", "count": 42724}
 
     data = fedclient.execute(
-        """{ _entities(representations: {__typename: "ZipcodesTable", zipcode: 90001}) {
-        ... on ZipcodesTable { count type row { state } } } }"""
+        """{ _entities(representations: {__typename: "ZipcodeTable", zipcode: 90001}) {
+        ... on ZipcodeTable { count type row { state } } } }"""
     )
     assert data == {"_entities": [{"count": 1, "type": "CachedTable", "row": {"state": "CA"}}]}
     data = fedclient.execute("""{ states { filter(state: {eq: "CA"}) { columns { indices {
         takeFrom(field: "zipcodes") { __typename column(name: "state") { count } } } } } } }""")
     table = data["states"]["filter"]["columns"]["indices"]["takeFrom"]
-    assert table == {"__typename": "ZipcodesTable", "column": {"count": 2647}}
+    assert table == {"__typename": "ZipcodeTable", "column": {"count": 2647}}
 
 
 def test_sorted(fedclient):

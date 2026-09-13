@@ -85,6 +85,7 @@ def root_value(cls: type):
     for name, value in cls.__dict__.items():
         if isinstance(value, (Source, Dataset)):
             data[name] = typed(value, name) if isinstance(value, Source) else value
+            type(data[name]).field = name  # type: ignore
     annotations = {name: type(data[name]) for name in data}
     cls = type(cls.__name__, cls.__bases__, {"__annotations__": annotations})
     return strawberry.type(cls)(**data)
@@ -95,7 +96,7 @@ def typed(source: Source, name: str = "", keys: Iterable = ()) -> Dataset:
 
     Args:
         source: ibis table or parquet dataset
-        name: optional name of the dataset, prefixed to the type names
+        name: optional prefix for the type names, and enables federation
         keys: keys for federation
     """
     return implement(ibis_schema(source), name, keys)(source=source)
@@ -106,7 +107,7 @@ def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[
 
     Args:
         schema: ibis schema
-        name: optional name of the dataset, prefixed to the type names
+        name: optional prefix for the type names, and enables federation
         keys: keys for federation
     """
     types = dict(schema_types(schema))
@@ -115,7 +116,7 @@ def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[
     Row = row_type(types, prefix)
 
     class Table(Dataset):
-        field = name
+        field: ClassVar[str]  # root Query field for `resolve_reference`
 
         def columns(self, info: Info) -> Columns:  # type: ignore
             """fields for each column"""
