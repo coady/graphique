@@ -6,15 +6,8 @@ lint:
 	uvx ruff format --check
 	uv run ty check graphique
 
-html: docs/schema.md
+html: docs/schema.graphql
 	uv run --group docs great-docs build
-
-docs/schema.md: docs/schema.graphql
-	./node_modules/.bin/graphql-markdown \
-		--title "Example Schema" \
-		--no-toc \
-		--prologue "Generated from a test fixture of zipcodes." \
-		$? > $@
 
 docs/schema.graphql: graphique/*.py
 	PARQUET_PATH=tests/fixtures/zipcodes.parquet uv run strawberry export-schema graphique.service:app.schema > $@

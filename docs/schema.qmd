@@ -1,0 +1,7 @@
+---
+title: Example Schema
+---
+
+Generated from a test fixture of zipcodes.
+
+{{< include schema.graphql lang="graphql" >}}

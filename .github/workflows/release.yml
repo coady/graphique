@@ -27,7 +27,6 @@ jobs:
     - uses: actions/checkout@v7
     - uses: astral-sh/setup-uv@v7
     - uses: quarto-dev/quarto-actions/setup@v2
-    - run: npm install
     - run: make html
     - uses: actions/upload-pages-artifact@v5
       with:

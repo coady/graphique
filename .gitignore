@@ -1,6 +1,5 @@
 __pycache__/
 .coverage
 great-docs/
-docs/schema.*
-node_modules/
+docs/schema.graphql
 uv.lock
