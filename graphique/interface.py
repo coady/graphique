@@ -164,16 +164,25 @@ class Dataset:
         index="column index(es); may access array offsets",
     )
     def column(
-        self, name: list[str], cast: str = "", try_: bool = False, index: list[BigInt] = []
+        self,
+        info: Info,
+        name: list[str],
+        cast: str = "",
+        try_: bool = False,
+        index: list[BigInt] = [],
     ) -> Column | None:
         """Column of any type by name.
 
         If the column is in the schema, `columns` can be used instead.
         """
-        column = getitems(self.table, *(name + index))
+        table = self.table
+        column = getitems(table, *(name + index))
         if cast:
             column = (column.try_cast if try_ else column.cast)(cast)
-        return Column.cast(column.as_table().cache()[0])
+        counts = selections(*info.selected_fields)
+        if counts.total() > 1 and not isinstance(table, ibis.expr.types.CachedTable):
+            column = column.as_table().cache()[0]
+        return Column.cast(column)
 
     @doc_field(
         offset="number of rows to skip; negative value skips from the end",
@@ -492,8 +501,13 @@ class Dataset:
     def columns(self, info: Info) -> dict:
         """Fields for each column."""
         names = selections(*info.selected_fields)
-        table = self.table.select(*names).cache()
-        return {name: Column.cast(table[name]) for name in table.columns}
+        table = self.table
+        counts = collections.Counter()
+        for field in info.selected_fields:
+            counts.update(selections(*field.selections))
+        if counts.total() > 1 and not isinstance(table, ibis.expr.types.CachedTable):
+            table = table.select(*names).cache()
+        return {name: Column.cast(table[name]) for name in names}
 
     def row(self, info: Info, index: int = 0) -> dict:
         """Scalar values at index."""

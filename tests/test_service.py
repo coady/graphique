@@ -212,8 +212,8 @@ def test_project(client):
         columns { zipcode { first last } } } }""")
     assert data == {"project": {"columns": {"zipcode": {"first": 501, "last": 2066562337}}}}
     data = client.execute("""{ project(columns: {alias: "state", cummin: {name: "state"}}) {
-        columns { state { last } } } }""")
-    assert data == {"project": {"columns": {"state": {"last": "AK"}}}}
+        columns { state { min } } } }""")
+    assert data == {"project": {"columns": {"state": {"min": "AK"}}}}
     data = client.execute("""{ project(columns: {alias: "idx", window: {denseRank: null, by: "state"}}) {
         column(name: "idx") { ... on BigIntColumn { min max } } } }""")
     assert data == {"project": {"column": {"min": 0, "max": 51}}}
