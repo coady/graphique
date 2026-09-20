@@ -3,11 +3,11 @@ import sys
 from importlib import metadata
 from pathlib import Path
 
+import ibis
 import pyarrow.dataset as ds
 import pytest
 
 from graphique import GraphQL
-from graphique.core import Parquet
 
 fixtures = Path(__file__).parent / "fixtures"
 
@@ -51,8 +51,8 @@ def partitioned():
 
 
 @pytest.fixture(scope="module")
-def client(dataset):
-    return TestClient(Parquet.to_table(dataset, name="zipcodes.parquet"))
+def client():
+    return TestClient(ibis.read_parquet(fixtures / "zipcodes.parquet", table_name="zipcodes"))
 
 
 @pytest.fixture(scope="module")

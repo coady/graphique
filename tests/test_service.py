@@ -391,7 +391,7 @@ def test_runs(client):
 
 def test_sql(client, monkeypatch):
     data = client.execute("{ toSql(pretty: false) }")
-    assert data == {"toSql": 'SELECT * FROM "zipcodes.parquet"'}
+    assert data == {"toSql": 'SELECT * FROM "zipcodes"'}
     with pytest.raises(ValueError, match="denied"):
         client.execute('{ sql(query: "select * from t", alias: "t") { type } }')
     monkeypatch.setattr("graphique.interface.Deny.has_permission", lambda *_, **__: True)
