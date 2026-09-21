@@ -66,6 +66,14 @@ def test_ordering(partitioned):
     assert Parquet.first(partitioned, "north", rank=2, dense=True).count_rows() == 41700
 
 
+def test_empty(partitioned):
+    empty = Parquet.filter(partitioned, pc.field("north") > 1)
+    assert empty.schema == partitioned.schema
+    assert not Parquet.to_table(empty).to_pyarrow()
+    assert Parquet.order(empty, "north").schema == empty.schema
+    assert Parquet.first(empty, "north").schema == empty.schema
+
+
 def test_rank_over(dataset):
     table = Parquet.to_table(dataset)
     data = rank_over(table, ["longitude"], ["state"], ibis.row_number(), 2)

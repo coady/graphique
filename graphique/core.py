@@ -60,7 +60,10 @@ class Parquet(ds.Dataset):
             parts[-1][path] = frag.path
             if counts:
                 parts[-1][counts] = frag.count_rows()
-        return ibis.memtable(pa.Table.from_pylist(parts))
+        schema = Parquet.schema(self).append(pa.field(path, "string"))
+        if counts:
+            schema = schema.append(pa.field(counts, "int64"))
+        return ibis.memtable(pa.Table.from_pylist(parts, schema=schema))
 
     def filter(self, expr: ds.Expression | None) -> ds.Dataset | None:
         """Attempt to apply filter to partition keys."""
@@ -71,11 +74,13 @@ class Parquet(ds.Dataset):
         if expr is None:
             return self
         paths = [frag.path for frag in self.get_fragments(expr)]
-        return ds.dataset(paths, partitioning=self.partitioning)
+        return ds.dataset(paths, schema=self.schema, partitioning=self.partitioning)
 
     def to_table(self) -> ibis.Table:
         """Return ibis `Table` from filtered dataset."""
         paths = [frag.path for frag in self.get_fragments()]
+        if not paths:
+            return ibis.memtable(self.schema.empty_table())
         return ibis.read_parquet(paths)
 
     def order(self, *names: str, limit: int | None = None) -> ds.Dataset:
@@ -84,7 +89,8 @@ class Parquet(ds.Dataset):
         table = table.order_by(*map(order_key, names)).cache()
         if limit is not None:
             limit = bisect.bisect_left(table["_"].cumsum().to_list(), limit) + 1
-        return ds.dataset(table[:limit]["__path__"].to_list(), partitioning=self.partitioning)
+        paths = table[:limit]["__path__"]
+        return ds.dataset(paths.to_list(), schema=self.schema, partitioning=self.partitioning)
 
     def first(self, *names: str, rank: int = 1, dense: bool = False) -> ds.Dataset:
         """Return ordered partitions up to max rank (dense or sparse)."""
@@ -96,4 +102,4 @@ class Parquet(ds.Dataset):
             table = Parquet.fragments(self, counts="_").order_by(*keys.values()).cache()
             limit = bisect.bisect_left(table["_"].cumsum().to_list(), rank) + 1
             paths = table.semi_join(table[:limit], list(keys))["__path__"]
-        return ds.dataset(paths.to_list(), partitioning=self.partitioning)
+        return ds.dataset(paths.to_list(), schema=self.schema, partitioning=self.partitioning)
