@@ -18,7 +18,7 @@ def execute(query):
 
 table = ibis.read_parquet("../../tests/fixtures/zipcodes.parquet")
 # example projection: camel-cased fields (not relevant in this dataset)
-_ = table.select({to_camel_case(name): table[name] for name in table.columns})
+_ = table.select(**{to_camel_case(name): table[name] for name in table.columns})
 app = GraphQL(table)
 ```
 

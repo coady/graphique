@@ -28,8 +28,8 @@ if COLUMNS or not root.partitioning.schema:
     if isinstance(COLUMNS, dict):
         root = root.select(**{alias: ibis._[name] for alias, name in COLUMNS.items()})
     elif COLUMNS:
-        root = root.select(COLUMNS)
+        root = root.select(*COLUMNS)
 
-if NAME:  # typically a class; only needed because `NAME` is dynamic
+if NAME:  # typically a class; `type` expression only needed because `NAME` is dynamic
     root = type("Query", (), {NAME: root})
 app = GraphQL(root, extensions=[MetricsExtension])

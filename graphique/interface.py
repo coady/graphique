@@ -208,7 +208,7 @@ class Dataset:
     ) -> Self:
         """[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
 
-        Differs from `group` by keeping all columns, and defaulting to all keys.
+        Differs from `group` by keeping all columns, and defaulting to all keys. May use ibis `value_counts` or `aggregate` as needed.
         """
         table = self.table
         if order:
@@ -238,7 +238,10 @@ class Dataset:
         order: str = "",
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
-        """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns."""
+        """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns.
+
+        Optimized for partitioned dataset keys with no aggregates.
+        """
         aggs = dict(aggregate)
         if not aggs and by == Parquet.keys(self.source, *by):
             table = Parquet.fragments(self.source, counts)
@@ -255,7 +258,7 @@ class Dataset:
     @doc_field(
         by="column names; prefix with `-` for descending order",
         limit="maximum number of rows to return; optimized for partitioned dataset keys",
-        over="column names; sort and `limit` applies separately over each grouping window",
+        over="column names; `limit` applies over separate grouping windows, which may be significantly slower than `group`",
     )
     def order(
         self,
@@ -281,7 +284,7 @@ class Dataset:
         by="column names; prefix with `-` for descending order",
         rank="maximum 1-based rank of rows to return; optimized for partitioned dataset keys",
         dense="use dense rank (all ties) instead of sparse rank (only ties at the boundary)",
-        over="column names; sort and `rank` applies separately over each grouping window",
+        over="column names; `rank` applies over separate grouping windows, which may be significantly slower than `group`",
     )
     def first(
         self,
@@ -291,7 +294,10 @@ class Dataset:
         dense: bool = False,
         over: list[str] = [],
     ) -> Self:
-        """Sort and filter by rank."""
+        """Sort and filter by maximum 1-based rank.
+
+        Differs from `order` with `limit` by including ties at the boundary. Not directly supported in ibis; requires a semi-join which may be slower.
+        """
         if over:
             index = ibis.dense_rank() if dense else ibis.rank()
             window = index.over(group_by=over, order_by=map(order_key, by))
@@ -435,7 +441,10 @@ class Dataset:
 
     @doc_field
     def take(self, info: Info, indices: list[BigInt]) -> Self:
-        """[Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index."""
+        """[Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index.
+
+        Not supported in ibis; uses arrow `take`.
+        """
         names = self.select(info, self.source)
         if not names:
             table = pa.table({"_": indices})
@@ -489,7 +498,10 @@ class Dataset:
         order: str = "_",
         aggregate: Aggregates = {},  # type: ignore
     ) -> Self:
-        """Group table by adjacent values in columns."""
+        """Group table by adjacent values in columns.
+
+        Not directly supported in ibis; requires window functions, which may be significantly slower than `group`.
+        """
         aggs = {name: ibis._[name].first() for name in by}
         aggs.update(aggregate)
         if counts:
@@ -528,6 +540,7 @@ class Dataset:
         """[Filter](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.filter) rows by predicates.
 
         Schema derived fields provide syntax for simple queries; `where` supports complex queries.
+        Optimized for partitioned dataset keys.
         """
         source = Parquet.filter(self.source, Filter.to_arrow(**queries))
         if source and not where:
@@ -541,7 +554,7 @@ class Dataset:
         query="SQL query string",
         alias="[alias](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.alias) of the table expression referenced in the query",
         dialect="input SQL dialect; defaults to the backend's native dialect",
-        params="JSON object or array for `:name` or `?` placeholders",
+        params="JSON object or array for `:name` or `?` placeholders; replaced by `sqlglot` before execution",
     )
     def sql(
         self,
