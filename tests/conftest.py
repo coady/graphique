@@ -33,8 +33,8 @@ class TestClient(GraphQL):
 def load(path, **vars):
     vars["PARQUET_PATH"] = str(fixtures / path)
     with pytest.MonkeyPatch.context() as mp:
-        for key in vars:
-            mp.setenv(key, vars[key])
+        for key, value in vars.items():
+            mp.setenv(key, value)
         mp.delitem(sys.modules, "graphique.service", raising=False)
         from graphique.service import app
     return app

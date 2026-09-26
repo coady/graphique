@@ -289,7 +289,7 @@ class Expression:
             elif isinstance(value, list) and value and isinstance(value[0], Expression):
                 yield name, map(Expression.to_ibis, value)
 
-    def __iter__(self) -> Iterable[ibis.Deferred]:
+    def __iter__(self):
         if self.name:
             yield getitems(ibis._, *self.name)
         if self.value is not UNSET:

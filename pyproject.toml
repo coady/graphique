@@ -45,7 +45,7 @@ cli = ["duckdb", "tqdm", "typer"]
 line-length = 100
 
 [tool.ruff.lint]
-ignore = ["B", "C408", "PL", "PYI045", "RUF012"]
+ignore = ["B00"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]

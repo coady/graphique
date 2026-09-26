@@ -47,10 +47,10 @@ class GraphQL(strawberry.asgi.GraphQL):
         **kwargs: additional `asgi.GraphQL` options
     """
 
-    options: ClassVar[dict] = dict(
-        types=Column.registry.values(),
-        config=strawberry.schema.config.StrawberryConfig(scalar_map=scalar_map),
-    )
+    options: ClassVar[dict] = {
+        "types": Column.registry.values(),
+        "config": strawberry.schema.config.StrawberryConfig(scalar_map=scalar_map),
+    }
 
     def __init__(self, root: Source | type | object, extensions: Iterable = (), **kwargs):
         self.root_value, Schema = root, strawberry.federation.Schema
@@ -125,9 +125,9 @@ def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[
         def row(self, info: Info, index: BigInt = 0) -> Row | None:  # type: ignore
             """Return scalar values at index."""
             row = super().row(info, index)
-            for name, value in row.items():
-                if isinstance(value, Column) and types[name] is not list:
-                    raise TypeError(f"Field `{name}` cannot represent `Column` value")
+            for field, value in row.items():
+                if isinstance(value, Column) and types[field] is not list:
+                    raise TypeError(f"Field `{field}` cannot represent `Column` value")
             return Row(**row)
 
     if types:
@@ -136,7 +136,7 @@ def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[
         Table.filter.type = Table
         args = Filter.resolve_args(dict(schema_types(schema, filters=True)))
         Table.filter.base_resolver.arguments = list(args)
-    options = dict(name=prefix + "Table", description="a dataset with a derived schema")
+    options = {"name": prefix + "Table", "description": "a dataset with a derived schema"}
     if name:
         return strawberry.federation.type(Table, keys=keys, **options)
     return strawberry.type(Table, **options)
