@@ -236,7 +236,7 @@ class Dataset:
         by: list[str] = [],
         counts: str = "",
         order: str = "",
-        aggregate: Aggregates = {},  # type: ignore
+        aggregate: Aggregates = Aggregates(),
     ) -> Self:
         """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns.
 
@@ -387,7 +387,7 @@ class Dataset:
         keys: list[str] = [],
         rkeys: list[str] = [],
         tolerance: JSON | None = None,
-        scalar: Scalars = {},  # type: ignore
+        scalar: Scalars = Scalars(),
         lname: str = "",
         rname: str = "{name}_right",
     ) -> Self:
@@ -466,7 +466,7 @@ class Dataset:
         info: Info,
         name: list[str] | None = None,
         value: JSON | None = UNSET,
-        scalar: Scalars = {},  # type: ignore
+        scalar: Scalars = Scalars(),
     ) -> Self:
         """[Fill null](https://ibis-project.org/reference/expression-tables.html#ibis.expr.types.relations.Table.fill_null) values."""
         (value,) = itertools.chain(scalar, [] if value is UNSET else [value])
@@ -496,7 +496,7 @@ class Dataset:
         split: list[Expression] = [],
         counts: str = "",
         order: str = "_",
-        aggregate: Aggregates = {},  # type: ignore
+        aggregate: Aggregates = Aggregates(),
     ) -> Self:
         """Group table by adjacent values in columns.
 
