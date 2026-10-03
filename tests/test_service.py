@@ -311,10 +311,11 @@ def test_distinct(client):
     data = client.execute("""{ distinct(counts: "c") { column(name: "c")
         { ... on BigIntColumn { distinct { values counts } } } } }""")
     assert data == {"distinct": {"column": {"distinct": {"values": [1], "counts": [41700]}}}}
-    data = client.execute('{ distinct(on: "state", counts: "c") { schema { names types } } }')
-    assert data["distinct"]["schema"] == {
-        "names": ["state", "latitude", "longitude", "city", "county", "zipcode", "c"],
-        "types": ["string", "float64", "float64", "string", "string", "int32", "int64"],
+    data = client.execute("""{ distinct(on: "state", counts: "c") {
+        schema { names types } columns { city { type } } } }""")
+    assert data["distinct"] == {
+        "schema": {"names": ["state", "city", "c"], "types": ["string", "string", "int64"]},
+        "columns": {"city": {"type": "string"}},
     }
 
 

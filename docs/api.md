@@ -65,6 +65,8 @@ Alternatively multiple named roots can be attached. This also enables federation
 ## Column selection
 Each field resolver transforms a table or column as needed. Ibis is [lazily executed](https://ibis-project.org/tutorials/basics), so there is no `select` field because it's handled automatically. Conversely if multiple table fields are requested, the [table selection is cached](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cache) for performance and consistency.
 
+This can have varying results in the few fields which implicitly reference "all" columns: `distinct(on: null)` and `dropNull`.
+
 ## Arrays
 Ibis [Array columns](https://ibis-project.org/reference/expression-collections#ibis.expr.types.arrays.ArrayValue) are supported. `unnest` flattens arrays back to scalars, and `group: {aggregate: {collect: ...}}` also creates arrays.
 

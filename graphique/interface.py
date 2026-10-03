@@ -193,7 +193,7 @@ class Dataset:
         return self.resolve(info, self.table[offset:][:limit])
 
     @doc_field(
-        on="column names to deduplicate on; defaults to all",
+        on="column names to deduplicate on; defaults to all remaining columns",
         keep="which duplicates to keep",
         counts=f"[value counts]({links.ref}/expression-tables#ibis.expr.types.relations.Table.value_counts); incompatible with `keep: null`",
         order="optionally include and order by first row number; incompatible with `on: null`",
@@ -208,9 +208,12 @@ class Dataset:
     ) -> Self:
         """[Remove duplicate](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.distinct) rows from table.
 
-        Differs from `group` by keeping all columns, and defaulting to all keys. May use ibis `value_counts` or `aggregate` as needed.
+        Differs from `group` by keeping all columns, and defaulting to all remaining keys. May use ibis `value_counts` or `aggregate`.
+        Note this can have varying behavior given automatic column selection; specify `on` as needed.
         """
         table = self.table
+        if on:
+            table = table.select(*dict.fromkeys(on + self.select(info, table)))
         if order:
             table = table.mutate({order: ibis.row_number()})
         if not counts or keep is None:
@@ -457,7 +460,10 @@ class Dataset:
 
     @doc_field(subset="columns names; defaults to all", how="remove if `any` or `all` are null")
     def drop_null(self, info: Info, subset: list[str] | None = None, how: str = "any") -> Self:
-        """[Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values."""
+        """[Drop](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.drop_null) rows with null values.
+
+        Note this can have varying behavior given automatic column selection.
+        """
         return self.resolve(info, self.table.drop_null(subset, how=how))
 
     @doc_field(name="column name(s); defaults to all", value="JSON scalar", scalar="typed scalar")
