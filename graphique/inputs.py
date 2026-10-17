@@ -73,7 +73,7 @@ class Filter(Generic[T]):
     ge: T | None = default_field(description=r"\>=")
 
     def __iter__(self) -> Iterator[tuple]:
-        for name, value in self.__dict__.items():
+        for name, value in vars(self).items():
             if value is not UNSET:
                 yield name, value
 
@@ -226,7 +226,7 @@ class Aggregates:
     var: list[VarAggregate] = default_field([], func=ibis.expr.types.NumericColumn.var)
 
     def __iter__(self) -> Iterator[tuple]:
-        for name, aggs in self.__dict__.items():
+        for name, aggs in vars(self).items():
             for agg in aggs:
                 yield agg.to_ibis(name)
 
@@ -241,7 +241,7 @@ class Scalars:
     time: time | None = default_field(description="time scalar")
 
     def __iter__(self):
-        for value in self.__dict__.values():
+        for value in vars(self).values():
             if value is not UNSET:
                 yield value
 
@@ -283,7 +283,7 @@ class Expression:
     window: Window | None = default_field(description="window functions")
 
     def items(self) -> Iterable[tuple]:
-        for name, value in self.__dict__.items():
+        for name, value in vars(self).items():
             if isinstance(value, Expression):
                 yield name, [value.to_ibis()]
             elif isinstance(value, list) and value and isinstance(value[0], Expression):
@@ -308,11 +308,11 @@ class Expression:
             if field:
                 yield from field
 
-    def to_ibis(self) -> ibis.Deferred | None:
+    def to_ibis(self) -> ibis.Deferred:
         fields = list(self)
-        if len(fields) > 1:
-            raise ValueError("conflicting inputs: " + ", ".join(map(str, fields)))
-        return next(iter(fields), None)
+        if len(fields) == 1:
+            return fields[0]
+        raise ValueError(f"'Expression' must specify one key (found {len(fields)})")
 
 
 @strawberry.input(description="an `Expression` with an optional alias")
@@ -320,10 +320,9 @@ class Projection(Expression):
     alias: str = strawberry.field(default="", description="name of projected column")
 
     def to_ibis(self) -> tuple:  # type: ignore
-        name = self.alias or ".".join(self.name)
-        if name:
+        if name := self.alias or ".".join(self.name):
             return name, super().to_ibis()
-        raise ValueError(f"projected fields require a name or alias: {self}")
+        raise ValueError("'Projection' must specify a name or alias")
 
 
 @strawberry.input(description=f"array [expressions]({links.ref}/expression-collections)")

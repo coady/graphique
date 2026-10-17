@@ -82,7 +82,7 @@ def root_value(cls: type):
     ```
     """
     data = {}
-    for name, value in cls.__dict__.items():
+    for name, value in vars(cls).items():
         if isinstance(value, (Source, Dataset)):
             data[name] = typed(value, name) if isinstance(value, Source) else value
             type(data[name]).field = name  # type: ignore

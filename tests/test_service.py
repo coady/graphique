@@ -204,7 +204,7 @@ def test_cast(client):
 
 def test_project(client):
     assert client.execute("{ project(columns: []) { optional { type } } }")
-    with pytest.raises(ValueError, match="conflict"):
+    with pytest.raises(ValueError, match="one key"):
         client.execute('{ project(columns: [{name: "state", value: ""}]) { type } }')
     with pytest.raises(ValueError, match="alias"):
         client.execute('{ project(columns: {inv: {name: "state"}}) { type } }')
