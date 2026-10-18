@@ -508,11 +508,11 @@ class Dataset:
 
         Not directly supported in ibis; requires window functions, which may be significantly slower than `group`.
         """
-        aggs = {name: ibis._[name].first() for name in by}
+        aggs = {name: ibis._[name].min() for name in by}
         aggs.update(aggregate)
         if counts:
             aggs[counts] = ibis._.count()
-        columns = [(ibis._[name] != ibis._[name].lag()).fill_null(False) for name in by]
+        columns = [~ibis._[name].identical_to(ibis._[name].lag()) for name in by]
         columns += map(Expression.to_ibis, split)
         table = self.table.mutate({order: ibis.or_(*columns)})  # window functions can't be nested
         table = table.mutate({order: table[order].cumsum()})

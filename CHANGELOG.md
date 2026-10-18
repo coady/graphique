@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * `GraphQL.federated` replaced with class-based approach
 * expression ranking functions moved to `window` input
 
+### Fixed
+* `runx` compares nulls
+
 ### Security
 * `sql` field protection compatible with strawberry >=0.324.2
 
