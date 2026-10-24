@@ -17,6 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Database :: Database Engines/Servers",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
@@ -27,8 +28,9 @@ dependencies = [
     "pyarrow>=23",
     "strawberry-graphql[asgi,cli]>=0.328.3",
     "ibis-framework>=10.7",
-    "pyarrow-hotfix",
     "isodate>=0.7",
+    "pyarrow-hotfix",  # ibis-project/ibis#11993
+    "sqlglot<30.16",  # ibis-project/ibis#12101
 ]
 
 [project.urls]

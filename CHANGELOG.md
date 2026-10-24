@@ -13,7 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * expression ranking functions moved to `window` input
 
 ### Fixed
-* `runx` compares nulls
+* Duckdb >=2 compatibility
+* `runs` compares nulls
 
 ### Security
 * `sql` field protection compatible with strawberry >=0.324.2
