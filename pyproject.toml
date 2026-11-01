@@ -62,6 +62,9 @@ source = ["graphique"]
 branch = true
 omit = ["graphique/partition.py"]
 
+[tool.pytest.ini_options]
+addopts = "--basetemp=tests/tmp"
+
 [dependency-groups]
 dev = ["pytest-cov", "uvicorn[standard]", "duckdb", "tqdm", "ty"]
 docs = ["great-docs"]

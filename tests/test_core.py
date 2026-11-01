@@ -1,7 +1,10 @@
+import shutil
+
 import ibis
 import pyarrow.compute as pc
 import pytest
 
+from graphique import ducklake
 from graphique.core import Parquet
 from graphique.scalars import (
     BigInt,
@@ -72,3 +75,15 @@ def test_empty(partitioned):
     assert not Parquet.to_table(empty).to_pyarrow()
     assert Parquet.order(empty, "north").schema == empty.schema
     assert Parquet.first(empty, "north").schema == empty.schema
+
+
+def test_ducklake(partitioned, tmp_path):
+    table = ducklake.register(partitioned.files, "partitioned")
+    assert list(table.schema())[-2:] == ["north", "west"]
+    catalog = tmp_path / "ducklake"
+    table = ducklake.register(partitioned, "partitioned", catalog=catalog)
+    assert list(table.schema())[-2:] == ["north", "west"]
+    del table
+    table = ducklake.attach("partitioned", catalog=catalog)
+    assert list(table.schema())[-2:] == ["north", "west"]
+    shutil.rmtree(tmp_path)
