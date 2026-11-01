@@ -8,8 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * DuckLake support
 * `sql` input `params` for placeholders
 
+### Changed
+* Dataset input `source` renamed to `table`
+
+### Deprecated
+* Direct dataset support
+
 ### Removed
 * `dense` ordering moved to `first`
+* `schema.partitioning` field
 * `GraphQL.federated` replaced with class-based approach
 * expression ranking functions moved to `window` input
 

@@ -64,12 +64,11 @@ def test_fragments(dsclient):
 
 
 def test_schema(dsclient):
-    schema = dsclient.execute("{ schema { names types partitioning } }")["schema"]
+    schema = dsclient.execute("{ schema { names types } }")["schema"]
     assert len(schema["names"]) == 8
-    assert set(schema["types"]) == {"float64", "int32", "string"}
-    assert schema["partitioning"] == ["north", "west"]
+    assert set(schema["types"]) == {"float64", "int32", "int64", "string"}
     data = dsclient.execute("{ type optional { type } }")
-    assert data == {"type": "FileSystemDataset", "optional": {"type": "FileSystemDataset"}}
+    assert data == {"type": "Table", "optional": {"type": "Table"}}
     data = dsclient.execute(" { slice { count optional { type } } }")
     assert data == {"slice": {"count": 41700, "optional": {"type": "CachedTable"}}}
 
@@ -93,8 +92,8 @@ def test_order(dsclient):
     assert data == {"first": {"count": 4, "row": {"state": "WY", "county": "Weston"}}}
     data = dsclient.execute('{ order(by: "state", limit: 3) { columns { state { values } } } }')
     assert data == {"order": {"columns": {"state": {"values": ["AK"] * 3}}}}
-    data = dsclient.execute('{ order(by: "-north") { row { state } } }')
-    assert data == {"order": {"row": {"state": "NY"}}}
+    data = dsclient.execute('{ order(by: "-north") { row { north } } }')
+    assert data == {"order": {"row": {"north": 1}}}
     data = dsclient.execute('{ first(by: "north", rank: 1) { count } }')
     assert data == {"first": {"count": 20850}}
     data = dsclient.execute('{ first(by: "north", rank: 2) { count } }')

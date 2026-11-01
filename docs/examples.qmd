@@ -29,7 +29,6 @@ execute("""{
   schema {
     names
     types
-    partitioning
   }
 }""")
 ```

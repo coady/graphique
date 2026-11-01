@@ -8,7 +8,7 @@ import collections
 import itertools
 import operator
 from collections.abc import Iterable, Iterator, Mapping
-from typing import Self, TypeAlias
+from typing import Self
 
 import ibis.expr.types
 import pyarrow as pa
@@ -19,12 +19,10 @@ from strawberry import UNSET, Info
 from strawberry.permission import BasePermission, PermissionExtension
 from strawberry.scalars import JSON
 
-from .core import Parquet, getitems, order_key
+from .core import getitems, order_key
 from .inputs import Aggregates, Expression, Field, Filter, Projection, Scalars
 from .models import Column, doc_field, links
 from .scalars import BigInt
-
-Source: TypeAlias = ibis.Table | ds.Dataset
 
 
 def selections(*fields) -> collections.Counter:
@@ -65,31 +63,21 @@ class Deny(BasePermission):
 class Schema:
     names: list[str] = strawberry.field(description="field names")
     types: list[str] = strawberry.field(description=f"{links.types}, corresponding to `names`")
-    partitioning: list[str] = strawberry.field(description="partition keys")
 
 
-def ibis_schema(root: Source) -> ibis.Schema:
-    return root.schema() if isinstance(root, ibis.Table) else ibis.Schema.from_pyarrow(root.schema)
-
-
-@strawberry.interface(description="ibis `Table` or parquet `Dataset`")
+@strawberry.interface(description="ibis `Table`")
 class Dataset:
-    source: strawberry.Private[Source]
+    table: strawberry.Private[ibis.Table]
 
-    @property
-    def table(self) -> ibis.Table:
-        """source as ibis table"""
-        return self.source if isinstance(self.source, ibis.Table) else Parquet.to_table(self.source)
-
-    def resolve(self, info: Info, source: Source) -> Self:
+    def resolve(self, info: Info, source: ibis.Table) -> Self:
         """Cache the table if it will be reused."""
-        if isinstance(source, ibis.Table) and not isinstance(source, ibis.expr.types.CachedTable):
+        if not isinstance(source, ibis.expr.types.CachedTable):
             counts = selections(*info.selected_fields)
             counts["type"] = counts["schema"] = counts["toSql"] = 0
             if counts.total() > 1:
                 names = self.select(info, source) or [ibis.row_number()]
                 source = source.select(*names).cache()
-        return type(self)(source=source)
+        return type(self)(table=source)
 
     @classmethod
     def resolve_reference(cls, info: Info, **keys) -> Self:
@@ -99,13 +87,13 @@ class Dataset:
         return self.filter(info, **queries)
 
     @staticmethod
-    def select(info: Info, source: Source) -> list:
+    def select(info: Info, table: ibis.Table) -> list:
         """Return minimal schema needed to continue."""
         refs: set = set()
         for field in info.selected_fields:
             for selection in field.selections:
                 refs.update(references(selection))
-        return [name for name in ibis_schema(source) if name in refs]
+        return [name for name in table.schema() if name in refs]
 
     @doc_field(
         dialect="output SQL dialect; defaults to the backend’s native dialect",
@@ -115,22 +103,16 @@ class Dataset:
         """[Compile to](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.to_sql) a formatted SQL string."""
         return self.table.to_sql(dialect=dialect, pretty=pretty)
 
-    @strawberry.field(
-        description=f"ibis [table]({links.ref}/expression-table) or parquet [dataset](https://arrow.apache.org/docs/python/api/dataset.html)"
-    )
+    @strawberry.field(description=f"ibis [table]({links.ref}/expression-table) type")
     def type(self) -> str:
-        return type(self.source).__name__
+        return type(self.table).__name__
 
     @strawberry.field(description=links.schema)
     def schema(self) -> Schema:
-        schema = ibis_schema(self.source)
-        partitioning = Parquet.schema(self.source).names
-        return Schema(names=schema.names, types=schema.types, partitioning=partitioning)
+        schema = self.table.schema()
+        return Schema(names=schema.names, types=schema.types)
 
-    @doc_field(
-        schema="field names and types",
-        try_="return null if cast fails",
-    )
+    @doc_field(schema="field names and types", try_="return null if cast fails")
     def cast(self, info: Info, schema: list[Field], try_: bool = False) -> Self:
         """[Cast](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cast) the columns of a table."""
         cast = self.table.try_cast if try_ else self.table.cast
@@ -139,15 +121,13 @@ class Dataset:
     @doc_field
     def optional(self, info: Info) -> Self | None:
         """Nullable field to stop error propagation, enabling partial query results."""
-        return self.resolve(info, self.source)
+        return self.resolve(info, self.table)
 
     @strawberry.field(
         description=f"[Count]({links.ref}/expression-tables#ibis.expr.types.relations.Table.count) the number of rows."
     )
     def count(self) -> BigInt:
-        if isinstance(self.source, ibis.Table):
-            return self.source.count().to_pyarrow().as_py()
-        return self.source.count_rows()
+        return self.table.count().to_pyarrow().as_py()
 
     @doc_field
     def any(self, limit: BigInt = BigInt(1)) -> bool:
@@ -175,12 +155,11 @@ class Dataset:
 
         If the column is in the schema, `columns` can be used instead.
         """
-        table = self.table
-        column = getitems(table, *(name + index))
+        column = getitems(self.table, *(name + index))
         if cast:
             column = (column.try_cast if try_ else column.cast)(cast)
         counts = selections(*info.selected_fields)
-        if counts.total() > 1 and not isinstance(table, ibis.expr.types.CachedTable):
+        if counts.total() > 1 and not isinstance(self.table, ibis.expr.types.CachedTable):
             column = column.as_table().cache()[0]
         return Column.cast(column)
 
@@ -241,15 +220,9 @@ class Dataset:
         order: str = "",
         aggregate: Aggregates = Aggregates(),
     ) -> Self:
-        """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns.
-
-        Optimized for partitioned dataset keys with no aggregates.
-        """
+        """[Group](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.group_by) table by columns."""
         aggs = dict(aggregate)
-        if not aggs and by == Parquet.keys(self.source, *by):
-            table = Parquet.fragments(self.source, counts)
-        else:
-            table = self.table
+        table = self.table
         if counts:
             aggs[counts] = table[counts].sum() if counts in table else ibis._.count()
         if order:
@@ -260,7 +233,7 @@ class Dataset:
 
     @doc_field(
         by="column names; prefix with `-` for descending order",
-        limit="maximum number of rows to return; optimized for partitioned dataset keys",
+        limit="maximum number of rows to return",
         over="column names; `limit` applies over separate grouping windows, which may be significantly slower than `group`",
     )
     def order(
@@ -274,18 +247,11 @@ class Dataset:
         if over and limit is not None:
             window = ibis.row_number().over(group_by=over, order_by=map(order_key, by))
             return self.resolve(info, self.table.filter(window < limit))
-        if keys := Parquet.keys(self.source, *by):
-            source = Parquet.order(self.source, *keys, limit=limit)
-            table = Parquet.to_table(source)
-            if keys == by:
-                return self.resolve(info, source if limit is None else table[:limit])
-        else:
-            table = self.table
-        return self.resolve(info, table.order_by(*map(order_key, by))[:limit])
+        return self.resolve(info, self.table.order_by(*map(order_key, by))[:limit])
 
     @doc_field(
         by="column names; prefix with `-` for descending order",
-        rank="maximum 1-based rank of rows to return; optimized for partitioned dataset keys",
+        rank="maximum 1-based rank of rows to return",
         dense="use dense rank (all ties) instead of sparse rank (only ties at the boundary)",
         over="column names; `rank` applies over separate grouping windows, which may be significantly slower than `group`",
     )
@@ -305,18 +271,11 @@ class Dataset:
             index = ibis.dense_rank() if dense else ibis.rank()
             window = index.over(group_by=over, order_by=map(order_key, by))
             return self.resolve(info, self.table.filter(window < rank))
-        if keys := Parquet.keys(self.source, *by):
-            source = Parquet.first(self.source, *keys, rank=rank, dense=dense)
-            if keys == by:
-                return type(self)(source=source)
-            table = Parquet.to_table(source)
-        else:
-            table = self.table
         order_by = {name.strip("-"): order_key(name) for name in by}
-        mask = table.select(*order_by)
+        mask = self.table.select(*order_by)
         if dense and rank > 1:
             mask = mask.distinct()
-        table = table.semi_join(mask.order_by(*order_by.values())[:rank], list(order_by))
+        table = self.table.semi_join(mask.order_by(*order_by.values())[:rank], list(order_by))
         return self.resolve(info, table.order_by(*order_by.values()))
 
     @doc_field(
@@ -334,9 +293,7 @@ class Dataset:
         order: str = "",
     ) -> Self:
         """[Unnest](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.unnest) an array column from a table."""
-        table = self.table
-        if order:
-            table = table.mutate({order: ibis.row_number()})
+        table = self.table.mutate({order: ibis.row_number()}) if order else self.table
         table = table.unnest(name, offset=offset or None, keep_empty=keep_empty)
         if order:
             table = table.order_by(order, offset) if offset else table.order_by(order)
@@ -396,7 +353,7 @@ class Dataset:
     ) -> Self:
         """[As-of join](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.asof_join) on nearest key rather than equal keys."""
         left = self.table
-        right = getattr(info.root_value, right).table
+        right = getattr(info.root_value, right).table.alias("right")
         if rkeys:
             keys = [getattr(left, key) == getattr(right, rkey) for key, rkey in zip(keys, rkeys)]
         (tolerance,) = list(scalar) or [tolerance]
@@ -444,19 +401,17 @@ class Dataset:
 
     @doc_field
     def take(self, info: Info, indices: list[BigInt]) -> Self:
-        """[Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Dataset.html#pyarrow.dataset.Dataset.take) rows by index.
+        """[Take](https://arrow.apache.org/docs/python/generated/pyarrow.dataset.Scanner.html#pyarrow.dataset.Scanner.take) rows by index.
 
         Not supported in ibis; uses arrow `take`.
         """
-        names = self.select(info, self.source)
+        names = self.select(info, self.table)
         if not names:
             table = pa.table({"_": indices})
-        elif isinstance(self.source, ds.Dataset):
-            table = self.source.take(indices, columns=names)
         else:
-            batches = self.source.select(*names).to_pyarrow_batches()
+            batches = self.table.select(*names).to_pyarrow_batches()
             table = ds.Scanner.from_batches(batches).take(indices)
-        return type(self)(source=ibis.memtable(table))
+        return type(self)(table=ibis.memtable(table))
 
     @doc_field(subset="columns names; defaults to all", how="remove if `any` or `all` are null")
     def drop_null(self, info: Info, subset: list[str] | None = None, how: str = "any") -> Self:
@@ -476,7 +431,7 @@ class Dataset:
     ) -> Self:
         """[Fill null](https://ibis-project.org/reference/expression-tables.html#ibis.expr.types.relations.Table.fill_null) values."""
         (value,) = itertools.chain(scalar, [] if value is UNSET else [value])
-        replacements = dict.fromkeys(ibis_schema(self.source) if name is None else name, value)
+        replacements = dict.fromkeys(self.table.schema() if name is None else name, value)
         return self.resolve(info, self.table.fill_null(replacements))
 
     @doc_field
@@ -546,13 +501,9 @@ class Dataset:
         """[Filter](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.filter) rows by predicates.
 
         Schema derived fields provide syntax for simple queries; `where` supports complex queries.
-        Optimized for partitioned dataset keys.
         """
-        source = Parquet.filter(self.source, Filter.to_arrow(**queries))
-        if source and not where:
-            return type(self)(source=source)
         exprs = list(where or []) + list(Filter.to_exprs(**queries))
-        return self.resolve(info, self.table.filter(*exprs) if exprs else self.source)
+        return self.resolve(info, self.table.filter(*exprs) if exprs else self.table)
 
     # protected fields = these methods can optionally be registered with `strawberry.field`
 

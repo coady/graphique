@@ -47,13 +47,12 @@ Note list inputs allow passing a single value, [coercing the input](https://spec
 The versatility of expressions can become complicated and unreadable. Consider applying expected projections to the root at startup, making `filter` and `project` simpler without performance penalty. Fields are not automatically camel-cased for the same reason; it's simpler to project first.
 
 ## Partitions
-Partitioned parquet datasets have custom optimizations for fragment keys.
+Partitioned parquet datasets may be registered with [DuckLake](https://ducklake.select/) so DuckDB can prune files and answer `count` from catalog metadata.
 
-* `filter` on fragment keys
-* `group` on fragment keys with counts
-* `order` or `first` rank on fragment keys
+* `graphique.ducklake.register` — attach a catalog and add files (default catalog is in-memory)
+* `graphique.ducklake.attach` — open an existing catalog read-only (suitable for multi-worker services)
 
-Otherwise there is no advantage in the root being a parquet dataset over an ibis table.
+Passing a PyArrow `Dataset` into `GraphQL` / `typed` is deprecated; convert with `register` (or `ibis.read_parquet` when unpartitioned) first.
 
 ## Roots
 A single root can be attached directly. This is not common - but perfectly valid - GraphQL usage. The resolvers receive the [table object](https://graphql.org/learn/execution/#root-fields-and-resolvers) as the first argument, just as with nested fields.

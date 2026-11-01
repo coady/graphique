@@ -33,7 +33,7 @@ Call `GraphQL` on a `Query` type with attributes, so that the root value is stor
 
 ```{python}
 class Query:
-    zipcodes = Zipcodes(source=source)
+    zipcodes = Zipcodes(table=source)
 
 app = GraphQL(Query)
 ```
@@ -61,5 +61,5 @@ GraphQL implementations commonly treat top-level fields as [static methods](http
 class Query:
     zipcodes: Zipcodes
 
-app = GraphQL(Query(zipcodes=Zipcodes(source=source)))
+app = GraphQL(Query(zipcodes=Zipcodes(table=source)))
 ```

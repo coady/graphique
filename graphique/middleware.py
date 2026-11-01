@@ -2,21 +2,26 @@
 ASGI GraphQL utilities.
 """
 
+import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
-from typing import ClassVar
+from typing import ClassVar, TypeAlias
 
 import ibis
+import pyarrow.dataset as ds
 import strawberry.asgi
 import strawberry.schema.config
 from strawberry import UNSET, Info
 from strawberry.extensions import tracing
 from strawberry.utils.str_converters import to_camel_case
 
+from . import ducklake
 from .inputs import Filter
-from .interface import Dataset, Source, ibis_schema
+from .interface import Dataset
 from .models import Column, doc_field
 from .scalars import BigInt, scalar_map, schema_types
+
+Source: TypeAlias = ibis.Table | ds.Dataset
 
 
 class MetricsExtension(tracing.ApolloTracingExtension):
@@ -42,7 +47,7 @@ class GraphQL(strawberry.asgi.GraphQL):
     """ASGI GraphQL app with root value(s).
 
     Args:
-        root: root dataset, Query type, or instance to attach as the Query root
+        root: root table, Query type, or instance to attach as the Query root
         extensions: additional extensions to enable
         **kwargs: additional `asgi.GraphQL` options
     """
@@ -95,11 +100,17 @@ def typed(source: Source, name: str = "", keys: Iterable = ()) -> Dataset:
     """Return schema-derived `Dataset` instance for `source`.
 
     Args:
-        source: ibis table or parquet dataset
+        source: ibis table or deprecated parquet dataset
         name: optional prefix for the type names, and enables federation
         keys: keys for federation
     """
-    return implement(ibis_schema(source), name, keys)(source=source)
+    if isinstance(source, ds.Dataset):
+        warnings.warn("use `ibis.read_parquet` or `ducklake.register` instead", DeprecationWarning)
+        if source.partitioning.schema:
+            source = ducklake.register(source, name or "table")
+        else:
+            source = ibis.read_parquet(source.files, hive_partitioning=True)
+    return implement(source.schema(), name, keys)(table=source)
 
 
 def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[Dataset]:

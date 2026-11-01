@@ -4,7 +4,6 @@ GraphQL input types.
 
 from __future__ import annotations
 
-import functools
 import inspect
 import operator
 from collections.abc import Callable, Iterable, Iterator
@@ -13,9 +12,6 @@ from decimal import Decimal
 from typing import Generic, TypeVar
 
 import ibis.expr.types
-import pyarrow as pa
-import pyarrow.compute as pc
-import pyarrow.dataset as ds
 import strawberry
 from strawberry import UNSET
 from strawberry.annotation import StrawberryAnnotation
@@ -104,22 +100,6 @@ class Filter(Generic[T]):
                         yield field.contains(value)
                     case _:
                         yield getattr(operator, op)(field, value)
-
-    @staticmethod
-    def to_arrow(**queries: Filter | dict) -> ds.Expression | None:
-        """Transform query syntax into an arrow expression."""
-        exprs = []
-        for name, query in queries.items():
-            field = pc.field(name)
-            for op, value in dict(query).items():
-                if isinstance(value, list):
-                    expr = pc.is_in(field, pa.array(value))
-                    exprs.append(pc.invert(expr) if op == "ne" else expr)
-                elif op == "contains":  # placeholder, will not be in partition schema
-                    exprs.append(field == value)
-                else:
-                    exprs.append(getattr(operator, op)(field, value))
-        return functools.reduce(operator.and_, exprs or [None])
 
 
 @strawberry.input(description="predicates for arrays")
