@@ -83,7 +83,7 @@ def root_value(cls: type):
         name: Table
         ...
 
-    Query(name=Table(source=source), ...)
+    Query(name=Table(table=source), ...)
     ```
     """
     data = {}

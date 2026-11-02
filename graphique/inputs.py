@@ -19,8 +19,7 @@ from strawberry.scalars import JSON
 from strawberry.schema_directive import Location
 from strawberry.types.arguments import StrawberryArgument
 
-from .core import getitems, links, order_key
-from .scalars import Duration
+from .scalars import Duration, getitems, links, order_key
 
 T = TypeVar("T")
 

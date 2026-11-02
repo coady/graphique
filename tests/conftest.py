@@ -41,11 +41,6 @@ def load(path, **vars):
 
 
 @pytest.fixture(scope="module")
-def dataset():
-    return ds.dataset(fixtures / "zipcodes.parquet")
-
-
-@pytest.fixture(scope="module")
 def partitioned():
     return ds.dataset(fixtures / "partitioned", partitioning="hive")
 

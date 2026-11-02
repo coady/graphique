@@ -1,11 +1,9 @@
 import shutil
 
 import ibis
-import pyarrow.compute as pc
 import pytest
 
 from graphique import ducklake
-from graphique.core import Parquet
 from graphique.scalars import (
     BigInt,
     Duration,
@@ -44,37 +42,6 @@ def test_types():
         assert not dict(schema_types(schema))
     schema = ibis.Schema({"_": ibis.dtype("array<array<string>>")})
     assert not dict(schema_types(schema, filters=True))
-
-
-def test_parquet(dataset):
-    assert not Parquet.schema(dataset)
-    assert not Parquet.keys(dataset, "key")
-    table = Parquet.fragments(dataset, "count")
-    (path,) = table["__path__"].to_list()
-    assert path.endswith(".parquet")
-    assert table["count"].to_list() == [41700]
-    assert Parquet.filter(dataset, None) is dataset
-    assert Parquet.filter(dataset, pc.field("key")) is None
-    assert Parquet.to_table(dataset).count().to_pyarrow().as_py() == 41700
-
-
-def test_ordering(partitioned):
-    assert Parquet.keys(partitioned, "north") == ["north"]
-    assert Parquet.order(partitioned, "north").count_rows() == 41700
-    assert Parquet.order(partitioned, "north", limit=1).count_rows() == 9301
-
-    assert Parquet.first(partitioned, "north").count_rows() == 20850
-    assert Parquet.first(partitioned, "north", rank=21000).count_rows() == 41700
-    assert Parquet.first(partitioned, "north", dense=True).count_rows() == 20850
-    assert Parquet.first(partitioned, "north", rank=2, dense=True).count_rows() == 41700
-
-
-def test_empty(partitioned):
-    empty = Parquet.filter(partitioned, pc.field("north") > 1)
-    assert empty.schema == partitioned.schema
-    assert not Parquet.to_table(empty).to_pyarrow()
-    assert Parquet.order(empty, "north").schema == empty.schema
-    assert Parquet.first(empty, "north").schema == empty.schema
 
 
 def test_ducklake(partitioned, tmp_path):

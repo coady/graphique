@@ -10,10 +10,29 @@ from collections.abc import Iterator
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
+import ibis
 import ibis.expr.datatypes
 import isodate
 import pyarrow as pa
 import strawberry
+
+
+class links:
+    ref = "https://ibis-project.org/reference"
+    types = f"[data type]({ref}/datatypes)"
+    schema = f"[table schema]({ref}/schemas#ibis.expr.schema.Schema)"
+
+
+def getitems(obj, *keys):
+    """Nested `getitem`."""
+    for key in keys:
+        obj = obj[key]
+    return obj
+
+
+def order_key(name: str):
+    """Parse sort order."""
+    return (ibis.desc if name.startswith("-") else ibis.asc)(ibis._[name.lstrip("-")])
 
 
 def parse_bigint(value) -> int:

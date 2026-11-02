@@ -12,7 +12,9 @@ import ibis
 import typer
 from tqdm import tqdm
 
-from .core import order_key
+
+def order_key(name: str):
+    return (ibis.desc if name.startswith("-") else ibis.asc)(ibis._[name.lstrip("-")])
 
 
 def connect(memory_limit: str = "", **config):

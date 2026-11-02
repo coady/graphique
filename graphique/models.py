@@ -16,9 +16,8 @@ import strawberry
 from strawberry import UNSET, Info
 from strawberry.types.field import StrawberryField
 
-from .core import links
 from .inputs import optional, provisional
-from .scalars import BigInt, Duration, py_type
+from .scalars import BigInt, Duration, links, py_type
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset

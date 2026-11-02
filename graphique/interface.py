@@ -19,10 +19,9 @@ from strawberry import UNSET, Info
 from strawberry.permission import BasePermission, PermissionExtension
 from strawberry.scalars import JSON
 
-from .core import getitems, order_key
 from .inputs import Aggregates, Expression, Field, Filter, Projection, Scalars
-from .models import Column, doc_field, links
-from .scalars import BigInt
+from .models import Column, doc_field
+from .scalars import BigInt, getitems, links, order_key
 
 
 def selections(*fields) -> collections.Counter:
