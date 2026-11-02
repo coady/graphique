@@ -7,7 +7,7 @@ import ibis
 import pyarrow.dataset as ds
 import pytest
 
-from graphique import GraphQL
+from graphique import GraphQL, ducklake
 
 fixtures = Path(__file__).parent / "fixtures"
 
@@ -51,8 +51,8 @@ def client():
 
 
 @pytest.fixture(scope="module")
-def dsclient(partitioned):
-    return TestClient(partitioned)
+def partclient():
+    return TestClient(ducklake.register(str(fixtures / "partitioned"), "partitioned"))
 
 
 @pytest.fixture(scope="module")
@@ -64,4 +64,4 @@ def fedclient():
 
 @pytest.fixture(scope="module")
 def executor():
-    return TestClient(ds.dataset(fixtures / "alltypes.parquet")).execute
+    return TestClient(ibis.read_parquet(fixtures / "alltypes.parquet")).execute
