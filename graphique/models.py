@@ -146,7 +146,7 @@ class GenericColumn(Column, Generic[T]):
 
 @Column.register(date, datetime, time)
 @strawberry.type(name="Column", description=f"[temporal column]({links.ref}/expression-temporal)")
-class TemporalColumn(GenericColumn[T]): ...  # pragma: no branch
+class TemporalColumn(GenericColumn[T]): ...
 
 
 @Column.register(Duration)
@@ -157,12 +157,12 @@ class TemporalColumn(GenericColumn[T]): ...  # pragma: no branch
 
 Interval support varies by backend; durations may still be useful for computation and as scalar inputs.""",
 )
-class DurationColumn(GenericColumn[T]): ...  # pragma: no branch
+class DurationColumn(GenericColumn[T]): ...
 
 
 @Column.register(str)
 @strawberry.type(name="ingColumn", description=f"[string column]({links.ref}/expression-strings)")
-class StringColumn(GenericColumn[T]): ...  # pragma: no branch
+class StringColumn(GenericColumn[T]): ...
 
 
 @Column.register(float, Decimal)
