@@ -167,10 +167,13 @@ def test_filter(client):
 
 def test_where(client):
     data = client.execute('{ filter(where: {eq: [{name: "county"}, {name: "city"}]}) { count } }')
-    assert data["filter"]["count"] == 2805
+    assert data == {"filter": {"count": 2805}}
+    data = client.execute("""{ filter(where: [{eq: [{name: "state"}, {value: "CA"}]},
+        {eq: [{name: "county"}, {name: "city"}]}]) { count } }""")
+    assert data == {"filter": {"count": 532}}
     data = client.execute("""{ filter(where: {or: [{eq: [{name: "state"}, {name: "county"}]},
         {eq: [{name: "county"}, {name: "city"}]}]}) { count } }""")
-    assert data["filter"]["count"] == 2805
+    assert data == {"filter": {"count": 2805}}
     data = client.execute("""{ project(columns: {alias: "zipcode", add: [{name: "zipcode"}, {name: "zipcode"}]})
         { columns { zipcode { min } } } }""")
     assert data["project"]["columns"]["zipcode"]["min"] == 1002

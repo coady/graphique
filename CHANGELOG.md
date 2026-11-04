@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 * Dataset input `source` renamed to `table`
+* `filter` accepts multiple `where` expressions
 
 ### Deprecated
 * Direct dataset support

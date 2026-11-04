@@ -68,22 +68,21 @@ class Schema:
 class Dataset:
     table: strawberry.Private[ibis.Table]
 
-    def resolve(self, info: Info, source: ibis.Table) -> Self:
+    def resolve(self, info: Info, table: ibis.Table) -> Self:
         """Cache the table if it will be reused."""
-        if not isinstance(source, ibis.expr.types.CachedTable):
+        if not isinstance(table, ibis.expr.types.CachedTable):
             counts = selections(*info.selected_fields)
             counts["type"] = counts["schema"] = counts["toSql"] = 0
             if counts.total() > 1:
-                names = self.select(info, source) or [ibis.row_number()]
-                source = source.select(*names).cache()
-        return type(self)(table=source)
+                names = self.select(info, table) or [ibis.row_number()]
+                table = table.select(*names).cache()
+        return type(self)(table=table)
 
     @classmethod
     def resolve_reference(cls, info: Info, **keys) -> Self:
         """Return table filtered by federated keys."""
         self = getattr(info.root_value, cls.field)
-        queries = {name: Filter(eq=[keys[name]]) for name in keys}
-        return self.filter(info, **queries)
+        return self.filter(info, **{name: Filter(eq=[keys[name]]) for name in keys})
 
     @staticmethod
     def select(info: Info, table: ibis.Table) -> list:
@@ -496,12 +495,12 @@ class Dataset:
                 row[name] = Column.cast(table[name].unnest())
         return row
 
-    def filter(self, info: Info, where: Expression | None = None, **queries: Filter) -> Self:
+    def filter(self, info: Info, where: list[Expression] = [], **predicates: Filter) -> Self:
         """[Filter](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.filter) rows by predicates.
 
-        Schema derived fields provide syntax for simple queries; `where` supports complex queries.
+        Schema derived fields provide syntax for simple queries; `where` supports complex queries, combined with `and`.
         """
-        exprs = list(where or []) + list(Filter.to_exprs(**queries))
+        exprs = list(map(Expression.to_ibis, where)) + list(Filter.to_exprs(**predicates))
         return self.resolve(info, self.table.filter(*exprs) if exprs else self.table)
 
     # protected fields = these methods can optionally be registered with `strawberry.field`

@@ -81,15 +81,15 @@ class Filter(Generic[T]):
             else:
                 annotation = cls[scalar]  # type: ignore
             yield StrawberryArgument(name, name, StrawberryAnnotation(annotation), default={})
-        annotation = StrawberryAnnotation(Expression | None)
-        yield StrawberryArgument("where", None, annotation, default=None)
+        annotation = StrawberryAnnotation(list[Expression])
+        yield StrawberryArgument("where", None, annotation, default=[])
 
     @staticmethod
-    def to_exprs(**queries: Filter) -> Iterable[ibis.Deferred]:
+    def to_exprs(**predicates: Filter) -> Iterable[ibis.Deferred]:
         """Transform query syntax into ibis expressions."""
-        for name, query in queries.items():
+        for name, predicate in predicates.items():
             field = ibis._[name]
-            for op, value in query:
+            for op, value in predicate:
                 match value, op:
                     case list(), "eq":
                         yield field == value[0] if len(value) == 1 else field.isin(value)
