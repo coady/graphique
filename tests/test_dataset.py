@@ -1,10 +1,12 @@
 import asyncio
 import json
 
+import ibis
 import pyarrow.dataset as ds
 import pytest
 
 from graphique import GraphQL, middleware, typed
+from graphique.interface import cached
 
 from .conftest import fixtures, load, unordered
 
@@ -45,6 +47,14 @@ def test_schema(partclient):
     assert data == {"type": "Table", "optional": {"type": "Table"}}
     data = partclient.execute(" { slice { count optional { type } } }")
     assert data == {"slice": {"count": 41700, "optional": {"type": "CachedTable"}}}
+
+
+def test_materialize(partclient, monkeypatch):
+    data = partclient.execute("{ materialize { type count } }")
+    assert data == {"materialize": {"type": "Table", "count": 41700}}
+    monkeypatch.delattr(ibis.expr.types.Table, "cache")
+    with pytest.raises(TypeError, match="materialize"):
+        cached(partclient.root_value.table)
 
 
 def test_rank_over(partclient):

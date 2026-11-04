@@ -51,6 +51,14 @@ def references(field) -> Iterator:
             yield from references(getattr(field, name, []))
 
 
+def cached(table: ibis.Table) -> ibis.expr.types.CachedTable:
+    """`Table.cache`, or raise with advice to use `materialize`."""
+    try:
+        return table.cache()
+    except Exception as exc:
+        raise TypeError("see `materialize` for client-side caching") from exc
+
+
 class Deny(BasePermission):
     message = "field is denied by default"
 
@@ -72,10 +80,10 @@ class Dataset:
         """Cache the table if it will be reused."""
         if not isinstance(table, ibis.expr.types.CachedTable):
             counts = selections(*info.selected_fields)
-            counts["type"] = counts["schema"] = counts["toSql"] = 0
+            counts["type"] = counts["schema"] = counts["toSql"] = counts["__typename"] = 0
             if counts.total() > 1:
                 names = self.select(info, table) or [ibis.row_number()]
-                table = table.select(*names).cache()
+                table = cached(table.select(*names))
         return type(self)(table=table)
 
     @classmethod
@@ -121,6 +129,15 @@ class Dataset:
         """Nullable field to stop error propagation, enabling partial query results."""
         return self.resolve(info, self.table)
 
+    @doc_field
+    def materialize(self, info: Info) -> Self:
+        """[Materialize](https://ibis-project.org/reference/expression-tables.html#ibis.memtable) an in-memory table.
+
+        An alternative to implicit [table caching](https://ibis-project.org/reference/expression-tables.html#ibis.expr.types.relations.Table.cache), which may fail or only cache server side.
+        """
+        names = self.select(info, self.table) or [ibis.row_number()]
+        return type(self)(table=ibis.memtable(self.table.select(*names).to_pyarrow()))
+
     @strawberry.field(
         description=f"[Count]({links.ref}/expression-tables#ibis.expr.types.relations.Table.count) the number of rows."
     )
@@ -158,7 +175,7 @@ class Dataset:
             column = (column.try_cast if try_ else column.cast)(cast)
         counts = selections(*info.selected_fields)
         if counts.total() > 1 and not isinstance(self.table, ibis.expr.types.CachedTable):
-            column = column.as_table().cache()[0]
+            column = cached(column.as_table())[0]
         return Column.cast(column)
 
     @doc_field(
@@ -481,13 +498,13 @@ class Dataset:
         for field in info.selected_fields:
             counts.update(selections(*field.selections))
         if counts.total() > 1 and not isinstance(table, ibis.expr.types.CachedTable):
-            table = table.select(*names).cache()
+            table = cached(table.select(*names))
         return {name: Column.cast(table[name]) for name in names}
 
     def row(self, info: Info, index: int = 0) -> dict:
         """Scalar values at index."""
         names = selections(*info.selected_fields)
-        table = self.table.select(*names)[index:][:1].cache()
+        table = ibis.memtable(self.table.select(*names)[index:][:1].to_pyarrow())
         row = {}
         for name in table.columns:
             (row[name],) = table[name].to_list()

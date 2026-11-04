@@ -52,7 +52,7 @@ Partitioned parquet datasets may be registered with [DuckLake](https://ducklake.
 * `graphique.ducklake.register` — attach a catalog and add files (default catalog is in-memory)
 * `graphique.ducklake.attach` — open an existing catalog read-only (suitable for multi-worker services)
 
-Passing a PyArrow `Dataset` into `GraphQL` / `typed` is deprecated; convert with `register` (or `ibis.read_parquet` when unpartitioned) first.
+Passing a PyArrow `Dataset` into `GraphQL` / `typed` is deprecated; convert with `register` (or `ibis.read_parquet` when not partitioned) first.
 
 ## Roots
 A single root can be attached directly. This is not common - but perfectly valid - GraphQL usage. The resolvers receive the [table object](https://graphql.org/learn/execution/#root-fields-and-resolvers) as the first argument, just as with nested fields.
@@ -65,6 +65,8 @@ Alternatively multiple named roots can be attached. This also enables federation
 Each field resolver transforms a table or column as needed. Ibis is [lazily executed](https://ibis-project.org/tutorials/basics), so there is no `select` field because it's handled automatically. Conversely if multiple table fields are requested, the [table selection is cached](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.cache) for performance and consistency.
 
 This can have varying results in the few fields which implicitly reference "all" columns: `distinct(on: null)` and `dropNull`.
+
+There is a `materialize` field to force client-side caching. Some backends cache on the server, and may not have permissions to do so.
 
 ## Arrays
 Ibis [Array columns](https://ibis-project.org/reference/expression-collections#ibis.expr.types.arrays.ArrayValue) are supported. `unnest` flattens arrays back to scalars, and `group: {aggregate: {collect: ...}}` also creates arrays.

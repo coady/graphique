@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 * DuckLake support
 * `sql` input `params` for placeholders
+* `materialize` field
 
 ### Changed
 * Dataset input `source` renamed to `table`
