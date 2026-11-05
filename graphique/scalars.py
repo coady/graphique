@@ -20,7 +20,6 @@ import strawberry
 class links:
     ref = "https://ibis-project.org/reference"
     types = f"[data type]({ref}/datatypes)"
-    schema = f"[table schema]({ref}/schemas#ibis.expr.schema.Schema)"
 
 
 def getitems(obj, *keys):

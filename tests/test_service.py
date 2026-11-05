@@ -206,11 +206,11 @@ def test_cast(client):
 
 
 def test_project(client):
-    assert client.execute("{ project(columns: []) { optional { type } } }")
+    assert client.execute("{ project(columns: []) { optional { schema { type } } } }")
     with pytest.raises(ValueError, match="one key"):
-        client.execute('{ project(columns: [{name: "state", value: ""}]) { type } }')
+        client.execute('{ project(columns: [{name: "state", value: ""}]) { schema { type } } }')
     with pytest.raises(ValueError, match="alias"):
-        client.execute('{ project(columns: {inv: {name: "state"}}) { type } }')
+        client.execute('{ project(columns: {inv: {name: "state"}}) { schema { type } } }')
     data = client.execute("""{ project(columns: {alias: "zipcode", numeric: {cumsum: {name: "zipcode"}}}) {
         columns { zipcode { first last } } } }""")
     assert data == {"project": {"columns": {"zipcode": {"first": 501, "last": 2066562337}}}}
@@ -397,7 +397,7 @@ def test_sql(client, monkeypatch):
     data = client.execute("{ toSql(pretty: false) }")
     assert data == {"toSql": 'SELECT * FROM "zipcodes"'}
     with pytest.raises(ValueError, match="denied"):
-        client.execute('{ sql(query: "select * from t", alias: "t") { type } }')
+        client.execute('{ sql(query: "select * from t", alias: "t") { schema { type } } }')
     monkeypatch.setattr("graphique.interface.Deny.has_permission", lambda *_, **__: True)
     data = client.execute('{ sql(query: "select * from t", alias: "t") { count } }')
     assert data == {"sql": {"count": 41700}}

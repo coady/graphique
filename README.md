@@ -97,7 +97,6 @@ uvicorn <module>:app
 * `first`: sort and filter by rank
 
 #### reflection
-* `type`: type of data source
 * `schema`: field names and types
 * `optional`: nullable for errors
 * `toSql`: compiles SQL query

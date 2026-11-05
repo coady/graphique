@@ -40,18 +40,18 @@ def test_partition(partclient):
 
 
 def test_schema(partclient):
-    schema = partclient.execute("{ schema { names types } }")["schema"]
+    schema = partclient.execute("{ schema { type backend names types } }")["schema"]
+    assert schema["type"] == "Table"
+    assert schema["backend"] == "duckdb"
     assert len(schema["names"]) == 8
     assert set(schema["types"]) == {"float64", "int32", "int64", "string"}
-    data = partclient.execute("{ type optional { type } }")
-    assert data == {"type": "Table", "optional": {"type": "Table"}}
-    data = partclient.execute(" { slice { count optional { type } } }")
-    assert data == {"slice": {"count": 41700, "optional": {"type": "CachedTable"}}}
+    data = partclient.execute(" { slice { count optional { schema { type } } } }")
+    assert data == {"slice": {"count": 41700, "optional": {"schema": {"type": "CachedTable"}}}}
 
 
 def test_materialize(partclient, monkeypatch):
-    data = partclient.execute("{ materialize { type count } }")
-    assert data == {"materialize": {"type": "Table", "count": 41700}}
+    data = partclient.execute("{ materialize { schema { backend } count } }")
+    assert data == {"materialize": {"schema": {"backend": "duckdb"}, "count": 41700}}
     monkeypatch.delattr(ibis.expr.types.Table, "cache")
     with pytest.raises(TypeError, match="materialize"):
         cached(partclient.root_value.table)
@@ -112,8 +112,8 @@ def test_federation(fedclient):
     assert data["zipDb"] == {"__typename": "ZipDbTable", "count": 42724}
 
     data = fedclient.execute("""{ _entities(representations: {__typename: "ZipcodeTable", zipcode: 90001}) {
-        ... on ZipcodeTable { count type row { state } } } }""")
-    assert data == {"_entities": [{"count": 1, "type": "CachedTable", "row": {"state": "CA"}}]}
+        ... on ZipcodeTable { count row { state } } } }""")
+    assert data == {"_entities": [{"count": 1, "row": {"state": "CA"}}]}
     data = fedclient.execute("""{ states { filter(state: {eq: "CA"}) { columns { indices {
         takeFrom(field: "zipcodes") { __typename column(name: "state") { count } } } } } } }""")
     table = data["states"]["filter"]["columns"]["indices"]["takeFrom"]
@@ -139,7 +139,7 @@ def test_sorted(fedclient):
 
 def test_join(fedclient):
     with pytest.raises(ValueError):
-        fedclient.execute("""{ zipcodes { join(right: "zip_db", keys: "zipcode") { type } } }""")
+        fedclient.execute("""{ zipcodes { join(right: "zip_db", keys: "zipcode") { any } } }""")
     data = fedclient.execute("""{ zipcodes { join(right: "zip_db", keys: "zipcode", rkeys: "zip")
         { count schema { names } } } }""")
     table = data["zipcodes"]["join"]

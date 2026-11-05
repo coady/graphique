@@ -8,10 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * DuckLake support
 * `sql` input `params` for placeholders
 * `materialize` field
+* `schema.backend` field
 
 ### Changed
 * Dataset input `source` renamed to `table`
 * `filter` accepts multiple `where` expressions
+* `type` field moved to `schema`
 
 ### Deprecated
 * Direct dataset support

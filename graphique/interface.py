@@ -66,8 +66,14 @@ class Deny(BasePermission):
         return False
 
 
-@strawberry.type(description=links.schema)
+@strawberry.type(
+    description=f"[table schema]({links.ref}/schemas#ibis.expr.schema.Schema) and info"
+)
 class Schema:
+    type: str = strawberry.field(description=f"[table]({links.ref}/expression-tables) type")
+    backend: str = strawberry.field(
+        description=f"[backend name]({links.ref}/expression-tables#ibis.expr.types.relations.Table.get_backend)"
+    )
     names: list[str] = strawberry.field(description="field names")
     types: list[str] = strawberry.field(description=f"{links.types}, corresponding to `names`")
 
@@ -80,7 +86,7 @@ class Dataset:
         """Cache the table if it will be reused."""
         if not isinstance(table, ibis.expr.types.CachedTable):
             counts = selections(*info.selected_fields)
-            counts["type"] = counts["schema"] = counts["toSql"] = counts["__typename"] = 0
+            counts["schema"] = counts["toSql"] = counts["__typename"] = 0
             if counts.total() > 1:
                 names = self.select(info, table) or [ibis.row_number()]
                 table = cached(table.select(*names))
@@ -109,14 +115,17 @@ class Dataset:
         """[Compile to](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.to_sql) a formatted SQL string."""
         return self.table.to_sql(dialect=dialect, pretty=pretty)
 
-    @strawberry.field(description=f"ibis [table]({links.ref}/expression-table) type")
-    def type(self) -> str:
-        return type(self.table).__name__
-
-    @strawberry.field(description=links.schema)
+    @strawberry.field(
+        description=f"[table schema]({links.ref}/expression-tables#ibis.expr.types.relations.Table.schema)"
+    )
     def schema(self) -> Schema:
         schema = self.table.schema()
-        return Schema(names=schema.names, types=schema.types)
+        return Schema(
+            type=type(self.table).__name__,
+            backend=self.table.get_backend().name,
+            names=schema.names,
+            types=schema.types,
+        )
 
     @doc_field(schema="field names and types", try_="return null if cast fails")
     def cast(self, info: Info, schema: list[Field], try_: bool = False) -> Self:
