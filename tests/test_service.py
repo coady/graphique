@@ -417,3 +417,9 @@ def test_sql(client, monkeypatch):
         '{ sql(query: "select * from t where state = ?", alias: "t", params: "CA") { count } }'
     )
     assert data == {"sql": {"count": 2647}}
+    data = client.execute("""{ sql(query: "select state from t", alias: "t", schema: {name: "state", type: "string"})
+        { column(name: "state") { type } } }""")
+    assert data == {"sql": {"column": {"type": "string"}}}
+    data = client.execute("""{ sql(query: "select state from t", alias: "t", dialect: "duckdb", schema: {name: "state", type: "string"})
+        { column(name: "state") { type } } }""")
+    assert data == {"sql": {"column": {"type": "string"}}}

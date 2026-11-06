@@ -10,6 +10,7 @@ import operator
 from collections.abc import Iterable, Iterator, Mapping
 from typing import Self
 
+import ibis.expr.operations
 import ibis.expr.types
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -536,6 +537,7 @@ class Dataset:
         alias="[alias](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.alias) of the table expression referenced in the query",
         dialect="input SQL dialect; defaults to the backend's native dialect",
         params="JSON object or array for `:name` or `?` placeholders; replaced by `sqlglot` before execution",
+        schema="output names and types to skip schema inference, which may require round trips to remote backends",
     )
     def sql(
         self,
@@ -544,6 +546,7 @@ class Dataset:
         alias: str = "",
         dialect: str | None = None,
         params: JSON | None = UNSET,
+        schema: list[Field] | None = None,
     ) -> Self:
         """[Run a SQL](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.sql) query against a table expression."""
         if params is not UNSET:
@@ -558,6 +561,13 @@ class Dataset:
                     expr = exp.replace_placeholders(expr, params)
             query = expr.sql(dialect=dialect)
         table = self.table.alias(alias) if alias else self.table
-        return self.resolve(info, table.sql(query, dialect=dialect))
+        if schema is None:  # ibis-project/ibis#12216
+            return self.resolve(info, table.sql(query, dialect=dialect))
+        if dialect is not None:
+            query = table.get_backend()._transpile_sql(query, dialect=dialect)
+        view = ibis.expr.operations.SQLStringView(  # type: ignore
+            parent=table.op(), query=query, schema={field.name: field.type for field in schema}
+        )
+        return self.resolve(info, view.to_expr())
 
     sql.extensions.append(PermissionExtension([Deny()], use_directives=False))
