@@ -18,7 +18,7 @@ def register(
     """Attach a DuckLake catalog and register a parquet dataset."""
     alias, _, schema = database.partition(".")
     con = ibis.duckdb.connect(extensions=["ducklake"])
-    con.raw_sql(f"ATTACH ? AS {alias}", parameters=[f"ducklake:{catalog}"])
+    con.raw_sql(f"ATTACH 'ducklake:{catalog}' AS {alias}")
     con.create_table(table, schema=con.read_parquet(source).schema(), database=database)
     if columns := ", ".join(partitioning):
         con.raw_sql(f"ALTER TABLE {database}.{table} SET PARTITIONED BY ({columns})")
@@ -37,5 +37,5 @@ def attach(table: str, catalog: str, database: str = "lake.main") -> ibis.Table:
     """Attach a DuckLake catalog read-only and return a table."""
     alias, _, _ = database.partition(".")
     con = ibis.duckdb.connect(extensions=["ducklake"])
-    con.raw_sql(f"ATTACH ? AS {alias} (READ_ONLY)", parameters=[f"ducklake:{catalog}"])
+    con.raw_sql(f"ATTACH 'ducklake:{catalog}' AS {alias} (READ_ONLY)")
     return con.table(table, database=database)

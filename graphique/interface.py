@@ -296,7 +296,7 @@ class Dataset:
             index = ibis.dense_rank() if dense else ibis.rank()
             window = index.over(group_by=over, order_by=map(order_key, by))
             return self.resolve(info, self.table.filter(window < rank))
-        order_by = {name.strip("-"): order_key(name) for name in by}
+        order_by = {name.lstrip("-"): order_key(name) for name in by}
         mask = self.table.select(*order_by)
         if dense and rank > 1:
             mask = mask.distinct()

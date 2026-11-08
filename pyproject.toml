@@ -55,7 +55,6 @@ ignore = ["B00"]
 [tool.ty.rules]
 invalid-argument-type = "ignore"
 unresolved-attribute = "ignore"
-unresolved-import = "ignore"
 
 [tool.coverage.run]
 source = ["graphique"]

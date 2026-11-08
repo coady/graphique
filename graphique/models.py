@@ -30,7 +30,7 @@ def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
         return functools.partial(doc_field, **kwargs)  # type: ignore
     parameters = inspect.signature(func).parameters
     for name, value in kwargs.items():
-        alias = name.strip("_") if name.endswith("_") else None
+        alias = name.rstrip("_") if name.endswith("_") else None
         directives = [optional()] if parameters[name].default is UNSET else []
         argument = strawberry.argument(name=alias, description=value, directives=directives)
         func.__annotations__[name] = Annotated[func.__annotations__[name], argument]  # type: ignore
