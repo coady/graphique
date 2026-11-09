@@ -30,7 +30,7 @@ dependencies = [
     "ibis-framework>=10.7",
     "isodate>=0.7",
     "pyarrow-hotfix",  # ibis-project/ibis#11993
-    "sqlglot<30.18",  # ibis-project/ibis#12101
+    "sqlglot<30.31",  # ibis-project/ibis#12101
 ]
 
 [project.urls]
