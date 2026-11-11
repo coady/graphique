@@ -47,6 +47,8 @@ def test_schema(partclient):
     assert set(schema["types"]) == {"float64", "int32", "int64", "string"}
     data = partclient.execute(" { slice { count optional { schema { type } } } }")
     assert data == {"slice": {"count": 41700, "optional": {"schema": {"type": "CachedTable"}}}}
+    data = partclient.execute(" { slice { __typename optional { schema { type } } } }")
+    assert data == {"slice": {"__typename": "Table", "optional": {"schema": {"type": "Table"}}}}
 
 
 def test_materialize(partclient, monkeypatch):
@@ -54,7 +56,7 @@ def test_materialize(partclient, monkeypatch):
     assert data == {"materialize": {"schema": {"backend": "duckdb"}, "count": 41700}}
     monkeypatch.delattr(ibis.expr.types.Table, "cache")
     with pytest.raises(TypeError, match="materialize"):
-        cached(partclient.root_value.table)
+        cached(partclient.root_value.table.filter(ibis._["state"] == "CA"))
 
 
 def test_rank_over(partclient):

@@ -10,7 +10,7 @@ import operator
 from collections.abc import Iterable, Iterator, Mapping
 from typing import Self
 
-import ibis.expr.operations
+import ibis.expr.operations as ops
 import ibis.expr.types
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -30,10 +30,10 @@ def selections(*fields) -> collections.Counter:
     counts = collections.Counter()
     for field in fields:
         for selection in field.selections:
-            if hasattr(selection, "name"):
-                counts[selection.name] += 1
-            else:
+            if not hasattr(selection, "name"):
                 counts.update(selections(selection))
+            elif selection.name != "__typename":
+                counts[selection.name] += 1
     return counts
 
 
@@ -52,8 +52,15 @@ def references(field) -> Iterator:
             yield from references(getattr(field, name, []))
 
 
-def cached(table: ibis.Table) -> ibis.expr.types.CachedTable:
-    """`Table.cache`, or raise with advice to use `materialize`."""
+def cached(table: ibis.Table) -> ibis.Table:
+    """Cache table if needed, on error raise with advice to use `materialize`."""
+    op = table.op()
+    while isinstance(op, (ops.Project, ops.DropColumns, ops.AliasedRelation)) and all(
+        isinstance(value, ops.Field) for value in op.values.values()
+    ):
+        op = op.parent
+    if isinstance(op, ops.PhysicalTable):
+        return table
     try:
         return table.cache()
     except Exception as exc:
@@ -85,12 +92,11 @@ class Dataset:
 
     def resolve(self, info: Info, table: ibis.Table) -> Self:
         """Cache the table if it will be reused."""
-        if not isinstance(table, ibis.expr.types.CachedTable):
-            counts = selections(*info.selected_fields)
-            counts["schema"] = counts["toSql"] = counts["__typename"] = 0
-            if counts.total() > 1:
-                names = self.select(info, table) or [ibis.row_number()]
-                table = cached(table.select(*names))
+        counts = selections(*info.selected_fields)
+        counts["schema"] = counts["toSql"] = 0
+        if counts.total() > 1:
+            names = self.select(info, table) or [ibis.row_number()]
+            table = cached(table.select(*names))
         return type(self)(table=table)
 
     @classmethod
@@ -183,8 +189,7 @@ class Dataset:
         column = getitems(self.table, *(name + index))
         if cast:
             column = (column.try_cast if try_ else column.cast)(cast)
-        counts = selections(*info.selected_fields)
-        if counts.total() > 1 and not isinstance(self.table, ibis.expr.types.CachedTable):
+        if selections(*info.selected_fields).total() > 1:
             column = cached(column.as_table())[0]
         return Column.cast(column)
 
@@ -507,7 +512,7 @@ class Dataset:
         counts = collections.Counter()
         for field in info.selected_fields:
             counts.update(selections(*field.selections))
-        if counts.total() > 1 and not isinstance(table, ibis.expr.types.CachedTable):
+        if counts.total() > 1:
             table = cached(table.select(*names))
         return {name: Column.cast(table[name]) for name in names}
 
@@ -565,7 +570,7 @@ class Dataset:
             return self.resolve(info, table.sql(query, dialect=dialect))
         if dialect is not None:
             query = table.get_backend()._transpile_sql(query, dialect=dialect)
-        view = ibis.expr.operations.SQLStringView(  # type: ignore
+        view = ops.SQLStringView(  # type: ignore
             parent=table.op(), query=query, schema={field.name: field.type for field in schema}
         )
         return self.resolve(info, view.to_expr())
