@@ -1,6 +1,6 @@
 [project]
 name = "graphique"
-version = "2.1"
+version = "2.2"
 description = "GraphQL service for python dataframes and parquet datasets."
 readme = "README.md"
 requires-python = ">=3.12"
