@@ -5,7 +5,7 @@ ASGI GraphQL utilities.
 import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
-from typing import ClassVar, TypeAlias
+from typing import ClassVar
 
 import ibis
 import pyarrow.dataset as ds
@@ -21,7 +21,7 @@ from .interface import Dataset
 from .models import Column, doc_field
 from .scalars import BigInt, scalar_map, schema_types
 
-Source: TypeAlias = ibis.Table | ds.Dataset
+Source = ibis.Table | ds.Dataset
 
 
 class MetricsExtension(tracing.ApolloTracingExtension):

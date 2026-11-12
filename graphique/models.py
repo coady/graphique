@@ -21,7 +21,7 @@ from .scalars import BigInt, Duration, links, py_type
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
-T = TypeVar("T")
+T = TypeVar("T")  # needed for strawberry annotation evaluation
 
 
 def doc_field(func: Callable | None = None, **kwargs: str) -> StrawberryField:
@@ -83,7 +83,7 @@ class Column:
 
 
 @strawberry.type(description="distinct values and counts")
-class Set(Generic[T]):
+class Set[T]:
     value_counts: strawberry.Private[ibis.Table]
 
     @doc_field
@@ -99,7 +99,7 @@ class Set(Generic[T]):
 
 @Column.register(strawberry.scalars.Base64)
 @strawberry.type(name="Column", description=f"[generic column]({links.ref}/expression-generic)")
-class GenericColumn(Column, Generic[T]):
+class GenericColumn[T](Column):
     @doc_field
     def values(self) -> list[T | None]:
         """list of values"""
@@ -146,7 +146,7 @@ class GenericColumn(Column, Generic[T]):
 
 @Column.register(date, datetime, time)
 @strawberry.type(name="Column", description=f"[temporal column]({links.ref}/expression-temporal)")
-class TemporalColumn(GenericColumn[T]): ...
+class TemporalColumn[T](GenericColumn[T]): ...
 
 
 @Column.register(Duration)
@@ -157,17 +157,17 @@ class TemporalColumn(GenericColumn[T]): ...
 
 Interval support varies by backend; durations may still be useful for computation and as scalar inputs.""",
 )
-class DurationColumn(GenericColumn[T]): ...
+class DurationColumn[T](GenericColumn[T]): ...
 
 
 @Column.register(str)
 @strawberry.type(name="ingColumn", description=f"[string column]({links.ref}/expression-strings)")
-class StringColumn(GenericColumn[T]): ...
+class StringColumn[T](GenericColumn[T]): ...
 
 
 @Column.register(float, Decimal)
 @strawberry.type(name="Column", description=f"[numeric column]({links.ref}/expression-numeric)")
-class NumericColumn(GenericColumn[T]):
+class NumericColumn[T](GenericColumn[T]):
     @col_field
     def sum(self) -> T | None:
         return self.column.sum().to_pyarrow().as_py()
@@ -195,7 +195,7 @@ class NumericColumn(GenericColumn[T]):
     name="eanColumn",
     description=f"[boolean column]({links.ref}/expression-numeric#ibis.expr.types.logical.BooleanColumn)",
 )
-class BooleanColumn(NumericColumn[T]):
+class BooleanColumn[T](NumericColumn[T]):
     @col_field
     def any(self) -> bool | None:
         return self.column.any().to_pyarrow().as_py()
@@ -210,7 +210,7 @@ class BooleanColumn(NumericColumn[T]):
     name="Column",
     description=f"[integer column]({links.ref}/expression-numeric#ibis.expr.types.numeric.IntegerColumn)",
 )
-class IntColumn(NumericColumn[T]):
+class IntColumn[T](NumericColumn[T]):
     @doc_field
     def take_from(
         self, info: Info, field: str
@@ -242,7 +242,7 @@ class ArrayColumn(Column):
     name="Column",
     description=f"[struct column]({links.ref}/expression-collections#ibis.expr.types.structs.StructValue)",
 )
-class StructColumn(GenericColumn[T]):
+class StructColumn[T](GenericColumn[T]):
     @doc_field
     def names(self) -> list[str]:
         """field names"""

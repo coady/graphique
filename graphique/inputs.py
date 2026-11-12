@@ -9,7 +9,7 @@ import operator
 from collections.abc import Callable, Iterable, Iterator
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 import ibis.expr.types
 import strawberry
@@ -21,7 +21,7 @@ from strawberry.types.arguments import StrawberryArgument
 
 from .scalars import Duration, getitems, links, order_key
 
-T = TypeVar("T")
+T = TypeVar("T")  # needed for strawberry annotation evaluation
 
 
 def use_doc(decorator: Callable, **kwargs):
@@ -59,7 +59,7 @@ class Field:
 
 
 @strawberry.input(description="predicates for scalars")
-class Filter(Generic[T]):
+class Filter[T]:
     eq: list[T] | None = default_field(description="== or `isin`", nullable=True)
     ne: list[T] | None = default_field(description="!= or `notin`", nullable=True)
     lt: T | None = default_field(description="<")
@@ -102,7 +102,7 @@ class Filter(Generic[T]):
 
 
 @strawberry.input(description="predicates for arrays")
-class ArrayFilter(Generic[T]):
+class ArrayFilter[T]:
     contains: T | None = default_field(description="array contains element")
 
     __iter__ = Filter.__iter__
