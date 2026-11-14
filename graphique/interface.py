@@ -527,6 +527,7 @@ class Dataset:
                 row[name] = Column.cast(table[name].unnest())
         return row
 
+    @doc_field
     def filter(self, info: Info, where: list[Expression] = [], **predicates: Filter) -> Self:
         """[Filter](https://ibis-project.org/reference/expression-tables#ibis.expr.types.relations.Table.filter) rows by predicates.
 
@@ -535,7 +536,9 @@ class Dataset:
         exprs = list(map(Expression.to_ibis, where)) + list(Filter.to_exprs(**predicates))
         return self.resolve(info, self.table.filter(*exprs) if exprs else self.table)
 
-    # protected fields = these methods can optionally be registered with `strawberry.field`
+    filter.arguments = filter.arguments[:1]  # exclude predicates
+
+    # protected fields - these methods can optionally be registered with `strawberry.field`
 
     @doc_field(
         query="SQL query string",

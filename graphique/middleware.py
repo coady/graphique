@@ -145,8 +145,7 @@ def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[
         for field in ("filter", "columns", "row"):
             setattr(Table, field, doc_field(getattr(Table, field)))
         Table.filter.type = Table
-        args = Filter.resolve_args(dict(schema_types(schema, filters=True)))
-        Table.filter.base_resolver.arguments = list(args)
+        Table.filter.arguments = list(Filter.resolve_args(dict(schema_types(schema, filters=True))))
     options = {"name": prefix + "Table", "description": "a dataset with a derived schema"}
     if name:
         return strawberry.federation.type(Table, keys=keys, **options)

@@ -64,7 +64,7 @@ uvicorn <module>:app
 ### API
 #### types
 * `Dataset`: GraphQL interface over an ibis table.
-* `Table`: implements the `Dataset` interface. Adds typed `row`, `columns`, and `filter` fields from introspecting the schema.
+* `Table`: implements the `Dataset` interface. Adds typed `row` field, `columns` field, and `filter` arguments from introspecting the schema.
 * `Column`: interface for an ibis column. Each data type has a corresponding column implementation: Boolean, Int, BigInt, Float, Decimal, Date, Datetime, Time, Duration, Base64, String, Array, Struct. All columns have a `values` field for their list of scalars. Additional fields vary by type.
 * `Row`: scalar fields. Tables are column-oriented, and graphique encourages that usage for performance. A single `row` field is provided for convenience, but a field for a list of rows is not. Requesting parallel columns is far more efficient.
 
