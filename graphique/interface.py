@@ -536,7 +536,7 @@ class Dataset:
         exprs = list(map(Expression.to_ibis, where)) + list(Filter.to_exprs(**predicates))
         return self.resolve(info, self.table.filter(*exprs) if exprs else self.table)
 
-    filter.arguments = filter.arguments[:1]  # exclude predicates
+    del filter.arguments[1:]  # exclude predicates
 
     # protected fields - these methods can optionally be registered with `strawberry.field`
 

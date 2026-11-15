@@ -19,7 +19,7 @@ from . import ducklake
 from .inputs import Filter
 from .interface import Dataset
 from .models import Column, doc_field
-from .scalars import BigInt, scalar_map, schema_types
+from .scalars import Array, BigInt, scalar_map, schema_types
 
 Source = ibis.Table | ds.Dataset
 
@@ -137,7 +137,7 @@ def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[
             """Return scalar values at index."""
             row = super().row(info, index)
             for field, value in row.items():
-                if isinstance(value, Column) and types[field] is not list:
+                if isinstance(value, Column) and types[field] is not Array:
                     raise TypeError(f"Field `{field}` cannot represent `Column` value")
             return Row(**row)
 
@@ -155,7 +155,7 @@ def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[
 def row_type(types: Mapping, prefix: str = "") -> type:
     """Return typed `Row`."""
     namespace = {name: strawberry.field(default=UNSET, name=name) for name in types}
-    annotations = {name: (Column if cls is list else cls) | None for name, cls in types.items()}
+    annotations = {name: (Column if cls is Array else cls) | None for name, cls in types.items()}
     cls = type(prefix + "Row", (), dict(namespace, __annotations__=annotations))
     return strawberry.type(cls, description="scalar fields")
 

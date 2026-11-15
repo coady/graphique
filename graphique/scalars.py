@@ -15,6 +15,7 @@ import ibis.expr.datatypes
 import isodate
 import pyarrow as pa
 import strawberry
+from strawberry.schema.types.scalar import DEFAULT_SCALAR_REGISTRY
 
 
 class links:
@@ -62,6 +63,9 @@ def _(mdn: pa.MonthDayNano) -> str:
 
 BigInt = typing.NewType("BigInt", int)
 Duration = typing.NewType("Duration", timedelta)
+# strawberry#1921 name prefixes; strawberry#4812 generic specialization
+Array = typing.NewType("Array", object)
+Struct = typing.NewType("Struct", object)
 scalar_map = {
     BigInt: strawberry.scalar(name="BigInt", description="64-bit int", parse_value=parse_bigint),
     Duration: strawberry.scalar(
@@ -71,6 +75,8 @@ scalar_map = {
         serialize=duration_isoformat,
         parse_value=parse_duration,
     ),
+    Array: DEFAULT_SCALAR_REGISTRY[strawberry.scalars.JSON],
+    Struct: DEFAULT_SCALAR_REGISTRY[strawberry.scalars.JSON],
 }
 
 
@@ -100,9 +106,9 @@ def py_type(dt: ibis.DataType) -> type | typing.NewType | None:
         case ibis.expr.datatypes.String() | ibis.expr.datatypes.UUID():
             return str
         case ibis.expr.datatypes.Array():
-            return list
+            return Array
         case ibis.expr.datatypes.Struct():
-            return strawberry.scalars.JSON
+            return Struct
 
 
 def schema_types(schema: ibis.Schema, *, filters: bool = False) -> Iterator:
@@ -119,11 +125,11 @@ def schema_types(schema: ibis.Schema, *, filters: bool = False) -> Iterator:
         if scalar is None:
             warnings.warn(f"unknown data type: {schema[name]}")
             continue
-        elif scalar is strawberry.scalars.JSON and filters:
+        elif scalar is Struct and filters:
             continue
-        elif scalar is list and filters:
+        elif scalar is Array and filters:
             scalar = py_type(schema[name].value_type)
-            if scalar in (None, list, strawberry.scalars.JSON):
+            if scalar in (None, Array, Struct):
                 continue
             scalar = list[scalar]  # type: ignore
         yield name, scalar

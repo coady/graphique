@@ -9,7 +9,7 @@ import inspect
 from collections.abc import Callable
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import TYPE_CHECKING, Annotated, ClassVar, Generic, TypeVar, get_args
+from typing import TYPE_CHECKING, Annotated, ClassVar, TypeVar, get_args
 
 import ibis.expr.types
 import strawberry
@@ -17,7 +17,7 @@ from strawberry import UNSET, Info
 from strawberry.types.field import StrawberryField
 
 from .inputs import optional, provisional
-from .scalars import BigInt, Duration, links, py_type
+from .scalars import Array, BigInt, Duration, Struct, links, py_type
 
 if TYPE_CHECKING:  # pragma: no cover
     from .interface import Dataset
@@ -52,10 +52,7 @@ class Column:
     def register(cls, *scalars):
         if cls is Column:
             return lambda cls: cls.register(*scalars) or cls
-        # strawberry#1921: scalar python names are prepended to column name
-        generic = issubclass(cls, Generic)
-        for scalar in scalars:
-            cls.registry[scalar] = cls[scalar] if generic else cls  # type: ignore
+        cls.registry.update({scalar: cls[scalar] for scalar in scalars})  # type: ignore
 
     @strawberry.field(description=links.types)
     def type(self) -> str:
@@ -220,9 +217,14 @@ class IntColumn[T](NumericColumn[T]):
         return root.take(info, self.column.to_list())
 
 
-@Column.register(list)
-@strawberry.type(description=f"[array column]({links.ref}/expression-collections)")
-class ArrayColumn(Column):
+@Column.register(Array)
+@strawberry.type(
+    name="Column",
+    description=f"""[array column]({links.ref}/expression-collections)
+
+JSON fields are for convenience; see `unnest` and nested `column` access""",
+)
+class ArrayColumn[T](GenericColumn[T]):
     @doc_field
     def unnest(self) -> Column:
         """Unnest an array into a column.
@@ -237,10 +239,12 @@ class ArrayColumn(Column):
         return self.column.length().to_list()
 
 
-@Column.register(strawberry.scalars.JSON)
+@Column.register(Struct)
 @strawberry.type(
     name="Column",
-    description=f"[struct column]({links.ref}/expression-collections#ibis.expr.types.structs.StructValue)",
+    description=f"""[struct column]({links.ref}/expression-collections#ibis.expr.types.structs.StructValue)
+
+JSON fields are for convenience; see `unpack` and nested `column` access""",
 )
 class StructColumn[T](GenericColumn[T]):
     @doc_field

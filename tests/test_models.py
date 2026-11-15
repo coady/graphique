@@ -130,8 +130,10 @@ def test_duration(executor):
 
 
 def test_array(executor):
-    data = executor("{ columns { array { count type } } }")
-    assert data == {"columns": {"array": {"count": 1, "type": "array<int32>"}}}
+    data = executor("{ columns { array { count type values } } }")
+    assert data == {
+        "columns": {"array": {"count": 1, "type": "array<int32>", "values": [[0, 1, 2], None]}}
+    }
     data = executor("{ row { array { ... on IntColumn { values } } } }")
     assert data == {"row": {"array": {"values": [0, 1, 2]}}}
     data = executor("{ row(index: -1) { array { type } } }")

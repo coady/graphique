@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## Unreleased
 ### Added
 * `Dataset.filter` field with `where`
+* `ArrayColumn` supports `JSON` fields
+
+### Changed
+* `JSONColumn` renamed to `StructColumn`
 
 ## [2.2](https://pypi.org/project/graphique/2.2/) - 2026-11-11
 ### Added
