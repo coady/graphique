@@ -52,8 +52,6 @@ Partitioned parquet datasets may be registered with [DuckLake](https://ducklake.
 * `graphique.ducklake.register` — attach a catalog and add files (default catalog is in-memory)
 * `graphique.ducklake.attach` — open an existing catalog read-only (suitable for multi-worker services)
 
-Passing a PyArrow `Dataset` into `GraphQL` / `typed` is deprecated; convert with `register` (or `ibis.read_parquet` when not partitioned) first.
-
 ## Roots
 A single root can be attached directly. This is not common - but perfectly valid - GraphQL usage. The resolvers receive the [table object](https://graphql.org/learn/execution/#root-fields-and-resolvers) as the first argument, just as with nested fields.
 

@@ -105,7 +105,7 @@ class GenericColumn[T](Column):
     @doc_field
     def distinct(self) -> Set[T]:
         """distinct values and counts"""
-        return Set(value_counts=self.column.value_counts().cache())
+        return Set(value_counts=ibis.memtable(self.column.value_counts().to_pyarrow()))
 
     @col_field
     def first(self) -> T | None:

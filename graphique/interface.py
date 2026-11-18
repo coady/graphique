@@ -254,7 +254,7 @@ class Dataset:
         aggs = dict(aggregate)
         table = self.table
         if counts:
-            aggs[counts] = table[counts].sum() if counts in table else ibis._.count()
+            aggs[counts] = ibis._.count()
         if order:
             table = table.mutate({order: ibis.row_number()})
             aggs[order] = table[order].min()

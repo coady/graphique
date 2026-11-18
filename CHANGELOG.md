@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 * `JSONColumn` renamed to `StructColumn`
 
+### Removed
+* Direct dataset support
+
 ## [2.2](https://pypi.org/project/graphique/2.2/) - 2026-11-11
 ### Added
 * DuckLake support

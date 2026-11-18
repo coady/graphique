@@ -10,7 +10,7 @@
 
 [GraphQL](https://graphql.org) service for [ibis](https://ibis-project.org) tables. Ibis supports [20+ backends](https://ibis-project.org/why#how-does-ibis-work) — DuckDB, PostgreSQL, Polars, BigQuery, etc. — so the same query API works across local files and remote databases. The schema is derived automatically.
 
-[Parquet](https://parquet.apache.org) files load with `ibis.read_parquet`. For hive-partitioned data, [DuckLake](https://ducklake.select/) (`graphique.ducklake.register` / `attach`) keeps partition metadata in a catalog so DuckDB can prune and count without scanning footers. Passing a PyArrow `Dataset` as a root is deprecated.
+[Parquet](https://parquet.apache.org) datasets can use `ibis.read_parquet`. For hive-partitioned data, [DuckLake](https://ducklake.select/) (`graphique.ducklake.register` / `attach`) keeps partition metadata in a catalog so DuckDB can prune and count without scanning footers.
 
 ## Usage
 There is an example app which reads a parquet dataset.

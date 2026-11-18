@@ -2,13 +2,12 @@ import asyncio
 import json
 
 import ibis
-import pyarrow.dataset as ds
 import pytest
 
-from graphique import GraphQL, middleware, typed
+from graphique import middleware
 from graphique.interface import cached
 
-from .conftest import fixtures, load, unordered
+from .conftest import load, unordered
 
 
 def test_extensions():
@@ -16,16 +15,6 @@ def test_extensions():
     for name in ("operation", "parse", "validate"):
         assert list(getattr(ext, "on_" + name)()) == [None]
     assert set(ext.get_results()["metrics"]) == {"duration", "execution"}
-
-
-def test_deprecated_dataset_root():
-    dataset = ds.dataset(fixtures / "zipcodes.parquet")
-    with pytest.warns(DeprecationWarning, match="ibis.read_parquet|ducklake.register"):
-        client = GraphQL(dataset)
-    assert client.root_value.table.count().to_pyarrow().as_py() == 41700
-    with pytest.warns(DeprecationWarning, match="ibis.read_parquet|ducklake.register"):
-        table = typed(ds.dataset(fixtures / "partitioned", partitioning="hive"), name="hive")
-    assert list(table.table.schema())[-2:] == ["north", "west"]
 
 
 def test_partition(partclient):

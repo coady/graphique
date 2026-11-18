@@ -2,26 +2,21 @@
 ASGI GraphQL utilities.
 """
 
-import warnings
 from collections.abc import Iterable, Mapping
 from datetime import timedelta
 from typing import ClassVar
 
 import ibis
-import pyarrow.dataset as ds
 import strawberry.asgi
 import strawberry.schema.config
 from strawberry import UNSET, Info
 from strawberry.extensions import tracing
 from strawberry.utils.str_converters import to_camel_case
 
-from . import ducklake
 from .inputs import Filter
 from .interface import Dataset
 from .models import Column, doc_field
 from .scalars import Array, BigInt, scalar_map, schema_types
-
-Source = ibis.Table | ds.Dataset
 
 
 class MetricsExtension(tracing.ApolloTracingExtension):
@@ -57,9 +52,9 @@ class GraphQL(strawberry.asgi.GraphQL):
         "config": strawberry.schema.config.StrawberryConfig(scalar_map=scalar_map),
     }
 
-    def __init__(self, root: Source | type | object, extensions: Iterable = (), **kwargs):
+    def __init__(self, root: ibis.Table | type | object, extensions: Iterable = (), **kwargs):
         self.root_value, Schema = root, strawberry.federation.Schema
-        if isinstance(root, Source):
+        if isinstance(root, ibis.Table):
             self.root_value, Schema = typed(root), strawberry.Schema
         elif isinstance(root, type):  # pragma: no branch
             self.root_value = root_value(root)
@@ -88,29 +83,23 @@ def root_value(cls: type):
     """
     data = {}
     for name, value in vars(cls).items():
-        if isinstance(value, (Source, Dataset)):
-            data[name] = typed(value, name) if isinstance(value, Source) else value
-            type(data[name]).field = name  # type: ignore
+        if isinstance(value, (ibis.Table, Dataset)):
+            data[name] = typed(value, name) if isinstance(value, ibis.Table) else value
+            type(data[name]).field = name
     annotations = {name: type(data[name]) for name in data}
     cls = type(cls.__name__, cls.__bases__, {"__annotations__": annotations})
     return strawberry.type(cls)(**data)
 
 
-def typed(source: Source, name: str = "", keys: Iterable = ()) -> Dataset:
-    """Return schema-derived `Dataset` instance for `source`.
+def typed(table: ibis.Table, name: str = "", keys: Iterable = ()) -> Dataset:
+    """Return schema-derived `Dataset` instance for `table`.
 
     Args:
-        source: ibis table or deprecated parquet dataset
+        table: ibis table
         name: optional prefix for the type names, and enables federation
         keys: keys for federation
     """
-    if isinstance(source, ds.Dataset):
-        warnings.warn("use `ibis.read_parquet` or `ducklake.register` instead", DeprecationWarning)
-        if source.partitioning.schema:
-            source = ducklake.register(source, name or "table")
-        else:
-            source = ibis.read_parquet(source.files, hive_partitioning=True)
-    return implement(source.schema(), name, keys)(table=source)
+    return implement(table.schema(), name, keys)(table=table)
 
 
 def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[Dataset]:
