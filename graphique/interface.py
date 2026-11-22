@@ -103,7 +103,10 @@ class Dataset:
     def resolve_reference(cls, info: Info, **keys) -> Self:
         """Return table filtered by federated keys."""
         self = getattr(info.root_value, cls.field)
-        return self.filter(info, **{name: Filter(eq=[keys[name]]) for name in keys})
+        dataset = self.filter(info, **{name: Filter(eq=[keys[name]]) for name in keys})
+        for name, value in keys.items():
+            setattr(dataset, name, value)
+        return dataset
 
     @staticmethod
     def select(info: Info, table: ibis.Table) -> list:

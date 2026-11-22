@@ -2,7 +2,7 @@
 ASGI GraphQL utilities.
 """
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import timedelta
 from typing import ClassVar
 
@@ -91,7 +91,7 @@ def root_value(cls: type):
     return strawberry.type(cls)(**data)
 
 
-def typed(table: ibis.Table, name: str = "", keys: Iterable = ()) -> Dataset:
+def typed(table: ibis.Table, name: str = "", keys: Sequence[str] = ()) -> Dataset:
     """Return schema-derived `Dataset` instance for `table`.
 
     Args:
@@ -102,7 +102,7 @@ def typed(table: ibis.Table, name: str = "", keys: Iterable = ()) -> Dataset:
     return implement(table.schema(), name, keys)(table=table)
 
 
-def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[Dataset]:
+def implement(schema: ibis.Schema, name: str = "", keys: Sequence[str] = ()) -> type[Dataset]:
     """Create `Table` type which implements `Dataset` interface with schema-aware fields.
 
     Args:
@@ -130,6 +130,9 @@ def implement(schema: ibis.Schema, name: str = "", keys: Iterable = ()) -> type[
                     raise TypeError(f"Field `{field}` cannot represent `Column` value")
             return Row(**row)
 
+    for key in keys:
+        Table.__annotations__[key] = types[key] | None
+        setattr(Table, key, strawberry.field(default=None))
     if types:
         for field in ("filter", "columns", "row"):
             setattr(Table, field, doc_field(getattr(Table, field)))

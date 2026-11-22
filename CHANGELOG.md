@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 * `JSONColumn` renamed to `StructColumn`
+* federation `keys` have nullable fields for composition
 
 ### Removed
 * Direct dataset support

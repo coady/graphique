@@ -96,15 +96,17 @@ def test_root():
 
 def test_federation(fedclient):
     data = fedclient.execute(
-        "{ _service { sdl } zipcodes { __typename count } zipDb { __typename count } }"
+        "{ _service { sdl } zipcodes { __typename zipcode count } zipDb { __typename count } }"
     )
-    assert data["_service"]["sdl"]
-    assert data["zipcodes"] == {"__typename": "ZipcodeTable", "count": 41700}
+    sdl = data["_service"]["sdl"]
+    assert 'type ZipcodeTable implements Dataset @key(fields: "zipcode")' in sdl
+    assert "zipcode: Int" in sdl
+    assert data["zipcodes"] == {"__typename": "ZipcodeTable", "zipcode": None, "count": 41700}
     assert data["zipDb"] == {"__typename": "ZipDbTable", "count": 42724}
 
     data = fedclient.execute("""{ _entities(representations: {__typename: "ZipcodeTable", zipcode: 90001}) {
-        ... on ZipcodeTable { count row { state } } } }""")
-    assert data == {"_entities": [{"count": 1, "row": {"state": "CA"}}]}
+        ... on ZipcodeTable { zipcode count row { state } } } }""")
+    assert data == {"_entities": [{"zipcode": 90001, "count": 1, "row": {"state": "CA"}}]}
     data = fedclient.execute("""{ states { filter(state: {eq: "CA"}) { columns { indices {
         takeFrom(field: "zipcodes") { __typename column(name: "state") { count } } } } } } }""")
     table = data["states"]["filter"]["columns"]["indices"]["takeFrom"]
