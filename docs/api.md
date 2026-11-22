@@ -57,6 +57,8 @@ A single root can be attached directly. This is not common - but perfectly valid
 
 Alternatively multiple named roots can be attached. This also enables federation, which can be ignored if not needed. Optionally keys can also be specified, which are translated into matching equality queries.
 
+To expose parquet IDs as federated entity stubs from another subgraph, [subclass the table](customize.qmd) and add a list field.
+
 `IntColumn.takeFrom` enables using one table as an index into another. Whether there is a performance benefit over `filter` will of course vary by backend, but there is potential to be orders of magnitude faster than a scan.
 
 ## Column selection

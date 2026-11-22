@@ -8,7 +8,7 @@ By default, `GraphQL(source)` derives typed `filter`, `columns`, and `row` from 
 import ibis
 import strawberry
 
-from graphique import Dataset, GraphQL, implement
+from graphique import Dataset, GraphQL, implement, typed
 
 source = ibis.read_parquet("../../tests/fixtures/zipcodes.parquet")
 Table = implement(source.schema())
@@ -54,7 +54,6 @@ execute("""{ zipcodes {
 } }""")
 ```
 
-### Advanced
 GraphQL implementations commonly treat top-level fields as [static methods](https://coady.github.io/posts/graphql-root-fields.html#static-methods). Whereas `graphique` requires root values to function as expected. The above example is syntactic sugar for:
 ```{python}
 @strawberry.type
@@ -62,4 +61,26 @@ class Query:
     zipcodes: Zipcodes
 
 app = GraphQL(Query(zipcodes=Zipcodes(table=source)))
+```
+
+### Federation
+Federated keys will automatically resolve by equality. Naturally there is no guarantee of uniqueness; a filtered table is returned. E.g., a `User` type could add a field for the user's events.
+```python
+class Query:
+    events = typed(source, name="Events", keys=["user_id"])
+```
+
+Conversely, federated entity stubs from ID columns can be added. E.g., given a federated `User` type, add a `users` field to return `[User]` from a `user_id` column.
+```{python}
+from strawberry.federation.schema_directives import Key
+
+@strawberry.type(directives=[Key(fields="id", resolvable=False)])
+class User:
+    id: str
+
+@strawberry.type
+class Events(Table):
+    @strawberry.field
+    def users(self) -> list[User | None]:
+        return [None if value is None else User(id=value) for value in self.table["user_id"].to_list()]
 ```
