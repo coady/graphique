@@ -48,7 +48,7 @@ def execute(query):
 
 execute("""{ zipcodes {
     count
-    filter(state: {eq: "CA"}) { count }
+    filter(state: {eq: "CA"}) { __typename count }
     sql(query: "select * from t where state = :state", alias: "t", params: {state: "CA"}) { count }
     states
 } }""")

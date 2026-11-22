@@ -136,7 +136,6 @@ def implement(schema: ibis.Schema, name: str = "", keys: Sequence[str] = ()) -> 
     if types:
         for field in ("filter", "columns", "row"):
             setattr(Table, field, doc_field(getattr(Table, field)))
-        Table.filter.type = Table
         Table.filter.arguments = list(Filter.resolve_args(dict(schema_types(schema, filters=True))))
     options = {"name": prefix + "Table", "description": "a dataset with a derived schema"}
     if name:
