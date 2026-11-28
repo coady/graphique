@@ -5,6 +5,7 @@ Doesn't require knowledge of the schema.
 """
 
 import collections
+import functools
 import itertools
 import operator
 from collections.abc import Iterable, Iterator, Mapping
@@ -64,7 +65,13 @@ def cached(table: ibis.Table) -> ibis.Table:
     try:
         return table.cache()
     except Exception as exc:
-        raise TypeError("see `materialize` for client-side caching") from exc
+        raise TypeError(f"{exc}: see `materialize` for client-side caching") from exc
+
+
+@functools.cache
+def root_fields(cls: type) -> dict[type, str]:
+    """Return mapping of root field types to Python attribute names."""
+    return {field.type: field.python_name for field in cls.__strawberry_definition__.fields}
 
 
 class Deny(BasePermission):
@@ -102,7 +109,7 @@ class Dataset:
     @classmethod
     def resolve_reference(cls, info: Info, **keys) -> Self:
         """Return table filtered by federated keys."""
-        self = getattr(info.root_value, cls.field)
+        self = getattr(info.root_value, root_fields(type(info.root_value))[cls])
         dataset = self.filter(info, **{name: Filter(eq=[keys[name]]) for name in keys})
         for name, value in keys.items():
             setattr(dataset, name, value)
@@ -118,7 +125,7 @@ class Dataset:
         return [name for name in table.schema() if name in refs]
 
     @doc_field(
-        dialect="output SQL dialect; defaults to the backend’s native dialect",
+        dialect="output SQL dialect; defaults to the backend's native dialect",
         pretty="whether to use pretty formatting",
     )
     def to_sql(self, dialect: str | None = None, pretty: bool = True) -> str:

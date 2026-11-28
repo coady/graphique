@@ -85,7 +85,6 @@ def root_value(cls: type):
     for name, value in vars(cls).items():
         if isinstance(value, (ibis.Table, Dataset)):
             data[name] = typed(value, name) if isinstance(value, ibis.Table) else value
-            type(data[name]).field = name
     annotations = {name: type(data[name]) for name in data}
     cls = type(cls.__name__, cls.__bases__, {"__annotations__": annotations})
     return strawberry.type(cls)(**data)
@@ -116,8 +115,6 @@ def implement(schema: ibis.Schema, name: str = "", keys: Sequence[str] = ()) -> 
     Row = row_type(types, prefix)
 
     class Table(Dataset):
-        field: ClassVar[str]  # root Query field for `resolve_reference`
-
         def columns(self, info: Info) -> Columns:  # type: ignore
             """fields for each column"""
             return Columns(**super().columns(info))
